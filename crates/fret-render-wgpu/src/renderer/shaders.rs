@@ -707,6 +707,18 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (FRET_FILL_KIND == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   if (FRET_FILL_KIND == 3u) {
     let sampled = FRET_FILL_MATERIAL_SAMPLED != 0u;
     return material_eval(p, local_pos, sampled);
@@ -732,6 +744,18 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (FRET_BORDER_KIND == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
@@ -3757,6 +3781,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   return vec4<f32>(0.0);
 }
 
@@ -4204,6 +4240,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   return vec4<f32>(0.0);
 }
 
@@ -4610,6 +4658,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
   return vec4<f32>(0.0);
 }
 
@@ -4982,6 +5042,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return paint_sample_stops(p, tt);
+  }
+  if (p.kind == 4u) {
+    let center = p.params0.xy;
+    let start = p.params0.z;
+    let span = max(p.params0.w, 1e-6);
+    let v = local_pos - center;
+    let a = atan2(v.y, v.x);
+    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
+    let rel = fract(turns - fract(start) + 1.0);
+    let t = rel / span;
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }

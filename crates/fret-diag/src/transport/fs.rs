@@ -211,13 +211,13 @@ impl State {
         ];
 
         let path = self.cfg.out_dir.join("capabilities.json");
-        if let Some(v) = read_json_value(&path) {
-            if let Ok(parsed) = serde_json::from_value::<FilesystemCapabilitiesV1>(v) {
-                for c in parsed.capabilities {
-                    let c = normalize_capability_string(&c);
-                    if !c.is_empty() {
-                        caps.push(c);
-                    }
+        if let Some(v) = read_json_value(&path)
+            && let Ok(parsed) = serde_json::from_value::<FilesystemCapabilitiesV1>(v)
+        {
+            for c in parsed.capabilities {
+                let c = normalize_capability_string(&c);
+                if !c.is_empty() {
+                    caps.push(c);
                 }
             }
         }

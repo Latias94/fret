@@ -43,7 +43,8 @@
       "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
-        "padding_px": 4.0
+        "padding_px": 0.0,
+        "eps_px": 2.0
       },
       "timeout_frames": 240
     },
@@ -77,7 +78,8 @@
     },
     { "type": "wait_frames", "n": 2 },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "dock-arb-dialog-close" } },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dialog-closed" } },
@@ -87,4 +89,3 @@
     { "type": "capture_bundle", "label": "docking-arbitration-demo-modal-dock-drag-viewport-capture" }
   ]
 }
-

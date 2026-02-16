@@ -495,13 +495,13 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
         let root = render_root(ui, app, services, window, bounds, test_id, |cx| {
             let mut mask_layout = crate::element::LayoutStyle {
                 position: crate::element::PositionStyle::Absolute,
+                overflow,
                 ..Default::default()
             };
             mask_layout.inset.left = Some(Px(0.0));
             mask_layout.inset.top = Some(Px(0.0));
             mask_layout.size.width = Length::Px(Px(20.0));
             mask_layout.size.height = Length::Px(Px(20.0));
-            mask_layout.overflow = overflow;
 
             let mask_props = crate::element::MaskLayerProps {
                 layout: mask_layout,

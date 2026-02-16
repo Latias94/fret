@@ -6,18 +6,13 @@ pub const DEFAULT_MIN_ZOOM: f32 = 0.05;
 pub const DEFAULT_MAX_ZOOM: f32 = 64.0;
 pub const DEFAULT_FIT_PADDING_SCREEN_PX: f32 = 24.0;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FitMode {
     /// Fits the entire target rect inside the viewport.
+    #[default]
     Contain,
     /// Fills the viewport (the target rect may be cropped).
     Cover,
-}
-
-impl Default for FitMode {
-    fn default() -> Self {
-        Self::Contain
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -1,6 +1,6 @@
 ---
 name: fret-crate-audits
-description: "Crate-by-crate code-quality audits for fearless refactors: produce a lightweight audit note (purpose/exports/deps/hazards), run a small gate set, and turn findings into landable steps. Use when you want to review a crate for Rust best practices, contract surface hygiene, and refactor hazards."
+description: "This skill should be used when the user asks to \"audit a crate\", \"review contract surfaces\", \"assess refactor hazards\", or \"produce a crate audit note\". Provides a crate-by-crate audit workflow (purpose/exports/deps/hazards) plus a small gate set to turn findings into landable steps."
 ---
 
 # Fret crate audits (code-quality pass)

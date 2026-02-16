@@ -161,6 +161,7 @@ mod tests {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
                 scale_factor: 1.0,
             },
         );
@@ -180,13 +181,13 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 text: prepared.blob,
-                paint: Color::TRANSPARENT.into(),
+                color: Color::TRANSPARENT,
             },
             SceneOp::Path {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: Color::TRANSPARENT.into(),
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT),
             },
             SceneOp::SvgImage {
                 order: DrawOrder(0),

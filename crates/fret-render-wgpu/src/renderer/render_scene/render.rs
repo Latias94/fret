@@ -122,6 +122,29 @@ impl Renderer {
             frame_perf.image_upload_bytes = frame_perf
                 .image_upload_bytes
                 .saturating_add(counters.image_upload_bytes);
+
+            let pending_effective = self.perf_pending_render_target_updates_by_ingest;
+            frame_perf.render_target_updates_ingest_unknown = pending_effective[0];
+            frame_perf.render_target_updates_ingest_owned = pending_effective[1];
+            frame_perf.render_target_updates_ingest_external_zero_copy = pending_effective[2];
+            frame_perf.render_target_updates_ingest_gpu_copy = pending_effective[3];
+            frame_perf.render_target_updates_ingest_cpu_upload = pending_effective[4];
+            self.perf_pending_render_target_updates_by_ingest =
+                [0; fret_render_core::RenderTargetIngestStrategy::COUNT];
+
+            let pending_requested = self.perf_pending_render_target_updates_requested_by_ingest;
+            frame_perf.render_target_updates_requested_ingest_unknown = pending_requested[0];
+            frame_perf.render_target_updates_requested_ingest_owned = pending_requested[1];
+            frame_perf.render_target_updates_requested_ingest_external_zero_copy =
+                pending_requested[2];
+            frame_perf.render_target_updates_requested_ingest_gpu_copy = pending_requested[3];
+            frame_perf.render_target_updates_requested_ingest_cpu_upload = pending_requested[4];
+            self.perf_pending_render_target_updates_requested_by_ingest =
+                [0; fret_render_core::RenderTargetIngestStrategy::COUNT];
+
+            frame_perf.render_target_updates_ingest_fallbacks =
+                self.perf_pending_render_target_updates_ingest_fallbacks;
+            self.perf_pending_render_target_updates_ingest_fallbacks = 0;
         }
 
         #[cfg(debug_assertions)]
@@ -626,18 +649,17 @@ impl Renderer {
         let text_vertices = &encoding.text_vertices;
         let path_vertices = &encoding.path_vertices;
 
-        self.ensure_instance_capacity(device, instances.len());
-        self.ensure_path_paint_capacity(device, path_paints.len());
-        self.ensure_text_paint_capacity(device, text_paints.len());
-        self.ensure_viewport_vertex_capacity(device, viewport_vertices.len());
-        self.ensure_text_vertex_capacity(device, text_vertices.len());
-        self.ensure_path_vertex_capacity(device, path_vertices.len());
+        self.quad_instances.ensure_capacity(device, instances.len());
+        self.path_paints.ensure_capacity(device, path_paints.len());
+        self.text_paints.ensure_capacity(device, text_paints.len());
+        self.viewport_vertices
+            .ensure_capacity(device, viewport_vertices.len());
+        self.text_vertices
+            .ensure_capacity(device, text_vertices.len());
+        self.path_vertices
+            .ensure_capacity(device, path_vertices.len());
 
-        let instance_buffer_index = self.instance_buffer_index;
-        self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
-        let quad_instance_bind_group =
-            self.quad_instance_bind_groups[instance_buffer_index].clone();
+        let (instance_buffer, quad_instance_bind_group) = self.quad_instances.next_pair();
         if !instances.is_empty() {
             queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
             if perf_enabled {
@@ -647,11 +669,7 @@ impl Renderer {
             }
         }
 
-        let path_paint_buffer_index = self.path_paint_buffer_index;
-        self.path_paint_buffer_index =
-            (self.path_paint_buffer_index + 1) % self.path_paint_buffers.len();
-        let path_paint_buffer = self.path_paint_buffers[path_paint_buffer_index].clone();
-        let path_paint_bind_group = self.path_paint_bind_groups[path_paint_buffer_index].clone();
+        let (path_paint_buffer, path_paint_bind_group) = self.path_paints.next_pair();
         if !path_paints.is_empty() {
             queue.write_buffer(&path_paint_buffer, 0, bytemuck::cast_slice(path_paints));
             if perf_enabled {
@@ -661,11 +679,7 @@ impl Renderer {
             }
         }
 
-        let text_paint_buffer_index = self.text_paint_buffer_index;
-        self.text_paint_buffer_index =
-            (self.text_paint_buffer_index + 1) % self.text_paint_buffers.len();
-        let text_paint_buffer = self.text_paint_buffers[text_paint_buffer_index].clone();
-        let text_paint_bind_group = self.text_paint_bind_groups[text_paint_buffer_index].clone();
+        let (text_paint_buffer, text_paint_bind_group) = self.text_paints.next_pair();
         if !text_paints.is_empty() {
             queue.write_buffer(&text_paint_buffer, 0, bytemuck::cast_slice(text_paints));
             if perf_enabled {
@@ -675,11 +689,7 @@ impl Renderer {
             }
         }
 
-        let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
-        self.viewport_vertex_buffer_index =
-            (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer =
-            self.viewport_vertex_buffers[viewport_vertex_buffer_index].clone();
+        let viewport_vertex_buffer = self.viewport_vertices.next_buffer();
         if !viewport_vertices.is_empty() {
             queue.write_buffer(
                 &viewport_vertex_buffer,
@@ -693,10 +703,7 @@ impl Renderer {
             }
         }
 
-        let text_vertex_buffer_index = self.text_vertex_buffer_index;
-        self.text_vertex_buffer_index =
-            (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
+        let text_vertex_buffer = self.text_vertices.next_buffer();
         if !text_vertices.is_empty() {
             queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
             if perf_enabled {
@@ -706,10 +713,7 @@ impl Renderer {
             }
         }
 
-        let path_vertex_buffer_index = self.path_vertex_buffer_index;
-        self.path_vertex_buffer_index =
-            (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
-        let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
+        let path_vertex_buffer = self.path_vertices.next_buffer();
         if !path_vertices.is_empty() {
             queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
             if perf_enabled {
@@ -1308,6 +1312,43 @@ impl Renderer {
                                             frame_perf.draw_calls.saturating_add(1);
                                         frame_perf.viewport_draw_calls =
                                             frame_perf.viewport_draw_calls.saturating_add(1);
+                                        let metadata = self
+                                            .render_targets
+                                            .metadata(draw.target)
+                                            .unwrap_or_default();
+                                        match metadata.ingest_strategy {
+                                            fret_render_core::RenderTargetIngestStrategy::Unknown => {
+                                                frame_perf.viewport_draw_calls_ingest_unknown =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_unknown
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::Owned => {
+                                                frame_perf.viewport_draw_calls_ingest_owned =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_owned
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::ExternalZeroCopy => {
+                                                frame_perf
+                                                    .viewport_draw_calls_ingest_external_zero_copy =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_external_zero_copy
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::GpuCopy => {
+                                                frame_perf.viewport_draw_calls_ingest_gpu_copy =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_gpu_copy
+                                                        .saturating_add(1);
+                                            }
+                                            fret_render_core::RenderTargetIngestStrategy::CpuUpload => {
+                                                frame_perf.viewport_draw_calls_ingest_cpu_upload =
+                                                    frame_perf
+                                                        .viewport_draw_calls_ingest_cpu_upload
+                                                        .saturating_add(1);
+                                            }
+                                        }
                                     }
                                 }
                                 OrderedDraw::Image(draw) => {
@@ -3459,12 +3500,7 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
-                    let pipeline_ix = match pass.blend_mode {
-                        fret_core::BlendMode::Over => 0,
-                        fret_core::BlendMode::Add => 1,
-                        fret_core::BlendMode::Multiply => 2,
-                        fret_core::BlendMode::Screen => 3,
-                    };
+                    let pipeline_ix = pass.blend_mode.pipeline_index();
 
                     let src_view = match pass.src {
                         PlanTarget::Output
@@ -3857,6 +3893,55 @@ impl Renderer {
                 .image_upload_bytes
                 .saturating_add(frame_perf.image_upload_bytes);
 
+            self.perf.render_target_updates_ingest_unknown = self
+                .perf
+                .render_target_updates_ingest_unknown
+                .saturating_add(frame_perf.render_target_updates_ingest_unknown);
+            self.perf.render_target_updates_ingest_owned = self
+                .perf
+                .render_target_updates_ingest_owned
+                .saturating_add(frame_perf.render_target_updates_ingest_owned);
+            self.perf.render_target_updates_ingest_external_zero_copy = self
+                .perf
+                .render_target_updates_ingest_external_zero_copy
+                .saturating_add(frame_perf.render_target_updates_ingest_external_zero_copy);
+            self.perf.render_target_updates_ingest_gpu_copy = self
+                .perf
+                .render_target_updates_ingest_gpu_copy
+                .saturating_add(frame_perf.render_target_updates_ingest_gpu_copy);
+            self.perf.render_target_updates_ingest_cpu_upload = self
+                .perf
+                .render_target_updates_ingest_cpu_upload
+                .saturating_add(frame_perf.render_target_updates_ingest_cpu_upload);
+
+            self.perf.render_target_updates_requested_ingest_unknown = self
+                .perf
+                .render_target_updates_requested_ingest_unknown
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_unknown);
+            self.perf.render_target_updates_requested_ingest_owned = self
+                .perf
+                .render_target_updates_requested_ingest_owned
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_owned);
+            self.perf
+                .render_target_updates_requested_ingest_external_zero_copy = self
+                .perf
+                .render_target_updates_requested_ingest_external_zero_copy
+                .saturating_add(
+                    frame_perf.render_target_updates_requested_ingest_external_zero_copy,
+                );
+            self.perf.render_target_updates_requested_ingest_gpu_copy = self
+                .perf
+                .render_target_updates_requested_ingest_gpu_copy
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_gpu_copy);
+            self.perf.render_target_updates_requested_ingest_cpu_upload = self
+                .perf
+                .render_target_updates_requested_ingest_cpu_upload
+                .saturating_add(frame_perf.render_target_updates_requested_ingest_cpu_upload);
+            self.perf.render_target_updates_ingest_fallbacks = self
+                .perf
+                .render_target_updates_ingest_fallbacks
+                .saturating_add(frame_perf.render_target_updates_ingest_fallbacks);
+
             self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
             self.perf.svg_rasters_live =
                 self.perf.svg_rasters_live.max(frame_perf.svg_rasters_live);
@@ -4017,6 +4102,26 @@ impl Renderer {
                 .perf
                 .viewport_draw_calls
                 .saturating_add(frame_perf.viewport_draw_calls);
+            self.perf.viewport_draw_calls_ingest_unknown = self
+                .perf
+                .viewport_draw_calls_ingest_unknown
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_unknown);
+            self.perf.viewport_draw_calls_ingest_owned = self
+                .perf
+                .viewport_draw_calls_ingest_owned
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_owned);
+            self.perf.viewport_draw_calls_ingest_external_zero_copy = self
+                .perf
+                .viewport_draw_calls_ingest_external_zero_copy
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_external_zero_copy);
+            self.perf.viewport_draw_calls_ingest_gpu_copy = self
+                .perf
+                .viewport_draw_calls_ingest_gpu_copy
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_gpu_copy);
+            self.perf.viewport_draw_calls_ingest_cpu_upload = self
+                .perf
+                .viewport_draw_calls_ingest_cpu_upload
+                .saturating_add(frame_perf.viewport_draw_calls_ingest_cpu_upload);
             self.perf.image_draw_calls = self
                 .perf
                 .image_draw_calls
@@ -4155,6 +4260,27 @@ impl Renderer {
                 svg_upload_bytes: frame_perf.svg_upload_bytes,
                 image_uploads: frame_perf.image_uploads,
                 image_upload_bytes: frame_perf.image_upload_bytes,
+                render_target_updates_ingest_unknown: frame_perf
+                    .render_target_updates_ingest_unknown,
+                render_target_updates_ingest_owned: frame_perf.render_target_updates_ingest_owned,
+                render_target_updates_ingest_external_zero_copy: frame_perf
+                    .render_target_updates_ingest_external_zero_copy,
+                render_target_updates_ingest_gpu_copy: frame_perf
+                    .render_target_updates_ingest_gpu_copy,
+                render_target_updates_ingest_cpu_upload: frame_perf
+                    .render_target_updates_ingest_cpu_upload,
+                render_target_updates_requested_ingest_unknown: frame_perf
+                    .render_target_updates_requested_ingest_unknown,
+                render_target_updates_requested_ingest_owned: frame_perf
+                    .render_target_updates_requested_ingest_owned,
+                render_target_updates_requested_ingest_external_zero_copy: frame_perf
+                    .render_target_updates_requested_ingest_external_zero_copy,
+                render_target_updates_requested_ingest_gpu_copy: frame_perf
+                    .render_target_updates_requested_ingest_gpu_copy,
+                render_target_updates_requested_ingest_cpu_upload: frame_perf
+                    .render_target_updates_requested_ingest_cpu_upload,
+                render_target_updates_ingest_fallbacks: frame_perf
+                    .render_target_updates_ingest_fallbacks,
                 svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
                 svg_rasters_live: frame_perf.svg_rasters_live,
                 svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,
@@ -4208,6 +4334,13 @@ impl Renderer {
                 draw_calls: frame_perf.draw_calls,
                 quad_draw_calls: frame_perf.quad_draw_calls,
                 viewport_draw_calls: frame_perf.viewport_draw_calls,
+                viewport_draw_calls_ingest_unknown: frame_perf.viewport_draw_calls_ingest_unknown,
+                viewport_draw_calls_ingest_owned: frame_perf.viewport_draw_calls_ingest_owned,
+                viewport_draw_calls_ingest_external_zero_copy: frame_perf
+                    .viewport_draw_calls_ingest_external_zero_copy,
+                viewport_draw_calls_ingest_gpu_copy: frame_perf.viewport_draw_calls_ingest_gpu_copy,
+                viewport_draw_calls_ingest_cpu_upload: frame_perf
+                    .viewport_draw_calls_ingest_cpu_upload,
                 image_draw_calls: frame_perf.image_draw_calls,
                 text_draw_calls: frame_perf.text_draw_calls,
                 path_draw_calls: frame_perf.path_draw_calls,

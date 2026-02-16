@@ -2284,15 +2284,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     timeout_ms,
                     poll_ms,
                 )
-                .map_err(|err| {
+                .inspect_err(|err| {
                     write_tooling_failure_script_result_if_missing(
                         &resolved_script_result_path,
                         "tooling.connect.failed",
-                        &err,
+                        err,
                         "tooling_error",
                         Some("connect_devtools_ws_tooling".to_string()),
                     );
-                    err
                 })?;
 
                 let (result, bundle_path) = run_script_over_transport(
@@ -2308,15 +2307,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_script_result_path,
                     &resolved_out_dir.join("check.capabilities.json"),
                 )
-                .map_err(|err| {
+                .inspect_err(|err| {
                     write_tooling_failure_script_result_if_missing(
                         &resolved_script_result_path,
                         "tooling.run.failed",
-                        &err,
+                        err,
                         "tooling_error",
                         Some("run_script_over_transport".to_string()),
                     );
-                    err
                 })?;
 
                 if exit_after_run {
@@ -2347,14 +2345,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .unwrap_or("")
                     .trim()
                     .is_empty()
+                    && let Some(bundle_path) = bundle_path.as_ref()
                 {
-                    if let Some(bundle_path) = bundle_path.as_ref() {
-                        summary.last_bundle_dir = bundle_path
-                            .parent()
-                            .and_then(|p| p.file_name())
-                            .and_then(|s| s.to_str())
-                            .map(|s| s.to_string());
-                    }
+                    summary.last_bundle_dir = bundle_path
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.to_string());
                 }
 
                 if wants_post_run_checks
@@ -2545,15 +2542,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
             )
-            .map_err(|err| {
+            .inspect_err(|err| {
                 write_tooling_failure_script_result_if_missing(
                     &resolved_script_result_path,
                     "tooling.connect.failed",
-                    &err,
+                    err,
                     "tooling_error",
                     Some("connect_filesystem_tooling".to_string()),
                 );
-                err
             })?;
             let script_json: serde_json::Value =
                 serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
@@ -2591,15 +2587,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_script_result_path,
                 &resolved_out_dir.join("check.capabilities.json"),
             )
-            .map_err(|err| {
+            .inspect_err(|err| {
                 write_tooling_failure_script_result_if_missing(
                     &resolved_script_result_path,
                     "tooling.run.failed",
-                    &err,
+                    err,
                     "tooling_error",
                     Some("run_script_over_transport".to_string()),
                 );
-                err
             })?;
 
             let stage = match script_result.stage {
@@ -2618,20 +2613,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 last_bundle_dir: script_result.last_bundle_dir.clone(),
             };
 
-            if result.stage.as_deref() == Some("failed") {
-                if let Some(dir) =
+            if result.stage.as_deref() == Some("failed")
+                && let Some(dir) =
                     wait_for_failure_dump_bundle(&resolved_out_dir, &result, timeout_ms, poll_ms)
-                {
-                    if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                        result.last_bundle_dir = Some(name.to_string());
-                    }
-                }
+                && let Some(name) = dir.file_name().and_then(|s| s.to_str())
+            {
+                result.last_bundle_dir = Some(name.to_string());
             }
             if exit_after_run {
                 let _ = touch(&resolved_exit_path);
             }
-            if result.stage.as_deref() == Some("passed") {
-                if check_stale_paint_test_id.is_some()
+            if result.stage.as_deref() == Some("passed")
+                && (check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
@@ -2703,7 +2696,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_keep_alive_reuse_min.is_some()
-                    || check_retained_vlist_keep_alive_budget.is_some()
+                    || check_retained_vlist_keep_alive_budget.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -2812,7 +2805,6 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         warmup_frames,
                     )?;
                 }
-            }
 
             if wants_pack {
                 let mut bundle_path = wait_for_bundle_json_from_script_result(
@@ -3157,16 +3149,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 if let Ok(s) = &summary
                     && s.stage.as_deref() == Some("failed")
-                {
-                    if let Some(dir) =
+                    && let Some(dir) =
                         wait_for_failure_dump_bundle(&resolved_out_dir, s, timeout_ms, poll_ms)
-                    {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            if let Ok(s) = summary.as_mut() {
-                                s.last_bundle_dir = Some(name.to_string());
-                            }
-                        }
-                    }
+                    && let Some(name) = dir.file_name().and_then(|s| s.to_str())
+                    && let Ok(s) = summary.as_mut()
+                {
+                    s.last_bundle_dir = Some(name.to_string());
                 }
 
                 if !reuse_process {
@@ -3229,83 +3217,76 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         }
 
                         let mut perf: Option<serde_json::Value> = None;
-                        if let Some(bundle_json) = bundle_json.as_ref() {
-                            if let Ok(report) = bundle_stats_from_path(
+                        if let Some(bundle_json) = bundle_json.as_ref()
+                            && let Ok(report) = bundle_stats_from_path(
                                 bundle_json,
                                 1,
                                 BundleStatsSort::Time,
                                 BundleStatsOptions { warmup_frames },
-                            ) {
-                                if let Some(top) = report.top.first() {
-                                    let total_us = top.total_time_us;
-                                    match &worst_perf {
-                                        Some((_idx, best_total, _frame))
-                                            if *best_total >= total_us => {}
-                                        _ => {
-                                            worst_perf = Some((run_index, total_us, top.frame_id));
-                                        }
-                                    }
-                                    perf = Some(serde_json::json!({
-                                        "top_total_time_us": top.total_time_us,
-                                        "top_layout_time_us": top.layout_time_us,
-                                        "top_layout_engine_solve_time_us": top.layout_engine_solve_time_us,
-                                        "frame_id": top.frame_id,
-                                    }));
+                            )
+                            && let Some(top) = report.top.first()
+                        {
+                            let total_us = top.total_time_us;
+                            match &worst_perf {
+                                Some((_idx, best_total, _frame)) if *best_total >= total_us => {}
+                                _ => {
+                                    worst_perf = Some((run_index, total_us, top.frame_id));
                                 }
                             }
+                            perf = Some(serde_json::json!({
+                                "top_total_time_us": top.total_time_us,
+                                "top_layout_time_us": top.layout_time_us,
+                                "top_layout_engine_solve_time_us": top.layout_engine_solve_time_us,
+                                "frame_id": top.frame_id,
+                            }));
                         }
 
                         let mut lint: Option<serde_json::Value> = None;
-                        if let Some(bundle_json) = bundle_json.as_ref() {
-                            if let Ok(report) = lint_bundle_from_path(
+                        if let Some(bundle_json) = bundle_json.as_ref()
+                            && let Ok(report) = lint_bundle_from_path(
                                 bundle_json,
                                 warmup_frames,
                                 LintOptions {
                                     all_test_ids_bounds: lint_all_test_ids_bounds,
                                     eps_px: lint_eps_px,
                                 },
-                            ) {
-                                let warning_issues = report
-                                    .payload
-                                    .get("warning_issues")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0);
-                                let counts_by_code = report.payload.get("counts_by_code").cloned();
-                                if report.error_issues > 0 {
-                                    lint_error_runs.push(run_index);
-                                }
-                                if let Some(serde_json::Value::Array(entries)) =
-                                    counts_by_code.as_ref()
-                                {
-                                    for entry in entries {
-                                        let Some(code) = entry.get("code").and_then(|v| v.as_str())
-                                        else {
-                                            continue;
-                                        };
-                                        let errors = entry
-                                            .get("errors")
-                                            .and_then(|v| v.as_u64())
-                                            .unwrap_or(0);
-                                        let warnings = entry
-                                            .get("warnings")
-                                            .and_then(|v| v.as_u64())
-                                            .unwrap_or(0);
-                                        if errors == 0 && warnings == 0 {
-                                            continue;
-                                        }
-                                        let entry = lint_counts_by_code
-                                            .entry(code.to_string())
-                                            .or_insert((0, 0));
-                                        entry.0 = entry.0.saturating_add(errors);
-                                        entry.1 = entry.1.saturating_add(warnings);
-                                    }
-                                }
-                                lint = Some(serde_json::json!({
-                                    "error_issues": report.error_issues,
-                                    "warning_issues": warning_issues,
-                                    "counts_by_code": counts_by_code,
-                                }));
+                            )
+                        {
+                            let warning_issues = report
+                                .payload
+                                .get("warning_issues")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0);
+                            let counts_by_code = report.payload.get("counts_by_code").cloned();
+                            if report.error_issues > 0 {
+                                lint_error_runs.push(run_index);
                             }
+                            if let Some(serde_json::Value::Array(entries)) = counts_by_code.as_ref()
+                            {
+                                for entry in entries {
+                                    let Some(code) = entry.get("code").and_then(|v| v.as_str())
+                                    else {
+                                        continue;
+                                    };
+                                    let errors =
+                                        entry.get("errors").and_then(|v| v.as_u64()).unwrap_or(0);
+                                    let warnings =
+                                        entry.get("warnings").and_then(|v| v.as_u64()).unwrap_or(0);
+                                    if errors == 0 && warnings == 0 {
+                                        continue;
+                                    }
+                                    let entry = lint_counts_by_code
+                                        .entry(code.to_string())
+                                        .or_insert((0, 0));
+                                    entry.0 = entry.0.saturating_add(errors);
+                                    entry.1 = entry.1.saturating_add(warnings);
+                                }
+                            }
+                            lint = Some(serde_json::json!({
+                                "error_issues": report.error_issues,
+                                "warning_issues": warning_issues,
+                                "counts_by_code": counts_by_code,
+                            }));
                         }
 
                         let mut compare_to_baseline: Option<serde_json::Value> = None;
@@ -3707,18 +3688,18 @@ See: `docs/tracy.md`.\n";
             let mut overall_error: Option<String> = None;
             let mut pack_items: Vec<ReproPackItem> = Vec::new();
 
-            if !required_caps.is_empty() {
-                if let Err(err) = gate_required_capabilities_with_script_result(
+            if !required_caps.is_empty()
+                && let Err(err) = gate_required_capabilities_with_script_result(
                     &capabilities_check_path,
                     &resolved_script_result_path,
                     &required_caps,
                     &available_caps,
                     "filesystem",
-                ) {
-                    overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
-                        .or_else(|| Some("capability.missing".to_string()));
-                    overall_error = Some(err);
-                }
+                )
+            {
+                overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
+                    .or_else(|| Some("capability.missing".to_string()));
+                overall_error = Some(err);
             }
 
             for (idx, src) in scripts.into_iter().enumerate() {
@@ -3798,17 +3779,16 @@ See: `docs/tracy.md`.\n";
                     last_bundle_dir: raw_result.last_bundle_dir.clone(),
                 };
 
-                if result.stage.as_deref() == Some("failed") {
-                    if let Some(dir) = wait_for_failure_dump_bundle(
+                if result.stage.as_deref() == Some("failed")
+                    && let Some(dir) = wait_for_failure_dump_bundle(
                         &resolved_out_dir,
                         &result,
                         timeout_ms,
                         poll_ms,
-                    ) {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            result.last_bundle_dir = Some(name.to_string());
-                        }
-                    }
+                    )
+                    && let Some(name) = dir.file_name().and_then(|s| s.to_str())
+                {
+                    result.last_bundle_dir = Some(name.to_string());
                 }
                 last_script_result = Some(result.clone());
 
@@ -5482,17 +5462,16 @@ See: `docs/tracy.md`.\n";
             for src in scripts.iter() {
                 for (key, value) in script_env_defaults(src) {
                     if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
+                        && prev != value
                     {
-                        if prev != value {
-                            suite_env_conflicts.push(format!(
-                                "{} wants {}={}, but another script requested {}={}",
-                                src.display(),
-                                key,
-                                value,
-                                key,
-                                prev
-                            ));
-                        }
+                        suite_env_conflicts.push(format!(
+                            "{} wants {}={}, but another script requested {}={}",
+                            src.display(),
+                            key,
+                            value,
+                            key,
+                            prev
+                        ));
                     }
                 }
             }
@@ -5762,15 +5741,14 @@ See: `docs/tracy.md`.\n";
                             timeout_ms,
                             poll_ms,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result(
                                 &resolved_script_result_path,
                                 "tooling.connect.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(script_key.clone()),
                             );
-                            err
                         })?;
                         &connected_fs_iter
                     };
@@ -5841,15 +5819,14 @@ See: `docs/tracy.md`.\n";
                         &resolved_script_result_path,
                         &resolved_out_dir.join("check.capabilities.json"),
                     )
-                    .map_err(|err| {
+                    .inspect_err(|err| {
                         write_tooling_failure_script_result_if_missing(
                             &resolved_script_result_path,
                             "tooling.run.failed",
-                            &err,
+                            err,
                             "tooling_error",
                             Some(script_key.clone()),
                         );
-                        err
                     })?;
 
                     let stage = match script_result.stage {
@@ -5915,12 +5892,12 @@ See: `docs/tracy.md`.\n";
                 if let Some(stage) = result.stage.as_deref() {
                     *suite_stage_counts.entry(stage.to_string()).or_default() += 1;
                 }
-                if let Some(code) = result.reason_code.as_deref() {
-                    if !code.trim().is_empty() {
-                        *suite_reason_code_counts
-                            .entry(code.to_string())
-                            .or_default() += 1;
-                    }
+                if let Some(code) = result.reason_code.as_deref()
+                    && !code.trim().is_empty()
+                {
+                    *suite_reason_code_counts
+                        .entry(code.to_string())
+                        .or_default() += 1;
                 }
 
                 let script_key = normalize_repo_relative_path(&workspace_root, &src);
@@ -7097,6 +7074,33 @@ See: `docs/tracy.md`.\n";
             }
             let reuse_process_per_script =
                 reuse_process && reuse_launch_per_script && scripts.len() > 1;
+            let use_devtools_ws = devtools_ws_url.is_some()
+                || devtools_token.is_some()
+                || devtools_session_id.is_some();
+            if use_devtools_ws && (launch.is_some() || reuse_launch) {
+                return Err(
+                    "--launch/--reuse-launch is not supported with --devtools-ws-url".to_string(),
+                );
+            }
+            let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
+                let ws_url = devtools_ws_url.clone().ok_or_else(|| {
+                    "missing --devtools-ws-url (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+                let token = devtools_token.clone().ok_or_else(|| {
+                    "missing --devtools-token (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+                Some(connect_devtools_ws_tooling(
+                    ws_url.as_str(),
+                    token.as_str(),
+                    devtools_session_id.as_deref(),
+                    timeout_ms,
+                    poll_ms,
+                )?)
+            } else {
+                None
+            };
             let perf_hint_gate_opts = parse_perf_hint_gate_options(
                 check_perf_hints,
                 &check_perf_hints_deny,
@@ -7141,6 +7145,8 @@ See: `docs/tracy.md`.\n";
             let mut child: Option<LaunchedDemo> = None;
             let launched_by_fretboard = reuse_launch && launch.is_some();
             let mut perf_launch_env = launch_env.clone();
+            std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
+            let perf_capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
             let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
             if let Some(name) = suite_name.as_deref() {
                 // Make the common UI gallery perf suites reproducible without requiring callers
@@ -7210,6 +7216,84 @@ See: `docs/tracy.md`.\n";
 
             let run_suite_aux_script_must_pass =
                 |src: &PathBuf, child: &mut Option<LaunchedDemo>| -> Result<(), String> {
+                    if use_devtools_ws {
+                        let connected = connected_ws.as_ref().ok_or_else(|| {
+                            "missing DevTools WS transport (this is a tooling bug)".to_string()
+                        })?;
+                        let script_key = normalize_repo_relative_path(&workspace_root, src);
+                        let script_json: serde_json::Value =
+                            serde_json::from_slice(&std::fs::read(src).map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.read_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(script_key.clone()),
+                                );
+                                err
+                            })?)
+                            .map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.parse_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(script_key.clone()),
+                                );
+                                err
+                            })?;
+                        let (result, _bundle_path) = run_script_over_transport(
+                            &resolved_out_dir,
+                            connected,
+                            script_json,
+                            false,
+                            false,
+                            None,
+                            None,
+                            timeout_ms,
+                            poll_ms,
+                            &resolved_script_result_path,
+                            &perf_capabilities_check_path,
+                        )
+                        .map_err(|err| {
+                            write_tooling_failure_script_result_if_missing(
+                                &resolved_script_result_path,
+                                "tooling.run.failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            err
+                        })?;
+
+                        match result.stage {
+                            fret_diag_protocol::UiScriptStageV1::Passed => return Ok(()),
+                            fret_diag_protocol::UiScriptStageV1::Failed => {
+                                eprintln!(
+                                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                    src.display(),
+                                    result.run_id,
+                                    result.step_index.unwrap_or(0),
+                                    result.reason.as_deref().unwrap_or("unknown"),
+                                    result.last_bundle_dir.as_deref().unwrap_or("")
+                                );
+                                stop_launched_demo(child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                            _ => {
+                                eprintln!(
+                                    "unexpected script stage for {}: {:?}",
+                                    src.display(),
+                                    result
+                                );
+                                stop_launched_demo(child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                        }
+                    }
+
                     if !reuse_process {
                         clear_script_result_files(
                             &resolved_script_result_path,
@@ -7228,19 +7312,16 @@ See: `docs/tracy.md`.\n";
                     );
                     if let Ok(summary) = &result
                         && summary.stage.as_deref() == Some("failed")
-                    {
-                        if let Some(dir) = wait_for_failure_dump_bundle(
+                        && let Some(dir) = wait_for_failure_dump_bundle(
                             &resolved_out_dir,
                             summary,
                             timeout_ms,
                             poll_ms,
-                        ) {
-                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                if let Ok(summary) = result.as_mut() {
-                                    summary.last_bundle_dir = Some(name.to_string());
-                                }
-                            }
-                        }
+                        )
+                        && let Some(name) = dir.file_name().and_then(|s| s.to_str())
+                        && let Ok(summary) = result.as_mut()
+                    {
+                        summary.last_bundle_dir = Some(name.to_string());
                     }
                     let result = match result {
                         Ok(v) => v,
@@ -7369,79 +7450,161 @@ See: `docs/tracy.md`.\n";
                         }
                     }
 
-                    let mut result = run_script_and_wait(
-                        &src,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    );
-                    if let Ok(summary) = &result
-                        && summary.stage.as_deref() == Some("failed")
-                    {
-                        if let Some(dir) = wait_for_failure_dump_bundle(
+                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                    let bundle_path: Option<PathBuf> = if use_devtools_ws {
+                        let connected = connected_ws.as_ref().ok_or_else(|| {
+                            "missing DevTools WS transport (this is a tooling bug)".to_string()
+                        })?;
+                        let script_json: serde_json::Value =
+                            serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.read_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(script_key.clone()),
+                                );
+                                err
+                            })?)
+                            .map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.parse_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(script_key.clone()),
+                                );
+                                err
+                            })?;
+                        let (result, bundle_path) = run_script_over_transport(
                             &resolved_out_dir,
-                            summary,
+                            connected,
+                            script_json,
+                            true,
+                            false,
+                            None,
+                            None,
                             timeout_ms,
                             poll_ms,
-                        ) {
-                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                if let Ok(summary) = result.as_mut() {
-                                    summary.last_bundle_dir = Some(name.to_string());
+                            &resolved_script_result_path,
+                            &perf_capabilities_check_path,
+                        )
+                        .map_err(|err| {
+                            write_tooling_failure_script_result_if_missing(
+                                &resolved_script_result_path,
+                                "tooling.run.failed",
+                                &err,
+                                "tooling_error",
+                                Some(script_key.clone()),
+                            );
+                            err
+                        })?;
+
+                        match result.stage {
+                            fret_diag_protocol::UiScriptStageV1::Passed => {}
+                            fret_diag_protocol::UiScriptStageV1::Failed => {
+                                eprintln!(
+                                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                    src.display(),
+                                    result.run_id,
+                                    result.step_index.unwrap_or(0),
+                                    result.reason.as_deref().unwrap_or("unknown"),
+                                    result.last_bundle_dir.as_deref().unwrap_or("")
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                            _ => {
+                                eprintln!(
+                                    "unexpected script stage for {}: {:?}",
+                                    src.display(),
+                                    result
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                        }
+
+                        bundle_path.map(|p| {
+                            let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
+                            let stable = run_dir.join("bundle.json");
+                            if stable.is_file() { stable } else { p }
+                        })
+                    } else {
+                        let mut result = run_script_and_wait(
+                            &src,
+                            &resolved_script_path,
+                            &resolved_script_trigger_path,
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                            timeout_ms,
+                            poll_ms,
+                        );
+                        if let Ok(summary) = &result
+                            && summary.stage.as_deref() == Some("failed")
+                        {
+                            if let Some(dir) = wait_for_failure_dump_bundle(
+                                &resolved_out_dir,
+                                summary,
+                                timeout_ms,
+                                poll_ms,
+                            ) {
+                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                    if let Ok(summary) = result.as_mut() {
+                                        summary.last_bundle_dir = Some(name.to_string());
+                                    }
                                 }
                             }
                         }
-                    }
-                    let result = match result {
-                        Ok(v) => v,
-                        Err(e) => {
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            return Err(e);
-                        }
-                    };
+                        let result = match result {
+                            Ok(v) => v,
+                            Err(e) => {
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                return Err(e);
+                            }
+                        };
 
-                    match result.stage.as_deref() {
-                        Some("passed") => {}
-                        Some("failed") => {
-                            eprintln!(
-                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                                src.display(),
-                                result.run_id,
-                                result.step_index.unwrap_or(0),
-                                result.reason.as_deref().unwrap_or("unknown"),
-                                result.last_bundle_dir.as_deref().unwrap_or("")
-                            );
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            std::process::exit(1);
+                        match result.stage.as_deref() {
+                            Some("passed") => {}
+                            Some("failed") => {
+                                eprintln!(
+                                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                    src.display(),
+                                    result.run_id,
+                                    result.step_index.unwrap_or(0),
+                                    result.reason.as_deref().unwrap_or("unknown"),
+                                    result.last_bundle_dir.as_deref().unwrap_or("")
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                            _ => {
+                                eprintln!(
+                                    "unexpected script stage for {}: {:?}",
+                                    src.display(),
+                                    result
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
                         }
-                        _ => {
-                            eprintln!(
-                                "unexpected script stage for {}: {:?}",
-                                src.display(),
-                                result
-                            );
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            std::process::exit(1);
+
+                        let bundle_dir = result
+                            .last_bundle_dir
+                            .as_deref()
+                            .filter(|s| !s.trim().is_empty())
+                            .map(PathBuf::from);
+
+                        match bundle_dir {
+                            Some(bundle_dir) => {
+                                Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
+                            }
+                            None => read_latest_pointer(&resolved_out_dir)
+                                .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                                .map(|path| resolve_bundle_json_path(path.as_path())),
                         }
-                    }
-
-                    let bundle_dir = result
-                        .last_bundle_dir
-                        .as_deref()
-                        .filter(|s| !s.trim().is_empty())
-                        .map(PathBuf::from);
-
-                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
-
-                    let bundle_path: Option<PathBuf> = match bundle_dir {
-                        Some(bundle_dir) => {
-                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
-                        }
-                        None => read_latest_pointer(&resolved_out_dir)
-                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                            .map(|path| resolve_bundle_json_path(path.as_path())),
                     };
 
                     if let Some(bundle_path) = bundle_path {
@@ -7461,14 +7624,12 @@ See: `docs/tracy.md`.\n";
                             )?;
                             report_warmup_frames = 0;
                         }
-                        if trace_chrome {
-                            if let Some(dir) = bundle_path.parent() {
-                                let trace_path = dir.join("trace.chrome.json");
-                                let _ = crate::trace::write_chrome_trace_from_bundle_path(
-                                    &bundle_path,
-                                    &trace_path,
-                                );
-                            }
+                        if trace_chrome && let Some(dir) = bundle_path.parent() {
+                            let trace_path = dir.join("trace.chrome.json");
+                            let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                                &bundle_path,
+                                &trace_path,
+                            );
                         }
                         if wants_perf_hints {
                             let triage = triage_json_from_stats(
@@ -8121,20 +8282,18 @@ See: `docs/tracy.md`.\n";
                             Some((prev_us, _, _)) if *prev_us >= top_total => {}
                             _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                         }
+                    } else if stats_json {
+                        perf_json_rows.push(serde_json::json!({
+                            "script": script_key.clone(),
+                            "sort": sort.as_str(),
+                            "error": "no_last_bundle_dir",
+                        }));
                     } else {
-                        if stats_json {
-                            perf_json_rows.push(serde_json::json!({
-                                "script": script_key.clone(),
-                                "sort": sort.as_str(),
-                                "error": "no_last_bundle_dir",
-                            }));
-                        } else {
-                            println!(
-                                "PERF {} sort={} (no last_bundle_dir recorded)",
-                                src.display(),
-                                sort.as_str()
-                            );
-                        }
+                        println!(
+                            "PERF {} sort={} (no last_bundle_dir recorded)",
+                            src.display(),
+                            sort.as_str()
+                        );
                     }
 
                     if !reuse_process {
@@ -8199,77 +8358,160 @@ See: `docs/tracy.md`.\n";
                         }
                     }
 
-                    let mut result = run_script_and_wait(
-                        &src,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    );
-                    if let Ok(summary) = &result
-                        && summary.stage.as_deref() == Some("failed")
-                    {
-                        if let Some(dir) = wait_for_failure_dump_bundle(
+                    let bundle_path: Option<PathBuf> = if use_devtools_ws {
+                        let connected = connected_ws.as_ref().ok_or_else(|| {
+                            "missing DevTools WS transport (this is a tooling bug)".to_string()
+                        })?;
+                        let script_json: serde_json::Value =
+                            serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.read_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(src.display().to_string()),
+                                );
+                                err
+                            })?)
+                            .map_err(|e| {
+                                let err = e.to_string();
+                                write_tooling_failure_script_result(
+                                    &resolved_script_result_path,
+                                    "tooling.script.parse_failed",
+                                    &err,
+                                    "tooling_error",
+                                    Some(src.display().to_string()),
+                                );
+                                err
+                            })?;
+                        let (result, bundle_path) = run_script_over_transport(
                             &resolved_out_dir,
-                            summary,
+                            connected,
+                            script_json,
+                            true,
+                            false,
+                            None,
+                            None,
                             timeout_ms,
                             poll_ms,
-                        ) {
-                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                if let Ok(summary) = result.as_mut() {
-                                    summary.last_bundle_dir = Some(name.to_string());
+                            &resolved_script_result_path,
+                            &perf_capabilities_check_path,
+                        )
+                        .map_err(|err| {
+                            write_tooling_failure_script_result_if_missing(
+                                &resolved_script_result_path,
+                                "tooling.run.failed",
+                                &err,
+                                "tooling_error",
+                                Some(src.display().to_string()),
+                            );
+                            err
+                        })?;
+
+                        match result.stage {
+                            fret_diag_protocol::UiScriptStageV1::Passed => {}
+                            fret_diag_protocol::UiScriptStageV1::Failed => {
+                                eprintln!(
+                                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                    src.display(),
+                                    result.run_id,
+                                    result.step_index.unwrap_or(0),
+                                    result.reason.as_deref().unwrap_or("unknown"),
+                                    result.last_bundle_dir.as_deref().unwrap_or("")
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                            _ => {
+                                eprintln!(
+                                    "unexpected script stage for {}: {:?}",
+                                    src.display(),
+                                    result
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                        }
+
+                        bundle_path.map(|p| {
+                            let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
+                            let stable = run_dir.join("bundle.json");
+                            if stable.is_file() { stable } else { p }
+                        })
+                    } else {
+                        let mut result = run_script_and_wait(
+                            &src,
+                            &resolved_script_path,
+                            &resolved_script_trigger_path,
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                            timeout_ms,
+                            poll_ms,
+                        );
+                        if let Ok(summary) = &result
+                            && summary.stage.as_deref() == Some("failed")
+                        {
+                            if let Some(dir) = wait_for_failure_dump_bundle(
+                                &resolved_out_dir,
+                                summary,
+                                timeout_ms,
+                                poll_ms,
+                            ) {
+                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                    if let Ok(summary) = result.as_mut() {
+                                        summary.last_bundle_dir = Some(name.to_string());
+                                    }
                                 }
                             }
                         }
-                    }
-                    let result = match result {
-                        Ok(v) => v,
-                        Err(e) => {
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            return Err(e);
-                        }
-                    };
+                        let result = match result {
+                            Ok(v) => v,
+                            Err(e) => {
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                return Err(e);
+                            }
+                        };
 
-                    match result.stage.as_deref() {
-                        Some("passed") => {}
-                        Some("failed") => {
-                            eprintln!(
-                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                                src.display(),
-                                result.run_id,
-                                result.step_index.unwrap_or(0),
-                                result.reason.as_deref().unwrap_or("unknown"),
-                                result.last_bundle_dir.as_deref().unwrap_or("")
-                            );
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            std::process::exit(1);
+                        match result.stage.as_deref() {
+                            Some("passed") => {}
+                            Some("failed") => {
+                                eprintln!(
+                                    "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                    src.display(),
+                                    result.run_id,
+                                    result.step_index.unwrap_or(0),
+                                    result.reason.as_deref().unwrap_or("unknown"),
+                                    result.last_bundle_dir.as_deref().unwrap_or("")
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
+                            _ => {
+                                eprintln!(
+                                    "unexpected script stage for {}: {:?}",
+                                    src.display(),
+                                    result
+                                );
+                                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                                std::process::exit(1);
+                            }
                         }
-                        _ => {
-                            eprintln!(
-                                "unexpected script stage for {}: {:?}",
-                                src.display(),
-                                result
-                            );
-                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                            std::process::exit(1);
-                        }
-                    }
 
-                    let bundle_dir = result
-                        .last_bundle_dir
-                        .as_deref()
-                        .filter(|s| !s.trim().is_empty())
-                        .map(PathBuf::from);
+                        let bundle_dir = result
+                            .last_bundle_dir
+                            .as_deref()
+                            .filter(|s| !s.trim().is_empty())
+                            .map(PathBuf::from);
 
-                    let bundle_path: Option<PathBuf> = match bundle_dir {
-                        Some(bundle_dir) => {
-                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
+                        match bundle_dir {
+                            Some(bundle_dir) => {
+                                Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
+                            }
+                            None => read_latest_pointer(&resolved_out_dir)
+                                .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                                .map(|path| resolve_bundle_json_path(path.as_path())),
                         }
-                        None => read_latest_pointer(&resolved_out_dir)
-                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                            .map(|path| resolve_bundle_json_path(path.as_path())),
                     };
 
                     let Some(bundle_path) = bundle_path else {
@@ -8306,14 +8548,12 @@ See: `docs/tracy.md`.\n";
                         )?;
                         report_warmup_frames = 0;
                     }
-                    if trace_chrome {
-                        if let Some(dir) = bundle_path.parent() {
-                            let trace_path = dir.join("trace.chrome.json");
-                            let _ = crate::trace::write_chrome_trace_from_bundle_path(
-                                &bundle_path,
-                                &trace_path,
-                            );
-                        }
+                    if trace_chrome && let Some(dir) = bundle_path.parent() {
+                        let trace_path = dir.join("trace.chrome.json");
+                        let _ = crate::trace::write_chrome_trace_from_bundle_path(
+                            &bundle_path,
+                            &trace_path,
+                        );
                     }
 
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
@@ -10221,6 +10461,7 @@ pub(crate) fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
     dir.join("check.lint.json")
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
     out_path: &Path,
@@ -10584,6 +10825,45 @@ pub(crate) fn triage_json_from_stats(
                     "renderer_text_atlas_evicted_pages": worst.renderer_text_atlas_evicted_pages,
                     "renderer_svg_raster_budget_evictions": worst.renderer_svg_raster_budget_evictions,
                     "renderer_intermediate_pool_evictions": worst.renderer_intermediate_pool_evictions,
+                }
+            }));
+        }
+
+        // renderer.external_import_ingest_fallbacks
+        //
+        // This is intentionally an info-level hint. Many targets (notably wasm/WebGPU today) will
+        // legitimately fall back from a requested zero/low-copy strategy to a copy-based path.
+        // The purpose is to make this visible in triage/perf bundles so baselines can be
+        // interpreted correctly and regressions can be gated when desired.
+        if worst.renderer_render_target_updates_ingest_fallbacks > 0 {
+            out.push(json!({
+                "code": "renderer.external_import_ingest_fallbacks",
+                "severity": "info",
+                "message": "Imported render target ingestion fell back from the requested strategy (requested != effective).",
+                "evidence": {
+                    "render_target_updates_ingest_fallbacks": worst.renderer_render_target_updates_ingest_fallbacks,
+                    "render_target_updates_requested": {
+                        "unknown": worst.renderer_render_target_updates_requested_ingest_unknown,
+                        "owned": worst.renderer_render_target_updates_requested_ingest_owned,
+                        "external_zero_copy": worst.renderer_render_target_updates_requested_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_render_target_updates_requested_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_render_target_updates_requested_ingest_cpu_upload,
+                    },
+                    "render_target_updates_effective": {
+                        "unknown": worst.renderer_render_target_updates_ingest_unknown,
+                        "owned": worst.renderer_render_target_updates_ingest_owned,
+                        "external_zero_copy": worst.renderer_render_target_updates_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_render_target_updates_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_render_target_updates_ingest_cpu_upload,
+                    },
+                    "viewport_draw_calls": worst.renderer_viewport_draw_calls,
+                    "viewport_draw_calls_by_ingest": {
+                        "unknown": worst.renderer_viewport_draw_calls_ingest_unknown,
+                        "owned": worst.renderer_viewport_draw_calls_ingest_owned,
+                        "external_zero_copy": worst.renderer_viewport_draw_calls_ingest_external_zero_copy,
+                        "gpu_copy": worst.renderer_viewport_draw_calls_ingest_gpu_copy,
+                        "cpu_upload": worst.renderer_viewport_draw_calls_ingest_cpu_upload,
+                    },
                 }
             }));
         }
@@ -11080,6 +11360,7 @@ fn zip_safe_component(s: &str) -> String {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn pack_repro_zip_multi(
     out_path: &Path,
     include_root_artifacts: bool,
@@ -11423,15 +11704,14 @@ fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
         .parent()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| dir.to_path_buf());
-    if let Some(parent) = script_result_path.parent() {
-        if parent
+    if let Some(parent) = script_result_path.parent()
+        && parent
             .file_name()
             .and_then(|s| s.to_str())
             .map(|s| s == parsed.run_id.to_string())
             .unwrap_or(false)
-        {
-            out_dir = parent.parent().unwrap_or(parent).to_path_buf();
-        }
+    {
+        out_dir = parent.parent().unwrap_or(parent).to_path_buf();
     }
 
     mark_existing_script_result_tooling_failure(
@@ -11560,7 +11840,7 @@ fn wait_for_bundle_json_from_script_result(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Option<PathBuf> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
         let run_id_bundle_path = run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
         if run_id_bundle_path.is_file() {
@@ -11591,7 +11871,7 @@ fn wait_for_bundle_json_in_dir(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Option<PathBuf> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     let bundle_path = resolve_bundle_json_path(bundle_dir);
     while Instant::now() < deadline {
         if bundle_path.is_file() {
@@ -11791,8 +12071,8 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     ]
 }
 
-fn docking_arbitration_suite_scripts() -> [&'static str; 12] {
-    [
+fn docking_arbitration_suite_scripts() -> Vec<&'static str> {
+    let mut scripts = vec![
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
         "tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json",
@@ -11804,8 +12084,21 @@ fn docking_arbitration_suite_scripts() -> [&'static str; 12] {
         "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
         "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
         "tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json",
         "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size.json",
-    ]
+    ];
+
+    #[cfg(target_os = "windows")]
+    {
+        scripts.push(
+            "tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+        );
+        scripts.push(
+            "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json",
+        );
+    }
+
+    scripts
 }
 
 fn docking_arbitration_script_default_gates(
@@ -11910,9 +12203,7 @@ fn ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(script: &
 }
 
 fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static str> {
-    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
-        return None;
-    };
+    let name = script.file_name().and_then(|v| v.to_str())?;
 
     match name {
         "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json" => {
@@ -11932,9 +12223,7 @@ fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static st
 }
 
 fn ui_gallery_script_wheel_scroll_hit_changes_test_id(script: &Path) -> Option<&'static str> {
-    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
-        return None;
-    };
+    let name = script.file_name().and_then(|v| v.to_str())?;
 
     match name {
         "ui-gallery-select-wheel-scroll.json" => Some("select-scroll-viewport"),
@@ -13159,10 +13448,10 @@ fn wait_for_devtools_bundle_dumped(
             {
                 continue;
             }
-            if let Some(expected) = expected_request_id {
-                if msg.request_id != Some(expected) {
-                    continue;
-                }
+            if let Some(expected) = expected_request_id
+                && msg.request_id != Some(expected)
+            {
+                continue;
             }
             let Ok(dumped) = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload) else {
                 continue;
@@ -13370,16 +13659,41 @@ fn devtools_select_session_id(
         ));
     }
 
-    if list.sessions.len() == 1 {
-        return Ok(list.sessions[0].session_id.clone());
-    }
-    if list.sessions.is_empty() {
-        return Err("no DevTools sessions available (is the app connected?)".to_string());
-    }
-
-    let web_apps = list
+    // DevTools servers include the caller (tooling) in `session.list`. When the target app is not
+    // connected (or isn't configured to connect), tooling-only sessions would otherwise "select"
+    // themselves and later hang waiting for script/bundle responses. Prefer selecting a non-tooling
+    // app session by default.
+    let non_tooling = list
         .sessions
         .iter()
+        .filter(|s| s.client_kind != "tooling")
+        .collect::<Vec<_>>();
+    let sessions = if non_tooling.is_empty() {
+        // Preserve the legacy error message while surfacing enough context to debug.
+        let known = list
+            .sessions
+            .iter()
+            .map(|s| format!("{}({})", s.session_id, s.client_kind))
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(if known.is_empty() {
+            "no DevTools sessions available (is the app connected?)".to_string()
+        } else {
+            format!(
+                "no DevTools app sessions available (is the app connected?) (sessions: {known})"
+            )
+        });
+    } else {
+        non_tooling
+    };
+
+    if sessions.len() == 1 {
+        return Ok(sessions[0].session_id.clone());
+    }
+
+    let web_apps = sessions
+        .iter()
+        .copied()
         .filter(|s| s.client_kind == "web_app")
         .collect::<Vec<_>>();
     if web_apps.len() == 1 {
@@ -13517,6 +13831,7 @@ fn connect_filesystem_tooling(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_script_over_transport(
     out_dir: &Path,
     connected: &ConnectedToolingTransport,
@@ -13537,7 +13852,7 @@ fn run_script_over_transport(
     }
 
     fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
-        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        let baseline_race_ms = poll_ms.saturating_mul(4).clamp(250, 5_000);
         baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
     }
 
@@ -13595,6 +13910,9 @@ fn run_script_over_transport(
 
             // Transport-agnostic streaming hook: persist incremental script progress so external
             // tooling can observe long runs without waiting for completion.
+            // Note: `script_result_path` is a tooling output file (not the in-app filesystem
+            // transport `runtime.script.result.json`), so it is safe to update it even when the
+            // underlying transport is filesystem-based.
             let _ = write_json_value(
                 script_result_path,
                 &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
@@ -13610,13 +13928,20 @@ fn run_script_over_transport(
         }
 
         if Instant::now() >= deadline {
+            let ws_hint = match connected.devtools.client().kind() {
+                crate::transport::DiagTransportKind::WebSocket => Some(
+                    "devtools_ws_hint=keep the app actively rendering (web: tab must be visible; background tabs may throttle rAF) and ensure the page URL includes fret_devtools_ws + fret_devtools_token",
+                ),
+                _ => None,
+            };
             let note = format!(
-                "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?}",
+                "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?} {}",
                 connected.source,
                 prev_run_id,
                 target_run_id,
                 last_seen_stage.unwrap_or("none"),
-                last_seen_step_index
+                last_seen_step_index,
+                ws_hint.unwrap_or(""),
             );
             write_tooling_failure_script_result_if_missing(
                 script_result_path,
@@ -13625,7 +13950,10 @@ fn run_script_over_transport(
                 "tooling_timeout",
                 Some(note),
             );
-            return Err("timeout waiting for script result".to_string());
+            return Err(
+                "timeout waiting for script result (DevTools WS: keep the app actively rendering; web tabs may be throttled in the background)"
+                    .to_string(),
+            );
         }
 
         if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
@@ -13668,37 +13996,62 @@ fn run_script_over_transport(
             }
             None
         };
-        let dumped = match wait_for_devtools_bundle_dumped(
-            &connected.devtools,
-            &connected.selected_session_id,
-            expected_request_id,
-            timeout_ms,
-            poll_ms,
-        ) {
-            Ok(v) => v,
-            Err(err) => {
-                let reason_code = if err.contains("timed out waiting") {
-                    "timeout.tooling.bundle_dump"
-                } else {
-                    "tooling.bundle_dump.failed"
-                };
-                push_tooling_event_log_entry(
-                    &mut result,
-                    "tooling_bundle_dump_failed",
-                    Some(err.clone()),
-                );
-                if matches!(result.stage, UiScriptStageV1::Passed) {
-                    result.stage = UiScriptStageV1::Failed;
-                    result.reason_code = Some(reason_code.to_string());
-                    result.reason = Some(err.clone());
+        let dumped = (|| {
+            // Filesystem transport can miss the first `trigger.touch` edge if the app has not yet
+            // established its baseline stamp (similar to the `script.touch` baseline race).
+            //
+            // Mitigate by doing a short initial wait and re-touching once before consuming the
+            // full timeout budget.
+            if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
+                && expected_request_id.is_none()
+            {
+                let short_ms = timeout_ms.min(2_000);
+                match wait_for_devtools_bundle_dumped(
+                    &connected.devtools,
+                    &connected.selected_session_id,
+                    None,
+                    short_ms,
+                    poll_ms,
+                ) {
+                    Ok(v) => return Ok(v),
+                    Err(err) if err.contains("timed out waiting") => {
+                        // Re-touch and fall through to the full wait below.
+                        connected.devtools.bundle_dump(None, bundle_label);
+                    }
+                    Err(err) => return Err(err),
                 }
-                let _ = write_json_value(
-                    script_result_path,
-                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                );
-                return Err(err);
             }
-        };
+
+            wait_for_devtools_bundle_dumped(
+                &connected.devtools,
+                &connected.selected_session_id,
+                expected_request_id,
+                timeout_ms,
+                poll_ms,
+            )
+        })()
+        .map_err(|err| {
+            let reason_code = if err.contains("timed out waiting") {
+                "timeout.tooling.bundle_dump"
+            } else {
+                "tooling.bundle_dump.failed"
+            };
+            push_tooling_event_log_entry(
+                &mut result,
+                "tooling_bundle_dump_failed",
+                Some(err.clone()),
+            );
+            if matches!(result.stage, UiScriptStageV1::Passed) {
+                result.stage = UiScriptStageV1::Failed;
+                result.reason_code = Some(reason_code.to_string());
+                result.reason = Some(err.clone());
+            }
+            let _ = write_json_value(
+                script_result_path,
+                &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            err
+        })?;
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
             Ok(v) => v,
@@ -13792,6 +14145,7 @@ fn dump_bundle_over_transport(
     materialize_devtools_bundle_dumped(out_dir, &dumped)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_script_suite_collect_bundles(
     scripts: &[PathBuf],
     paths: &ResolvedScriptPaths,
@@ -13860,16 +14214,12 @@ fn run_script_suite_collect_bundles(
         );
         if let Ok(summary) = &result
             && summary.stage.as_deref() == Some("failed")
-        {
-            if let Some(dir) =
+            && let Some(dir) =
                 wait_for_failure_dump_bundle(&paths.out_dir, summary, timeout_ms, poll_ms)
-            {
-                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                    if let Ok(summary) = result.as_mut() {
-                        summary.last_bundle_dir = Some(name.to_string());
-                    }
-                }
-            }
+            && let Some(name) = dir.file_name().and_then(|s| s.to_str())
+            && let Ok(summary) = result.as_mut()
+        {
+            summary.last_bundle_dir = Some(name.to_string());
         }
         let result = result?;
         if result.stage.as_deref() != Some("passed") {
@@ -13943,6 +14293,7 @@ fn run_script_suite_collect_bundles(
     Ok(bundle_paths)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_post_run_checks(
     bundle_path: &Path,
     out_dir: &Path,
@@ -15559,11 +15910,11 @@ mod tests {
         let deadline = Instant::now() + Duration::from_secs(2);
         let mut saw_running = false;
         while Instant::now() < deadline {
-            if let Some(v) = crate::util::read_json_value(&tool_script_result_path) {
-                if v.get("stage").and_then(|v| v.as_str()) == Some("running") {
-                    saw_running = true;
-                    break;
-                }
+            if let Some(v) = crate::util::read_json_value(&tool_script_result_path)
+                && v.get("stage").and_then(|v| v.as_str()) == Some("running")
+            {
+                saw_running = true;
+                break;
             }
             std::thread::sleep(Duration::from_millis(5));
         }
@@ -19686,11 +20037,10 @@ mod tests {
 
         let v = read_json_value(&out_dir.join("check.redraw_hitches.json")).unwrap();
         let failures = v.get("failures").and_then(|v| v.as_array()).unwrap();
-        assert_eq!(
+        assert!(
             failures
                 .iter()
-                .any(|f| f.get("kind").and_then(|v| v.as_str()) == Some("max_total_ms")),
-            true
+                .any(|f| f.get("kind").and_then(|v| v.as_str()) == Some("max_total_ms"))
         );
     }
 
@@ -21234,6 +21584,20 @@ mod tests {
         };
         let err = devtools_select_session_id(&list, None).unwrap_err();
         assert!(err.contains("multiple DevTools sessions available"));
+    }
+
+    #[test]
+    fn devtools_select_session_id_rejects_tooling_only_sessions() {
+        let list = DevtoolsSessionListV1 {
+            sessions: vec![DevtoolsSessionDescriptorV1 {
+                session_id: "s-tooling".to_string(),
+                client_kind: "tooling".to_string(),
+                client_version: "1".to_string(),
+                capabilities: Vec::new(),
+            }],
+        };
+        let err = devtools_select_session_id(&list, None).unwrap_err();
+        assert!(err.contains("no DevTools app sessions available"));
     }
 
     #[test]

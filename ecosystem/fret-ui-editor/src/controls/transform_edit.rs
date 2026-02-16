@@ -9,7 +9,7 @@ use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
@@ -340,6 +340,15 @@ fn section_row<H: UiHost>(
         .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted_foreground"))
         .unwrap_or_else(|| theme.color_token("foreground"));
+    let badge_bg = theme
+        .color_by_key("muted")
+        .or_else(|| theme.color_by_key("component.card.bg"))
+        .unwrap_or_else(|| theme.color_token("background"));
+    let badge_border = theme
+        .color_by_key("border")
+        .or_else(|| theme.color_by_key("component.card.border"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+    let badge_w = Px(density.row_height.0.max(density.hit_thickness.0));
 
     cx.flex(
         FlexProps {
@@ -364,12 +373,16 @@ fn section_row<H: UiHost>(
                 ContainerProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
+                            width: Length::Px(badge_w),
                             height: Length::Px(density.row_height),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
+                    background: Some(badge_bg),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(badge_border),
+                    corner_radii: Corners::all(Px(4.0)),
                     ..Default::default()
                 },
                 move |cx| {
@@ -384,7 +397,8 @@ fn section_row<H: UiHost>(
                         },
                         text: Arc::from(short),
                         style: Some(TextStyle {
-                            size: Px(10.0),
+                            size: Px(11.0),
+                            weight: FontWeight::SEMIBOLD,
                             line_height: Some(density.row_height),
                             ..Default::default()
                         }),
@@ -440,7 +454,7 @@ fn section_row<H: UiHost>(
                                     },
                                     text: Arc::from("Link"),
                                     style: Some(TextStyle {
-                                        size: Px(10.0),
+                                        size: Px(11.0),
                                         line_height: Some(density.row_height),
                                         ..Default::default()
                                     }),
@@ -502,8 +516,9 @@ fn section_col<H: UiHost>(
                     },
                     text: Arc::from(label),
                     style: Some(TextStyle {
-                        size: Px(10.0),
-                        line_height: Some(Px(12.0)),
+                        size: Px(11.0),
+                        weight: FontWeight::SEMIBOLD,
+                        line_height: Some(Px(14.0)),
                         ..Default::default()
                     }),
                     color: Some(label_fg),

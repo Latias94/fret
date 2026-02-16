@@ -655,7 +655,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 order: DrawOrder(20_901),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: text_color.into(),
+                paint: (text_color).into(),
             });
         }
 
@@ -693,7 +693,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 order: DrawOrder(20_902),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: text_color.into(),
+                paint: (text_color).into(),
             });
         }
 
@@ -735,7 +735,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         order: DrawOrder(20_902),
                         text: id,
                         origin: Point::new(Px(tx), Px(ty)),
-                        paint: text_color.into(),
+                        paint: (text_color).into(),
                     });
                 };
 
@@ -769,7 +769,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 order: DrawOrder(20_902),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: text_color.into(),
+                paint: (text_color).into(),
             });
         }
     }

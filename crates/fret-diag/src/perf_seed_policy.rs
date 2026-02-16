@@ -36,6 +36,7 @@ impl std::str::FromStr for PerfBaselineSeed {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[allow(clippy::enum_variant_names)]
 pub(crate) enum PerfSeedMetric {
     TopTotalTimeUs,
     TopLayoutTimeUs,
@@ -505,7 +506,7 @@ mod tests {
             &workspace_root,
             Some("extras-marquee-steady"),
             &scripts,
-            &[preset_path.clone()],
+            std::slice::from_ref(&preset_path),
             &[],
         )
         .unwrap();

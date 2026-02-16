@@ -10,7 +10,7 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed (workstream note; not an ADR)  
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ## Summary
 
@@ -181,6 +181,7 @@ Suggested v1 key families:
 - `editor.slider.*` (track height, thumb size)
 - `editor.axis.*` (axis label colors for vec/transform controls)
 - `editor.color.*` (swatch size, popup padding)
+- `editor.vec.*` (responsive vec layout)
 
 ### Minimal v1 token table (proposed)
 
@@ -202,8 +203,11 @@ Notes:
 | `editor.numeric.scrub_fast_multiplier` | metric | Alt fast mode multiplier | > 1.0 |
 | `editor.numeric.scrub_drag_threshold` | metric | Minimum drag distance (px) before scrubbing starts | small (2–6px) |
 | `editor.numeric.error_fg` | color | Numeric input validation/error foreground | near `destructive` |
+| `editor.numeric.error_border` | color | Numeric input error-state frame border | near `destructive` |
+| `editor.numeric.error_bg` | color | Numeric input error-state frame background | subtle, opaque |
 | `editor.property.column_gap` | metric | Label/value column gap | small |
 | `editor.property.group_header_height` | metric | Collapsible group header height | row_height-ish |
+| `editor.property.auto_stack_below` | metric | Stack property row label/value vertically below this width | tuned per inspector width |
 | `editor.checkbox.size` | metric | Checkbox visual square size (inside hit target) | ~16px |
 | `editor.checkbox.radius` | metric | Checkbox corner radius | small |
 | `editor.enum_select.max_list_height` | metric | Max height for enum select list viewport | medium |
@@ -211,6 +215,7 @@ Notes:
 | `editor.axis.y_color` | color | Axis label color (Y) | green-ish |
 | `editor.axis.z_color` | color | Axis label color (Z) | blue-ish |
 | `editor.axis.w_color` | color | Axis label color (W) | muted |
+| `editor.vec.auto_stack_below` | metric | Stack vec axes vertically below this width | tuned per inspector width |
 | `editor.color.swatch_size` | metric | Color swatch square size | icon_size-ish |
 | `editor.color.popup_padding` | metric | Picker popup padding | small/medium |
 | `editor.slider.track_height` | metric | Slider track thickness | small (3–6px) |
@@ -241,8 +246,11 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   `test_id` is for diagnostics/automation and must not be treated as widget identity.
   This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
   (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).
-- **Visual cohesion**: editor controls are still missing a single, shared “widget visuals” resolver (hover/active/disabled)
-  comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`. Without this, chrome and density drift across controls.
+- **Visual cohesion**: we now have early convergence points (`EditorStyle`, `EditorWidgetVisuals`, and joined input-group
+  primitives). Text inputs now drive hover and a lightweight pressed/active visual via `HoverRegion` + `PointerRegion`,
+  but hover/active/disabled visuals are not yet
+  consistently resolved across all controls (and some controls still rely on ad-hoc capture/hover plumbing). Keep
+  converging toward a single “widget visuals” resolver comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`.
 
 ## Interaction contracts (v1)
 

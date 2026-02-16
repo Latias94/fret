@@ -1,6 +1,7 @@
 use super::super::state::{EncodeState, apply_transform_px, bounds_of_quad_points};
 use super::super::*;
 
+use super::paint::{PaintMaterialPolicy, paint_to_gpu};
 use crate::text::{GlyphQuadKind, TextDecorationKind};
 use fret_core::{Corners, Edges};
 
@@ -47,6 +48,13 @@ pub(in super::super) fn encode_text(
                 }
                 g.stops[n - 1].color
             }
+            Paint::SweepGradient(g) => {
+                let n = usize::from(g.stop_count).clamp(0, MAX_STOPS);
+                if n == 0 {
+                    return Color::TRANSPARENT;
+                }
+                g.stops[n - 1].color
+            }
             Paint::Material { params, .. } => {
                 let base = params.vec4s[0];
                 Color {
@@ -57,121 +65,6 @@ pub(in super::super) fn encode_text(
                 }
             }
         }
-    }
-
-    fn mul_alpha(color: Color, opacity: f32) -> Color {
-        let mut c = color;
-        c.a = (c.a * opacity).clamp(0.0, 1.0);
-        c
-    }
-
-    fn tile_mode_to_u32(m: fret_core::scene::TileMode) -> u32 {
-        match m {
-            fret_core::scene::TileMode::Clamp => 0,
-            fret_core::scene::TileMode::Repeat => 1,
-            fret_core::scene::TileMode::Mirror => 2,
-        }
-    }
-
-    fn color_space_to_u32(c: fret_core::scene::ColorSpace) -> u32 {
-        match c {
-            fret_core::scene::ColorSpace::Srgb => 0,
-            fret_core::scene::ColorSpace::Oklab => 1,
-        }
-    }
-
-    fn paint_to_gpu(p: fret_core::scene::Paint, opacity: f32, scale_factor: f32) -> PaintGpu {
-        use fret_core::scene::{MAX_STOPS, Paint};
-
-        let mut out = PaintGpu {
-            kind: 0,
-            tile_mode: 0,
-            color_space: 0,
-            stop_count: 0,
-            params0: [0.0; 4],
-            params1: [0.0; 4],
-            params2: [0.0; 4],
-            params3: [0.0; 4],
-            stop_colors: [[0.0; 4]; MAX_STOPS],
-            stop_offsets0: [0.0; 4],
-            stop_offsets1: [0.0; 4],
-        };
-
-        // v1: text paint supports solid + gradients. Material is deterministically degraded to
-        // a solid base color (params.vec4s[0]).
-        let p = match p {
-            Paint::Material { params, .. } => {
-                let base = params.vec4s[0];
-                Paint::Solid(Color {
-                    r: base[0],
-                    g: base[1],
-                    b: base[2],
-                    a: base[3],
-                })
-            }
-            other => other,
-        };
-
-        match p {
-            Paint::Solid(c) => {
-                let c = mul_alpha(c, opacity);
-                out.kind = 0;
-                out.params0 = color_to_linear_rgba_premul(c);
-            }
-            Paint::LinearGradient(g) => {
-                out.kind = 1;
-                out.tile_mode = tile_mode_to_u32(g.tile_mode);
-                out.color_space = color_space_to_u32(g.color_space);
-                out.stop_count = u32::from(g.stop_count);
-                out.params0 = [
-                    g.start.x.0 * scale_factor,
-                    g.start.y.0 * scale_factor,
-                    g.end.x.0 * scale_factor,
-                    g.end.y.0 * scale_factor,
-                ];
-
-                let n = usize::from(g.stop_count).min(MAX_STOPS);
-                for i in 0..n {
-                    let stop = g.stops[i];
-                    let c = mul_alpha(stop.color, opacity);
-                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
-                    let offset = stop.offset.clamp(0.0, 1.0);
-                    if i < 4 {
-                        out.stop_offsets0[i] = offset;
-                    } else {
-                        out.stop_offsets1[i - 4] = offset;
-                    }
-                }
-            }
-            Paint::RadialGradient(g) => {
-                out.kind = 2;
-                out.tile_mode = tile_mode_to_u32(g.tile_mode);
-                out.color_space = color_space_to_u32(g.color_space);
-                out.stop_count = u32::from(g.stop_count);
-                out.params0 = [
-                    g.center.x.0 * scale_factor,
-                    g.center.y.0 * scale_factor,
-                    g.radius.width.0 * scale_factor,
-                    g.radius.height.0 * scale_factor,
-                ];
-
-                let n = usize::from(g.stop_count).min(MAX_STOPS);
-                for i in 0..n {
-                    let stop = g.stops[i];
-                    let c = mul_alpha(stop.color, opacity);
-                    out.stop_colors[i] = color_to_linear_rgba_premul(c);
-                    let offset = stop.offset.clamp(0.0, 1.0);
-                    if i < 4 {
-                        out.stop_offsets0[i] = offset;
-                    } else {
-                        out.stop_offsets1[i - 4] = offset;
-                    }
-                }
-            }
-            Paint::Material { .. } => {}
-        }
-
-        out
     }
 
     fn paint_is_visible(p: &PaintGpu) -> bool {
@@ -237,7 +130,14 @@ pub(in super::super) fn encode_text(
         state.flush_quad_batch();
     }
 
-    let text_paint = paint_to_gpu(paint, group_opacity, state.scale_factor);
+    let text_paint = paint_to_gpu(
+        renderer,
+        state,
+        paint,
+        group_opacity,
+        state.scale_factor,
+        PaintMaterialPolicy::DegradeToSolidBase,
+    );
     let text_paint_index = state.text_paints.len() as u32;
     state.text_paints.push(text_paint);
 

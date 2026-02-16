@@ -21,6 +21,8 @@ pub(super) struct DockTabsDragPayload {
     pub(super) active: usize,
     pub(super) grab_offset: Point,
     pub(super) start_tick: TickId,
+    pub(super) tear_off_requested: bool,
+    pub(super) tear_off_oob_start_frame: Option<FrameId>,
     pub(super) dock_previews_enabled: bool,
 }
 

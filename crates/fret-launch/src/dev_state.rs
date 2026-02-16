@@ -55,7 +55,7 @@ impl DevStateWindowKeyRegistry {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DevStateService {
     incoming: HashMap<String, Value>,
     outgoing: HashMap<String, Value>,
@@ -63,10 +63,13 @@ pub struct DevStateService {
     path: Option<PathBuf>,
 }
 
+type DevStateExportFn = dyn Fn(&App) -> DevStateExport + Send + Sync;
+type DevStateImportFn = dyn Fn(&mut App, Value) -> Result<(), String> + Send + Sync;
+
 pub struct DevStateHook {
     key: String,
-    export: Box<dyn Fn(&App) -> DevStateExport + Send + Sync>,
-    import: Option<Box<dyn Fn(&mut App, Value) -> Result<(), String> + Send + Sync>>,
+    export: Box<DevStateExportFn>,
+    import: Option<Box<DevStateImportFn>>,
 }
 
 impl std::fmt::Debug for DevStateHook {
@@ -171,17 +174,6 @@ impl DevStateHooks {
                 }
             }
         });
-    }
-}
-
-impl Default for DevStateService {
-    fn default() -> Self {
-        Self {
-            incoming: HashMap::new(),
-            outgoing: HashMap::new(),
-            outgoing_epoch: 0,
-            path: None,
-        }
     }
 }
 

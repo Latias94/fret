@@ -192,8 +192,10 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     cx.keyed(key, |cx| {
-        let mut props = LayoutQueryRegionProps::default();
-        props.name = Some("fret-canvas.ui.canvas_world_bounds_item".into());
+        let props = LayoutQueryRegionProps {
+            name: Some("fret-canvas.ui.canvas_world_bounds_item".into()),
+            ..Default::default()
+        };
 
         cx.layout_query_region_with_id(props, move |cx, element| {
             let visual_bounds = cx
@@ -383,10 +385,10 @@ where
                     return false;
                 }
 
-                if let Some(start_filter) = start_filter.as_ref() {
-                    if !start_filter(host, action_cx, down) {
-                        return false;
-                    }
+                if let Some(start_filter) = start_filter.as_ref()
+                    && !start_filter(host, action_cx, down)
+                {
+                    return false;
                 }
 
                 host.capture_pointer();
@@ -466,35 +468,35 @@ where
                 host.release_pointer_capture();
                 let _ = host.models_mut().update(&drag_c, |st| *st = None);
 
-                if drag.active {
-                    if let Some(on_commit) = on_commit.as_ref() {
-                        let bounds = host.bounds();
-                        let view = host
-                            .models_mut()
-                            .read(&view_model, |v| *v)
-                            .ok()
-                            .unwrap_or(default_view);
+                if drag.active
+                    && let Some(on_commit) = on_commit.as_ref()
+                {
+                    let bounds = host.bounds();
+                    let view = host
+                        .models_mut()
+                        .read(&view_model, |v| *v)
+                        .ok()
+                        .unwrap_or(default_view);
 
-                        let rect_screen = rect_from_points(drag.start, drag.current);
-                        let c0 = view.screen_to_canvas(bounds, rect_screen.origin);
-                        let c1 = view.screen_to_canvas(
-                            bounds,
-                            fret_core::Point::new(
-                                fret_core::Px(rect_screen.origin.x.0 + rect_screen.size.width.0),
-                                fret_core::Px(rect_screen.origin.y.0 + rect_screen.size.height.0),
-                            ),
-                        );
-                        let rect_canvas = rect_from_points(c0, c1);
-                        on_commit(
-                            host,
-                            action_cx,
-                            CanvasMarqueeCommitCx {
-                                rect_screen,
-                                rect_canvas,
-                                modifiers: drag.modifiers,
-                            },
-                        );
-                    }
+                    let rect_screen = rect_from_points(drag.start, drag.current);
+                    let c0 = view.screen_to_canvas(bounds, rect_screen.origin);
+                    let c1 = view.screen_to_canvas(
+                        bounds,
+                        fret_core::Point::new(
+                            fret_core::Px(rect_screen.origin.x.0 + rect_screen.size.width.0),
+                            fret_core::Px(rect_screen.origin.y.0 + rect_screen.size.height.0),
+                        ),
+                    );
+                    let rect_canvas = rect_from_points(c0, c1);
+                    on_commit(
+                        host,
+                        action_cx,
+                        CanvasMarqueeCommitCx {
+                            rect_screen,
+                            rect_canvas,
+                            modifiers: drag.modifiers,
+                        },
+                    );
                 }
 
                 host.request_redraw(action_cx.window);
@@ -514,28 +516,25 @@ where
             let drag = cx
                 .get_model_copied(&drag_state, Invalidation::Paint)
                 .unwrap_or(None);
-            if let Some(drag) = drag {
-                if drag.active {
-                    let rect_screen = rect_from_points(drag.start, drag.current);
-                    if rect_screen.size.width.0 > 0.0 && rect_screen.size.height.0 > 0.0 {
-                        let left =
-                            fret_core::Px(rect_screen.origin.x.0 - paint_cx.bounds.origin.x.0);
-                        let top =
-                            fret_core::Px(rect_screen.origin.y.0 - paint_cx.bounds.origin.y.0);
+            if let Some(drag) = drag
+                && drag.active
+            {
+                let rect_screen = rect_from_points(drag.start, drag.current);
+                if rect_screen.size.width.0 > 0.0 && rect_screen.size.height.0 > 0.0 {
+                    let left = fret_core::Px(rect_screen.origin.x.0 - paint_cx.bounds.origin.x.0);
+                    let top = fret_core::Px(rect_screen.origin.y.0 - paint_cx.bounds.origin.y.0);
 
-                        let mut p = ContainerProps::default();
-                        p.layout.position = fret_ui::element::PositionStyle::Absolute;
-                        p.layout.inset.left = Some(left);
-                        p.layout.inset.top = Some(top);
-                        p.layout.size.width = Length::Px(rect_screen.size.width);
-                        p.layout.size.height = Length::Px(rect_screen.size.height);
-                        p.background = Some(marquee_style.fill);
-                        p.border =
-                            fret_core::Edges::all(fret_core::Px(marquee_style.border_width_px));
-                        p.border_color = Some(marquee_style.border);
-                        p.snap_to_device_pixels = true;
-                        out.push(cx.container(p, |_cx| std::iter::empty()));
-                    }
+                    let mut p = ContainerProps::default();
+                    p.layout.position = fret_ui::element::PositionStyle::Absolute;
+                    p.layout.inset.left = Some(left);
+                    p.layout.inset.top = Some(top);
+                    p.layout.size.width = Length::Px(rect_screen.size.width);
+                    p.layout.size.height = Length::Px(rect_screen.size.height);
+                    p.background = Some(marquee_style.fill);
+                    p.border = fret_core::Edges::all(fret_core::Px(marquee_style.border_width_px));
+                    p.border_color = Some(marquee_style.border);
+                    p.snap_to_device_pixels = true;
+                    out.push(cx.container(p, |_cx| std::iter::empty()));
                 }
             }
         }

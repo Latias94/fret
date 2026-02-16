@@ -17,7 +17,9 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::select::{Select, SelectItem, SelectPosition};
@@ -1987,7 +1989,15 @@ fn calendar_nav_icon_button<H: UiHost>(
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
-    let icon = decl_icon::icon(cx, icon);
+    let icon = decl_icon::icon_with(
+        cx,
+        icon,
+        None,
+        Some(ColorRef::Token {
+            key: "foreground",
+            fallback: ColorFallback::ThemeTextPrimary,
+        }),
+    );
 
     crate::button::Button::new(label)
         .variant(crate::button::ButtonVariant::Ghost)

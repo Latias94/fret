@@ -84,7 +84,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(52),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                paint: color.into(),
+                paint: (color).into(),
             });
         }
     }
@@ -234,7 +234,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(71),
             origin: Point::new(text_x, text_y),
             text: blob,
-            paint: self.style.context_menu_text.into(),
+            paint: (self.style.context_menu_text).into(),
         });
     }
 
@@ -354,7 +354,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(70),
             origin: Point::new(text_x, text_y),
             text: blob,
-            paint: self.style.context_menu_text.into(),
+            paint: (self.style.context_menu_text).into(),
         });
     }
 }

@@ -110,6 +110,22 @@ impl SceneRecording {
                     }
                     true
                 }
+                Paint::SweepGradient(g) => {
+                    if !g.center.x.0.is_finite()
+                        || !g.center.y.0.is_finite()
+                        || !g.start_angle_turns.is_finite()
+                        || !g.end_angle_turns.is_finite()
+                    {
+                        return false;
+                    }
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    for s in g.stops.iter().take(n) {
+                        if !s.offset.is_finite() || !color_is_finite(s.color) {
+                            return false;
+                        }
+                    }
+                    true
+                }
                 Paint::Material { params, .. } => params.is_finite(),
             }
         }

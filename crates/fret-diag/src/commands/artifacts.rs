@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::lint::{LintOptions, lint_bundle_from_path};
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_pack(
     rest: &[String],
     workspace_root: &Path,
@@ -62,6 +63,7 @@ pub(crate) fn cmd_pack(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_triage(
     rest: &[String],
     pack_after_run: bool,
@@ -115,6 +117,7 @@ pub(crate) fn cmd_triage(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_lint(
     rest: &[String],
     pack_after_run: bool,

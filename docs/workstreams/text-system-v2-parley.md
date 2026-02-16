@@ -39,6 +39,11 @@ Supported (mechanism-level):
   - OpenType features (e.g. `calt`, `liga`, `ss01`) via `TextShapingStyle.features`
   - Variable font axes (e.g. `wght`, `wdth`) via `TextShapingStyle.axes`
   - Evidence: `crates/fret-core/src/text/mod.rs`, `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - Behavior gates (bundled fonts; no system dependency):
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
 
 Behavioral maturity:
 
@@ -459,12 +464,20 @@ Legend:
 
 - [x] Unit tests: span invariant validation and clamping behavior.
   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
+  - Additional gate: feature-only spans are not treated as noop.
+    - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+      (`sanitize_spans_treats_feature_overrides_as_non_noop`)
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
     `crates/fret-render-wgpu/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
   - Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
+- [x] Unit conformance: OpenType feature toggles are behavior-visible (not only key-visible).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+    (`open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_fixture`)
 - [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
   - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
     (`snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preedit`).

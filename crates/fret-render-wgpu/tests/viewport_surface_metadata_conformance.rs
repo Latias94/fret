@@ -2,8 +2,7 @@ use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{DrawOrder, Scene, SceneOp};
 use fret_render_wgpu::{
     ClearColor, RenderSceneParams, RenderTargetAlphaMode, RenderTargetColorSpace,
-    RenderTargetDescriptor, RenderTargetMetadata, RenderTargetOrientation, RenderTargetRotation,
-    Renderer, WgpuContext,
+    RenderTargetDescriptor, RenderTargetMetadata, RenderTargetRotation, Renderer, WgpuContext,
 };
 use std::sync::mpsc;
 
@@ -221,8 +220,10 @@ fn gpu_viewport_surface_respects_alpha_mode_metadata() {
     write_rgba8_texture_solid(&ctx.queue, &src, size, [255, 0, 0, 128]); // straight alpha (not premul)
     let src_view = src.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let mut metadata = RenderTargetMetadata::default();
-    metadata.alpha_mode = RenderTargetAlphaMode::Straight;
+    let metadata = RenderTargetMetadata {
+        alpha_mode: RenderTargetAlphaMode::Straight,
+        ..Default::default()
+    };
 
     let target = renderer.register_render_target(RenderTargetDescriptor {
         view: src_view,
@@ -300,9 +301,10 @@ fn gpu_viewport_surface_respects_orientation_metadata() {
     });
     write_rgba8_texture_quadrants(&ctx.queue, &src, size);
 
-    let mut metadata = RenderTargetMetadata::default();
-    metadata.alpha_mode = RenderTargetAlphaMode::Premultiplied;
-    metadata.orientation = RenderTargetOrientation::default();
+    let metadata = RenderTargetMetadata {
+        alpha_mode: RenderTargetAlphaMode::Premultiplied,
+        ..Default::default()
+    };
 
     let target = renderer.register_render_target(RenderTargetDescriptor {
         view: src.create_view(&wgpu::TextureViewDescriptor::default()),

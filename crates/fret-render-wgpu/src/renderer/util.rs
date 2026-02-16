@@ -230,3 +230,15 @@ pub(super) fn hash_bytes(bytes: &[u8]) -> u64 {
     }
     state
 }
+
+pub(super) fn render_target_ingest_strategy_perf_index(
+    strategy: fret_render_core::RenderTargetIngestStrategy,
+) -> usize {
+    match strategy {
+        fret_render_core::RenderTargetIngestStrategy::Unknown => 0,
+        fret_render_core::RenderTargetIngestStrategy::Owned => 1,
+        fret_render_core::RenderTargetIngestStrategy::ExternalZeroCopy => 2,
+        fret_render_core::RenderTargetIngestStrategy::GpuCopy => 3,
+        fret_render_core::RenderTargetIngestStrategy::CpuUpload => 4,
+    }
+}

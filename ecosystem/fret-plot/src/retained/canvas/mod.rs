@@ -5388,7 +5388,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             order: DrawOrder(6),
                             origin,
                             text: t.blob,
-                            paint: text_color.into(),
+                            paint: (text_color).into(),
                         });
                     }
                     if let Some(t) = min_text {
@@ -5400,7 +5400,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             order: DrawOrder(6),
                             origin,
                             text: t.blob,
-                            paint: text_color.into(),
+                            paint: (text_color).into(),
                         });
                     }
                 }
@@ -6261,7 +6261,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     order: DrawOrder(3),
                                     origin,
                                     text: text.blob,
-                                    paint: annotation_text.into(),
+                                    paint: (annotation_text).into(),
                                 });
 
                                 let marker_w = Px(2.0);
@@ -6328,7 +6328,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     order: DrawOrder(3),
                                     origin,
                                     text: text.blob,
-                                    paint: annotation_text.into(),
+                                    paint: (annotation_text).into(),
                                 });
 
                                 let marker_h = Px(2.0);
@@ -6961,12 +6961,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             Px(origin.y.0 + pad + t.metrics.baseline.0),
                         ),
                         text: t.blob,
-                        paint: Color {
+                        paint: (Color {
                             r: 1.0,
                             g: 1.0,
                             b: 1.0,
                             a: 1.0,
-                        }
+                        })
                         .into(),
                     });
                 }
@@ -7080,7 +7080,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(7),
                     origin,
                     text: entry.text.blob,
-                    paint: text_color.into(),
+                    paint: (text_color).into(),
                 });
             }
         }
@@ -7206,7 +7206,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(11),
                     origin,
                     text: label.blob,
-                    paint: label_color.into(),
+                    paint: (label_color).into(),
                 });
             }
 
@@ -7235,7 +7235,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(11),
                     origin,
                     text: label.blob,
-                    paint: label_color.into(),
+                    paint: (label_color).into(),
                 });
             }
         }
@@ -7262,7 +7262,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: label.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7290,7 +7290,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: label.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7318,7 +7318,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: label.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7420,7 +7420,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(11),
                     origin,
                     text: t.blob,
-                    paint: label_color.into(),
+                    paint: (label_color).into(),
                 });
             }
         }
@@ -7437,7 +7437,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(11),
                     origin,
                     text: t.blob,
-                    paint: label_color.into(),
+                    paint: (label_color).into(),
                 });
             }
         }
@@ -7458,7 +7458,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: t.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7480,7 +7480,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: t.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7502,7 +7502,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(11),
                         origin,
                         text: t.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -7688,7 +7688,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(13),
                     origin,
                     text: tt.blob,
-                    paint: tooltip_text_color.into(),
+                    paint: (tooltip_text_color).into(),
                 });
             }
         }
@@ -7757,7 +7757,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         order: DrawOrder(13),
                         origin,
                         text: tt.blob,
-                        paint: label_color.into(),
+                        paint: (label_color).into(),
                     });
                 }
             }
@@ -8164,7 +8164,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     order: DrawOrder(21),
                     origin,
                     text: tt.blob,
-                    paint: tooltip_text_color.into(),
+                    paint: (tooltip_text_color).into(),
                 });
             }
         }

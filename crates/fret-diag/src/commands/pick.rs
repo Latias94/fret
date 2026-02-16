@@ -64,6 +64,7 @@ pub(crate) fn cmd_pick_script(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_pick_apply(
     rest: &[String],
     workspace_root: &Path,

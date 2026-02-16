@@ -223,10 +223,10 @@ impl GenUiActionExecutorV1 {
             if confirm == &Value::Bool(false) {
                 return GenUiActionOutcome::Skipped;
             }
-            if let Some(policy) = self.confirm.as_ref() {
-                if !policy(host, inv, confirm) {
-                    return GenUiActionOutcome::Skipped;
-                }
+            if let Some(policy) = self.confirm.as_ref()
+                && !policy(host, inv, confirm)
+            {
+                return GenUiActionOutcome::Skipped;
             }
         }
 

@@ -22,6 +22,25 @@ pub enum RenderTargetAlphaMode {
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum RenderTargetIngestStrategy {
+    #[default]
+    Unknown,
+    /// The target is produced on the shared device/queue without importing external handles.
+    Owned,
+    /// The target is sampled from an external producer without an intermediate copy.
+    ExternalZeroCopy,
+    /// The target is refreshed via a GPU-side copy/blit into a renderer-owned texture.
+    GpuCopy,
+    /// The target is refreshed via CPU bytes uploaded into a GPU texture.
+    CpuUpload,
+}
+
+impl RenderTargetIngestStrategy {
+    pub const COUNT: usize = 5;
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RenderTargetRotation {
     #[default]
     R0,
@@ -51,6 +70,12 @@ impl Default for RenderTargetOrientation {
 pub struct RenderTargetMetadata {
     pub alpha_mode: RenderTargetAlphaMode,
     pub orientation: RenderTargetOrientation,
+    /// Requested ingestion strategy (what the caller wanted).
+    ///
+    /// This is a diagnostic hint for capability-gated fallback behavior. Renderers may
+    /// report when `requested_ingest_strategy` differs from `ingest_strategy`.
+    pub requested_ingest_strategy: RenderTargetIngestStrategy,
+    pub ingest_strategy: RenderTargetIngestStrategy,
 
     /// Optional frame timestamp hint for diagnostics/telemetry, in monotonic nanoseconds.
     ///
@@ -64,6 +89,8 @@ impl Default for RenderTargetMetadata {
         Self {
             alpha_mode: RenderTargetAlphaMode::Premultiplied,
             orientation: RenderTargetOrientation::default(),
+            requested_ingest_strategy: RenderTargetIngestStrategy::Unknown,
+            ingest_strategy: RenderTargetIngestStrategy::Unknown,
             frame_timestamp_ns: None,
         }
     }

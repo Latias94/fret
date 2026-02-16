@@ -28,7 +28,7 @@ pub(super) fn ddmin_keep_indices(
 
         let len = keep.len();
         let chunks = granularity.min(len).max(2);
-        let chunk_size = (len + chunks - 1) / chunks;
+        let chunk_size = len.div_ceil(chunks);
 
         let mut reduced_this_round = false;
         let mut chunk_start: usize = 0;

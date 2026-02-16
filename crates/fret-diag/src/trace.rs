@@ -397,6 +397,7 @@ fn chrome_x(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_phase(
     events: &mut Vec<Value>,
     pid: u32,

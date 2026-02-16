@@ -439,7 +439,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                 order: DrawOrder(1),
                                 origin: text_origin,
                                 text: blob,
-                                paint: fg.into(),
+                                paint: (fg).into(),
                             });
 
                             let caret_rect = services.caret_rect(blob, st.caret, st.affinity);

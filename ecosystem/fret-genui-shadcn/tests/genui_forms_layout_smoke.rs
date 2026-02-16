@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use std::sync::Arc;
 
 use fret_app::App;
@@ -65,7 +67,7 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
             "form_stack": {
                 "type": "VStack",
                 "props": { "gap": "N2", "wFull": true, "minW0": true },
-                "children": ["row_name", "row_enabled", "row_actions"]
+                "children": ["row_name", "row_bio", "row_enabled", "row_role", "row_prefs", "row_volume", "row_newsletter", "row_actions"]
             },
 
             "row_name": {
@@ -77,6 +79,18 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
             "name_input": { "type": "Input", "props": { "placeholder": "Type…", "value": { "$bindState": "/name" }, "flex1": true, "minW0": true }, "children": [] },
             "name_value": { "type": "Badge", "props": { "label": { "$state": "/name" }, "variant": "secondary" }, "children": [] },
 
+            "row_bio": {
+                "type": "VStack",
+                "props": { "gap": "N1", "wFull": true, "minW0": true },
+                "children": ["bio_label", "bio_textarea"]
+            },
+            "bio_label": { "type": "Label", "props": { "text": "Bio" }, "children": [] },
+            "bio_textarea": {
+                "type": "Textarea",
+                "props": { "value": { "$bindState": "/bio" }, "minHeightPx": 72, "wFull": true, "minW0": true },
+                "children": []
+            },
+
             "row_enabled": {
                 "type": "HStack",
                 "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true },
@@ -85,6 +99,73 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
             "enabled_label": { "type": "Text", "props": { "text": "Enabled:", "variant": "small" }, "children": [] },
             "enabled_switch": { "type": "Switch", "props": { "checked": { "$bindState": "/enabled" } }, "children": [] },
             "enabled_value": { "type": "Badge", "props": { "label": { "$state": "/enabled" }, "variant": "outline" }, "children": [] },
+
+            "row_role": {
+                "type": "HStack",
+                "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
+                "children": ["role_label", "role_select", "role_value"]
+            },
+            "role_label": { "type": "Text", "props": { "text": "Role:", "variant": "small" }, "children": [] },
+            "role_select": {
+                "type": "Select",
+                "props": {
+                    "value": { "$bindState": "/role" },
+                    "placeholder": "Pick a role…",
+                    "options": [
+                        { "value": "admin", "label": "Admin" },
+                        { "value": "editor", "label": "Editor" },
+                        { "value": "viewer", "label": "Viewer" }
+                    ],
+                    "flex1": true,
+                    "minW0": true
+                },
+                "children": []
+            },
+            "role_value": { "type": "Badge", "props": { "label": { "$state": "/role" }, "variant": "secondary" }, "children": [] },
+
+            "row_prefs": {
+                "type": "VStack",
+                "props": { "gap": "N1", "wFull": true, "minW0": true },
+                "children": ["prefs_label", "prefs_radio"]
+            },
+            "prefs_label": { "type": "Label", "props": { "text": "Theme" }, "children": [] },
+            "prefs_radio": {
+                "type": "RadioGroup",
+                "props": {
+                    "value": { "$bindState": "/theme" },
+                    "orientation": "horizontal",
+                    "options": [
+                        { "value": "light", "label": "Light" },
+                        { "value": "dark", "label": "Dark" }
+                    ]
+                },
+                "children": []
+            },
+
+            "row_volume": {
+                "type": "HStack",
+                "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true, "minW0": true },
+                "children": ["volume_label", "volume_slider", "volume_value"]
+            },
+            "volume_label": { "type": "Text", "props": { "text": "Volume:", "variant": "small" }, "children": [] },
+            "volume_slider": {
+                "type": "Slider",
+                "props": { "value": { "$bindState": "/volume" }, "min": 0, "max": 10, "step": 1, "flex1": true, "minW0": true },
+                "children": []
+            },
+            "volume_value": { "type": "Badge", "props": { "label": { "$state": "/volume" }, "variant": "secondary" }, "children": [] },
+
+            "row_newsletter": {
+                "type": "HStack",
+                "props": { "gap": "N2", "wrap": true, "items": "center", "wFull": true },
+                "children": ["newsletter_checkbox", "newsletter_value"]
+            },
+            "newsletter_checkbox": {
+                "type": "Checkbox",
+                "props": { "checked": { "$bindState": "/newsletter" }, "label": "Newsletter" },
+                "children": []
+            },
+            "newsletter_value": { "type": "Badge", "props": { "label": { "$state": "/newsletter" }, "variant": "outline" }, "children": [] },
 
             "row_actions": {
                 "type": "HStack",
@@ -106,7 +187,7 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
 
             "footer": { "type": "Text", "props": { "text": "End.", "variant": "muted" }, "children": [] }
         },
-        "state": { "name": "Ada", "enabled": true, "saveClicks": 0 }
+        "state": { "name": "Ada", "bio": "Hello", "enabled": true, "role": "editor", "theme": "light", "volume": 5, "newsletter": false, "saveClicks": 0 }
     }))
     .unwrap();
 
@@ -156,7 +237,12 @@ fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
             assert!(joined.contains("Forms Smoke"));
             assert!(joined.contains("Profile"));
             assert!(joined.contains("Name:"));
+            assert!(joined.contains("Bio"));
             assert!(joined.contains("Enabled:"));
+            assert!(joined.contains("Role:"));
+            assert!(joined.contains("Theme"));
+            assert!(joined.contains("Volume:"));
+            assert!(joined.contains("Newsletter"));
             assert!(joined.contains("Reset"));
             assert!(joined.contains("Save"));
             assert!(

@@ -176,10 +176,10 @@ pub fn resolve_bindings(
         };
         if let Some(path) = get_str(obj, "$bindState") {
             out.insert(k.clone(), path.to_string());
-        } else if let Some(field) = get_str(obj, "$bindItem") {
-            if let Some(abs) = resolve_bind_item_path(field, ctx) {
-                out.insert(k.clone(), abs);
-            }
+        } else if let Some(field) = get_str(obj, "$bindItem")
+            && let Some(abs) = resolve_bind_item_path(field, ctx)
+        {
+            out.insert(k.clone(), abs);
         }
     }
     out

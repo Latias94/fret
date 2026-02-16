@@ -482,7 +482,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 order: DrawOrder(21_002),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: self.style.controls_text.into(),
+                paint: (self.style.controls_text).into(),
             });
         }
     }

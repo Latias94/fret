@@ -88,12 +88,21 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         resolved_props: &serde_json::Map<String, serde_json::Value>,
     ) -> AnyElement {
-        let text = Self::json_to_label(resolved_props.get("text"));
-        match resolved_props
+        let text = Self::json_to_label(
+            resolved_props
+                .get("text")
+                .or_else(|| resolved_props.get("content")),
+        );
+        let muted = resolved_props
+            .get("muted")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let variant = resolved_props
             .get("variant")
             .and_then(|v| v.as_str())
-            .unwrap_or("body")
-        {
+            .unwrap_or(if muted { "muted" } else { "body" });
+
+        match variant {
             "body" => fret_ui_shadcn::typography::p(cx, text),
             "muted" => fret_ui_shadcn::typography::muted(cx, text),
             "small" => fret_ui_shadcn::typography::small(cx, text),
@@ -365,6 +374,14 @@ impl ShadcnResolver {
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
     ) -> AnyElement {
         let label = Self::json_to_label(resolved_props.get("label"));
+        let disabled = resolved_props
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let variant = Self::parse_button_variant(resolved_props.get("variant"))
+            .unwrap_or(fret_ui_shadcn::ButtonVariant::Default);
+        let size = Self::parse_button_size(resolved_props.get("size"))
+            .unwrap_or(fret_ui_shadcn::ButtonSize::Default);
         let w_full = resolved_props
             .get("wFull")
             .and_then(|v| v.as_bool())
@@ -391,6 +408,9 @@ impl ShadcnResolver {
 
         let mut button = fret_ui_shadcn::Button::new(label)
             .children(children)
+            .disabled(disabled)
+            .variant(variant)
+            .size(size)
             .refine_layout(layout);
         if let Some(on_activate) = on_event("press") {
             button = button.on_activate(on_activate);
@@ -404,7 +424,11 @@ impl ShadcnResolver {
         resolved_props: &serde_json::Map<String, serde_json::Value>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        let label = Self::json_to_label(resolved_props.get("label"));
+        let label = Self::json_to_label(
+            resolved_props
+                .get("label")
+                .or_else(|| resolved_props.get("text")),
+        );
         let variant = Self::parse_badge_variant(resolved_props.get("variant")).unwrap_or_default();
         fret_ui_shadcn::Badge::new(label)
             .variant(variant)

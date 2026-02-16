@@ -11,9 +11,28 @@ Current status (as of 2026-02-16):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
-- Text paint surface v1 started:
-  - ADR 0279 drafted (`SceneOp::Text` upgrades from `Color` to `Paint`).
-  - Implementation WIP in this worktree (next: GPU readback conformance).
+- External texture imports v2 planning and observability landed:
+  - ADR 0282 (requested: zero/low-copy import path with deterministic fallbacks).
+  - Renderer perf snapshot surfaces per-update ingest strategy breakdown for imported render targets
+    (requested vs effective) and a downgrade counter.
+  - Diagnostics bundle (`UiFrameStatsV1`) exposes the same ingest counters for devtools/perf baselines.
+  - Web runner now records renderer perf samples when DevTools WS is configured, and keeps the app
+    rendering while devtools is attached so WS-driven scripts/bundles can run on otherwise-idle pages.
+- Sweep gradient paint v1 landed:
+  - ADR 0280 (`Paint::SweepGradient`).
+  - GPU readback conformance is exercised via `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`.
+- Compositing blend modes v2 (bounded) landed:
+  - ADR 0281 (`BlendMode::{Darken, Lighten, Subtract}`).
+  - Conformance is exercised via `crates/fret-render-wgpu/tests/composite_group_conformance.rs`.
+- Text paint surface v1 landed:
+  - ADR 0279 (`SceneOp::Text` upgrades from solid `Color` to `Paint`).
+  - Renderer implementation landed (solid + gradients; bounded batching via `paint_index`).
+  - GPU readback conformance gate landed (`crates/fret-render-wgpu/tests/text_paint_conformance.rs`).
+  - Adoption is tracked as optional in `docs/workstreams/text-paint-surface-v1.md` (M3).
+- Paint→GPU encoding for solid/gradients/material is now shared across quad/path/text encode paths,
+  with an explicit policy that keeps v1 text/path material behavior deterministic (degrade to solid base).
+- Renderer per-frame GPU buffer rotation is now ring-buffered (quad instances + viewport/text/path vertices),
+  reducing duplicated resize/rotation code without changing any public contract.
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`

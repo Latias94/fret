@@ -68,6 +68,46 @@ These conventions keep skills consistent and easy to auto-validate/package:
 - Recommended headings: `When to use`, `Quick start`, `Workflow`, `Evidence anchors`, `Common pitfalls`, `Related skills`
 - Evidence anchors: prefer stable file paths + symbol names; avoid fragile line-number anchors
 
+## Skill quality bar (engineering discipline)
+
+These rules are adapted from mature skill ecosystems (e.g. Claude Code plugin “skill-development” guidance),
+but aligned to how Fret skills are validated and shipped.
+
+### 1) Strong triggers in frontmatter
+
+- Make `description` *specific* about when it should trigger (include concrete user phrases like
+  “create a diag script”, “audit UI focus”, “align shadcn component”).
+- Prefer third-person trigger wording:
+  - ✅ “This skill should be used when…”
+  - ❌ Vague one-liners.
+
+### 2) Lean `SKILL.md` + progressive disclosure
+
+- Keep procedural essentials in `SKILL.md`.
+- Move long material (schemas, large checklists, deep background) into `references/` and link it.
+- If a reference is large, include a suggested `rg` search pattern so agents can load only the relevant slice.
+
+### 3) No duplicated knowledge
+
+- Pick one “owner skill” per concept; other skills should link to it.
+- Avoid copy/pasting the same checklist into multiple skills.
+
+### 4) Write for an agent (not a blog post)
+
+- Use imperative / verb-first instructions.
+- Avoid second-person narration (“you should…”).
+- Prefer checklists + short workflows over long prose.
+
+### 5) Evidence + regression protection
+
+- For non-trivial work, include evidence anchors (stable paths + key symbols).
+- Prefer leaving the “3-pack”: Repro + Gate + Evidence (see `fret-skills-playbook`).
+
+### 6) Validate locally
+
+- Fast: `python3 .agents/skills/fret_skills.py validate --strict`
+- Maintainer mode (mono-repo): `python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols`
+
 Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
 
 ```bash

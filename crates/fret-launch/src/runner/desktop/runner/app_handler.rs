@@ -297,7 +297,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     return;
                 }
 
-                // On macOS, releasing the mouse button outside any window may not deliver a
+                // Releasing the mouse button outside any window may not deliver a
                 // `WindowEvent::MouseInput` to the source window. Use device events to still
                 // terminate cross-window dock drags (Unity/ImGui-style tear-off).
                 let (source_window, current_window, dragging) = {
@@ -314,24 +314,36 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
                 ));
 
-                #[cfg(target_os = "macos")]
+                if self.saw_left_mouse_release_this_turn
+                    || !self.is_left_mouse_down_for_window(source_window)
                 {
-                    if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
-                        return;
-                    }
-                    if let Some(d) = self.app.drag_mut(pointer_id)
-                        && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-                    {
-                        d.dragging = true;
-                    }
-                    // Route the drop using the current cursor position, so docking into another
-                    // window works even when the `MouseInput` event is missing.
-                    self.route_internal_drag_drop_from_cursor();
-                    dock_tearoff_log(format_args!(
-                        "[device-drop] dispatched target={:?}",
-                        source_window
-                    ));
+                    return;
                 }
+
+                #[cfg(target_os = "macos")]
+                if macos_is_left_mouse_down() {
+                    return;
+                }
+
+                // We didn't observe a window-scoped mouse release, so clear the runner's cached
+                // button state to avoid getting stuck in a "mouse down" state.
+                self.left_mouse_down = false;
+                for state in self.windows.values_mut() {
+                    state.platform.input.pressed_buttons.left = false;
+                }
+
+                if let Some(d) = self.app.drag_mut(pointer_id)
+                    && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+                {
+                    d.dragging = true;
+                }
+                // Route the drop using the current cursor position, so docking into another
+                // window works even when the `MouseInput` event is missing.
+                self.route_internal_drag_drop_from_cursor();
+                dock_tearoff_log(format_args!(
+                    "[device-drop] dispatched target={:?}",
+                    source_window
+                ));
                 if self
                     .app
                     .drag(pointer_id)
@@ -879,12 +891,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::ThemeChanged(_theme) => {
                 let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
-                if let Some(window_ref) = window_ref {
-                    if self
+                if let Some(window_ref) = window_ref
+                    && self
                         .update_window_environment_for_window_ref(app_window, window_ref.as_ref())
-                    {
-                        self.app.request_redraw(app_window);
-                    }
+                {
+                    self.app.request_redraw(app_window);
                 }
             }
             WindowEvent::Focused(focused) => {
@@ -1527,21 +1538,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
                     let draw_result = (|| -> Result<(), fret_render::RenderError> {
-                        let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
-                        let (frame, view) = {
-                            let acquire_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.surface.acquire",
-                                        window = ?app_window,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = acquire_span.enter();
-                            surface.get_current_frame_view().map_err(|source| {
-                                fret_render::RenderError::SurfaceAcquireFailed { source }
-                            })?
-                        };
+                        let (frame, view) = surface.get_current_frame_view().map_err(|source| {
+                            fret_render::RenderError::SurfaceAcquireFailed { source }
+                        })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -1593,15 +1592,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         #[cfg(feature = "diag-screenshots")]
                         if let Some(diag) = self.diag_screenshots.as_mut() {
                             let window_ffi = app_window.data().as_ffi();
-                            let begin_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.diag_screenshots.begin",
-                                        window = ?app_window,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = begin_span.enter();
                             if let Some((cmd, inflight)) = diag.begin_capture_for_window(
                                 &context.device,
                                 window_ffi,
@@ -1616,88 +1606,35 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let mut pending_bundle_screenshot = None;
                         if let Some(dir) = screenshot_dir
-                            && let Some((pending, copy_cmd)) = {
-                                let begin_span = trace_enabled
-                                    .then(|| {
-                                        tracing::trace_span!(
-                                            "fret.runner.diag_bundle_screenshot.begin_readback",
-                                            window = ?app_window,
-                                        )
-                                    })
-                                    .unwrap_or_else(tracing::Span::none);
-                                let _guard = begin_span.enter();
+                            && let Some((pending, copy_cmd)) =
                                 self.diag_bundle_screenshots.begin_readback(
                                     &context.device,
                                     &frame.texture,
                                     surface.format(),
                                     surface.size(),
                                 )
-                            }
                         {
                             cmd_buffers.push(copy_cmd);
                             pending_bundle_screenshot = Some((pending, dir));
                         }
 
-                        let cmd_buffers_len = cmd_buffers.len();
-                        {
-                            let submit_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.queue.submit",
-                                        window = ?app_window,
-                                        cmd_buffers = cmd_buffers_len as u32,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = submit_span.enter();
-                            context.queue.submit(cmd_buffers);
-                        }
-                        {
-                            let present_trace_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.frame.present",
-                                        window = ?app_window,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = present_trace_span.enter();
-                            frame.present();
-                        }
+                        context.queue.submit(cmd_buffers);
+                        frame.present();
                         drop(engine_keepalive);
 
                         #[cfg(feature = "diag-screenshots")]
                         if let (Some(diag), Some(inflight)) =
                             (self.diag_screenshots.as_mut(), screenshot_inflight)
+                            && let Err(err) = diag.finish_capture(&context.device, inflight)
                         {
-                            let finish_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.diag_screenshots.finish",
-                                        window = ?app_window,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = finish_span.enter();
-                            if let Err(err) = diag.finish_capture(&context.device, inflight) {
-                                tracing::warn!(
-                                    error = %err,
-                                    window = ?app_window,
-                                    "diag screenshot: capture failed"
-                                );
-                            }
+                            tracing::warn!(
+                                error = %err,
+                                window = ?app_window,
+                                "diag screenshot: capture failed"
+                            );
                         }
 
                         if let Some((pending, dir)) = pending_bundle_screenshot {
-                            let bundle_span = trace_enabled
-                                .then(|| {
-                                    tracing::trace_span!(
-                                        "fret.runner.diag_bundle_screenshot.write_bmp",
-                                        window = ?app_window,
-                                    )
-                                })
-                                .unwrap_or_else(tracing::Span::none);
-                            let _guard = bundle_span.enter();
                             let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
                                 &context.device,
                                 pending,
@@ -1897,6 +1834,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         // tree (bypassing OS cursor events), so poll a best-effort cursor override surface once
         // per event-loop turn while a dock drag is active.
         if self.dock_drag_pointer_id().is_some() {
+            let _ = self.poll_diag_mouse_buttons_override();
             let _ = self.poll_diag_cursor_screen_pos_override();
             let _ = self.route_internal_drag_hover_from_cursor();
             let _ = self.update_dock_tearoff_follow();
@@ -2213,6 +2151,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         #[cfg(target_os = "macos")]
         {
             if self.maybe_finish_dock_drag_released_outside() {
+                self.drain_effects(event_loop);
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if self.maybe_finish_dock_drag_released_outside_windows() {
                 self.drain_effects(event_loop);
             }
         }

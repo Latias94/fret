@@ -26,6 +26,7 @@ pub(crate) fn touch(path: &Path) -> Result<(), String> {
     }
     let mut f = std::fs::OpenOptions::new()
         .create(true)
+        .truncate(true)
         .write(true)
         .open(path)
         .map_err(|e| e.to_string())?;

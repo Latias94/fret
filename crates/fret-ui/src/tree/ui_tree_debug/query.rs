@@ -308,9 +308,10 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         {
             if !self.debug_enabled {
-                return &[];
+                &[]
+            } else {
+                self.debug_notify_requests.as_slice()
             }
-            return self.debug_notify_requests.as_slice();
         }
 
         #[cfg(not(feature = "diagnostics"))]

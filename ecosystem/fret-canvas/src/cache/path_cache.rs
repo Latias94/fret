@@ -530,7 +530,7 @@ mod tests {
             order: DrawOrder(0),
             origin: Point::new(Px(0.0), Px(0.0)),
             path: id,
-            color: Color::TRANSPARENT,
+            paint: fret_core::Paint::Solid(Color::TRANSPARENT),
         }];
 
         cache.begin_frame(); // frame 2

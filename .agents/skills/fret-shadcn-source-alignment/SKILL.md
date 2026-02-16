@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: Align Fret’s shadcn/Radix-inspired components with upstream sources (public docs + GitHub source). Also consider Base UI (unstyled, accessibility-first primitives) as a reference for part composition and headless state machines. Map changes to the correct Fret layer and lock outcomes with tests + `fretboard diag` scripts.
+description: "This skill should be used when the user asks to \"align shadcn components\", \"match Radix behaviors\", \"debug parity mismatches\", or \"port upstream shadcn/ui v4 recipes\". Provides an upstream-alignment workflow (shadcn/Radix/Base UI) that maps changes to the correct Fret layer and locks outcomes with targeted tests and `fretboard diag` scripts."
 ---
 
 # Shadcn / Radix source alignment

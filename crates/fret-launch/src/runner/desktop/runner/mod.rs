@@ -86,6 +86,7 @@ mod app_handler;
 mod dev_state;
 mod diag_bundle_screenshots;
 mod diag_cursor_override;
+mod diag_mouse_buttons_override;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
@@ -203,6 +204,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     saw_left_mouse_release_this_turn: bool,
     left_mouse_down: bool,
     dock_tearoff_follow: Option<DockTearoffFollow>,
+    dock_floating_windows: HashSet<fret_core::AppWindowId>,
 
     tick_id: TickId,
     frame_id: FrameId,
@@ -227,6 +229,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     diag_window_insets_overrides: HashMap<fret_core::AppWindowId, DiagWindowInsetsOverride>,
     diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
+    diag_mouse_buttons_override: Option<diag_mouse_buttons_override::DiagMouseButtonsOverride>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,

@@ -118,8 +118,7 @@ pub(super) fn workspace_prefix_from_out_dir(
     if depth == 0 {
         return Ok(".".to_string());
     }
-    Ok(std::iter::repeat("..")
-        .take(depth)
+    Ok(std::iter::repeat_n("..", depth)
         .collect::<Vec<_>>()
         .join("/"))
 }

@@ -175,18 +175,17 @@ pub(super) fn compare_bundles_json(
     let b_fp = b_snapshot
         .and_then(|s| s.get("scene_fingerprint"))
         .and_then(|v| v.as_u64());
-    if !opts.ignore_scene_fingerprint {
-        if let (Some(a_fp), Some(b_fp)) = (a_fp, b_fp) {
-            if a_fp != b_fp {
-                diffs.push(CompareDiff {
-                    kind: "scene_fingerprint_mismatch",
-                    key: None,
-                    field: Some("scene_fingerprint"),
-                    a: Some(serde_json::Value::from(a_fp)),
-                    b: Some(serde_json::Value::from(b_fp)),
-                });
-            }
-        }
+    if !opts.ignore_scene_fingerprint
+        && let (Some(a_fp), Some(b_fp)) = (a_fp, b_fp)
+        && a_fp != b_fp
+    {
+        diffs.push(CompareDiff {
+            kind: "scene_fingerprint_mismatch",
+            key: None,
+            field: Some("scene_fingerprint"),
+            a: Some(serde_json::Value::from(a_fp)),
+            b: Some(serde_json::Value::from(b_fp)),
+        });
     }
 
     if let (Some(a_snapshot), Some(b_snapshot)) = (a_snapshot, b_snapshot) {
@@ -221,10 +220,10 @@ struct SelectedSnapshotInfo {
     frame_id: Option<u64>,
 }
 
-fn select_snapshot_for_compare<'a>(
-    window: &'a serde_json::Value,
+fn select_snapshot_for_compare(
+    window: &serde_json::Value,
     warmup_frames: u64,
-) -> (Option<&'a serde_json::Value>, SelectedSnapshotInfo) {
+) -> (Option<&serde_json::Value>, SelectedSnapshotInfo) {
     let snaps = window
         .get("snapshots")
         .and_then(|v| v.as_array())
@@ -331,18 +330,17 @@ fn compare_semantics_by_test_id(
                 b: Some(b_node.actions.clone()),
             });
         }
-        if !opts.ignore_bounds {
-            if let (Some(a), Some(b)) = (a_node.bounds, b_node.bounds) {
-                if !rect_eq_eps(a, b, opts.eps_px) {
-                    diffs.push(CompareDiff {
-                        kind: "node_field_mismatch",
-                        key: Some(test_id.clone()),
-                        field: Some("bounds"),
-                        a: Some(serde_json::json!({ "x": a.0, "y": a.1, "w": a.2, "h": a.3 })),
-                        b: Some(serde_json::json!({ "x": b.0, "y": b.1, "w": b.2, "h": b.3 })),
-                    });
-                }
-            }
+        if !opts.ignore_bounds
+            && let (Some(a), Some(b)) = (a_node.bounds, b_node.bounds)
+            && !rect_eq_eps(a, b, opts.eps_px)
+        {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("bounds"),
+                a: Some(serde_json::json!({ "x": a.0, "y": a.1, "w": a.2, "h": a.3 })),
+                b: Some(serde_json::json!({ "x": b.0, "y": b.1, "w": b.2, "h": b.3 })),
+            });
         }
     }
 
@@ -495,32 +493,28 @@ fn compare_focus_and_capture_by_test_id(
     let b_focus = b_sem.get("focus").and_then(|v| v.as_u64());
     let a_focus_tid = a_focus.and_then(|id| a_id_to_test_id.get(&id).cloned());
     let b_focus_tid = b_focus.and_then(|id| b_id_to_test_id.get(&id).cloned());
-    if a_focus_tid.is_some() || b_focus_tid.is_some() {
-        if a_focus_tid != b_focus_tid {
-            diffs.push(CompareDiff {
-                kind: "focus_mismatch",
-                key: None,
-                field: Some("focus.test_id"),
-                a: a_focus_tid.map(serde_json::Value::from),
-                b: b_focus_tid.map(serde_json::Value::from),
-            });
-        }
+    if (a_focus_tid.is_some() || b_focus_tid.is_some()) && a_focus_tid != b_focus_tid {
+        diffs.push(CompareDiff {
+            kind: "focus_mismatch",
+            key: None,
+            field: Some("focus.test_id"),
+            a: a_focus_tid.map(serde_json::Value::from),
+            b: b_focus_tid.map(serde_json::Value::from),
+        });
     }
 
     let a_captured = a_sem.get("captured").and_then(|v| v.as_u64());
     let b_captured = b_sem.get("captured").and_then(|v| v.as_u64());
     let a_captured_tid = a_captured.and_then(|id| a_id_to_test_id.get(&id).cloned());
     let b_captured_tid = b_captured.and_then(|id| b_id_to_test_id.get(&id).cloned());
-    if a_captured_tid.is_some() || b_captured_tid.is_some() {
-        if a_captured_tid != b_captured_tid {
-            diffs.push(CompareDiff {
-                kind: "captured_mismatch",
-                key: None,
-                field: Some("captured.test_id"),
-                a: a_captured_tid.map(serde_json::Value::from),
-                b: b_captured_tid.map(serde_json::Value::from),
-            });
-        }
+    if (a_captured_tid.is_some() || b_captured_tid.is_some()) && a_captured_tid != b_captured_tid {
+        diffs.push(CompareDiff {
+            kind: "captured_mismatch",
+            key: None,
+            field: Some("captured.test_id"),
+            a: a_captured_tid.map(serde_json::Value::from),
+            b: b_captured_tid.map(serde_json::Value::from),
+        });
     }
 }
 
@@ -566,6 +560,7 @@ pub(crate) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
@@ -616,10 +611,9 @@ pub(crate) fn maybe_launch_demo(
     if let Some((_, v)) = launch_env
         .iter()
         .find(|(k, _)| k == "FRET_DIAG_FIXED_FRAME_DELTA_MS")
+        && let Ok(parsed) = v.trim().parse::<u64>()
     {
-        if let Ok(parsed) = v.trim().parse::<u64>() {
-            cfg.frame_clock_fixed_delta_ms = Some(parsed);
-        }
+        cfg.frame_clock_fixed_delta_ms = Some(parsed);
     }
     if let Some((_, v)) = launch_env
         .iter()
@@ -1185,20 +1179,20 @@ pub(super) fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> 
 
     // If `--features` already exists, try to extend it.
     for i in 0..cmd.len() {
-        if cmd[i] == "--features" || cmd[i] == "-F" {
-            if let Some(value) = cmd.get_mut(i + 1) {
-                let mut features: Vec<&str> = value
-                    .split(',')
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                if features.iter().any(|f| *f == feature) {
-                    return false;
-                }
-                features.push(feature);
-                *value = features.join(",");
-                return true;
+        if (cmd[i] == "--features" || cmd[i] == "-F")
+            && let Some(value) = cmd.get_mut(i + 1)
+        {
+            let mut features: Vec<&str> = value
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if features.contains(&feature) {
+                return false;
             }
+            features.push(feature);
+            *value = features.join(",");
+            return true;
         }
         if let Some(rest) = cmd[i].strip_prefix("--features=") {
             let mut features: Vec<&str> = rest
@@ -1206,7 +1200,7 @@ pub(super) fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> 
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .collect();
-            if features.iter().any(|f| *f == feature) {
+            if features.contains(&feature) {
                 return false;
             }
             features.push(feature);
@@ -1219,7 +1213,7 @@ pub(super) fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> 
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .collect();
-            if features.iter().any(|f| *f == feature) {
+            if features.contains(&feature) {
                 return false;
             }
             features.push(feature);
@@ -1309,6 +1303,7 @@ pub(super) struct RenderdocDumpAttempt {
     pub(super) error: Option<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn run_fret_renderdoc_dump(
     workspace_root: &Path,
     capture: &Path,
@@ -1459,6 +1454,15 @@ pub(super) fn read_perf_baseline_file(
     } else {
         workspace_root.join(path)
     };
+
+    if let Ok(meta) = std::fs::metadata(&resolved) {
+        if meta.is_dir() {
+            return Err(format!(
+                "invalid --perf-baseline path (expected a JSON file, got a directory): {}",
+                resolved.display()
+            ));
+        }
+    }
 
     let bytes = std::fs::read(&resolved).map_err(|e| {
         format!(
@@ -1661,6 +1665,7 @@ impl std::str::FromStr for PerfThresholdAggregate {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn scan_perf_threshold_failures(
     script: &str,
     sort: BundleStatsSort,

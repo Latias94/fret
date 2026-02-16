@@ -1,6 +1,6 @@
 ---
 name: fret-framework-maintainer-guide
-description: "Maintainer playbook for evolving the Fret UI framework safely: contracts/ADRs, layering boundaries, diagnostics + perf gates, shadcn/Radix/Base UI alignment, and evidence discipline. Use when landing framework changes (mechanisms, policies, tooling, or contracts)."
+description: "This skill should be used when the user asks to \"land a framework change\", \"change a hard contract\", \"update/add an ADR\", \"add diagnostics/perf gates\", or \"do upstream parity work\". Provides a contract-first maintainer playbook for safe evolution (ADRs, boundaries, diag/perf, shadcn/Radix/Base UI alignment, evidence discipline)."
 ---
 
 # Fret framework maintainer guide (contract-first)

@@ -326,14 +326,26 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             button,
             modifiers,
             click_count,
+            pointer_type,
             ..
         }) => {
-            if *button != fret_core::MouseButton::Left {
-                return;
+            match *button {
+                fret_core::MouseButton::Left => {
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    cx.set_cursor_icon(fret_core::CursorIcon::Text);
+                }
+                fret_core::MouseButton::Right => {
+                    if *pointer_type != fret_core::PointerType::Mouse {
+                        return;
+                    }
+                    // Preserve selection for Copy/Cut/Paste context menus and ensure command
+                    // availability hooks see this surface as focused (matching TextInput/TextArea).
+                    cx.request_focus(cx.node);
+                    cx.set_cursor_icon(fret_core::CursorIcon::Text);
+                }
+                _ => return,
             }
-            cx.request_focus(cx.node);
-            cx.capture_pointer(cx.node);
-            cx.set_cursor_icon(fret_core::CursorIcon::Text);
 
             let local = fret_core::Point::new(
                 fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
@@ -364,7 +376,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 this.element,
                 crate::element::SelectableTextState::default,
                 |state| {
-                    state.dragging = true;
+                    state.dragging = matches!(*button, fret_core::MouseButton::Left);
                     state.last_pointer_pos = Some(*position);
                     state.preferred_x = None;
 
@@ -374,21 +386,36 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                     });
 
                     let idx = hit.index.min(props.rich.text.len());
-                    let (anchor, caret) = match *click_count {
-                        2 => select_word(&props.rich.text, idx, boundary_mode),
-                        3 => select_line(&props.rich.text, idx),
-                        _ => {
-                            let caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
-                                &props.rich.text,
-                                idx,
-                            );
-                            let anchor = if modifiers.shift {
-                                state.selection_anchor
+                    let selection_start = state.selection_anchor.min(state.caret);
+                    let selection_end = state.selection_anchor.max(state.caret);
+                    let caret_at_point =
+                        crate::text_edit::utf8::clamp_to_grapheme_boundary(&props.rich.text, idx);
+
+                    let (anchor, caret) = match *button {
+                        fret_core::MouseButton::Right => {
+                            // Preserve an existing selection when right-clicking inside it so
+                            // upstream context menus keep Copy enabled.
+                            if selection_start != selection_end
+                                && caret_at_point >= selection_start
+                                && caret_at_point <= selection_end
+                            {
+                                (state.selection_anchor, state.caret)
                             } else {
-                                caret
-                            };
-                            (anchor, caret)
+                                (caret_at_point, caret_at_point)
+                            }
                         }
+                        _ => match *click_count {
+                            2 => select_word(&props.rich.text, idx, boundary_mode),
+                            3 => select_line(&props.rich.text, idx),
+                            _ => {
+                                let anchor = if modifiers.shift {
+                                    state.selection_anchor
+                                } else {
+                                    caret_at_point
+                                };
+                                (anchor, caret_at_point)
+                            }
+                        },
                     };
 
                     state.selection_anchor = anchor;
@@ -400,7 +427,9 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
             sync_active_text_selection(&mut *cx.app, window, this.element);
-            cx.stop_propagation();
+            if matches!(*button, fret_core::MouseButton::Left) {
+                cx.stop_propagation();
+            }
         }
         Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
             cx.set_cursor_icon(fret_core::CursorIcon::Text);

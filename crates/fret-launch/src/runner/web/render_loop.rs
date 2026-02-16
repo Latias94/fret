@@ -542,6 +542,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .set_global(gfx.renderer.text_fallback_policy_snapshot(self.frame_id));
         }
 
+        if let Some(perf) = gfx.renderer.take_last_frame_perf_snapshot() {
+            let tick_id = self.tick_id.0;
+            let frame_id = self.frame_id.0;
+            self.app.with_global_mut_untracked(
+                fret_render::RendererPerfFrameStore::default,
+                |store, _app| {
+                    store.record(self.app_window, tick_id, frame_id, perf);
+                },
+            );
+        }
+
         let mut submit: Vec<wgpu::CommandBuffer> = command_buffers;
         submit.push(cmd);
         gfx.ctx.queue.submit(submit);
@@ -549,6 +560,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         drop(keepalive);
 
         self.drain_turns(event_loop, window, &mut gfx, &mut state);
+        if gfx.diag_keepalive_redraw {
+            window.request_redraw();
+        }
 
         self.window_state = Some(state);
         self.gfx = Some(gfx);

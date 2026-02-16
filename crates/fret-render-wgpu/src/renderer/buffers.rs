@@ -1,169 +1,187 @@
 use super::*;
 
+pub(super) struct StorageRingBuffer<T> {
+    buffers: Vec<wgpu::Buffer>,
+    bind_groups: Vec<wgpu::BindGroup>,
+    bind_group_layout: wgpu::BindGroupLayout,
+    buffer_index: usize,
+    capacity: usize,
+    label_prefix: Arc<str>,
+    usage: wgpu::BufferUsages,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> StorageRingBuffer<T> {
+    pub(super) fn new(
+        device: &wgpu::Device,
+        frames_in_flight: usize,
+        capacity: usize,
+        bind_group_layout: wgpu::BindGroupLayout,
+        label_prefix: impl Into<Arc<str>>,
+        usage: wgpu::BufferUsages,
+    ) -> Self {
+        let label_prefix = label_prefix.into();
+        let element_size = std::mem::size_of::<T>() as u64;
+        let buffers: Vec<wgpu::Buffer> = (0..frames_in_flight)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("{label_prefix} #{i}")),
+                    size: (capacity as u64).saturating_mul(element_size).max(4),
+                    usage,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        let bind_groups: Vec<wgpu::BindGroup> = buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buffer)| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("{label_prefix} bind group #{i}")),
+                    layout: &bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer.as_entire_binding(),
+                    }],
+                })
+            })
+            .collect();
+
+        Self {
+            buffers,
+            bind_groups,
+            bind_group_layout,
+            buffer_index: 0,
+            capacity,
+            label_prefix,
+            usage,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub(super) fn layout(&self) -> &wgpu::BindGroupLayout {
+        &self.bind_group_layout
+    }
+
+    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.capacity.saturating_mul(2).max(1));
+        let element_size = std::mem::size_of::<T>() as u64;
+
+        let mut new_buffers = Vec::with_capacity(self.buffers.len());
+        let mut new_bind_groups = Vec::with_capacity(self.bind_groups.len());
+        for i in 0..self.buffers.len() {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("{} (resized) #{i}", self.label_prefix)),
+                size: (new_capacity as u64).saturating_mul(element_size).max(4),
+                usage: self.usage,
+                mapped_at_creation: false,
+            });
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(&format!("{} bind group (resized) #{i}", self.label_prefix)),
+                layout: &self.bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            new_buffers.push(buffer);
+            new_bind_groups.push(bind_group);
+        }
+
+        self.buffers = new_buffers;
+        self.bind_groups = new_bind_groups;
+        self.buffer_index = 0;
+        self.capacity = new_capacity;
+    }
+
+    pub(super) fn next_pair(&mut self) -> (wgpu::Buffer, wgpu::BindGroup) {
+        let idx = self.buffer_index;
+        self.buffer_index = (self.buffer_index + 1) % self.buffers.len();
+        (self.buffers[idx].clone(), self.bind_groups[idx].clone())
+    }
+}
+
+pub(super) struct RingBuffer<T> {
+    buffers: Vec<wgpu::Buffer>,
+    buffer_index: usize,
+    capacity: usize,
+    label_prefix: Arc<str>,
+    usage: wgpu::BufferUsages,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> RingBuffer<T> {
+    pub(super) fn new(
+        device: &wgpu::Device,
+        frames_in_flight: usize,
+        capacity: usize,
+        label_prefix: impl Into<Arc<str>>,
+        usage: wgpu::BufferUsages,
+    ) -> Self {
+        let label_prefix = label_prefix.into();
+        let element_size = std::mem::size_of::<T>() as u64;
+        let buffers: Vec<wgpu::Buffer> = (0..frames_in_flight)
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("{label_prefix} #{i}")),
+                    size: (capacity as u64).saturating_mul(element_size).max(4),
+                    usage,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        Self {
+            buffers,
+            buffer_index: 0,
+            capacity,
+            label_prefix,
+            usage,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.capacity.saturating_mul(2).max(1));
+        let element_size = std::mem::size_of::<T>() as u64;
+
+        let mut new_buffers = Vec::with_capacity(self.buffers.len());
+        for i in 0..self.buffers.len() {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("{} (resized) #{i}", self.label_prefix)),
+                size: (new_capacity as u64).saturating_mul(element_size).max(4),
+                usage: self.usage,
+                mapped_at_creation: false,
+            });
+            new_buffers.push(buffer);
+        }
+
+        self.buffers = new_buffers;
+        self.buffer_index = 0;
+        self.capacity = new_capacity;
+    }
+
+    pub(super) fn next_buffer(&mut self) -> wgpu::Buffer {
+        let idx = self.buffer_index;
+        self.buffer_index = (self.buffer_index + 1) % self.buffers.len();
+        self.buffers[idx].clone()
+    }
+}
+
 impl Renderer {
-    pub(super) fn ensure_instance_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.instance_capacity {
-            return;
-        }
-        let new_capacity = needed.next_power_of_two().max(self.instance_capacity * 2);
-        let mut new_buffers = Vec::with_capacity(self.instance_buffers.len());
-        let mut new_bind_groups = Vec::with_capacity(self.instance_buffers.len());
-        for i in 0..self.instance_buffers.len() {
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(&format!("fret quad instances (resized) #{i}")),
-                size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("fret quad instances bind group (resized) #{i}")),
-                layout: &self.quad_instance_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }],
-            });
-            new_buffers.push(buffer);
-            new_bind_groups.push(bind_group);
-        }
-        self.instance_buffers = new_buffers;
-        self.quad_instance_bind_groups = new_bind_groups;
-        self.instance_buffer_index = 0;
-        self.instance_capacity = new_capacity;
-    }
-
-    pub(super) fn ensure_path_paint_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.path_paint_capacity {
-            return;
-        }
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.path_paint_capacity.saturating_mul(2).max(1));
-        let mut new_buffers = Vec::with_capacity(self.path_paint_buffers.len());
-        let mut new_bind_groups = Vec::with_capacity(self.path_paint_buffers.len());
-        for i in 0..self.path_paint_buffers.len() {
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(&format!("fret path paints (resized) #{i}")),
-                size: (new_capacity * std::mem::size_of::<PaintGpu>()) as u64,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("fret path paints bind group (resized) #{i}")),
-                layout: &self.path_paint_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }],
-            });
-            new_buffers.push(buffer);
-            new_bind_groups.push(bind_group);
-        }
-        self.path_paint_buffers = new_buffers;
-        self.path_paint_bind_groups = new_bind_groups;
-        self.path_paint_buffer_index = 0;
-        self.path_paint_capacity = new_capacity;
-    }
-
-    pub(super) fn ensure_text_paint_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.text_paint_capacity {
-            return;
-        }
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.text_paint_capacity.saturating_mul(2).max(1));
-        let mut new_buffers = Vec::with_capacity(self.text_paint_buffers.len());
-        let mut new_bind_groups = Vec::with_capacity(self.text_paint_buffers.len());
-        for i in 0..self.text_paint_buffers.len() {
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(&format!("fret text paints (resized) #{i}")),
-                size: (new_capacity * std::mem::size_of::<PaintGpu>()) as u64,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("fret text paints bind group (resized) #{i}")),
-                layout: &self.text_paint_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }],
-            });
-            new_buffers.push(buffer);
-            new_bind_groups.push(bind_group);
-        }
-        self.text_paint_buffers = new_buffers;
-        self.text_paint_bind_groups = new_bind_groups;
-        self.text_paint_buffer_index = 0;
-        self.text_paint_capacity = new_capacity;
-    }
-
-    pub(super) fn ensure_viewport_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.viewport_vertex_capacity {
-            return;
-        }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.viewport_vertex_capacity * 2);
-        self.viewport_vertex_buffers = (0..self.viewport_vertex_buffers.len())
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret viewport vertices (resized) #{i}")),
-                    size: (new_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-        self.viewport_vertex_buffer_index = 0;
-        self.viewport_vertex_capacity = new_capacity;
-    }
-
-    pub(super) fn ensure_text_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.text_vertex_capacity {
-            return;
-        }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.text_vertex_capacity * 2);
-        self.text_vertex_buffers = (0..self.text_vertex_buffers.len())
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret text vertices (resized) #{i}")),
-                    size: (new_capacity * std::mem::size_of::<TextVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-        self.text_vertex_buffer_index = 0;
-        self.text_vertex_capacity = new_capacity;
-    }
-
-    pub(super) fn ensure_path_vertex_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.path_vertex_capacity {
-            return;
-        }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.path_vertex_capacity * 2);
-        self.path_vertex_buffers = (0..self.path_vertex_buffers.len())
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret path vertices (resized) #{i}")),
-                    size: (new_capacity * std::mem::size_of::<PathVertex>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
-        self.path_vertex_buffer_index = 0;
-        self.path_vertex_capacity = new_capacity;
-    }
-
     pub(super) fn ensure_uniform_capacity(&mut self, device: &wgpu::Device, needed: usize) {
         if needed <= self.uniform_capacity {
             return;

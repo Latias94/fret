@@ -6,6 +6,7 @@ mod prelude {
     pub(super) use super::super::super::*;
 }
 
+use crate::ui::doc_layout::{self, DocSection};
 use prelude::*;
 
 pub(super) fn preview_combobox(
@@ -33,105 +34,14 @@ pub(super) fn preview_combobox(
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
 
-    let component_panel = sections::component_panel(
-        cx,
-        demo,
-        custom_items_top,
-        multiple_selection,
-        basic,
-        long_list,
-        multiple,
-        clear_button,
-        groups,
-        custom_items_example,
-        invalid,
-        disabled,
-        auto_highlight,
-        popup,
-        input_group,
-        rtl,
-    );
-
-    let code_panel = code_panel(cx);
-    let notes_panel = notes_panel(cx);
-
-    super::render_component_page_tabs(
-        cx,
-        "ui-gallery-combobox",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
-}
-
-fn code_block(
-    cx: &mut ElementContext<'_, App>,
-    title: &'static str,
-    snippet: &'static str,
-) -> AnyElement {
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-            .into_element(cx),
-    ])
-    .into_element(cx)
-}
-
-fn code_panel(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"let combo = shadcn::Combobox::new(value, open)
-    .placeholder("Select a framework")
-    .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-    ])
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Style + Disabled",
-                    r#"let invalid = shadcn::Combobox::new(value, open)
-    .refine_style(ChromeRefinement::default().border_1())
-    .disabled(true)
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Combobox::new(value, open)
-        .placeholder("????")
-        .into_element(cx)
-})"#,
-                ),
-            ]
-        },
-    );
-    helpers::shell(cx, code_stack)
-}
-
-fn notes_panel(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Current Fret `Combobox` focuses on single-select + query filtering; several Base UI recipes are tracked as explicit gaps here.",
@@ -151,5 +61,87 @@ fn notes_panel(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ]
         },
     );
-    helpers::shell(cx, notes_stack)
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Preview follows shadcn Combobox docs flow; unsupported recipes are kept as explicit gap markers.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Basic single-select combobox with query filtering.")
+                .code(
+                    "rust",
+                    r#"let combo = shadcn::Combobox::new(value, open)
+    .placeholder("Pick a fruit")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("apple", "Apple"),
+        shadcn::ComboboxItem::new("banana", "Banana"),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Custom Items", custom_items_top)
+                .description(
+                    "Fret currently uses string value/label pairs; object-item mapping is approximated by richer labels.",
+                )
+                .code(
+                    "rust",
+                    r#"let combo = shadcn::Combobox::new(value, open)
+    .placeholder("Select framework")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js (React)"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Multiple Selection", multiple_selection)
+                .description("Parity gap marker: upstream supports chips + multiple values."),
+            DocSection::new("Basic", basic)
+                .description("Small list of items with stable test IDs for diag scripts."),
+            DocSection::new("Long List", long_list)
+                .description(
+                    "Supports long-list scroll regression gates (and future virtualization invariants).",
+                ),
+            DocSection::new("Multiple", multiple)
+                .description("Parity gap marker: `multiple` + chips behavior is not exposed yet."),
+            DocSection::new("Clear Button", clear_button)
+                .description("Parity gap marker: upstream `showClear` is not exposed yet."),
+            DocSection::new("Groups", groups)
+                .description(
+                    "Grouped rows are approximated with prefix labels until group/separator APIs exist.",
+                ),
+            DocSection::new("Custom Items (Rich)", custom_items_example).description(
+                "Parity gap marker: render-rich item surfaces are currently approximated at label level.",
+            ),
+            DocSection::new("Invalid", invalid).description(
+                "Invalid visual is currently approximated via destructive border style on trigger.",
+            ),
+            DocSection::new("Disabled", disabled)
+                .description("Disabled state should block open/selection and use muted styling."),
+            DocSection::new("Auto Highlight", auto_highlight).description(
+                "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not surfaced yet.",
+            ),
+            DocSection::new("Popup", popup).description(
+                "Parity gap marker: trigger-as-button popup recipe is not exposed yet.",
+            ),
+            DocSection::new("Input Group", input_group)
+                .description("Inline keybinding + input grouping example."),
+            DocSection::new("RTL", rtl)
+                .description("All shadcn components should work under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Combobox::new(value, open)
+        .placeholder("????")
+        .into_element(cx)
+})"#,
+                ),
+            DocSection::new("Notes", notes)
+                .description("Guidelines and parity notes for combobox recipes."),
+        ],
+    );
+
+    vec![body]
 }

@@ -2275,37 +2275,37 @@ impl<H: UiHost> UiTree<H> {
                 );
 
             #[cfg(feature = "diagnostics")]
-            if let Some(window) = self.window {
-                if ime_reserved {
-                    app.with_global_mut_untracked(
-                        fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
-                        |store, app| {
-                            store.record(
-                                window,
-                                fret_runtime::ShortcutRoutingDecision {
-                                    seq: 0,
-                                    frame_id: app.frame_id(),
-                                    phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
-                                    key: *key,
-                                    modifiers: *modifiers,
-                                    repeat: *repeat,
-                                    deferred: true,
-                                    focus_is_text_input,
-                                    ime_composing: self.ime_composing,
-                                    pending_sequence_len: self
-                                        .pending_shortcut
-                                        .keystrokes
-                                        .len()
-                                        .min(u32::MAX as usize)
-                                        as u32,
-                                    outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
-                                    command: None,
-                                    command_enabled: None,
-                                },
-                            );
-                        },
-                    );
-                }
+            if let Some(window) = self.window
+                && ime_reserved
+            {
+                app.with_global_mut_untracked(
+                    fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
+                    |store, app| {
+                        store.record(
+                            window,
+                            fret_runtime::ShortcutRoutingDecision {
+                                seq: 0,
+                                frame_id: app.frame_id(),
+                                phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                                key: *key,
+                                modifiers: *modifiers,
+                                repeat: *repeat,
+                                deferred: true,
+                                focus_is_text_input,
+                                ime_composing: self.ime_composing,
+                                pending_sequence_len: self
+                                    .pending_shortcut
+                                    .keystrokes
+                                    .len()
+                                    .min(u32::MAX as usize)
+                                    as u32,
+                                outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
+                                command: None,
+                                command_enabled: None,
+                            },
+                        );
+                    },
+                );
             }
 
             if !ime_reserved

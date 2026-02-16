@@ -75,7 +75,7 @@ pub(crate) fn web_demos_as_vec() -> Vec<String> {
 }
 
 pub(crate) fn validate_web_demo(name: &str) -> Result<(), String> {
-    if web_demos().iter().any(|d| *d == name) {
+    if web_demos().contains(&name) {
         return Ok(());
     }
     Err(format!(

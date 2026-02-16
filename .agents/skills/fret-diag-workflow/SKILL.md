@@ -1,6 +1,6 @@
 ---
 name: fret-diag-workflow
-description: "Diagnostics workflow for Fret UI: scripted interaction automation (`fretboard diag`), shareable bundles/screenshots, triage/compare, and perf gates (`diag perf`) with worst-bundle attribution. Use to turn flaky UI issues or perf hitches into stable repro gates with evidence."
+description: "This skill should be used when the user asks to \"reproduce a UI bug\", \"write a diag script\", \"capture a diagnostics bundle\", \"triage/compare bundles\", or \"add a perf gate\". Provides the `fretboard diag` workflow for scripted interactions, shareable bundles, comparisons, and perf attribution with stable evidence."
 ---
 
 # Fret diagnostics workflow (correctness + perf)

@@ -938,6 +938,25 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+
+    pub(super) renderer_render_target_updates_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_unknown: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_owned: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_external_zero_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_gpu_copy: u64,
+    pub(super) renderer_render_target_updates_requested_ingest_cpu_upload: u64,
+    pub(super) renderer_render_target_updates_ingest_fallbacks: u64,
+
+    pub(super) renderer_viewport_draw_calls: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_unknown: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_owned: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_external_zero_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_gpu_copy: u64,
+    pub(super) renderer_viewport_draw_calls_ingest_cpu_upload: u64,
     pub(super) renderer_svg_raster_budget_bytes: u64,
     pub(super) renderer_svg_rasters_live: u64,
     pub(super) renderer_svg_standalone_bytes_live: u64,
@@ -1825,55 +1844,57 @@ impl BundleStatsReport {
                             let path = compact_debug_path(path);
                             out.push_str(&format!(" root.path={path}"));
                         }
-                        if let Some(m) = s.top_measures.first() {
-                            if m.measure_time_us > 0 && m.node != 0 {
+                        if let Some(m) = s.top_measures.first()
+                            && m.measure_time_us > 0
+                            && m.node != 0
+                        {
+                            out.push_str(&format!(
+                                " top_measure.us={} node={}",
+                                m.measure_time_us, m.node
+                            ));
+                            if let Some(kind) = m.element_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" kind={kind}"));
+                            }
+                            if let Some(el) = m.element {
+                                out.push_str(&format!(" element={el}"));
+                            }
+                            if let Some(test_id) = m.test_id.as_deref()
+                                && !test_id.is_empty()
+                            {
+                                out.push_str(&format!(" test_id={test_id}"));
+                            }
+                            if let Some(role) = m.role.as_deref()
+                                && !role.is_empty()
+                            {
+                                out.push_str(&format!(" role={role}"));
+                            }
+                            if let Some(c) = m.top_children.first()
+                                && c.measure_time_us > 0
+                                && c.child != 0
+                            {
                                 out.push_str(&format!(
-                                    " top_measure.us={} node={}",
-                                    m.measure_time_us, m.node
+                                    " child.us={} child={}",
+                                    c.measure_time_us, c.child
                                 ));
-                                if let Some(kind) = m.element_kind.as_deref()
+                                if let Some(kind) = c.element_kind.as_deref()
                                     && !kind.is_empty()
                                 {
-                                    out.push_str(&format!(" kind={kind}"));
+                                    out.push_str(&format!(" child.kind={kind}"));
                                 }
-                                if let Some(el) = m.element {
-                                    out.push_str(&format!(" element={el}"));
+                                if let Some(el) = c.element {
+                                    out.push_str(&format!(" child.element={el}"));
                                 }
-                                if let Some(test_id) = m.test_id.as_deref()
+                                if let Some(test_id) = c.test_id.as_deref()
                                     && !test_id.is_empty()
                                 {
-                                    out.push_str(&format!(" test_id={test_id}"));
+                                    out.push_str(&format!(" child.test_id={test_id}"));
                                 }
-                                if let Some(role) = m.role.as_deref()
+                                if let Some(role) = c.role.as_deref()
                                     && !role.is_empty()
                                 {
-                                    out.push_str(&format!(" role={role}"));
-                                }
-                                if let Some(c) = m.top_children.first() {
-                                    if c.measure_time_us > 0 && c.child != 0 {
-                                        out.push_str(&format!(
-                                            " child.us={} child={}",
-                                            c.measure_time_us, c.child
-                                        ));
-                                        if let Some(kind) = c.element_kind.as_deref()
-                                            && !kind.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.kind={kind}"));
-                                        }
-                                        if let Some(el) = c.element {
-                                            out.push_str(&format!(" child.element={el}"));
-                                        }
-                                        if let Some(test_id) = c.test_id.as_deref()
-                                            && !test_id.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.test_id={test_id}"));
-                                        }
-                                        if let Some(role) = c.role.as_deref()
-                                            && !role.is_empty()
-                                        {
-                                            out.push_str(&format!(" child.role={role}"));
-                                        }
-                                    }
+                                    out.push_str(&format!(" child.role={role}"));
                                 }
                             }
                         }
@@ -3753,7 +3774,7 @@ impl BundleStatsReport {
                         h_obj.insert("text_len".to_string(), Value::from(h.text_len));
                         h_obj.insert(
                             "max_width".to_string(),
-                            h.max_width.map(|v| Value::from(v)).unwrap_or(Value::Null),
+                            h.max_width.map(Value::from).unwrap_or(Value::Null),
                         );
                         h_obj.insert(
                             "wrap".to_string(),
@@ -3765,9 +3786,7 @@ impl BundleStatsReport {
                         );
                         h_obj.insert(
                             "scale_factor".to_string(),
-                            h.scale_factor
-                                .map(|v| Value::from(v))
-                                .unwrap_or(Value::Null),
+                            h.scale_factor.map(Value::from).unwrap_or(Value::Null),
                         );
                         h_obj.insert("reasons_mask".to_string(), Value::from(h.reasons_mask));
                         h_obj.insert(
@@ -4204,14 +4223,16 @@ mod tests {
 
     #[test]
     fn stats_json_includes_avg_and_budget() {
-        let mut report = BundleStatsReport::default();
-        report.sort = BundleStatsSort::Time;
-        report.snapshots_considered = 2;
-        report.sum_total_time_us = 100;
-        report.sum_layout_time_us = 40;
-        report.sum_prepaint_time_us = 10;
-        report.sum_paint_time_us = 50;
-        report.sum_layout_observation_record_time_us = 6;
+        let report = BundleStatsReport {
+            sort: BundleStatsSort::Time,
+            snapshots_considered: 2,
+            sum_total_time_us: 100,
+            sum_layout_time_us: 40,
+            sum_prepaint_time_us: 10,
+            sum_paint_time_us: 50,
+            sum_layout_observation_record_time_us: 6,
+            ..Default::default()
+        };
 
         let json = report.to_json();
         assert!(json.get("avg").is_some());
@@ -4278,30 +4299,31 @@ pub(super) fn check_bundle_for_stale_paint_json(
                 continue;
             };
 
-            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp) {
-                if (y - prev_y).abs() >= eps as f64 && fp == prev_fp {
-                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let paint_nodes_performed = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_nodes_performed"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let paint_replayed_ops = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_cache_replayed_ops"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    suspicious.push(format!(
+            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp)
+                && (y - prev_y).abs() >= eps as f64
+                && fp == prev_fp
+            {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let paint_nodes_performed = s
+                    .get("debug")
+                    .and_then(|v| v.get("stats"))
+                    .and_then(|v| v.get("paint_nodes_performed"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_replayed_ops = s
+                    .get("debug")
+                    .and_then(|v| v.get("stats"))
+                    .and_then(|v| v.get("paint_cache_replayed_ops"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                suspicious.push(format!(
                         "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} delta_y={:.2} scene_fingerprint=0x{:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_replayed_ops}",
                         y - prev_y,
                         fp
                     ));
-                    if suspicious.len() >= 8 {
-                        break;
-                    }
+                if suspicious.len() >= 8 {
+                    break;
                 }
             }
 
@@ -4652,13 +4674,13 @@ fn semantics_node_summary_json(id: u64, node: Option<&serde_json::Value>) -> ser
     let label = node.get("label").and_then(|v| v.as_str());
     let value = node.get("value").and_then(|v| v.as_str());
 
-    let bounds = node.get("bounds").and_then(|b| {
-        Some(json!({
+    let bounds = node.get("bounds").map(|b| {
+        json!({
             "x": b.get("x").and_then(|v| v.as_f64()),
             "y": b.get("y").and_then(|v| v.as_f64()),
             "w": b.get("w").and_then(|v| v.as_f64()),
             "h": b.get("h").and_then(|v| v.as_f64()),
-        }))
+        })
     });
 
     json!({
@@ -5450,10 +5472,10 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
             .and_then(|v| v.first())
             .and_then(|v| v.get("offset"))
             .and_then(|v| v.as_f64());
-        if let (Some(a), Some(b)) = (before_offset, after_offset) {
-            if (a - b).abs() > 0.1 {
-                continue;
-            }
+        if let (Some(a), Some(b)) = (before_offset, after_offset)
+            && (a - b).abs() > 0.1
+        {
+            continue;
         }
 
         if hit_before == hit_after {
@@ -6022,25 +6044,24 @@ pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_jso
 
                 if let (Some(prev_start), Some(prev_fp)) =
                     (stats.prev_visible_start, stats.prev_scene_fingerprint)
+                    && visible_start != prev_start
                 {
-                    if visible_start != prev_start {
-                        stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
-                        total_visible_start_changes = total_visible_start_changes.saturating_add(1);
-                        if fp == prev_fp {
-                            stats.suspicious_visible_start_changes =
-                                stats.suspicious_visible_start_changes.saturating_add(1);
-                            total_suspicious_changes = total_suspicious_changes.saturating_add(1);
-                            if suspicious.len() < 32 {
-                                suspicious.push(serde_json::json!({
-                                    "window": window_id,
-                                    "tick_id": tick_id,
-                                    "frame_id": frame_id,
-                                    "callsite_id": callsite_id,
-                                    "prev_visible_start": prev_start,
-                                    "visible_start": visible_start,
-                                    "scene_fingerprint": fp,
-                                }));
-                            }
+                    stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
+                    total_visible_start_changes = total_visible_start_changes.saturating_add(1);
+                    if fp == prev_fp {
+                        stats.suspicious_visible_start_changes =
+                            stats.suspicious_visible_start_changes.saturating_add(1);
+                        total_suspicious_changes = total_suspicious_changes.saturating_add(1);
+                        if suspicious.len() < 32 {
+                            suspicious.push(serde_json::json!({
+                                "window": window_id,
+                                "tick_id": tick_id,
+                                "frame_id": frame_id,
+                                "callsite_id": callsite_id,
+                                "prev_visible_start": prev_start,
+                                "visible_start": visible_start,
+                                "scene_fingerprint": fp,
+                            }));
                         }
                     }
                 }
@@ -7127,7 +7148,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
             }
 
             let mut unique_entries: Vec<&serde_json::Value> = Vec::new();
-            let mut seen_keys: std::collections::HashSet<(
+            type VirtualListShiftKey = (
                 Option<u64>,
                 Option<u64>,
                 Option<String>,
@@ -7135,7 +7156,9 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
                 Option<String>,
                 Option<String>,
                 Option<bool>,
-            )> = std::collections::HashSet::new();
+            );
+            let mut seen_keys: std::collections::HashSet<VirtualListShiftKey> =
+                std::collections::HashSet::new();
             for w in shift_entries {
                 let key = (
                     w.get("node").and_then(|v| v.as_u64()),
@@ -7583,7 +7606,7 @@ pub(super) fn check_bundle_for_drag_cache_root_paint_only(
                 .get("debug")
                 .and_then(|v| v.get("dirty_views"))
                 .and_then(|v| v.as_array())
-                .map_or(false, |dirty| {
+                .is_some_and(|dirty| {
                     dirty.iter().any(|d| {
                         d.get("root_node")
                             .and_then(|v| v.as_u64())
@@ -8820,10 +8843,12 @@ pub(super) fn bundle_stats_from_json_with_options(
         .and_then(|v| v.as_array())
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
-    let mut out = BundleStatsReport::default();
-    out.sort = sort;
-    out.warmup_frames = opts.warmup_frames;
-    out.windows = windows.len().min(u32::MAX as usize) as u32;
+    let mut out = BundleStatsReport {
+        sort,
+        warmup_frames: opts.warmup_frames,
+        windows: windows.len().min(u32::MAX as usize) as u32,
+        ..Default::default()
+    };
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
     let mut global_type_counts: std::collections::HashMap<String, u64> =
@@ -9347,6 +9372,78 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_image_upload_bytes = stats
                 .and_then(|m| m.get("renderer_image_upload_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let renderer_render_target_updates_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_owned = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_external_zero_copy = stats
+                .and_then(|m| {
+                    m.get("renderer_render_target_updates_requested_ingest_external_zero_copy")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_requested_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_render_target_updates_requested_ingest_cpu_upload"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_target_updates_ingest_fallbacks = stats
+                .and_then(|m| m.get("renderer_render_target_updates_ingest_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let renderer_viewport_draw_calls = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_unknown = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_unknown"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_owned = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_owned"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_external_zero_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_external_zero_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_gpu_copy = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_gpu_copy"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_viewport_draw_calls_ingest_cpu_upload = stats
+                .and_then(|m| m.get("renderer_viewport_draw_calls_ingest_cpu_upload"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_svg_raster_budget_bytes = stats
@@ -10116,6 +10213,23 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_prepare_svg_us,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
+                renderer_render_target_updates_ingest_unknown,
+                renderer_render_target_updates_ingest_owned,
+                renderer_render_target_updates_ingest_external_zero_copy,
+                renderer_render_target_updates_ingest_gpu_copy,
+                renderer_render_target_updates_ingest_cpu_upload,
+                renderer_render_target_updates_requested_ingest_unknown,
+                renderer_render_target_updates_requested_ingest_owned,
+                renderer_render_target_updates_requested_ingest_external_zero_copy,
+                renderer_render_target_updates_requested_ingest_gpu_copy,
+                renderer_render_target_updates_requested_ingest_cpu_upload,
+                renderer_render_target_updates_ingest_fallbacks,
+                renderer_viewport_draw_calls,
+                renderer_viewport_draw_calls_ingest_unknown,
+                renderer_viewport_draw_calls_ingest_owned,
+                renderer_viewport_draw_calls_ingest_external_zero_copy,
+                renderer_viewport_draw_calls_ingest_gpu_copy,
+                renderer_viewport_draw_calls_ingest_cpu_upload,
                 renderer_svg_raster_budget_bytes,
                 renderer_svg_rasters_live,
                 renderer_svg_standalone_bytes_live,
@@ -13383,7 +13497,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
                     }
                 }
                 1 => {
-                    if focused && (sel_lo == 5 && sel_hi == 5 || sel_lo == 0 && sel_hi == 5) {
+                    if focused && (sel_lo == 0 || sel_lo == 5) && sel_hi == 5 {
                         state = 2;
                         break;
                     }
@@ -14520,13 +14634,12 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
                     }
                 }
                 2 => {
-                    if caret == WRAP_COLS + 1 {
-                        if let Some(base) = baseline_len_bytes
-                            && len_bytes == base.saturating_add(1)
-                        {
-                            edited_len_bytes = Some(len_bytes);
-                            state = 3;
-                        }
+                    if caret == WRAP_COLS + 1
+                        && let Some(base) = baseline_len_bytes
+                        && len_bytes == base.saturating_add(1)
+                    {
+                        edited_len_bytes = Some(len_bytes);
+                        state = 3;
                     }
                 }
                 3 => {
@@ -14535,11 +14648,9 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
                     }
                 }
                 4 => {
-                    if caret == WRAP_COLS {
-                        if edited_len_bytes == Some(len_bytes) {
-                            state = 5;
-                            break;
-                        }
+                    if caret == WRAP_COLS && edited_len_bytes == Some(len_bytes) {
+                        state = 5;
+                        break;
                     }
                 }
                 _ => {}
@@ -18780,7 +18891,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
                     baseline_caret = caret;
                     state = 1;
                 }
-                1 | 2 | 3 => {
+                1..=3 => {
                     if rev != baseline_rev
                         || len != baseline_len
                         || anchor != baseline_anchor
@@ -19064,12 +19175,11 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
                     toggled_inlays = Some(inlays_fixture);
                     state = 3;
                 }
-            } else if state == 3 {
-                if baseline_folds.is_some_and(|b| folds_fixture == b)
-                    && baseline_inlays.is_some_and(|b| inlays_fixture == b)
-                {
-                    state = 4;
-                }
+            } else if state == 3
+                && baseline_folds.is_some_and(|b| folds_fixture == b)
+                && baseline_inlays.is_some_and(|b| inlays_fixture == b)
+            {
+                state = 4;
             }
 
             let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
@@ -19454,17 +19564,16 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_s
             }
 
             let torture = app_snapshot.get("code_editor")?.get("torture")?;
-            if torture.get("preedit_active")?.as_bool()? != true {
+            if !(torture.get("preedit_active")?.as_bool()?) {
                 return None;
             }
-            if torture
+            if !(torture
                 .get("allow_decorations_under_inline_preedit")?
-                .as_bool()?
-                != true
+                .as_bool()?)
             {
                 return None;
             }
-            if torture.get("compose_inline_preedit")?.as_bool()? != true {
+            if !(torture.get("compose_inline_preedit")?.as_bool()?) {
                 return None;
             }
 
@@ -20174,7 +20283,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
                         }
                     }
                     1 => {
-                        if (a == 3 && b == 3) || (a == 0 && b == 3) || (a == 4 && b == 5) {
+                        if (a == 0 || a == 3) && b == 3 || (a == 4 && b == 5) {
                             state = 2;
                         }
                     }
@@ -20184,7 +20293,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
                         }
                     }
                     3 => {
-                        if (a == 5 && b == 5) || (a == 0 && b == 5) {
+                        if (a == 0 || a == 5) && b == 5 {
                             state = 4;
                         }
                     }
@@ -20809,10 +20918,10 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
                         Some(s.len() as u64)
                     })
                 });
-            if let Some(len_bytes) = len_bytes {
-                if expected_len_bytes.is_none() {
-                    expected_len_bytes = Some(len_bytes);
-                }
+            if let Some(len_bytes) = len_bytes
+                && expected_len_bytes.is_none()
+            {
+                expected_len_bytes = Some(len_bytes);
             }
             let Some(len_bytes) = expected_len_bytes else {
                 continue;

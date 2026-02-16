@@ -10,8 +10,36 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 
 ## Open items (v1 follow-ups)
 
+- [~] EXT-adr-200 External texture imports v2 contract (zero/low-copy):
+      define the bounded strategy set, capability gating, deterministic fallback order, and the
+      required metadata semantics for correctness parity.
+  - ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md`
+  - Exit criteria:
+    - the fallback chain is explicit and bounded (no “best effort”),
+    - metadata (colorspace/orientation/alpha) semantics are locked,
+    - and a minimal perf-gate checklist is recorded for wasm/mobile.
+
+- [x] EXT-diag-210 Surface per-frame ingestion strategy counters in renderer perf snapshots:
+      record declared `RenderTargetMetadata` ingestion strategy counts for `RenderTargetId` updates and
+      viewport sampling, and include them in UI diagnostics bundles for perf attribution.
+  - Notes:
+    - `RenderTargetMetadata.requested_ingest_strategy` (requested) and `RenderTargetMetadata.ingest_strategy`
+      (effective) are both surfaced so capability-gated fallbacks are measurable.
+    - `render_target_updates_ingest_fallbacks` counts requested != effective at update time (best-effort).
+  - Evidence anchors:
+    - `crates/fret-render-core/src/lib.rs` (`RenderTargetIngestStrategy`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`perf_pending_render_target_updates_by_ingest`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (snapshot fields + breakdown)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` renderer fields)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (web: enable `Renderer::set_perf_enabled` when DevTools WS is configured)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (web: record `RendererPerfFrameStore` samples per frame)
+
 - [!] EXT-web-100 Web v1 zero-copy import: WebCodecs `VideoFrame` → WebGPU `ExternalTexture`
       (capability-gated) with deterministic fallback.
+  - Notes:
+    - This is the web backend’s primary v2 “ceiling path”, but it remains blocked until the
+      WebGPU backend supports `ExternalTexture` ingestion end-to-end.
+    - Contract details are tracked in ADR 0282.
   - Blocker: wgpu WebGPU backend does not implement `ExternalTexture` yet (wgpu v28 has an
     `unimplemented!` stub in `wgpu/src/backend/webgpu.rs`).
   - Evidence anchors:
@@ -57,6 +85,8 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
     - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
   - Notes:
+    - Direct perf gate (devtools-ws):
+      - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
     - Export bundles (devtools-ws):
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-diag-export -- --list-sessions`
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-diag-export -- --script tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --session-id <id> --out-dir target/fret-diag-web-copy/exports`
@@ -67,3 +97,11 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - Exports:
       - `target/fret-diag-web-copy/exports/1771140829044-bundle`
       - `target/fret-diag-web-copy/exports/1771140845261-bundle`
+
+- [x] EXT-web-diag-212 Web DevTools WS scripts are runnable while the app is otherwise idle:
+      keep the web runner rendering while DevTools WS is configured so inbound WS messages (scripts,
+      bundle dumps) are processed even when the UI would otherwise not request redraw.
+  - Evidence anchors:
+    - `crates/fret-launch/src/runner/web/mod.rs` (`GfxState.diag_keepalive_redraw`)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (detect DevTools WS query params + set keepalive)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (re-request redraw when keepalive enabled)

@@ -2700,7 +2700,9 @@ impl CommandDialog {
             }
         };
         let entries = self.entries;
-        let a11y_label = self.a11y_label;
+        let a11y_label = self
+            .a11y_label
+            .unwrap_or_else(|| Arc::from("Command palette"));
         let disabled = self.disabled;
         let wrap = self.wrap;
         let close_on_select = self.close_on_select;
@@ -2816,7 +2818,7 @@ impl CommandDialog {
                 let palette = CommandPalette::new(query, Vec::new())
                     .command_dialog_defaults()
                     .entries(entries)
-                    .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
+                    .a11y_label(a11y_label.clone())
                     .disabled(disabled)
                     .wrap(wrap)
                     .empty_text(empty_text)
@@ -2825,6 +2827,7 @@ impl CommandDialog {
 
                 DialogContent::new(vec![palette])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .a11y_label(a11y_label)
                     .into_element(cx)
             })
     }
