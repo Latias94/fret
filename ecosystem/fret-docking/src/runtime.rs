@@ -4,6 +4,7 @@
 //! These ops must be applied by the app/runner layer:
 //! - apply graph mutations (`DockGraph::apply_op`)
 //! - translate `RequestFloatPanelToNewWindow` into a `WindowRequest::Create`
+//! - translate `RequestFloatTabsToNewWindow` into a `WindowRequest::Create`
 //! - complete the float by updating the graph once the OS window exists
 
 use fret_core::{AppWindowId, DockOp};
@@ -42,8 +43,15 @@ impl DockFloatingOsWindowRegistry {
 #[derive(Debug, Clone)]
 struct DockTearOffPending {
     source_window: AppWindowId,
+    kind: DockTearOffKind,
     requested_at: fret_runtime::TickId,
     canceled: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DockTearOffKind {
+    Panel,
+    Tabs { source_tabs: fret_core::DockNodeId },
 }
 
 /// Small runtime-layer state machine to keep tear-off window creation idempotent.
@@ -72,6 +80,7 @@ impl DockTearOffMachine {
         now: fret_runtime::TickId,
         source_window: AppWindowId,
         panel: &fret_core::PanelKey,
+        kind: DockTearOffKind,
     ) -> bool {
         self.prune_expired(now);
         match self.pending_by_panel.get(panel) {
@@ -81,6 +90,7 @@ impl DockTearOffMachine {
                     panel.clone(),
                     DockTearOffPending {
                         source_window,
+                        kind,
                         requested_at: now,
                         canceled: false,
                     },
@@ -100,27 +110,27 @@ impl DockTearOffMachine {
         &mut self,
         request: &CreateWindowRequest,
         now: fret_runtime::TickId,
-    ) -> DockTearOffCompletion {
+    ) -> (DockTearOffCompletion, Option<DockTearOffPending>) {
         self.prune_expired(now);
         let CreateWindowKind::DockFloating {
             source_window,
             panel,
         } = &request.kind
         else {
-            return DockTearOffCompletion::Proceed;
+            return (DockTearOffCompletion::Proceed, None);
         };
 
         let Some(pending) = self.pending_by_panel.remove(panel) else {
             // If we can't correlate the request, default to proceeding; callers may still apply the
             // graph update if the panel exists.
-            return DockTearOffCompletion::Proceed;
+            return (DockTearOffCompletion::Proceed, None);
         };
 
         if pending.canceled || pending.source_window != *source_window {
-            return DockTearOffCompletion::CancelAndCloseWindow;
+            return (DockTearOffCompletion::CancelAndCloseWindow, Some(pending));
         }
 
-        DockTearOffCompletion::Proceed
+        (DockTearOffCompletion::Proceed, Some(pending))
     }
 }
 
@@ -266,7 +276,77 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
 
             let now = app.tick_id();
             let should_emit = app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
-                machine.register_request(now, source_window, &panel)
+                machine.register_request(now, source_window, &panel, DockTearOffKind::Panel)
+            });
+            if !should_emit {
+                return true;
+            }
+
+            app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                kind: CreateWindowKind::DockFloating {
+                    source_window,
+                    panel,
+                },
+                anchor,
+                role: fret_runtime::WindowRole::Auxiliary,
+                style: fret_runtime::WindowStyleRequest {
+                    taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
+                    activation: Some(fret_runtime::ActivationPolicy::Activates),
+                    z_level: None,
+                },
+            })));
+            true
+        }
+        DockOp::RequestFloatTabsToNewWindow {
+            source_window,
+            source_tabs,
+            panel,
+            anchor,
+        } => {
+            if app.global::<DockManager>().is_none() {
+                return false;
+            }
+
+            if let Some(caps) = app.global::<PlatformCapabilities>() {
+                let tear_off_supported = caps.ui.multi_window
+                    && caps.ui.window_tear_off
+                    && caps.ui.window_hover_detection
+                        != fret_runtime::WindowHoverDetectionQuality::None;
+                if !tear_off_supported {
+                    let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
+                    let rect = default_in_window_float_rect(app, target_window, anchor);
+                    return handle_dock_op(
+                        app,
+                        DockOp::FloatTabsInWindow {
+                            source_window,
+                            source_tabs,
+                            target_window,
+                            rect,
+                        },
+                    );
+                }
+            } else {
+                let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
+                let rect = default_in_window_float_rect(app, target_window, anchor);
+                return handle_dock_op(
+                    app,
+                    DockOp::FloatTabsInWindow {
+                        source_window,
+                        source_tabs,
+                        target_window,
+                        rect,
+                    },
+                );
+            }
+
+            let now = app.tick_id();
+            let should_emit = app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
+                machine.register_request(
+                    now,
+                    source_window,
+                    &panel,
+                    DockTearOffKind::Tabs { source_tabs },
+                )
             });
             if !should_emit {
                 return true;
@@ -318,8 +398,16 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         machine.prune_expired(now);
                         machine.cancel_for_panel(panel);
                     }
-                    DockOp::MoveTabs { .. } | DockOp::FloatTabsInWindow { .. } => {
+                    DockOp::MoveTabs { source_tabs, .. }
+                    | DockOp::FloatTabsInWindow { source_tabs, .. } => {
                         machine.prune_expired(now);
+                        if let Some(fret_core::DockNode::Tabs { tabs, .. }) =
+                            dock.graph.node(*source_tabs)
+                        {
+                            for panel in tabs {
+                                machine.cancel_for_panel(panel);
+                            }
+                        }
                     }
                     _ => machine.prune_expired(now),
                 });
@@ -406,7 +494,8 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     | DockOp::SetSplitFractionTwo { .. } => {
                         invalidate_windows(app, dock.graph.windows());
                     }
-                    DockOp::RequestFloatPanelToNewWindow { .. } => unreachable!(),
+                    DockOp::RequestFloatPanelToNewWindow { .. }
+                    | DockOp::RequestFloatTabsToNewWindow { .. } => unreachable!(),
                 }
                 true
             });
@@ -442,9 +531,10 @@ pub fn handle_dock_window_created<H: UiHost>(
     new_window: AppWindowId,
 ) -> bool {
     let now = app.tick_id();
-    let completion = app.with_global_mut(DockTearOffMachine::default, |machine, _app| {
-        machine.complete_for_create_request(request, now)
-    });
+    let (completion, pending) = app
+        .with_global_mut(DockTearOffMachine::default, |machine, _app| {
+            machine.complete_for_create_request(request, now)
+        });
     if matches!(completion, DockTearOffCompletion::CancelAndCloseWindow) {
         if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
             tracing::info!(
@@ -477,17 +567,32 @@ pub fn handle_dock_window_created<H: UiHost>(
         return true;
     }
 
+    let kind = pending
+        .as_ref()
+        .map(|p| p.kind)
+        .unwrap_or(DockTearOffKind::Panel);
     let handled = app.with_global_mut(DockManager::default, |dock, app| {
-        let changed = dock
-            .graph
-            .float_panel_to_window(*source_window, panel.clone(), new_window);
+        let changed = match kind {
+            DockTearOffKind::Panel => {
+                dock.graph
+                    .float_panel_to_window(*source_window, panel.clone(), new_window)
+            }
+            DockTearOffKind::Tabs { source_tabs } => {
+                dock.graph
+                    .float_tabs_to_window(*source_window, source_tabs, new_window)
+            }
+        };
         if !changed {
             return false;
         }
 
-        if let Some(pointer_id) = app.find_drag_pointer_id(|d| {
-            d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL && d.source_window == *source_window
-        }) && let Some(drag) = app.drag_mut(pointer_id)
+        let drag_kind = match kind {
+            DockTearOffKind::Panel => fret_runtime::DRAG_KIND_DOCK_PANEL,
+            DockTearOffKind::Tabs { .. } => fret_runtime::DRAG_KIND_DOCK_TABS,
+        };
+        if let Some(pointer_id) =
+            app.find_drag_pointer_id(|d| d.kind == drag_kind && d.source_window == *source_window)
+            && let Some(drag) = app.drag_mut(pointer_id)
         {
             drag.source_window = new_window;
             drag.current_window = new_window;
@@ -829,11 +934,89 @@ mod tests {
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
 
-        let drag = app
-            .drag(pointer_id)
-            .expect("expected active drag session");
+        let drag = app.drag(pointer_id).expect("expected active drag session");
         assert_eq!(drag.source_window, window_b);
         assert_eq!(drag.current_window, window_b);
+    }
+
+    #[test]
+    fn window_created_updates_drag_source_window_for_active_dock_tabs_drag() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let pointer_id = fret_core::PointerId(9);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel_a.clone(),
+                crate::DockPanel {
+                    title: "A".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            dock.insert_panel(
+                panel_b.clone(),
+                crate::DockPanel {
+                    title: "B".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel_a.clone(), panel_b.clone()],
+                active: 1,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+            tabs
+        });
+
+        app.begin_cross_window_drag_with_kind(
+            pointer_id,
+            fret_runtime::DRAG_KIND_DOCK_TABS,
+            window_a,
+            fret_core::Point::default(),
+            (),
+        );
+
+        let op = DockOp::RequestFloatTabsToNewWindow {
+            source_window: window_a,
+            source_tabs,
+            panel: panel_b.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        let create = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+                _ => None,
+            })
+            .expect("expected WindowRequest::Create");
+
+        assert!(handle_dock_window_created(&mut app, &create, window_b));
+
+        let drag = app.drag(pointer_id).expect("expected active drag session");
+        assert_eq!(drag.source_window, window_b);
+        assert_eq!(drag.current_window, window_b);
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.collect_panels_in_window(window_a).is_empty(),
+            "expected source window to be empty after floating tabs to new window"
+        );
+        assert_eq!(
+            dock.graph.collect_panels_in_window(window_b),
+            vec![panel_a, panel_b],
+            "expected all tabs to be moved to the new window"
+        );
     }
 
     #[test]

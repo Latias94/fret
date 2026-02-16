@@ -71,6 +71,96 @@ fn dock_tab_drop_outside_window_requests_float() {
         "expected a float request effect when dropping outside the window"
     );
 }
+
+#[test]
+fn dock_tabs_group_drop_outside_window_requests_float() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![
+                PanelKey::new("core.hierarchy"),
+                PanelKey::new("core.inspector"),
+            ],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("core.inspector"),
+            DockPanel {
+                title: "Inspector".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        tabs
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        fret_runtime::DRAG_KIND_DOCK_TABS,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockTabsDragPayload {
+            source_tabs,
+            tabs: vec![
+                PanelKey::new("core.hierarchy"),
+                PanelKey::new("core.inspector"),
+            ],
+            active: 0,
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(-32.0), Px(12.0)),
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatTabsToNewWindow { source_tabs: tabs, .. })
+                if *tabs == source_tabs
+        )),
+        "expected a float request effect when dropping a tabs group outside the window"
+    );
+}
+
 #[test]
 fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
     let window = AppWindowId::default();
@@ -158,6 +248,95 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
     assert_eq!(
         count, 1,
         "expected at most one tear-off request for a single drag session"
+    );
+}
+
+#[test]
+fn dock_tabs_group_drop_outside_window_does_not_request_tear_off_twice() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let source_tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![
+                PanelKey::new("core.hierarchy"),
+                PanelKey::new("core.inspector"),
+            ],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("core.inspector"),
+            DockPanel {
+                title: "Inspector".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        tabs
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        fret_runtime::DRAG_KIND_DOCK_TABS,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockTabsDragPayload {
+            source_tabs,
+            tabs: vec![
+                PanelKey::new("core.hierarchy"),
+                PanelKey::new("core.inspector"),
+            ],
+            active: 0,
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: true,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(-32.0), Px(12.0)),
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let request_count = effects
+        .iter()
+        .filter(|e| matches!(e, Effect::Dock(DockOp::RequestFloatTabsToNewWindow { .. })))
+        .count();
+    assert_eq!(
+        request_count, 0,
+        "expected no float request when tear-off was already requested"
     );
 }
 #[test]

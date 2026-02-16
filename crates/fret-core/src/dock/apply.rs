@@ -40,6 +40,9 @@ impl DockGraph {
             DockOp::RequestFloatPanelToNewWindow { .. } => Err(DockOpApplyError {
                 kind: DockOpApplyErrorKind::UnsupportedOp,
             }),
+            DockOp::RequestFloatTabsToNewWindow { .. } => Err(DockOpApplyError {
+                kind: DockOpApplyErrorKind::UnsupportedOp,
+            }),
             _ => Ok(self.apply_op(op)),
         }
     }
@@ -84,6 +87,7 @@ impl DockGraph {
                 new_window,
             } => self.float_panel_to_window(*source_window, panel.clone(), *new_window),
             DockOp::RequestFloatPanelToNewWindow { .. } => false,
+            DockOp::RequestFloatTabsToNewWindow { .. } => false,
             DockOp::FloatPanelInWindow {
                 source_window,
                 panel,

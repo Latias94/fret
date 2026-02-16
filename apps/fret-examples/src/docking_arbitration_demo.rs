@@ -153,8 +153,11 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         };
 
         // Scripted drag anchors must start on the *tab* itself (not empty space in the tab bar),
-        // otherwise docking will interpret the interaction as a "tabs group" drag. That prevents
-        // multi-window tear-off (which is currently only supported for panel drags).
+        // otherwise docking will interpret the interaction as a "tabs group" drag.
+        //
+        // For multi-window tear-off scenarios, this distinction matters:
+        // - panel drags tear off a single tab (ImGui-style),
+        // - tabs-group drags tear off the whole stack.
         //
         // Avoid depending on the viewport layout cache produced during `DockSpace::paint(...)`.
         // That cache is populated after layout, which makes script anchors race-y on the first

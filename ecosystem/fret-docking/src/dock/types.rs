@@ -74,6 +74,12 @@ pub(super) enum DockDropIntent {
         panel: PanelKey,
         anchor: Option<fret_core::WindowAnchor>,
     },
+    RequestFloatTabsToNewWindow {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        panel: PanelKey,
+        anchor: Option<fret_core::WindowAnchor>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]

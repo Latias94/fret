@@ -402,6 +402,35 @@ fn float_tabs_in_window_creates_floating_container_with_tabs() {
 }
 
 #[test]
+fn float_tabs_to_window_moves_tab_stack_to_new_window_root() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+        active: 2,
+    });
+    g.set_window_root(w1, tabs);
+
+    assert!(g.float_tabs_to_window(w1, tabs, w2));
+
+    assert!(
+        g.window_root(w1).is_none(),
+        "expected source window root to be removed"
+    );
+    let root2 = g.window_root(w2).expect("expected new window root");
+    let DockNode::Tabs { tabs, active } = g.node(root2).expect("new tabs exists") else {
+        unreachable!();
+    };
+    assert_eq!(tabs, &vec![panel_a, panel_b, panel_c]);
+    assert_eq!(*active, 2);
+}
+
+#[test]
 fn move_tabs_merges_into_target_tabs_and_preserves_active() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
@@ -743,6 +772,9 @@ fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
                         DockOp::FloatPanelToWindow { .. } => "float_panel_to_window",
                         DockOp::RequestFloatPanelToNewWindow { .. } => {
                             "request_float_panel_to_new_window"
+                        }
+                        DockOp::RequestFloatTabsToNewWindow { .. } => {
+                            "request_float_tabs_to_new_window"
                         }
                         DockOp::FloatPanelInWindow { .. } => "float_panel_in_window",
                         DockOp::FloatTabsInWindow { .. } => "float_tabs_in_window",
