@@ -152,7 +152,7 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - [x] punctuation (`.`) and operator tokens (`::`, `->`) avoid obviously-bad splits,
   - [x] grapheme clusters (ZWJ/VS16/combining marks) do not split inside clusters,
   - [x] long tokens have a bounded emergency-break behavior.
-- [ ] Coordinate with `docs/workstreams/text-line-breaking-v1.md`:
+- [x] Coordinate with `docs/workstreams/text-line-breaking-v1.md`:
   - UI wrap improvements must not change editor wrap policy implicitly.
   - Evidence anchors:
     - `ecosystem/fret-code-editor-view/src/code_wrap_policy.rs` (`row_starts_for_code_wrap`)
