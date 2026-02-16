@@ -848,6 +848,45 @@ fn row_text_cache_stats_tracks_hits_and_misses() {
 }
 
 #[test]
+fn code_wrap_policy_change_invalidates_row_text_cache() {
+    let handle = CodeEditorHandle::new("ab_cd_ef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Conservative,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..4);
+        assert_eq!(
+            text.as_ref(),
+            "ab_c",
+            "conservative wrap falls back to grapheme boundaries (no identifier knob)"
+        );
+    }
+
+    handle.set_code_wrap_policy(Some(
+        fret_code_editor_view::code_wrap_policy::CodeWrapPolicy::preset(
+            fret_code_editor_view::code_wrap_policy::CodeWrapPreset::Balanced,
+        ),
+    ));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let (range, text, _, _, _) = paint::cached_row_text_with_range(&mut st, 0, 8);
+        assert_eq!(range, 0..3);
+        assert_eq!(
+            text.as_ref(),
+            "ab_",
+            "balanced wrap prefers breaking after '_' when near the wrap width"
+        );
+    }
+}
+
+#[test]
 fn ctrl_page_down_bubbles_and_keeps_preedit() {
     let handle = CodeEditorHandle::new("hello\nworld");
     let preedit = PreeditState {

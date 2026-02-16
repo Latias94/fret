@@ -638,6 +638,7 @@ struct CodeEditorState {
     display_wrap_cols: Option<usize>,
     code_wrap_policy: Option<CodeWrapPolicy>,
     display_map: DisplayMap,
+    display_map_epoch: u64,
     caret_preferred_x: Option<Px>,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
@@ -655,6 +656,7 @@ struct CodeEditorState {
     row_text_cache_wrap_cols: Option<usize>,
     row_text_cache_folds_epoch: u64,
     row_text_cache_inlays_epoch: u64,
+    row_text_cache_display_map_epoch: u64,
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (RowTextCacheEntry, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
@@ -662,6 +664,7 @@ struct CodeEditorState {
     row_geom_cache_wrap_cols: Option<usize>,
     row_geom_cache_folds_epoch: u64,
     row_geom_cache_inlays_epoch: u64,
+    row_geom_cache_display_map_epoch: u64,
     row_geom_cache_tick: u64,
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
@@ -737,11 +740,13 @@ impl CodeEditorState {
     }
 
     fn invalidate_row_caches(&mut self) {
+        self.row_text_cache_display_map_epoch = self.display_map_epoch;
         self.row_text_cache_tick = 0;
         self.row_text_cache.clear();
         self.row_text_cache_queue.clear();
         self.cache_stats.row_text_resets = self.cache_stats.row_text_resets.saturating_add(1);
 
+        self.row_geom_cache_display_map_epoch = self.display_map_epoch;
         self.row_geom_cache_tick = 0;
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
@@ -817,6 +822,7 @@ impl CodeEditorState {
                 code_wrap_policy,
             )
         };
+        self.display_map_epoch = self.display_map_epoch.saturating_add(1);
     }
 
     fn paint_perf_begin_frame(&mut self, frame: WindowedRowsPaintFrame) {
@@ -927,6 +933,7 @@ impl CodeEditorHandle {
                 display_wrap_cols: None,
                 code_wrap_policy: Some(CodeWrapPolicy::preset(CodeWrapPreset::Balanced)),
                 display_map,
+                display_map_epoch: 0,
                 caret_preferred_x: None,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
@@ -944,6 +951,7 @@ impl CodeEditorHandle {
                 row_text_cache_wrap_cols: None,
                 row_text_cache_folds_epoch: 0,
                 row_text_cache_inlays_epoch: 0,
+                row_text_cache_display_map_epoch: 0,
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
@@ -951,6 +959,7 @@ impl CodeEditorHandle {
                 row_geom_cache_wrap_cols: None,
                 row_geom_cache_folds_epoch: 0,
                 row_geom_cache_inlays_epoch: 0,
+                row_geom_cache_display_map_epoch: 0,
                 row_geom_cache_tick: 0,
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
@@ -1240,12 +1249,14 @@ impl CodeEditorHandle {
         st.refresh_display_map();
 
         st.row_text_cache_folds_epoch = st.folds_epoch;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1262,12 +1273,14 @@ impl CodeEditorHandle {
         st.refresh_display_map();
 
         st.row_text_cache_folds_epoch = st.folds_epoch;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1295,12 +1308,14 @@ impl CodeEditorHandle {
         st.refresh_display_map();
 
         st.row_text_cache_inlays_epoch = st.inlays_epoch;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1317,12 +1332,14 @@ impl CodeEditorHandle {
         st.refresh_display_map();
 
         st.row_text_cache_inlays_epoch = st.inlays_epoch;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1362,6 +1379,7 @@ impl CodeEditorHandle {
         st.row_text_cache_rev = st.buffer.revision();
         st.row_text_cache_folds_epoch = st.folds_epoch;
         st.row_text_cache_inlays_epoch = st.inlays_epoch;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
@@ -1369,6 +1387,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1421,10 +1440,12 @@ impl CodeEditorHandle {
         st.refresh_display_map();
         input::clamp_selection_out_of_folds(&mut st);
         st.caret_preferred_x = None;
+        st.row_text_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_display_map_epoch = st.display_map_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -1443,13 +1464,26 @@ impl CodeEditorHandle {
             st.refresh_display_map();
             input::clamp_selection_out_of_folds(&mut st);
             st.caret_preferred_x = None;
+            st.row_text_cache_display_map_epoch = st.display_map_epoch;
             st.row_geom_cache_rev = st.buffer.revision();
             st.row_geom_cache_wrap_cols = st.display_wrap_cols;
             st.row_geom_cache_folds_epoch = st.folds_epoch;
             st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+            st.row_geom_cache_display_map_epoch = st.display_map_epoch;
             st.row_geom_cache_tick = 0;
             st.row_geom_cache.clear();
             st.row_geom_cache_queue.clear();
+            st.row_text_cache_tick = 0;
+            st.row_text_cache.clear();
+            st.row_text_cache_queue.clear();
+            st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+            #[cfg(feature = "syntax")]
+            {
+                st.row_rich_cache_tick = 0;
+                st.row_rich_cache.clear();
+                st.row_rich_cache_queue.clear();
+                st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+            }
         }
     }
 }
