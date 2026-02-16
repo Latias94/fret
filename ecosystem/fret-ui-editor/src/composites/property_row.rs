@@ -1,5 +1,4 @@
 //! Inspector-style property row composite (label + value + actions).
-use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
@@ -136,22 +135,19 @@ impl PropertyRow {
         value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
     ) -> AnyElement {
-        let loc = Location::caller();
-        let callsite = (loc.file(), loc.line(), loc.column());
         let id_source = self.options.id_source.clone();
         if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(
-                ("fret-ui-editor.property_row", id_source, callsite),
-                move |cx| self.into_element_keyed(cx, label, value, actions),
-            )
-        } else {
-            cx.keyed(("fret-ui-editor.property_row", callsite), move |cx| {
-                self.into_element_keyed(cx, label, value, actions)
+            // Only key when the caller provides an explicit identity source. Keying by callsite
+            // alone breaks loop-built rows by collapsing them into a single element identity.
+            cx.keyed(("fret-ui-editor.property_row", id_source), move |cx| {
+                self.into_element_inner(cx, label, value, actions)
             })
+        } else {
+            self.into_element_inner(cx, label, value, actions)
         }
     }
 
-    fn into_element_keyed<H: UiHost>(
+    fn into_element_inner<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
