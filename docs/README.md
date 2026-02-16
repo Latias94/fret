@@ -3,6 +3,10 @@
 This repository is intentionally documentation-driven: the goal is to lock in “hard-to-change” editor-grade UI
 contracts early to avoid large rewrites later.
 
+New to the repo? Start with:
+
+- First hour onboarding (native): `docs/first-hour.md`
+
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`

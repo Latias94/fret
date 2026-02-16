@@ -9,6 +9,22 @@ This document shows what we want a first-time Fret user to write when building a
 
 It is intentionally “golden path”: advanced apps may assemble crates manually.
 
+## Onboarding ladder (progressive disclosure)
+
+Prefer an explicit ladder instead of starting with the full baseline on minute 1:
+
+1. `hello` — the smallest runnable “Hello UI”
+2. `simple-todo` — **Model + MVU messages + keyed lists** (no selectors/queries)
+3. `todo` — the best-practice baseline (**selectors + queries**) once you need derived/async state
+
+Templates (in this repository):
+
+```bash
+fretboard new hello --name hello-world
+fretboard new simple-todo --name my-simple-todo
+fretboard new todo --name my-todo
+```
+
 Related ADRs:
 
 - Golden-path driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
@@ -44,6 +60,23 @@ Notes:
 
 - `fret` defaults to a practical desktop setup (diagnostics + icons + optional caches).
 - Advanced apps can depend on `fret-framework` + `fret-bootstrap` directly for finer-grained control.
+
+## Invalidation rules of thumb (keep it simple)
+
+When observing models in views:
+
+- Visual-only changes → `Paint`
+- Affects sizing/flow/scroll extents → `Layout`
+- Affects hit regions only → `HitTest`
+
+If you are unsure, start with `Layout` and tighten later.
+
+## Identity rules of thumb (keyed lists)
+
+Dynamic lists should use stable keys:
+
+- Prefer `cx.keyed(id, |cx| ...)` for list rows.
+- If a list can insert/remove/reorder, assume it needs keys.
 
 ## Minimal `Cargo.toml`
 
@@ -112,7 +145,11 @@ struct TodoProgram;
 
 ## Three-layer state split (recommended)
 
-The official baseline (including `apps/fret-examples/src/todo_demo.rs`) uses an explicit 3-layer model:
+This section describes the **best-practice baseline** (`todo`) and `apps/fret-examples/src/todo_demo.rs`.
+
+The `simple-todo` template intentionally stops earlier (Model + MVU only).
+
+The official baseline uses an explicit 3-layer model:
 
 1. Local mutable state (`Model<T>`):
    - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).
