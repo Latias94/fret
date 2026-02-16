@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_dropdown_menu(
     cx: &mut ElementContext<'_, App>,
@@ -181,48 +182,6 @@ pub(super) fn preview_dropdown_menu(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let button_trigger = |cx: &mut ElementContext<'_, App>,
                           open_model: Model<bool>,
                           label: &'static str,
@@ -238,44 +197,62 @@ pub(super) fn preview_dropdown_menu(
         shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
     };
 
-    let demo_content = shadcn::DropdownMenu::new(open.clone())
-        .into_element(
-            cx,
-            |cx| {
-                shadcn::Button::new("Open menu")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .toggle_model(open.clone())
-                    .test_id("ui-gallery-dropdown-menu-demo-trigger")
-                    .into_element(cx)
-            },
-            |cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("My Account")),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Profile")
-                            .leading(icon(cx, "lucide.user"))
-                            .trailing(shadcn::DropdownMenuShortcut::new("Cmd+P").into_element(cx))
-                            .on_select(CMD_MENU_DROPDOWN_APPLE)
-                            .test_id("ui-gallery-dropdown-menu-demo-profile"),
-                    ),
-                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("More").submenu(
-                        vec![
-                            shadcn::DropdownMenuEntry::Item(
-                                shadcn::DropdownMenuItem::new("Invite users")
-                                    .on_select(CMD_MENU_DROPDOWN_APPLE),
-                            ),
-                            shadcn::DropdownMenuEntry::Item(
-                                shadcn::DropdownMenuItem::new("Preferences")
-                                    .on_select(CMD_MENU_DROPDOWN_ORANGE),
-                            ),
-                        ],
-                    )),
-                ]
-            },
-        )
-        .test_id("ui-gallery-dropdown-menu-demo");
-    let demo = section_card(cx, "Demo", demo_content);
+    let action_text = cx
+        .app
+        .models()
+        .get_cloned(&last_action)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let demo_menu = shadcn::DropdownMenu::new(open.clone()).into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("Open menu")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open.clone())
+                .test_id("ui-gallery-dropdown-menu-demo-trigger")
+                .into_element(cx)
+        },
+        |cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("My Account")),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Item(
+                    shadcn::DropdownMenuItem::new("Profile")
+                        .leading(icon(cx, "lucide.user"))
+                        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+P").into_element(cx))
+                        .on_select(CMD_MENU_DROPDOWN_APPLE)
+                        .test_id("ui-gallery-dropdown-menu-demo-profile"),
+                ),
+                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("More").submenu(
+                    vec![
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users")
+                                .on_select(CMD_MENU_DROPDOWN_APPLE),
+                        ),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Preferences")
+                                .on_select(CMD_MENU_DROPDOWN_ORANGE),
+                        ),
+                    ],
+                )),
+            ]
+        },
+    );
+
+    let demo = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_center()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            vec![
+                demo_menu,
+                shadcn::typography::muted(cx, format!("last action: {action_text}"))
+                    .test_id("ui-gallery-dropdown-menu-last-action"),
+            ]
+        },
+    );
 
     let basic_content = shadcn::DropdownMenu::new(basic_open.clone()).into_element(
         cx,
@@ -302,7 +279,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let basic = section_card(cx, "Basic", basic_content);
+    let basic = basic_content;
 
     let submenu_content = shadcn::DropdownMenu::new(submenu_open.clone()).into_element(
         cx,
@@ -334,7 +311,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let submenu = section_card(cx, "Submenu", submenu_content);
+    let submenu = submenu_content;
 
     let shortcuts_content = shadcn::DropdownMenu::new(shortcuts_open.clone()).into_element(
         cx,
@@ -361,7 +338,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let shortcuts = section_card(cx, "Shortcuts", shortcuts_content);
+    let shortcuts = shortcuts_content;
 
     let icons_content = shadcn::DropdownMenu::new(icons_open.clone()).into_element(
         cx,
@@ -388,7 +365,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let icons = section_card(cx, "Icons", icons_content);
+    let icons = icons_content;
 
     let checkboxes_content = shadcn::DropdownMenu::new(checkboxes_open.clone()).into_element(
         cx,
@@ -413,7 +390,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let checkboxes = section_card(cx, "Checkboxes", checkboxes_content);
+    let checkboxes = checkboxes_content;
 
     let checkboxes_icons_content = shadcn::DropdownMenu::new(checkboxes_icons_open.clone())
         .into_element(
@@ -445,7 +422,7 @@ pub(super) fn preview_dropdown_menu(
                 ]
             },
         );
-    let checkboxes_icons = section_card(cx, "Checkboxes Icons", checkboxes_icons_content);
+    let checkboxes_icons = checkboxes_icons_content;
 
     let radio_group_content = shadcn::DropdownMenu::new(radio_open.clone()).into_element(
         cx,
@@ -466,7 +443,7 @@ pub(super) fn preview_dropdown_menu(
             )]
         },
     );
-    let radio_group = section_card(cx, "Radio Group", radio_group_content);
+    let radio_group = radio_group_content;
 
     let radio_icons_content = shadcn::DropdownMenu::new(radio_icons_open.clone()).into_element(
         cx,
@@ -496,7 +473,7 @@ pub(super) fn preview_dropdown_menu(
             )]
         },
     );
-    let radio_icons = section_card(cx, "Radio Icons", radio_icons_content);
+    let radio_icons = radio_icons_content;
 
     let destructive_content = shadcn::DropdownMenu::new(destructive_open.clone()).into_element(
         cx,
@@ -521,7 +498,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let destructive = section_card(cx, "Destructive", destructive_content);
+    let destructive = destructive_content;
 
     let avatar_content = shadcn::DropdownMenu::new(avatar_open.clone()).into_element(
         cx,
@@ -544,7 +521,7 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let avatar = section_card(cx, "Avatar", avatar_content);
+    let avatar = avatar_content;
 
     let complex_content = shadcn::DropdownMenu::new(complex_open.clone())
         .arrow(true)
@@ -591,7 +568,7 @@ pub(super) fn preview_dropdown_menu(
                 ]
             },
         );
-    let complex = section_card(cx, "Complex", complex_content);
+    let complex = complex_content;
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -622,111 +599,16 @@ pub(super) fn preview_dropdown_menu(
             )
         },
     );
-    let rtl = section_card(cx, "RTL", rtl_content);
+    let rtl = rtl_content;
 
-    let action_text = cx
-        .app
-        .models()
-        .get_cloned(&last_action)
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Dropdown Menu docs order: Demo, Basic, Submenu, Shortcuts, Icons, Checkboxes, Checkboxes Icons, Radio Group, Radio Icons, Destructive, Avatar, Complex, RTL.",
-                ),
-                shadcn::typography::muted(cx, format!("last action: {action_text}")),
-                demo,
-                basic,
-                submenu,
-                shortcuts,
-                icons,
-                checkboxes,
-                checkboxes_icons,
-                radio_group,
-                radio_icons,
-                destructive,
-                avatar,
-                complex,
-                rtl,
-            ]
-        },
-    );
-    let component_panel =
-        shell(cx, component_panel_body).test_id("ui-gallery-dropdown-menu-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Basic").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"shadcn::DropdownMenu::new(open).into_element(
-    cx,
-    |cx| trigger,
-    |_cx| vec![
-        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
-        shadcn::DropdownMenuEntry::Separator,
-        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Billing")),
-    ],
-);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Checkbox + Radio").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"shadcn::DropdownMenuEntry::CheckboxItem(
-    shadcn::DropdownMenuCheckboxItem::new(show_status_bar, "Status Bar"),
-);
-
-shadcn::DropdownMenuEntry::RadioGroup(
-    shadcn::DropdownMenuRadioGroup::new(theme_mode)
-        .item(shadcn::DropdownMenuRadioItemSpec::new("light", "Light")),
-);"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Dropdown Menu page follows docs sequence to keep parity review deterministic.",
@@ -742,13 +624,69 @@ shadcn::DropdownMenuEntry::RadioGroup(
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-dropdown-menu",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Dropdown Menu docs order: Demo, Basic, Submenu, Shortcuts, Icons, Checkboxes, Checkboxes Icons, Radio Group, Radio Icons, Destructive, Avatar, Complex, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Minimal menu surface with label, separator, and submenu.")
+                .code(
+                    "rust",
+                    r#"let open = app.models_mut().insert(false);
+let menu = shadcn::DropdownMenu::new(open).into_element(
+    cx,
+    |cx| shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx),
+    |_cx| vec![/* entries */],
+);"#,
+                ),
+            DocSection::new("Basic", basic)
+                .description("A simple menu with label, separator, and items.")
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenu::new(open).into_element(cx, trigger, |_cx| {
+    vec![
+        shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("My Account")),
+        shadcn::DropdownMenuEntry::Separator,
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
+    ]
+});"#,
+                ),
+            DocSection::new("Submenu", submenu)
+                .description("Nested submenu entries for grouped actions."),
+            DocSection::new("Shortcuts", shortcuts)
+                .description("Trailing shortcuts for command discovery."),
+            DocSection::new("Icons", icons).description("Leading icons for visual scanning."),
+            DocSection::new("Checkboxes", checkboxes)
+                .description("Checkbox items are bound to boolean models."),
+            DocSection::new("Checkboxes Icons", checkboxes_icons)
+                .description("Checkbox items can also render leading icons."),
+            DocSection::new("Radio Group", radio_group)
+                .description("Radio groups are bound to a single selected value.")
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenuEntry::RadioGroup(
+    shadcn::DropdownMenuRadioGroup::new(theme_mode)
+        .item(shadcn::DropdownMenuRadioItemSpec::new("light", "Light"))
+        .item(shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")),
+);"#,
+                ),
+            DocSection::new("Radio Icons", radio_icons)
+                .description("Radio items can render leading icons."),
+            DocSection::new("Destructive", destructive)
+                .description("Destructive items use a dedicated visual variant."),
+            DocSection::new("Avatar", avatar)
+                .description("Menu triggers can be non-button elements (e.g. avatar)."),
+            DocSection::new("Complex", complex)
+                .description("Composed menu with arrows, submenus, and destructive actions."),
+            DocSection::new("RTL", rtl)
+                .description("Menu layout should follow right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines."),
+        ],
+    );
+
+    vec![body]
 }

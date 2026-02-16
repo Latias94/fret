@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -19,48 +20,6 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let demo = {
         let content = stack::hstack(
             cx,
@@ -74,7 +33,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             },
         )
         .test_id("ui-gallery-kbd-demo");
-        section_card(cx, "Demo", content)
+        content
     };
 
     let group = {
@@ -85,7 +44,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .into_element(cx)
         .test_id("ui-gallery-kbd-group");
-        section_card(cx, "Group", content)
+        content
     };
 
     let button = {
@@ -99,7 +58,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .on_click(CMD_APP_OPEN)
             .into_element(cx)
             .test_id("ui-gallery-kbd-button");
-        section_card(cx, "Button", content)
+        content
     };
 
     let tooltip = {
@@ -136,7 +95,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .next()
             .expect("kbd tooltip provider should return one root");
 
-        section_card(cx, "Tooltip", content)
+        content
     };
 
     let input_group = {
@@ -152,7 +111,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .into_element(cx)
             .test_id("ui-gallery-kbd-input-group");
 
-        section_card(cx, "Input Group", content)
+        content
     };
 
     let rtl = {
@@ -170,93 +129,17 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         )
         .test_id("ui-gallery-kbd-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Kbd docs order: Demo, Group, Button, Tooltip, Input Group, RTL.",
-                ),
-                demo,
-                group,
-                button,
-                tooltip,
-                input_group,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-kbd-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Base Usage").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(cx, r#"Kbd::new("Ctrl")"#).into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Group and Button").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"Button::new("Command Palette").children([KbdGroup::new([Kbd::new("Cmd"), Kbd::new("K")])])"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Input Group").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            r#"InputGroup::new(model).trailing([KbdGroup::new([Kbd::new("Ctrl"), Kbd::new("K")])]).trailing_has_kbd(true)"#,
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Kbd uses tokenized muted surfaces and is intended for shortcut display rather than free text chips.",
@@ -272,13 +155,43 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-kbd",
-        component_panel,
-        code_panel,
-        notes_panel,
+        Some("Preview follows shadcn Kbd docs order: Demo, Group, Button, Tooltip, Input Group, RTL."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Basic kbd tokens for a shortcut chord.")
+                .code("rust", r#"shadcn::Kbd::new("Ctrl").into_element(cx);"#),
+            DocSection::new("Group", group)
+                .description("Use `KbdGroup` to keep spacing consistent across tokens.")
+                .code(
+                    "rust",
+                    r#"shadcn::KbdGroup::new([
+    shadcn::Kbd::new("Cmd").into_element(cx),
+    shadcn::Kbd::new("K").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Button", button)
+                .description("kbd tokens can be composed into button labels for discoverability."),
+            DocSection::new("Tooltip", tooltip)
+                .description("Tooltips often include shortcut hints for expert users."),
+            DocSection::new("Input Group", input_group)
+                .description("Trailing kbd hints can be rendered inside an input group.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(query)
+    .trailing([shadcn::KbdGroup::new([/* ... */]).into_element(cx)])
+    .trailing_has_kbd(true);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("kbd token order should respect right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines."),
+        ],
     )
+    .test_id("ui-gallery-kbd-component");
+
+    vec![body]
 }

@@ -7,22 +7,19 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, Px, TextStyle};
+use fret_core::{Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActivateReason, OnActivate};
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, TextAreaProps, TextInputProps,
-};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorDensity;
 use crate::primitives::chrome::{
-    resolve_editor_text_area_field_style, resolve_editor_text_field_style,
+    joined_text_area_style, joined_text_input_style, resolve_editor_text_area_field_style,
+    resolve_editor_text_field_style,
 };
-use crate::primitives::icons::editor_icon;
-use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
+use crate::primitives::input_group::{editor_clear_button_segment, editor_joined_input_frame};
+use crate::primitives::style::EditorStyle;
 
 #[derive(Debug, Clone)]
 pub struct TextFieldOptions {
@@ -88,196 +85,129 @@ impl TextField {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let TextField { model, options } = self;
+
+        let layout = options.layout;
+        let size = options.size;
+        let placeholder = options.placeholder.clone();
+        let enabled_for_paint = options.enabled;
+        let focusable = options.focusable;
+        let clear_button = options.clear_button;
+        let a11y_label = options.a11y_label.clone();
+        let test_id = options.test_id.clone();
+        let clear_test_id = options.clear_test_id.clone();
+        let multiline = options.multiline;
+        let min_height = options.min_height;
+
         let has_value = cx
-            .read_model_ref(&self.model, Invalidation::Layout, |s| !s.is_empty())
+            .read_model_ref(&model, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false);
 
-        let density = {
+        let clear_enabled = clear_button && has_value && enabled_for_paint;
+
+        let (density, frame_chrome) = {
             let theme = Theme::global(&*cx.app);
-            EditorDensity::resolve(theme)
+            let style = EditorStyle::resolve(theme);
+            (style.density, style.frame_chrome(size))
         };
 
-        let enabled_for_paint = self.options.enabled;
-        let clear_enabled = self.options.clear_button && has_value && enabled_for_paint;
+        let model_for_input = model.clone();
+        let model_for_trailing = model.clone();
 
-        let input = if self.options.multiline {
-            let (chrome, text_style) = {
-                let theme = Theme::global(&*cx.app);
-                resolve_editor_text_area_field_style(
-                    theme,
-                    self.options.size,
-                    &ChromeRefinement::default(),
-                )
-            };
+        editor_joined_input_frame(
+            cx,
+            layout,
+            density,
+            frame_chrome,
+            enabled_for_paint,
+            false,
+            None,
+            move |cx| {
+                if multiline {
+                    let (chrome, text_style) = {
+                        let theme = Theme::global(&*cx.app);
+                        resolve_editor_text_area_field_style(
+                            theme,
+                            size,
+                            &ChromeRefinement::default(),
+                        )
+                    };
 
-            let mut props = TextAreaProps::new(self.model.clone());
-            props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            props.enabled = self.options.enabled;
-            props.focusable = self.options.focusable;
-            props.a11y_label = self.options.a11y_label.clone();
-            props.test_id = self.options.test_id.clone();
-            props.chrome = chrome;
-            props.text_style = text_style;
-            props.min_height = self.options.min_height.unwrap_or_else(|| {
-                let baseline = Px(80.0);
-                let dense = Px(density.row_height.0 * 3.0);
-                Px(baseline.0.max(dense.0))
-            });
-
-            cx.text_area(props)
-        } else {
-            let (chrome, text_style) = {
-                let theme = Theme::global(&*cx.app);
-                resolve_editor_text_field_style(
-                    theme,
-                    self.options.size,
-                    &ChromeRefinement::default(),
-                )
-            };
-
-            let mut props = TextInputProps::new(self.model.clone());
-            props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    min_height: Some(density.row_height),
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            props.enabled = self.options.enabled;
-            props.focusable = self.options.focusable;
-            props.placeholder = self.options.placeholder.clone();
-            props.a11y_label = self.options.a11y_label.clone();
-            props.test_id = self.options.test_id.clone();
-            props.chrome = chrome;
-            props.text_style = TextStyle {
-                line_height: Some(density.row_height),
-                ..text_style
-            };
-
-            let el = cx.text_input(props);
-            el
-        };
-
-        let clear = clear_enabled.then(|| {
-            let model_for_clear = self.model.clone();
-            let mut el = cx.pressable(
-                PressableProps {
-                    enabled: enabled_for_paint,
-                    focusable: false,
-                    layout: LayoutStyle {
+                    let mut props = TextAreaProps::new(model_for_input.clone());
+                    props.layout = LayoutStyle {
                         size: SizeStyle {
-                            width: Length::Px(density.hit_thickness),
-                            height: Length::Px(density.row_height),
+                            width: Length::Fill,
+                            height: Length::Fill,
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
-                    a11y: PressableA11y {
-                        label: Some(Arc::from("Clear text")),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                move |cx, st| {
-                    let on_activate: OnActivate = Arc::new({
-                        let model_for_clear = model_for_clear.clone();
-                        move |host, action_cx, _reason: ActivateReason| {
-                            let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
-                            host.request_redraw(action_cx.window);
-                        }
+                    };
+                    props.enabled = enabled_for_paint;
+                    props.focusable = focusable;
+                    props.a11y_label = a11y_label.clone();
+                    props.test_id = test_id.clone();
+
+                    props.chrome = joined_text_area_style(chrome);
+                    props.text_style = text_style;
+                    props.min_height = min_height.unwrap_or_else(|| {
+                        let baseline = Px(80.0);
+                        let dense = Px(density.row_height.0 * 3.0);
+                        Px(baseline.0.max(dense.0))
                     });
-                    cx.pressable_add_on_activate(on_activate);
 
-                    let theme = Theme::global(&*cx.app);
-                    let hovered = st.hovered || st.hovered_raw;
-                    let pressed = st.pressed;
-                    let bg = editor_icon_button_bg(theme, enabled_for_paint, hovered, pressed);
-                    let border =
-                        editor_icon_button_border(theme, enabled_for_paint, hovered, pressed);
-                    let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };
+                    cx.text_area(props)
+                } else {
+                    let (chrome, text_style) = {
+                        let theme = Theme::global(&*cx.app);
+                        resolve_editor_text_field_style(theme, size, &ChromeRefinement::default())
+                    };
 
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            background: bg,
-                            border: Edges::all(border_width),
-                            border_color: border,
-                            corner_radii: fret_core::Corners::all(Px(6.0)),
+                    let mut props = TextInputProps::new(model_for_input.clone());
+                    props.layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            min_height: Some(density.row_height),
                             ..Default::default()
                         },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![editor_icon(
-                                        cx,
-                                        density,
-                                        fret_icons::ids::ui::CLOSE,
-                                        Some(Px(12.0)),
-                                    )]
-                                },
-                            )]
-                        },
-                    )]
-                },
-            );
+                        ..Default::default()
+                    };
+                    props.enabled = enabled_for_paint;
+                    props.focusable = focusable;
+                    props.placeholder = placeholder.clone();
+                    props.a11y_label = a11y_label.clone();
+                    props.test_id = test_id.clone();
 
-            if let Some(test_id) = self.options.clear_test_id.as_ref() {
-                el = el.test_id(test_id.clone());
-            }
-            el
-        });
+                    props.chrome = joined_text_input_style(chrome);
+                    props.text_style = TextStyle {
+                        line_height: Some(density.row_height),
+                        ..text_style
+                    };
 
-        let root = cx.flex(
-            FlexProps {
-                layout: self.options.layout,
-                direction: Axis::Horizontal,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            move |_cx| {
-                let mut out = vec![input];
-                if let Some(clear) = clear {
-                    out.push(clear);
+                    cx.text_input(props)
                 }
-                out
             },
-        );
+            move |cx| {
+                if !clear_enabled {
+                    return Vec::new();
+                }
 
-        root
+                let model_for_clear = model_for_trailing.clone();
+                let on_activate: OnActivate =
+                    Arc::new(move |host, action_cx, _reason: ActivateReason| {
+                        let _ = host.models_mut().update(&model_for_clear, |s| s.clear());
+                        host.request_redraw(action_cx.window);
+                    });
+
+                vec![editor_clear_button_segment(
+                    cx,
+                    density,
+                    enabled_for_paint,
+                    Arc::from("Clear text"),
+                    clear_test_id.clone(),
+                    on_activate,
+                )]
+            },
+        )
     }
 }

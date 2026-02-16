@@ -14,7 +14,7 @@ use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{PlatformCapabilities, PlatformCompletion};
+use fret_runtime::{PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore};
 use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
@@ -724,8 +724,33 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                     }
                     Effect::ClipboardSetText { text } => {
-                        if let Err(err) = self.clipboard.set_text(&text) {
-                            tracing::debug!(?err, "failed to set clipboard text");
+                        let window = self.main_window.or_else(|| self.windows.keys().next());
+                        let Some(window) = window else {
+                            continue;
+                        };
+
+                        match self.clipboard.set_text(&text) {
+                            Ok(()) => {
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_ok(window, self.frame_id);
+                                    },
+                                );
+                            }
+                            Err(err) => {
+                                tracing::debug!(?err, "failed to set clipboard text");
+                                self.app.with_global_mut_untracked(
+                                    WindowClipboardDiagnosticsStore::default,
+                                    |store, _app| {
+                                        store.record_write_unavailable(
+                                            window,
+                                            self.frame_id,
+                                            Some(format!("{err:?}")),
+                                        );
+                                    },
+                                );
+                            }
                         }
                     }
                     Effect::ClipboardGetText { window, token } => {

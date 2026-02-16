@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_alert_dialog(
     cx: &mut ElementContext<'_, App>,
@@ -75,48 +76,6 @@ pub(super) fn preview_alert_dialog(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let build_dialog = |cx: &mut ElementContext<'_, App>,
                         test_id_prefix: &'static str,
                         open_model: Model<bool>,
@@ -188,7 +147,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Default,
         None,
     );
-    let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = build_dialog(
         cx,
@@ -204,7 +162,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Default,
         None,
     );
-    let basic = section_card(cx, "Basic", basic_content);
 
     let small_content = build_dialog(
         cx,
@@ -220,7 +177,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Sm,
         None,
     );
-    let small = section_card(cx, "Small", small_content);
 
     let media_content = build_dialog(
         cx,
@@ -236,7 +192,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Default,
         Some("lucide.circle-plus"),
     );
-    let media = section_card(cx, "Media", media_content);
 
     let small_with_media_content = build_dialog(
         cx,
@@ -252,7 +207,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Sm,
         Some("lucide.bluetooth"),
     );
-    let small_with_media = section_card(cx, "Small with Media", small_with_media_content);
 
     let destructive_content = build_dialog(
         cx,
@@ -268,7 +222,6 @@ pub(super) fn preview_alert_dialog(
         shadcn::AlertDialogContentSize::Default,
         Some("lucide.trash-2"),
     );
-    let destructive = section_card(cx, "Destructive", destructive_content);
 
     let rtl_dialog = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -290,90 +243,15 @@ pub(super) fn preview_alert_dialog(
             )
         },
     );
-    let rtl = section_card(cx, "RTL", rtl_dialog);
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Alert Dialog docs order and keeps each state in a separate section for quick lookup.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                basic,
-                small,
-                media,
-                small_with_media,
-                destructive,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-alert-dialog-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Demo / Basic",
-                    r#"AlertDialog::new(open).into_element(
-    cx,
-    |cx| Button::new("Show Dialog").toggle_model(open.clone()).into_element(cx),
-    |cx| AlertDialogContent::new([header, footer]).into_element(cx),
-)"#,
-                ),
-                code_block(
-                    cx,
-                    "Small + Media",
-                    r#"AlertDialogContent::new([...])
-    .size(AlertDialogContentSize::Sm)
-
-let header = AlertDialogHeader::new([title, description])
-    .media(AlertDialogMedia::new(icon).into_element(cx))"#,
-                ),
-                code_block(
-                    cx,
-                    "Destructive + RTL",
-                    r#"AlertDialogAction::new("Delete", open).variant(ButtonVariant::Destructive)
-with_direction_provider(LayoutDirection::Rtl, |cx| ...)"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
@@ -389,13 +267,90 @@ with_direction_provider(LayoutDirection::Rtl, |cx| ...)"#,
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-alert-dialog",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Alert Dialog docs order and keeps each state in a separate section for quick lookup.",
+        ),
+        vec![
+            DocSection::new("Demo", demo_content)
+                .description("Default-sized modal alert dialog.")
+                .code(
+                    "rust",
+                    r#"shadcn::AlertDialog::new(open).into_element(
+    cx,
+    |cx| {
+        shadcn::Button::new("Show Dialog")
+            .toggle_model(open.clone())
+            .into_element(cx)
+    },
+    |cx| {
+        let header = shadcn::AlertDialogHeader::new([
+            shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+            shadcn::AlertDialogDescription::new("This action cannot be undone.").into_element(cx),
+        ])
+        .into_element(cx);
+
+        let footer = shadcn::AlertDialogFooter::new([
+            shadcn::AlertDialogCancel::new("Cancel", open.clone()).into_element(cx),
+            shadcn::AlertDialogAction::new("Continue", open.clone()).into_element(cx),
+        ])
+        .into_element(cx);
+
+        shadcn::AlertDialogContent::new([header, footer])
+            .into_element(cx)
+    },
+)"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("Basic", basic_content)
+                .description("A minimal alert dialog with default buttons.")
+                .max_w(Px(760.0)),
+            DocSection::new("Small", small_content)
+                .description("Compact dialog size for short copy.")
+                .code(
+                    "rust",
+                    r#"shadcn::AlertDialogContent::new([...])
+    .size(shadcn::AlertDialogContentSize::Sm)
+    .into_element(cx);"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("Media", media_content)
+                .description("Dialogs can optionally show a leading media/icon in the header.")
+                .code(
+                    "rust",
+                    r#"let icon = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.circle-plus"),
+    Some(Px(32.0)),
+    None,
+);
+
+let header = shadcn::AlertDialogHeader::new([title, description])
+    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx));"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("Small with Media", small_with_media_content)
+                .description("Small size + media variant.")
+                .max_w(Px(760.0)),
+            DocSection::new("Destructive", destructive_content)
+                .description("Destructive styling for irreversible actions.")
+                .code(
+                    "rust",
+                    r#"shadcn::AlertDialogAction::new("Delete", open.clone())
+    .variant(shadcn::ButtonVariant::Destructive)
+    .into_element(cx);"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("RTL", rtl_dialog)
+                .description("All shadcn components should work under an RTL direction provider.")
+                .max_w(Px(760.0)),
+            DocSection::new("Notes", notes)
+                .description("Guidelines and best practices for alert dialogs.")
+                .max_w(Px(760.0)),
+        ],
+    );
+
+    vec![body]
 }

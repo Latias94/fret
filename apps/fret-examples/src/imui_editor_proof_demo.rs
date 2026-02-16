@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret::interop::embedded_viewport as embedded;
 use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{Axis, Color, Edges, Px};
+use fret_core::{Color, Px};
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, ViewportPanel,
     runtime as dock_runtime,
@@ -14,13 +14,15 @@ use fret_runtime::{
     ActivationPolicy, FrameId, Model, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
     WindowRole, WindowStyleRequest,
 };
-use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle};
-use fret_ui_editor::composites::{PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset};
+use fret_ui_editor::composites::{
+    GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
+    InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyRow, PropertyRowReset,
+};
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, EnumSelect, EnumSelectItem,
-    EnumSelectOptions, FieldStatus, FieldStatusBadge, MiniSearchBox, NumericFormatFn,
-    NumericParseFn, NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions,
-    TransformEdit, TransformEditOptions, Vec3Edit,
+    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericFormatFn, NumericParseFn,
+    NumericValidateFn, Slider, SliderOptions, TextField, TextFieldOptions, TransformEdit,
+    TransformEditOptions, Vec3Edit,
 };
 use fret_ui_editor::primitives::{percent_0_1_format, percent_0_1_parse};
 
@@ -170,6 +172,9 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
     let editor_iterations_model = editor_demo_iterations_model(cx);
     let editor_search_model = editor_demo_search_model(cx);
+    let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
+    let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
+    let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -264,80 +269,63 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                         }
                     });
 
-                    let query = cx
-                        .get_model_cloned(&editor_search_model, fret_ui::Invalidation::Layout)
-                        .unwrap_or_default();
-                    let q = query.trim().to_lowercase();
-                    let matches = |s: &str| q.is_empty() || s.to_lowercase().contains(&q);
+                    vec![InspectorPanel::new(Some(editor_search_model.clone()))
+                        .options(InspectorPanelOptions {
+                            test_id: Some(Arc::from("imui-editor-proof.editor.inspector")),
+                            header_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.inspector.header",
+                            )),
+                            search_test_id: Some(Arc::from("imui-editor-proof.editor.search")),
+                            search_clear_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.search.clear",
+                            )),
+                            content_test_id: Some(Arc::from(
+                                "imui-editor-proof.editor.inspector.content",
+                            )),
+                            ..Default::default()
+                        })
+                        .into_element(
+                            cx,
+                            |_cx, _panel_cx| Vec::new(),
+                            move |cx, panel_cx| {
+                                let matches = |s: &str| panel_cx.matches(s);
 
-                    let material_show_all = q.is_empty() || matches("material");
-                    let show_opacity = material_show_all || matches("opacity");
-                    let show_roughness = material_show_all || matches("roughness");
-                    let show_metallic = material_show_all || matches("metallic");
-                    let show_base_color = material_show_all || matches("base") || matches("color");
-                    let show_shading_model =
-                        material_show_all || matches("shading") || matches("model");
-                    let show_alpha_clip =
-                        material_show_all || matches("alpha") || matches("clip");
-                    let show_cast_shadows =
-                        material_show_all || matches("shadow") || matches("shadows");
+                                let material_show_all = matches("material");
+                                let show_opacity = material_show_all || matches("opacity");
+                                let show_roughness = material_show_all || matches("roughness");
+                                let show_metallic = material_show_all || matches("metallic");
+                                let show_base_color =
+                                    material_show_all || matches("base") || matches("color");
+                                let show_shading_model =
+                                    material_show_all || matches("shading") || matches("model");
+                                let show_alpha_clip =
+                                    material_show_all || matches("alpha") || matches("clip");
+                                let show_cast_shadows =
+                                    material_show_all || matches("shadow") || matches("shadows");
 
-                    let advanced_show_all = q.is_empty() || matches("advanced");
-                    let show_iterations = advanced_show_all || matches("iterations");
-                    let show_position =
-                        advanced_show_all || matches("position") || matches("pos");
-                    let show_transform = advanced_show_all
-                        || matches("transform")
-                        || matches("xform")
-                        || matches("rotation")
-                        || matches("rot")
-                        || matches("scale");
+                                let advanced_show_all = matches("advanced");
+                                let show_iterations = advanced_show_all || matches("iterations");
+                                let show_position =
+                                    advanced_show_all || matches("position") || matches("pos");
+                                let show_transform = advanced_show_all
+                                    || matches("transform")
+                                    || matches("xform")
+                                    || matches("rotation")
+                                    || matches("rot")
+                                    || matches("scale");
 
-                    let any_match =
-                        show_opacity
-                            || show_roughness
-                            || show_metallic
-                            || show_base_color
-                            || show_shading_model
-                            || show_alpha_clip
-                            || show_cast_shadows
-                            || show_iterations
-                            || show_position
-                            || show_transform;
+                                let any_match = show_opacity
+                                    || show_roughness
+                                    || show_metallic
+                                    || show_base_color
+                                    || show_shading_model
+                                    || show_alpha_clip
+                                    || show_cast_shadows
+                                    || show_iterations
+                                    || show_position
+                                    || show_transform;
 
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: Axis::Vertical,
-                            gap: Px(8.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            let mut out = Vec::new();
-
-                            out.push(
-                                MiniSearchBox::new(editor_search_model.clone())
-                                    .options(fret_ui_editor::controls::MiniSearchBoxOptions {
-                                        test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.search",
-                                        )),
-                                        clear_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.search.clear",
-                                        )),
-                                        ..Default::default()
-                                    })
-                                    .into_element(cx),
-                            );
+                                let mut out = Vec::new();
 
                             out.push(
                                 PropertyGroup::new("Object")
@@ -753,6 +741,115 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             );
 
                             out.push(
+                                PropertyGroup::new("Gradient")
+                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient",
+                                        )),
+                                        header_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient.header",
+                                        )),
+                                        content_test_id: Some(Arc::from(
+                                            "imui-editor-proof.editor.group.gradient.content",
+                                        )),
+                                        ..Default::default()
+                                    })
+                                    .into_element(
+                                        cx,
+                                        |_cx| None,
+                                        move |cx| {
+                                            let stops: Vec<GradientDemoStop> = cx
+                                                .watch_model(&editor_gradient_stops_model)
+                                                .paint()
+                                                .cloned()
+                                                .unwrap_or_default();
+
+                                            let on_remove: fret_ui_editor::composites::OnGradientStopAction =
+                                                Arc::new({
+                                                    let stops_model = editor_gradient_stops_model.clone();
+                                                    move |host, action_cx, stop_id| {
+                                                        let _ = host.models_mut().update(
+                                                            &stops_model,
+                                                            |stops| stops.retain(|s| s.id != stop_id),
+                                                        );
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                });
+
+                                            let on_add: fret_ui_editor::composites::OnGradientAction =
+                                                Arc::new({
+                                                    let stops_model = editor_gradient_stops_model.clone();
+                                                    let next_id_model = editor_gradient_next_id_model.clone();
+                                                    move |host, action_cx| {
+                                                        let id = host
+                                                            .models_mut()
+                                                            .update(&next_id_model, |v| {
+                                                                let out = *v;
+                                                                *v = v.saturating_add(1);
+                                                                out
+                                                            })
+                                                            .unwrap_or(1);
+
+                                                        let position = host.models_mut().insert(0.5_f64);
+                                                        let color = host.models_mut().insert(Color {
+                                                            r: 0.85,
+                                                            g: 0.85,
+                                                            b: 0.85,
+                                                            a: 1.0,
+                                                        });
+                                                        let stop = GradientDemoStop {
+                                                            id,
+                                                            position,
+                                                            color,
+                                                        };
+
+                                                        let _ = host
+                                                            .models_mut()
+                                                            .update(&stops_model, |stops| stops.push(stop));
+                                                        host.request_redraw(action_cx.window);
+                                                    }
+                                                });
+
+                                            let bindings: Arc<[GradientStopBinding]> = stops
+                                                .into_iter()
+                                                .map(|s| GradientStopBinding {
+                                                    id: s.id,
+                                                    position: s.position,
+                                                    color: s.color,
+                                                    remove: Some(on_remove.clone()),
+                                                })
+                                                .collect::<Vec<_>>()
+                                                .into();
+
+                                            vec![GradientEditor::new(bindings)
+                                                .angle_degrees(Some(
+                                                    editor_gradient_angle_model.clone(),
+                                                ))
+                                                .on_add_stop(Some(on_add))
+                                                .options(GradientEditorOptions {
+                                                    id_source: Some(Arc::from(
+                                                        "imui_editor_proof_demo.gradient",
+                                                    )),
+                                                    test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient",
+                                                    )),
+                                                    preview_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.preview",
+                                                    )),
+                                                    stops_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.stops",
+                                                    )),
+                                                    add_stop_test_id: Some(Arc::from(
+                                                        "imui-editor-proof.editor.gradient.add-stop",
+                                                    )),
+                                                    ..Default::default()
+                                                })
+                                                .into_element(cx)]
+                                        },
+                                    ),
+                            );
+
+                            out.push(
                                 PropertyGroup::new("Advanced")
                                     .options(fret_ui_editor::composites::PropertyGroupOptions {
                                         test_id: Some(Arc::from(
@@ -987,7 +1084,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                                     ),
                             );
 
-                            if !q.is_empty() && !any_match {
+                            if !panel_cx.is_query_empty() && !any_match {
                                 out.push(
                                     cx.text("No matches")
                                         .test_id("imui-editor-proof.editor.no-matches"),
@@ -995,8 +1092,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                             }
 
                             out
-                        },
-                    )]
+                            },
+                        )]
                 });
                 ui.separator();
 
@@ -1056,6 +1153,58 @@ fn editor_demo_roughness_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mod
 fn editor_demo_metallic_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
     named_demo_state(cx, "imui_editor_proof_demo.model.metallic", |cx| {
         cx.app.models_mut().insert(0.1_f64)
+    })
+}
+
+#[derive(Clone)]
+struct GradientDemoStop {
+    id: fret_ui::ItemKey,
+    position: Model<f64>,
+    color: Model<Color>,
+}
+
+fn editor_demo_gradient_angle_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_angle", |cx| {
+        cx.app.models_mut().insert(45.0_f64)
+    })
+}
+
+fn editor_demo_gradient_stops_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Vec<GradientDemoStop>> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_stops", |cx| {
+        let stop_0_pos = cx.app.models_mut().insert(0.0_f64);
+        let stop_0_color = cx.app.models_mut().insert(Color {
+            r: 0.95,
+            g: 0.35,
+            b: 0.20,
+            a: 1.0,
+        });
+        let stop_1_pos = cx.app.models_mut().insert(1.0_f64);
+        let stop_1_color = cx.app.models_mut().insert(Color {
+            r: 0.20,
+            g: 0.45,
+            b: 0.95,
+            a: 1.0,
+        });
+        cx.app.models_mut().insert(vec![
+            GradientDemoStop {
+                id: 1,
+                position: stop_0_pos,
+                color: stop_0_color,
+            },
+            GradientDemoStop {
+                id: 2,
+                position: stop_1_pos,
+                color: stop_1_color,
+            },
+        ])
+    })
+}
+
+fn editor_demo_gradient_next_id_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<u64> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.gradient_next_id", |cx| {
+        cx.app.models_mut().insert(3_u64)
     })
 }
 

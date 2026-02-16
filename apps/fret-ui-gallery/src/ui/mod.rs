@@ -49,6 +49,7 @@ use crate::driver::UiGalleryImageSourceDemoAssets;
 use crate::spec::*;
 
 mod content;
+mod doc_layout;
 mod models;
 mod nav;
 mod pages;

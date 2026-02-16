@@ -6640,11 +6640,20 @@ impl UiDiagnosticsService {
 
         let clipboard = app
             .global::<fret_runtime::WindowClipboardDiagnosticsStore>()
-            .and_then(|store| store.last_read_for_window(window, app.frame_id()))
-            .map(|entry| UiClipboardDiagnosticsSnapshotV1 {
-                last_read_token: entry.token.0,
-                last_read_unavailable: entry.unavailable,
-                last_read_message: entry.message.clone(),
+            .and_then(|store| {
+                let frame_id = app.frame_id();
+                let last_read = store.last_read_for_window(window, frame_id);
+                let last_write = store.last_write_for_window(window, frame_id);
+                if last_read.is_none() && last_write.is_none() {
+                    return None;
+                }
+                Some(UiClipboardDiagnosticsSnapshotV1 {
+                    last_read_token: last_read.map(|e| e.token.0),
+                    last_read_unavailable: last_read.map(|e| e.unavailable),
+                    last_read_message: last_read.and_then(|e| e.message.clone()),
+                    last_write_unavailable: last_write.map(|e| e.unavailable),
+                    last_write_message: last_write.and_then(|e| e.message.clone()),
+                })
             });
 
         let wgpu_adapter = app
@@ -6681,6 +6690,8 @@ impl UiDiagnosticsService {
                 platform: c.platform.as_str().to_string(),
                 ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
                 clipboard_text: c.caps.clipboard.text.read && c.caps.clipboard.text.write,
+                clipboard_text_read: c.caps.clipboard.text.read,
+                clipboard_text_write: c.caps.clipboard.text.write,
                 clipboard_primary_text: c.caps.clipboard.primary_text,
                 ime: c.caps.ime.enabled,
                 ime_set_cursor_area: c.caps.ime.set_cursor_area,
@@ -7782,10 +7793,16 @@ pub struct UiDiagnosticsSnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiClipboardDiagnosticsSnapshotV1 {
-    pub last_read_token: u64,
-    pub last_read_unavailable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_token: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_read_unavailable: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_read_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_write_unavailable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_write_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -7793,6 +7810,8 @@ pub struct UiPlatformCapabilitiesSummaryV1 {
     pub platform: String,
     pub ui_window_hover_detection: String,
     pub clipboard_text: bool,
+    pub clipboard_text_read: bool,
+    pub clipboard_text_write: bool,
     pub clipboard_primary_text: bool,
     pub ime: bool,
     pub ime_set_cursor_area: bool,
