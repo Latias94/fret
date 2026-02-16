@@ -236,7 +236,8 @@ They are tracked here to keep the workstream grounded in “what feels broken”
   This applies to demo harness state helpers too: any `with_state`-backed model helper must be `named/keyed`
   (see `apps/fret-examples/src/imui_editor_proof_demo.rs`, `named_demo_state`).
 - **Visual cohesion**: we now have early convergence points (`EditorStyle`, `EditorWidgetVisuals`, and joined input-group
-  primitives). Text inputs now drive hover visuals via `HoverRegion`, but hover/active/disabled visuals are not yet
+  primitives). Text inputs now drive hover and a lightweight pressed/active visual via `HoverRegion` + `PointerRegion`,
+  but hover/active/disabled visuals are not yet
   consistently resolved across all controls (and some controls still rely on ad-hoc capture/hover plumbing). Keep
   converging toward a single “widget visuals” resolver comparable to egui’s `Visuals::widgets` / ImGui’s `ImGuiStyle`.
 

@@ -3,14 +3,16 @@
 //! This is a policy-only helper for composing "joined" controls (axis markers, value fields,
 //! small action icons) into a single input-like frame without style drift.
 
+use std::sync::{Arc, Mutex};
+
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Corners, Edges, Px, TextAlign, TextStyle};
-use fret_ui::action::OnActivate;
+use fret_core::{Color, Corners, Edges, MouseButton, Px, TextAlign, TextStyle};
+use fret_ui::action::{ActionCx, OnActivate, OnPointerCancel, OnPointerDown, OnPointerUp};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
-    MainAlign, PressableA11y, PressableProps, SizeStyle, TextProps,
+    MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
@@ -262,6 +264,11 @@ pub(crate) fn editor_clear_button_segment<H: UiHost>(
     )
 }
 
+#[derive(Debug, Default)]
+struct JoinedInputPointerState {
+    pressed: bool,
+}
+
 pub(crate) fn editor_joined_input_frame<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
@@ -274,45 +281,116 @@ pub(crate) fn editor_joined_input_frame<H: UiHost>(
     build_trailing_segments: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
-        let input = build_input(cx);
-        let focused = cx.is_focused_element(input.id);
-
-        let divider = chrome.border;
-        let input = editor_input_group_inset(cx, chrome.padding, input);
-
-        let mut segments = vec![input];
-        for seg in build_trailing_segments(cx) {
-            segments.push(editor_input_group_divider(cx, divider));
-            segments.push(seg);
-        }
-
-        let mut frame = editor_input_group_frame(
-            cx,
-            LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            density,
-            chrome,
-            EditorFrameState {
-                enabled: enabled_for_paint,
-                hovered,
-                pressed: false,
-                focused,
-                open,
-            },
-            move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), segments)],
+        let pointer_state: Arc<Mutex<JoinedInputPointerState>> = cx.with_state(
+            || Arc::new(Mutex::new(JoinedInputPointerState::default())),
+            |s| s.clone(),
         );
 
-        if let Some(test_id) = frame_test_id.as_ref() {
-            frame = frame.test_id(test_id.clone());
+        // Best-effort cleanup: if the pointer is no longer hovering the region, do not keep a
+        // stale "pressed" visual (e.g. pointer-up outside the region without capture).
+        if !hovered {
+            if let Ok(mut st) = pointer_state.lock() {
+                st.pressed = false;
+            }
         }
 
-        vec![frame]
+        let pointer_state_down = pointer_state.clone();
+        let on_down: OnPointerDown = Arc::new(move |host, action_cx: ActionCx, down| {
+            // Only show the frame "pressed" state when the pointer-down hits the text input
+            // surface, not when interacting with trailing segments (e.g. clear button).
+            if !down.hit_is_text_input {
+                return false;
+            }
+            if down.pointer_type == fret_core::PointerType::Mouse
+                && down.button != MouseButton::Left
+            {
+                return false;
+            }
+
+            if let Ok(mut st) = pointer_state_down.lock() {
+                st.pressed = true;
+            }
+            host.invalidate(Invalidation::Paint);
+            host.request_redraw(action_cx.window);
+            false
+        });
+
+        let pointer_state_up = pointer_state.clone();
+        let on_up: OnPointerUp = Arc::new(move |host, action_cx: ActionCx, _up| {
+            if let Ok(mut st) = pointer_state_up.lock() {
+                st.pressed = false;
+            }
+            host.invalidate(Invalidation::Paint);
+            host.request_redraw(action_cx.window);
+            false
+        });
+
+        let pointer_state_cancel = pointer_state.clone();
+        let on_cancel: OnPointerCancel = Arc::new(move |host, action_cx: ActionCx, _cancel| {
+            if let Ok(mut st) = pointer_state_cancel.lock() {
+                st.pressed = false;
+            }
+            host.invalidate(Invalidation::Paint);
+            host.request_redraw(action_cx.window);
+            false
+        });
+
+        let pressed = pointer_state.lock().map(|s| s.pressed).unwrap_or(false);
+
+        let root = cx.pointer_region(
+            PointerRegionProps {
+                layout: LayoutStyle::default(),
+                enabled: enabled_for_paint,
+                capture_phase_pointer_moves: false,
+            },
+            move |cx| {
+                cx.pointer_region_add_on_pointer_down(on_down);
+                cx.pointer_region_add_on_pointer_up(on_up);
+                cx.pointer_region_on_pointer_cancel(on_cancel);
+
+                let input = build_input(cx);
+                let focused = cx.is_focused_element(input.id);
+
+                let divider = chrome.border;
+                let input = editor_input_group_inset(cx, chrome.padding, input);
+
+                let mut segments = vec![input];
+                for seg in build_trailing_segments(cx) {
+                    segments.push(editor_input_group_divider(cx, divider));
+                    segments.push(seg);
+                }
+
+                let mut frame = editor_input_group_frame(
+                    cx,
+                    LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    density,
+                    chrome,
+                    EditorFrameState {
+                        enabled: enabled_for_paint,
+                        hovered,
+                        pressed: enabled_for_paint && pressed,
+                        focused,
+                        open,
+                    },
+                    move |cx, _visuals| vec![editor_input_group_row(cx, Px(0.0), segments)],
+                );
+
+                if let Some(test_id) = frame_test_id.as_ref() {
+                    frame = frame.test_id(test_id.clone());
+                }
+
+                vec![frame]
+            },
+        );
+
+        vec![root]
     })
 }
 
