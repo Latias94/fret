@@ -117,6 +117,12 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`move_caret_vertical_uses_row_fold_map_for_fold_placeholders_under_soft_wrap`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_click_extends_selection_to_inlay_insertion_point_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_drag_preserves_anchor_when_dragging_across_fold_placeholder_mapping`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`pointer_down_cancels_preedit_replacement_and_snaps_to_replace_start`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`home_end_move_within_wrapped_display_rows`)
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
       (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
