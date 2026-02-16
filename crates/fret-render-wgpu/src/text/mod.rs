@@ -5524,6 +5524,17 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_spans_treats_feature_overrides_as_non_noop() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: text.len(),
+            shaping: TextShapingStyle::default().with_feature("calt", 0),
+            paint: Default::default(),
+        }];
+        assert!(super::sanitize_spans_for_text(text, &spans).is_some());
+    }
+
+    #[test]
     fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
