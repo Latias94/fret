@@ -11424,7 +11424,7 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     ]
 }
 
-fn docking_arbitration_suite_scripts() -> [&'static str; 13] {
+fn docking_arbitration_suite_scripts() -> [&'static str; 14] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
@@ -11436,6 +11436,7 @@ fn docking_arbitration_suite_scripts() -> [&'static str; 13] {
         "tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
         "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
         "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json",
         "tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
         "tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json",
         "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size.json",
