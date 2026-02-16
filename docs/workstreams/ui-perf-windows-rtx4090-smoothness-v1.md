@@ -63,6 +63,9 @@ Workflow when it fails:
 - Attribute the worst bundle:
   - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
   - `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
+  - Renderer stage timings (CPU-side) are also available in `diag stats`:
+    - `--sort ensure_pipelines|plan_compile|upload|record_passes|encoder_finish`
+    - The human summary prints `renderer p50/p95` and `renderer max` when the fields are present.
 
 If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
 suite normalization hooks to reduce cross-script state contamination:
