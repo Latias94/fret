@@ -29,6 +29,9 @@ Active workstreams:
 - `docs/workstreams/path-paint-surface-v1.md`
 - `docs/workstreams/path-paint-surface-v1-todo.md`
 - `docs/workstreams/path-paint-surface-v1-milestones.md`
+- `docs/workstreams/text-paint-surface-v1.md`
+- `docs/workstreams/text-paint-surface-v1-todo.md`
+- `docs/workstreams/text-paint-surface-v1-milestones.md`
 - `docs/workstreams/docking-nary-split-graph-v1.md`
 - `docs/workstreams/docking-nary-split-graph-v1-todo.md`
 - `docs/workstreams/docking-nary-split-graph-v1-milestones.md`

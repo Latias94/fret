@@ -216,8 +216,10 @@ milestones) when implementation begins.
   - Current: only linear + radial gradients exist.
 - [ ] REN-VNEXT-sem-050 Blend modes v2 (bounded): expand `BlendMode` beyond `Over/Add/Multiply/Screen`.
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
-- [ ] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
+- [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
   - Current: `SceneOp::Text` is solid-color only; effects-based recipes exist but are not contract-level.
+  - Planning: `SceneOp::Text` → `Paint` bounded surface workstream drafted.
+  - Tracking: `docs/workstreams/text-paint-surface-v1.md`
 - [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
   - Current: sanitize degrades repeat/mirror to clamp for determinism.
 - [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
