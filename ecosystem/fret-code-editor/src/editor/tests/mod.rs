@@ -1272,6 +1272,58 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
 }
 
 #[test]
+fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() {
+    // Staging contract: selection-replacing composition ranges that span a newline in the
+    // platform-facing composed window are clamped to the anchor logical line in the view model.
+    // This keeps IME replacement deterministic while we stage multi-line composition support.
+    let handle = CodeEditorHandle::new("ab\ncd");
+    handle.set_compose_inline_preedit(true);
+    handle.set_caret(0);
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+    st.preedit = None;
+    st.preedit_replace_range = None;
+    st.preedit_saved_selection = None;
+
+    let (value, _selection, _composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ab\ncd");
+
+    // Range 1..4 covers "b\nc" in UTF-16 (ASCII here), i.e. it spans the newline boundary.
+    let did = platform_replace_and_mark_text_in_range_utf16(
+        &mut st,
+        1024,
+        value.as_str(),
+        fret_runtime::Utf16Range::new(1, 4),
+        "X",
+        Some(fret_runtime::Utf16Range::new(1, 2)),
+    );
+    assert!(did);
+    assert_eq!(
+        st.buffer.text_string(),
+        "ab\ncd",
+        "base buffer stays unchanged"
+    );
+
+    // Clamp to the end of the first line (newline byte index == 2), replacing only "b".
+    assert_eq!(st.preedit_replace_range, Some(1..2));
+    assert_eq!(
+        st.preedit.as_ref().map(|p| p.text.as_str()),
+        Some("X"),
+        "composing text remains preedit-only"
+    );
+    assert_eq!(st.selection.caret(), 1);
+
+    let (next_value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(next_value.as_str(), "aX\ncd");
+    assert_eq!(composition, Some((1, 2)));
+    assert_eq!(selection, Some((1, 2)));
+}
+
+#[test]
 fn font_stack_key_change_clears_geometry_caches() {
     let handle = CodeEditorHandle::new("hello");
     let mut st = handle.state.borrow_mut();

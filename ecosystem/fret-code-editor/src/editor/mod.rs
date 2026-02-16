@@ -133,7 +133,15 @@ fn platform_replace_and_mark_text_in_range_utf16(
     }
 
     let start = start.min(end);
-    let end = start.max(end);
+    let mut end = start.max(end);
+
+    // Staging contract: selection-replacing composition is best-effort and currently treated as
+    // single-line. Clamp any multi-line replacement range to the anchor logical line so the view
+    // model remains deterministic while we stage multi-line composition support.
+    let anchor_line = st.buffer.line_index_at_byte(start);
+    if let Some(line_range) = st.buffer.line_byte_range(anchor_line) {
+        end = end.min(line_range.end);
+    }
 
     let mut did = false;
     st.undo_group = None;
