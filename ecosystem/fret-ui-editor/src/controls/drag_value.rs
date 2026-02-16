@@ -26,7 +26,7 @@ use crate::controls::numeric_input::{
 };
 use crate::primitives::chrome::resolve_editor_frame_chrome;
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
+use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,8 +218,7 @@ where
                 ));
 
                 let theme = Theme::global(&*cx.app);
-                let visuals = editor_frame_visuals(
-                    theme,
+                let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
                     scrub_chrome,
                     EditorFrameState {
                         enabled: true,

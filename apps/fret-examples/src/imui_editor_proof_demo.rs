@@ -1027,11 +1027,14 @@ fn named_demo_state<H: UiHost, S: Clone + 'static>(
             Some(v) => v,
             None => {
                 let v = init(cx);
-                cx.with_state(|| None::<S>, |st| {
-                    if st.is_none() {
-                        *st = Some(v.clone());
-                    }
-                });
+                cx.with_state(
+                    || None::<S>,
+                    |st| {
+                        if st.is_none() {
+                            *st = Some(v.clone());
+                        }
+                    },
+                );
                 v
             }
         }
@@ -1143,9 +1146,9 @@ fn editor_demo_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<St
 
 fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.notes", |cx| {
-        cx.app.models_mut().insert(
-            "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string(),
-        )
+        cx.app
+            .models_mut()
+            .insert("Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n".to_string())
     })
 }
 

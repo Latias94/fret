@@ -26,7 +26,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::controls::MiniSearchBox;
 use crate::primitives::chrome::{resolve_editor_frame_chrome, sanitize_editor_surface_bg};
 use crate::primitives::icons::editor_icon_with;
-use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
+use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -234,8 +234,7 @@ impl EnumSelect {
             },
             move |cx, _st| {
                 let theme = Theme::global(&*cx.app);
-                let visuals = editor_frame_visuals(
-                    theme,
+                let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
                     frame_chrome,
                     EditorFrameState {
                         enabled: enabled_for_paint,

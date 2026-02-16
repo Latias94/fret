@@ -30,7 +30,7 @@ use crate::controls::numeric_input::{
 };
 use crate::primitives::chrome::resolve_editor_frame_chrome;
 use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::visuals::{EditorFrameState, editor_frame_visuals};
+use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
@@ -507,8 +507,7 @@ where
                 let pressed = st.pressed;
                 let focused = st.focused;
 
-                let frame_visuals = editor_frame_visuals(
-                    theme,
+                let frame_visuals = EditorWidgetVisuals::new(theme).frame_visuals(
                     frame,
                     EditorFrameState {
                         enabled: interactive_enabled,
