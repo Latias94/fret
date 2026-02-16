@@ -589,6 +589,39 @@ pub(crate) const USAGE_TEXT_MEASURE_OVERLAY: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_TEXT_FEATURE_TOGGLES: &str = r#"
+## Text OpenType feature toggles (diagnostic)
+
+This page is a small harness for the `TextShapingStyle.features` surface:
+
+- toggles `liga` / `calt` / one `ssXX` (`ss01`) via `TextFontFeatureSetting`,
+- shapes the same sample string twice:
+  - baseline (no explicit features),
+  - explicit feature overrides.
+
+Notes:
+
+- This is a **best-effort** surface: if a resolved font face does not support a tag, it is ignored.
+- Visible differences are font-dependent. Inter typically demonstrates `liga` (fi/fl/ffi/ffl).
+"#;
+
+pub(crate) const USAGE_TEXT_FEATURE_TOGGLES: &str = r#"
+```rust
+use fret_core::{TextShapingStyle, TextSpan};
+
+let shaping = TextShapingStyle::default()
+    .with_feature("liga", 0)
+    .with_feature("calt", 0)
+    .with_feature("ss01", 1);
+
+let span = TextSpan {
+    len: text.len(),
+    shaping,
+    ..Default::default()
+};
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 
@@ -873,6 +906,40 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_CONVERSATION_DEMO: &str = r#"
+## AI conversation (demo)
+
+This page demonstrates AI Elements-aligned conversation transcript surfaces:
+
+- `ConversationTranscript` (text-only harness),
+- `AiConversationTranscript` (rich parts via `MessageParts`).
+
+It exists to validate stick-to-bottom behavior, virtualization stability, and stable `test_id`
+anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CONVERSATION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{AiConversationTranscript, ConversationMessage, ConversationTranscript, MessageRole};
+```
+"#;
+
+pub(crate) const DOC_AI_MESSAGE_DEMO: &str = r#"
+## AI message (demo)
+
+This page demonstrates AI Elements-aligned message building blocks:
+
+- `Message` (role-aware alignment wrapper),
+- `MessageContent` (assistant flow vs user bubble),
+- `MessageActions` / `MessageAction` (icon actions row).
+"#;
+
+pub(crate) const USAGE_AI_MESSAGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Message, MessageAction, MessageActions, MessageContent, MessageRole};
+```
+"#;
+
 pub(crate) const DOC_AI_CONTEXT_DEMO: &str = r#"
 ## AI context (demo)
 
@@ -1116,6 +1183,99 @@ use fret_ui_ai::{WorkflowPanel, WorkflowToolbar};
 ```
 "#;
 
+pub(crate) const DOC_AI_WORKFLOW_CANVAS_DEMO: &str = r#"
+## AI workflow canvas (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowCanvas` host surface (UI-only chrome).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_CANVAS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::WorkflowCanvas;
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_NODE_DEMO: &str = r#"
+## AI workflow node (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowNode` chrome (UI-only):
+
+- node header/content/footer composition,
+- optional handle indicators.
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_NODE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    WorkflowNode, WorkflowNodeContent, WorkflowNodeFooter, WorkflowNodeHandles, WorkflowNodeHeader,
+    WorkflowNodeTitle,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_EDGE_DEMO: &str = r#"
+## AI workflow edge (demo)
+
+This page demonstrates AI Elements-aligned workflow edge renderers (UI-only):
+
+- `WorkflowEdgeTemporary` (dashed),
+- `WorkflowEdgeAnimated` (animated stroke + optional arrow marker).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_EDGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{WorkflowEdgeAnimated, WorkflowEdgeMarkerEnd, WorkflowEdgeTemporary};
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_CONNECTION_DEMO: &str = r#"
+## AI workflow connection (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowConnection` line renderer (UI-only).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_CONNECTION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::WorkflowConnection;
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_CONTROLS_DEMO: &str = r#"
+## AI workflow controls (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowControls` chrome (UI-only).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_CONTROLS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{WorkflowControls, WorkflowControlsButton};
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_PANEL_DEMO: &str = r#"
+## AI workflow panel (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowPanel` container chrome (UI-only).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_PANEL_DEMO: &str = r#"
+```rust
+use fret_ui_ai::WorkflowPanel;
+```
+"#;
+
+pub(crate) const DOC_AI_WORKFLOW_TOOLBAR_DEMO: &str = r#"
+## AI workflow toolbar (demo)
+
+This page demonstrates the AI Elements-aligned `WorkflowToolbar` row chrome (UI-only).
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_TOOLBAR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::WorkflowToolbar;
+```
+"#;
+
 pub(crate) const DOC_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = r#"
 ## AI workflow node graph (demo)
 
@@ -1243,6 +1403,38 @@ It exists to validate:
 pub(crate) const USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{PromptInputReferencedSourcesRow, use_prompt_input_referenced_sources};
+```
+"#;
+
+pub(crate) const DOC_AI_INLINE_CITATION_DEMO: &str = r#"
+## AI inline citation (demo)
+
+This page demonstrates the AI Elements-aligned `InlineCitation` surface:
+
+- hover card content,
+- pager controls for multiple sources,
+- optional “select source” seam (model update) for cross-highlighting.
+"#;
+
+pub(crate) const USAGE_AI_INLINE_CITATION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{InlineCitation, SourceItem};
+```
+"#;
+
+pub(crate) const DOC_AI_SOURCES_DEMO: &str = r#"
+## AI sources (demo)
+
+This page demonstrates the AI Elements-aligned `SourcesBlock` surface:
+
+- collapsible root (hidden by default upstream),
+- app-owned link activation seam (`on_open_url`),
+- optional highlighted row seam for pairing with `InlineCitation`.
+"#;
+
+pub(crate) const USAGE_AI_SOURCES_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{SourceItem, SourcesBlock};
 ```
 "#;
 
@@ -1453,6 +1645,18 @@ It exists to validate:
 pub(crate) const USAGE_AI_CODE_BLOCK_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{CodeBlock, CodeBlockCopyButton, Snippet, SnippetCopyButton, SnippetInput, SnippetText};
+```
+"#;
+
+pub(crate) const DOC_AI_SNIPPET_DEMO: &str = r#"
+## AI snippet (demo)
+
+This page demonstrates the AI Elements-aligned `Snippet` surface (inline copyable code).
+"#;
+
+pub(crate) const USAGE_AI_SNIPPET_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Snippet, SnippetCopyButton, SnippetInput, SnippetText};
 ```
 "#;
 
@@ -1750,6 +1954,21 @@ It exists to validate:
 pub(crate) const USAGE_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{HttpMethod, SchemaDisplay, SchemaParameter, SchemaProperty};
+```
+"#;
+
+pub(crate) const DOC_AI_IMAGE_DEMO: &str = r#"
+## AI image (demo)
+
+This page demonstrates the AI Elements-aligned `Image` surface (generated image presentation).
+
+Note: decode/upload remain app-owned; the UI Gallery demo sources pixels via `fret-ui-assets`
+`ImageSource` and renders the resulting `ImageId`.
+"#;
+
+pub(crate) const USAGE_AI_IMAGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Image;
 ```
 "#;
 

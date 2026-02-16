@@ -1,0 +1,14 @@
+{
+  "name": "partial_chunks",
+  "options": { "mode": "mixed" },
+  "chunks": [
+    "Hi\n{\"op\":\"add\",\"path\":\"/x\",\"value\":",
+    "42}\nBye\n"
+  ],
+  "expect": {
+    "text_lines": ["Hi", "Bye"],
+    "patches": [{ "op": "add", "path": "/x", "value": 42 }],
+    "result": { "x": 42 }
+  }
+}
+

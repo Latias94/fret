@@ -13,8 +13,9 @@ use fret_docking::{
     create_dock_space_node_with_test_id, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -36,6 +37,24 @@ type ViewportKey = (AppWindowId, RenderTargetId);
 const DOCKING_ARBITRATION_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const DOCKING_ARBITRATION_SPLIT_HANDLE_ANCHOR_SIZE: Px = Px(12.0);
+
+const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking_arbitration.layout";
+
+#[derive(Debug, Default)]
+struct DockingArbitrationDevStateIncoming {
+    layout: Option<fret_core::DockLayout>,
+}
+
+#[derive(Debug, Default)]
+struct DockingArbitrationDevStateModels {
+    persist_layout_on_exit: bool,
+    windows: Vec<(AppWindowId, String)>,
+}
+
+#[derive(Debug, Default)]
+struct DockingArbitrationDevStateGate {
+    export_ready: bool,
+}
 
 struct DockingArbitrationDragAnchor {
     test_id: &'static str,
@@ -971,6 +990,27 @@ impl DockingArbitrationDriver {
     const DOCK_LAYOUT_PATH: &'static str = ".fret/layout.json";
     const MAIN_LOGICAL_WINDOW_ID: &'static str = "main";
 
+    fn sync_dev_state_models(&self, app: &mut App) {
+        let mut windows: Vec<(AppWindowId, String)> = self
+            .logical_windows
+            .iter()
+            .map(|(w, id)| (*w, id.clone()))
+            .collect();
+        windows.sort_by(|a, b| a.1.cmp(&b.1));
+
+        let persist_layout_on_exit = self.persist_layout_on_exit;
+        app.with_global_mut_untracked(DockingArbitrationDevStateModels::default, |st, _app| {
+            st.persist_layout_on_exit = persist_layout_on_exit;
+            st.windows = windows;
+        });
+    }
+
+    fn mark_dev_state_export_ready(app: &mut App) {
+        app.with_global_mut_untracked(DockingArbitrationDevStateGate::default, |gate, _app| {
+            gate.export_ready = true;
+        });
+    }
+
     fn new(
         pending_layout: Option<fret_core::DockLayout>,
         viewport_tools: Arc<Mutex<DemoViewportToolState>>,
@@ -1399,11 +1439,29 @@ impl DockingArbitrationDriver {
         });
 
         self.restore = None;
+        self.sync_dev_state_models(app);
+        Self::mark_dev_state_export_ready(app);
+        DevStateHooks::export_all(app);
         app.request_redraw(main_window);
     }
 
     fn try_restore_layout_on_init(&mut self, app: &mut App, main_window: AppWindowId) {
+        if self.pending_layout.is_none()
+            && self.layout_preset == DockingArbitrationLayoutPreset::Default
+            && !diag_enabled_env()
+        {
+            let incoming = app.with_global_mut_untracked(
+                DockingArbitrationDevStateIncoming::default,
+                |st, _app| st.layout.take(),
+            );
+            if incoming.is_some() {
+                self.pending_layout = incoming;
+            }
+        }
+
         let Some(layout) = self.pending_layout.take() else {
+            self.sync_dev_state_models(app);
+            Self::mark_dev_state_export_ready(app);
             return;
         };
 
@@ -1426,6 +1484,9 @@ impl DockingArbitrationDriver {
                     app.request_redraw(main_window);
                 }
             });
+            self.sync_dev_state_models(app);
+            Self::mark_dev_state_export_ready(app);
+            DevStateHooks::export_all(app);
             return;
         }
 
@@ -1502,6 +1563,9 @@ impl DockingArbitrationDriver {
         } else {
             app.request_redraw(main_window);
         }
+
+        self.sync_dev_state_models(app);
+        DevStateHooks::export_all(app);
     }
 
     fn render_dock(
@@ -1591,6 +1655,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
         self.docking_runtime = Some(DockingRuntime::new(main_window));
         self.logical_windows
             .insert(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string());
+        self.sync_dev_state_models(app);
         self.try_restore_layout_on_init(app, main_window);
     }
 
@@ -1986,11 +2051,15 @@ impl WinitAppDriver for DockingArbitrationDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.on_dock_op(app, op))
             .unwrap_or(false);
+        if changed {
+            self.sync_dev_state_models(app);
+            DevStateHooks::export_all(app);
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -2189,11 +2258,21 @@ impl WinitAppDriver for DockingArbitrationDriver {
                     .map(|rt| rt.on_window_created(app, request, new_window))
                     .unwrap_or(false);
                 let logical = self.alloc_floating_logical_window_id();
+                let logical_key = logical.clone();
                 self.logical_windows.insert(new_window, logical);
+                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                    reg.register(new_window, logical_key);
+                });
+                self.sync_dev_state_models(app);
+                DevStateHooks::export_all(app);
             }
             CreateWindowKind::DockRestore { logical_window_id } => {
                 self.logical_windows
                     .insert(new_window, logical_window_id.clone());
+                app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                    reg.register(new_window, logical_window_id.clone());
+                });
+                self.sync_dev_state_models(app);
                 if let Some(restore) = self.restore.as_mut() {
                     restore.pending_logical_window_ids.remove(logical_window_id);
                 }
@@ -2209,6 +2288,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
             }
         } else {
             self.logical_windows.remove(&window);
+            app.with_global_mut_untracked(DevStateWindowKeyRegistry::default, |reg, _app| {
+                reg.unregister(window);
+            });
+            self.sync_dev_state_models(app);
+            DevStateHooks::export_all(app);
         }
 
         let _ = self
@@ -2362,6 +2446,72 @@ pub fn run() -> anyhow::Result<()> {
             tools: viewport_tools.clone(),
         }));
     });
+    app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
+        hooks.register(
+            DevStateHook::new(DEV_STATE_DOCKING_LAYOUT_KEY, |app| {
+                let Some(gate) = app.global::<DockingArbitrationDevStateGate>() else {
+                    return DevStateExport::Noop;
+                };
+                if !gate.export_ready {
+                    return DevStateExport::Noop;
+                }
+
+                let Some(models) = app.global::<DockingArbitrationDevStateModels>() else {
+                    return DevStateExport::Noop;
+                };
+                if !models.persist_layout_on_exit {
+                    return DevStateExport::Noop;
+                }
+                if models.windows.is_empty() {
+                    return DevStateExport::Noop;
+                }
+                let windows = models.windows.clone();
+                let Some(dock) = app.global::<DockManager>() else {
+                    return DevStateExport::Noop;
+                };
+                let Some(metrics) = app.global::<fret_core::WindowMetricsService>() else {
+                    return DevStateExport::Noop;
+                };
+
+                let placements: HashMap<AppWindowId, fret_core::DockWindowPlacement> = windows
+                    .iter()
+                    .filter_map(|(window, _logical_window_id)| {
+                        let size = metrics.inner_size(*window)?;
+                        let width = (size.width.0.max(1.0).round() as u32).max(1);
+                        let height = (size.height.0.max(1.0).round() as u32).max(1);
+                        Some((
+                            *window,
+                            fret_core::DockWindowPlacement {
+                                width,
+                                height,
+                                x: None,
+                                y: None,
+                                monitor_hint: None,
+                            },
+                        ))
+                    })
+                    .collect();
+
+                let layout = dock.graph.export_layout_with_placement(&windows, |window| {
+                    placements.get(&window).cloned()
+                });
+                match serde_json::to_value(layout) {
+                    Ok(value) => DevStateExport::Set(value),
+                    Err(_) => DevStateExport::Noop,
+                }
+            })
+            .with_import(|app, value| {
+                let layout = serde_json::from_value(value).map_err(|e| e.to_string())?;
+                app.with_global_mut_untracked(
+                    DockingArbitrationDevStateIncoming::default,
+                    |st, _app| {
+                        st.layout = Some(layout);
+                    },
+                );
+                Ok(())
+            }),
+        );
+    });
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo docking_arbitration_demo".to_string(),
@@ -2398,4 +2548,9 @@ pub fn run() -> anyhow::Result<()> {
         persist_layout_on_exit,
     );
     fret::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
+}
+
+fn diag_enabled_env() -> bool {
+    std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
 }

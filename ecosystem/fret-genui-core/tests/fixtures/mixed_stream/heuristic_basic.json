@@ -1,0 +1,15 @@
+{
+  "name": "heuristic_basic",
+  "options": { "mode": "mixed" },
+  "chunks": [
+    "Hello there\n",
+    "{\"op\":\"add\",\"path\":\"/schema_version\",\"value\":1}\n",
+    "More text\n"
+  ],
+  "expect": {
+    "text_lines": ["Hello there", "More text"],
+    "patches": [{ "op": "add", "path": "/schema_version", "value": 1 }],
+    "result": { "schema_version": 1 }
+  }
+}
+

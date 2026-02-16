@@ -19,12 +19,14 @@ pub(crate) fn hotpatch_cmd(args: Vec<String>) -> Result<(), String> {
             println!("{}", path.display());
             Ok(())
         }
+        Some("status") => hotpatch_status(it.collect()),
         Some("watch") => hotpatch_watch(it.collect()),
         Some("help") | Some("-h") | Some("--help") | None => {
             println!(
                 r#"Usage:
   fretboard hotpatch poke [--path <path>]   # update the trigger file (causes runner reload when enabled)
   fretboard hotpatch path [--path <path>]   # print the trigger file path
+  fretboard hotpatch status [--tail <n>]    # show hotpatch-related log tails (read-only)
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
 
 Notes:
@@ -40,6 +42,164 @@ Notes:
 
 fn hotpatch_trigger_path(workspace_root: &Path) -> PathBuf {
     workspace_root.join(".fret").join("hotpatch.touch")
+}
+
+fn hotpatch_runner_log_paths(workspace_root: &Path) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    paths.push(workspace_root.join(".fret").join("hotpatch_runner.log"));
+
+    let tmp = std::env::temp_dir();
+    if !tmp.as_os_str().is_empty() {
+        paths.push(tmp.join("fret").join("hotpatch_runner.log"));
+    }
+    paths
+}
+
+fn hotpatch_bootstrap_log_paths(workspace_root: &Path) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    paths.push(workspace_root.join(".fret").join("hotpatch_bootstrap.log"));
+
+    let tmp = std::env::temp_dir();
+    if !tmp.as_os_str().is_empty() {
+        paths.push(tmp.join("fret").join("hotpatch_bootstrap.log"));
+    }
+    paths
+}
+
+fn hotpatch_status(args: Vec<String>) -> Result<(), String> {
+    let root = workspace_root()?;
+
+    let mut tail: usize = 40;
+
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--tail" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--tail requires a value".to_string())?;
+                tail = raw.parse::<usize>().map_err(|e| e.to_string())?;
+            }
+            "--help" | "-h" => return Ok(()),
+            other => return Err(format!("unknown argument for hotpatch status: {other}")),
+        }
+    }
+
+    println!("Hotpatch status (read-only):");
+    println!("  workspace: {}", root.display());
+    println!("  tail: {tail}");
+
+    let legacy_direct =
+        std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+    let strategy_env = std::env::var("FRET_HOTPATCH_VIEW_CALL_STRATEGY").ok();
+    if legacy_direct {
+        println!("  view_call_strategy: direct (legacy; FRET_HOTPATCH_VIEW_CALL_DIRECT=1)");
+    } else if let Some(raw) = strategy_env.as_deref() {
+        println!("  view_call_strategy: {raw} (FRET_HOTPATCH_VIEW_CALL_STRATEGY)");
+    } else {
+        println!("  view_call_strategy: auto (default)");
+        if cfg!(windows) {
+            println!(
+                "  windows note: auto defaults to `direct` when running with `--hotpatch` (ADR 0105)"
+            );
+        }
+    }
+
+    // Prefer the runtime's own trace if available (this reflects the effective strategy even when
+    // the env vars are unset in the current shell).
+    if let Some(path) = hotpatch_bootstrap_log_paths(&root)
+        .into_iter()
+        .find(|p| p.is_file())
+    {
+        if let Ok(lines) = read_tail_lines(&path, 200, 256 * 1024) {
+            let needle = "ui_app_render: view call strategy=";
+            let last = lines.iter().rev().find_map(|line| {
+                line.find(needle)
+                    .map(|idx| line[(idx + needle.len())..].trim().to_string())
+            });
+            if let Some(strategy) = last {
+                if strategy == "direct" || strategy == "hotfn" {
+                    println!("  last_view_call: {strategy} (from bootstrap log)");
+                }
+            }
+
+            let reload_needle = "dev_reload:";
+            if let Some(line) = lines.iter().rev().find(|line| line.contains(reload_needle)) {
+                println!("  last_dev_reload: {line}");
+            }
+        }
+    }
+
+    print_log_tail_group(
+        "runner",
+        &hotpatch_runner_log_paths(&root),
+        tail,
+        256 * 1024,
+    )?;
+    print_log_tail_group(
+        "bootstrap",
+        &hotpatch_bootstrap_log_paths(&root),
+        tail,
+        256 * 1024,
+    )?;
+
+    Ok(())
+}
+
+fn print_log_tail_group(
+    name: &str,
+    candidates: &[PathBuf],
+    tail_lines: usize,
+    max_bytes: usize,
+) -> Result<(), String> {
+    let existing: Vec<&PathBuf> = candidates.iter().filter(|p| p.is_file()).collect();
+
+    println!("");
+    println!("{name} log candidates:");
+    for p in candidates {
+        let exists = if p.is_file() { "yes" } else { "no" };
+        println!("  - {} (exists={exists})", p.display());
+    }
+
+    let Some(path) = existing.first() else {
+        println!("  (no {name} log found)");
+        return Ok(());
+    };
+
+    println!("");
+    println!("{name} log tail: {}", path.display());
+    match read_tail_lines(path, tail_lines, max_bytes) {
+        Ok(lines) => {
+            for line in lines {
+                println!("  {line}");
+            }
+        }
+        Err(err) => {
+            println!("  (failed to read: {err})");
+        }
+    }
+    Ok(())
+}
+
+fn read_tail_lines(
+    path: &Path,
+    tail_lines: usize,
+    max_bytes: usize,
+) -> Result<Vec<String>, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let start = bytes.len().saturating_sub(max_bytes);
+    let slice = &bytes[start..];
+    let text = String::from_utf8_lossy(slice);
+
+    let mut out: Vec<String> = Vec::new();
+    for line in text.lines().rev() {
+        if out.len() >= tail_lines {
+            break;
+        }
+        out.push(line.to_string());
+    }
+    out.reverse();
+    Ok(out)
 }
 
 fn hotpatch_poke(path: Option<&str>) -> Result<(), String> {
@@ -300,13 +460,4 @@ pub(crate) fn parse_hotpatch_build_id(raw: &str) -> Result<HotpatchBuildIdArg, S
             other.parse::<u64>().map_err(|e| e.to_string())?,
         )),
     }
-}
-
-pub(crate) fn generate_hotpatch_build_id() -> u64 {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let nanos = now.as_nanos();
-    let pid = std::process::id() as u64;
-    (nanos as u64) ^ (pid.rotate_left(17)) ^ 0x6a09e667f3bcc909u64
 }

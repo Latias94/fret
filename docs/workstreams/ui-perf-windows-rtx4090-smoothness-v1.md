@@ -43,13 +43,43 @@ P0 commands:
 - `target/release/fretboard.exe diag perf ui-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 - `target/release/fretboard.exe diag perf ui-code-editor-resize-probes --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
 
+## Stress/jitter runs (tail hunting, not P0)
+
+The canonical `windows-rtx4090.v1` baselines were tuned for **P0** usage (`repeat=3`, aggregate = `max`).
+
+When you increase `repeat` (e.g. `repeat=7`), you are intentionally stress-testing stability. Expect
+occasional gate failures even when P0 is green; use this mode to find and explain tail spikes.
+
+Recommended stress command:
+
+- `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
+
+Workflow when it fails:
+
+- Read `target/fret-diag/check.perf_thresholds.json` and follow the bundle path printed as `worst overall`.
+- Attribute the worst bundle:
+  - `target/release/fretboard.exe diag stats <bundle.json> --sort time --top 30`
+  - `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
+
+If suite results look inconsistent (a script is fast when run alone but slow inside a suite), use
+suite normalization hooks to reduce cross-script state contamination:
+
+- `--suite-prewarm <script.json>...`: run once per launched process before the suite.
+- `--suite-prelude <script.json>...`: run before each measured script (and per-run when combined with
+  `--suite-prelude-each-run`).
+
+Suggested defaults for UI-gallery perf work:
+
+- `--suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json`
+- `--suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json`
+
 ## Failure triage (when a gate fails)
 
 1) Look at the generated perf check:
 
 - `<out_dir>/check.perf_thresholds.json`
   - Includes `max` and percentiles (`p50`/`p95`) per script.
-  - When a threshold fails, `failures[]` also includes `actual_p95_us` and `outlier_suspected` for quick triage.
+  - When a threshold fails, `failures[]` includes `actual_p95_us`, `outlier_suspected`, and `evidence_bundle` (a bundle.json path you can feed to `diag stats`) for quick triage.
 
 2) Open the worst evidence bundle:
 
@@ -119,6 +149,22 @@ Interpretation:
 - High sampled CPU with stable stacks in Fret code ⇒ real work regression (optimize the hottest phase).
 - DPC/ISR spikes aligned with frame spikes ⇒ driver/OS noise; consider isolating (priority, affinity, power plan, background activity).
 
+## In-app CPU-time signal (when ETW/WPR is unavailable)
+
+Some environments block WPR/ETW system profiling. In that case, use the in-app UI-thread CPU-time
+signal exported into `debug.stats`:
+
+- `ui_thread_cpu_time_us`: approximate CPU time consumed by the UI thread since the previous snapshot.
+- `ui_thread_cpu_cycle_time_delta_cycles`: UI thread cycle delta since the previous snapshot (Windows-only, higher resolution).
+
+How to interpret:
+
+- Prefer `ui_thread_cpu_cycle_time_delta_cycles` when available: `GetThreadTimes` can be coarse and appear quantized.
+- Treat `ui_thread_cpu_time_us` as a best-effort hint, not a precise per-frame budget.
+
+- If `total_time_us` spikes but `ui_thread_cpu_time_us` stays low ⇒ schedule noise / preemption likely.
+- If both spike together ⇒ real CPU work regression (optimize the dominating phase).
+
 ## What “typical perf” means here (not tail)
 
 Tail (spikes) is “max / worst frame”. Typical perf should use **percentiles** (p50/p95) to answer
@@ -128,7 +174,15 @@ Preferred workflow:
 
 - Use `fretboard diag perf ... --json` and review `p50`/`p95` for the top metrics.
 - Use `diag stats --json` for within-bundle `p50` / `p95` (typical), `avg.*`, and `budget_pct.*`.
-- If you want a **typical-perf gate** (ignore rare max spikes), run with `--perf-threshold-agg p95`.
+- If you want a **typical-perf gate**, create a dedicated baseline seeded from percentiles and then
+  gate using `--perf-threshold-agg p95`.
+
+Example (local typical baseline; does not change the canonical baselines):
+
+- Create a p95-seeded baseline:
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-baseline-out .fret/perf.baseline.p95.json --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json --perf-baseline-seed this-suite@top_total_time_us=p95 --launch -- target/release/fret-ui-gallery.exe`
+- Gate typical perf (p95 aggregate):
+  - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 15 --warmup-frames 5 --perf-threshold-agg p95 --perf-baseline .fret/perf.baseline.p95.json --launch -- target/release/fret-ui-gallery.exe`
 
 If a change improves p50/p95 but worsens max occasionally, treat it as “needs jitter work” (allocator,
 capacity management, background work scheduling).
@@ -148,6 +202,59 @@ Evidence:
 
 - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` became consistently under the
   `ui-gallery-steady.windows-rtx4090.v1` thresholds in repeated local runs.
+
+## Finding (2026-02-15): Make the VirtualList cache root layout definite to avoid rerender on deferred scroll
+
+Background:
+
+- `ViewCache` reuse under layout invalidation is only safe for definite-sized cache roots.
+- `CachedSubtreeProps` previously created `ViewCacheProps` with the default (Auto-sized) layout, which makes
+  `layout_definite=false` even when the subtree itself has a definite size.
+
+Observed symptom:
+
+- `ui-gallery-virtual-list-torture-steady` failed `ui-gallery-steady.windows-rtx4090.v1` on Windows due to
+  max spikes in `top_total_time_us` / `top_layout_time_us` / `top_layout_engine_solve_time_us` during
+  the jump-to-item + scroll-to-bottom sequence.
+
+Change:
+
+- Extend `CachedSubtreeProps` (ecosystem helper) to allow overriding the `ViewCache` wrapper layout.
+- In `virtual_list_torture`, set the cache root layout to the same fixed-size layout as the list (`w_full`, `h=420px`).
+
+Result (local, `repeat=3`, baseline `ui-gallery-steady.windows-rtx4090.v1`):
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` no longer trips the max thresholds.
+
+Repro command:
+
+- `target/release/fretboard.exe diag perf tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json --repeat 3 --warmup-frames 5 --sort time --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+
+## Finding (2026-02-15): Batch-solve barrier roots to eliminate per-root solve spikes
+
+Observed symptom:
+
+- `ui-gallery-virtual-list-torture-steady` could still hit max spikes in `top_layout_engine_solve_time_us`
+  during “jump + scroll to bottom”, with `layout_engine_solves` often matching the visible item count
+  (e.g. ~38 independent solves in one frame).
+
+Root cause:
+
+- Layout barriers (VirtualList/Scroll/etc.) solved each child root one-by-one, amplifying fixed Taffy
+  solve overhead into tail latency.
+
+Change:
+
+- Add `TaffyLayoutEngine::compute_independent_roots_with_measure_if_needed(...)` and use it from the
+  barrier solve path so many child roots can be solved in a single synthetic-root Taffy compute when
+  they are independent and have definite sizes.
+
+Result (local, `repeat=3`):
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json` now stays under the baseline with
+  `top_layout_engine_solve_time_us` max around ~1.1ms (previously ~1.9ms worst frames).
+- `ui-gallery-steady`, `ui-resize-probes`, and `ui-code-editor-resize-probes` all pass their
+  `windows-rtx4090.v1` baselines.
 
 ## Finding (2026-02-14): repeat=7 can fail on Material3 tabs (request_build_roots dominates)
 

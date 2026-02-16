@@ -1,6 +1,6 @@
 # Workstream: Text Line Breaking v1 (Wrap Quality + Editor-Grade Rules)
 
-Status: Draft (design); implementation planned as an incremental replacement of wrapper heuristics.
+Status: M0 implemented (fixture-driven conformance harness); M1 implemented (Unicode break opportunities via `swash::text::analyze`, with small heuristic fallback); M2 implemented (Parley paragraph line breaking for `TextWrap::Word`).
 
 This document is **non-normative**. It complements:
 
@@ -47,12 +47,17 @@ produces editor-visible issues:
 Key files:
 
 - Wrapper: `crates/fret-render-wgpu/src/text/wrapper.rs`
-  - word wrap uses `is_word_char` heuristics:
-    - `crates/fret-render-wgpu/src/text/wrapper.rs` (`is_word_char`, `is_cjk_char`)
+  - word wrap candidate selection:
+    - prefers Unicode line-break opportunities (UAX#14-like) via `swash::text::analyze`
+      (`line_break_positions`),
+    - keeps a small heuristic fallback (`is_word_char`, whitespace boundaries) for now.
   - grapheme wrap uses `unicode_segmentation` boundaries.
-- Invariants already gated by tests:
+ - Invariants already gated by tests:
   - trailing whitespace at soft wrap is selectable:
     - `crates/fret-render-wgpu/src/text/mod.rs:6294`
+- Conformance harness:
+  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+  - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
 
 ## Design Options
 
@@ -108,10 +113,12 @@ Cons:
 
 Stage the work as:
 
-1) M0: Expand conformance tests and make failures visible (no behavior change yet).
-2) M1: Improve the wrapper cut-point selection (Option B) for better results immediately.
-3) M2: Introduce Parley-driven line breaking behind a controlled switch and migrate (Option A),
-   keeping the wrapper as a compatibility layer for cases not yet covered (RTL staging).
+1) M0: Expand conformance tests and make failures visible (baseline harness is landed).
+2) M1: Improve the wrapper cut-point selection (Option B) for better results immediately (initial
+   Unicode break opportunities are landed; keep iterating with fixtures + perf gates).
+3) M2: Replace the legacy wrapper with Parley-driven paragraph line breaking (Option A). Do not
+   retain a long-lived compatibility wrapper: rely on conformance + invariants to keep the behavior
+   auditable, and keep code wrap policy in the ecosystem/editor layer.
 
 This sequencing keeps risk bounded while still converging on a simpler, more correct architecture.
 
@@ -153,4 +160,3 @@ For detailed milestone checklists and task breakdown:
 
 - `docs/workstreams/text-line-breaking-v1-milestones.md`
 - `docs/workstreams/text-line-breaking-v1-todo.md`
-

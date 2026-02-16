@@ -16,6 +16,33 @@ use super::tab_overflow::{
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
+fn tab_title_clip_rect(
+    theme: fret_ui::ThemeSnapshot,
+    tab_rect: Rect,
+    close_glyph_present: bool,
+) -> Rect {
+    let pad_x = theme.metric_token("metric.padding.md").0.max(0.0);
+    let pad_sm = theme.metric_token("metric.padding.sm").0.max(0.0);
+    let reserve = if close_glyph_present {
+        DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0 + pad_sm
+    } else {
+        0.0
+    };
+
+    // Keep at least a 1px content span so text doesn't disappear entirely under theme metric
+    // misconfiguration (e.g. overly large padding).
+    let max_pad = (tab_rect.size.width.0 - reserve - 1.0).max(0.0);
+    let pad_x = pad_x.clamp(0.0, max_pad);
+
+    Rect {
+        origin: Point::new(Px(tab_rect.origin.x.0 + pad_x), tab_rect.origin.y),
+        size: Size::new(
+            Px((tab_rect.size.width.0 - pad_x - reserve).max(1.0)),
+            tab_rect.size.height,
+        ),
+    }
+}
+
 pub(super) struct PaintDockParams<'a> {
     pub(super) window: fret_core::AppWindowId,
     pub(super) layout: &'a std::collections::HashMap<DockNodeId, Rect>,
@@ -28,6 +55,8 @@ pub(super) struct PaintDockParams<'a> {
     pub(super) tab_scroll: &'a HashMap<DockNodeId, Px>,
     pub(super) tab_close_glyph: Option<PreparedTabTitle>,
     pub(super) tab_overflow_glyph: Option<PreparedTabTitle>,
+    pub(super) tab_close_svg: Option<fret_core::SvgId>,
+    pub(super) tab_overflow_svg: Option<fret_core::SvgId>,
     pub(super) tab_overflow_menu: Option<TabOverflowMenuState>,
 }
 
@@ -44,6 +73,7 @@ pub(super) fn paint_dock(
     let primary = theme.color_token("primary");
     let fg = theme.color_token("foreground");
     let fg_muted = theme.color_token("muted-foreground");
+    let border = theme.color_token("border");
     let pad_md = theme.metric_token("metric.padding.md");
     let radius_sm = theme.metric_token("metric.radius.sm");
 
@@ -59,6 +89,8 @@ pub(super) fn paint_dock(
         tab_scroll,
         tab_close_glyph,
         tab_overflow_glyph,
+        tab_close_svg,
+        tab_overflow_svg,
         tab_overflow_menu,
     } = params;
     let graph = &dock.graph;
@@ -81,8 +113,13 @@ pub(super) fn paint_dock(
             order: fret_core::DrawOrder(1),
             rect: tab_bar,
             background: fret_core::Paint::Solid(surface_bg),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border: Edges {
+                top: Px(0.0),
+                right: Px(0.0),
+                bottom: Px(1.0),
+                left: Px(0.0),
+            },
+            border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
@@ -116,21 +153,48 @@ pub(super) fn paint_dock(
 
             let is_active = i == *active;
             let is_hovered = hovered_tab == Some((node_id, i));
-            let bg = if is_active {
-                panel_bg
+            let (bg, tab_border, corner_radii) = if is_active {
+                (
+                    panel_bg,
+                    Edges {
+                        top: Px(1.0),
+                        right: Px(1.0),
+                        bottom: Px(0.0),
+                        left: Px(1.0),
+                    },
+                    fret_core::Corners {
+                        top_left: radius_sm,
+                        top_right: radius_sm,
+                        bottom_left: Px(0.0),
+                        bottom_right: Px(0.0),
+                    },
+                )
             } else if is_hovered {
-                hover_bg
+                (
+                    hover_bg,
+                    Edges::all(Px(0.0)),
+                    fret_core::Corners {
+                        top_left: radius_sm,
+                        top_right: radius_sm,
+                        bottom_left: Px(0.0),
+                        bottom_right: Px(0.0),
+                    },
+                )
             } else {
-                Color { a: 0.0, ..panel_bg }
+                (
+                    Color { a: 0.0, ..panel_bg },
+                    Edges::all(Px(0.0)),
+                    fret_core::Corners::all(Px(0.0)),
+                )
             };
 
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(2),
                 rect: tab_rect,
                 background: fret_core::Paint::Solid(bg),
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
-                corner_radii: fret_core::Corners::all(Px(0.0)),
+                border: tab_border,
+                border_paint: fret_core::Paint::Solid(border),
+                corner_radii,
             });
 
             if is_active {
@@ -153,8 +217,8 @@ pub(super) fn paint_dock(
             }
 
             if let Some(title) = tab_titles.get(panel) {
-                let pad_x = pad_md;
-                let text_x = Px(tab_rect.origin.x.0 + pad_x.0);
+                let clip = tab_title_clip_rect(theme, tab_rect, tab_close_glyph.is_some());
+                let text_x = clip.origin.x;
                 let inner_y = tab_rect.origin.y.0
                     + ((tab_rect.size.height.0 - title.metrics.size.height.0) * 0.5);
                 let text_y = Px(inner_y + title.metrics.baseline.0);
@@ -164,7 +228,7 @@ pub(super) fn paint_dock(
                     fg_muted
                 };
 
-                scene.push(SceneOp::PushClipRect { rect: tab_rect });
+                scene.push(SceneOp::PushClipRect { rect: clip });
                 scene.push(SceneOp::Text {
                     order: fret_core::DrawOrder(4),
                     origin: Point::new(text_x, text_y),
@@ -174,7 +238,7 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::PopClip);
             }
 
-            if (is_active || is_hovered) && tab_close_glyph.is_some() {
+            if (is_active || is_hovered) && (tab_close_svg.is_some() || tab_close_glyph.is_some()) {
                 let close_rect = tab_close_rect(theme, tab_rect);
                 let close_hovered = is_hovered && hovered_tab_close;
                 let close_pressed = pressed_tab_close == Some((node_id, i));
@@ -190,17 +254,37 @@ pub(super) fn paint_dock(
                     });
                 }
 
-                if let Some(glyph) = tab_close_glyph {
+                let color = if close_pressed || close_hovered {
+                    fg
+                } else {
+                    fg_muted
+                };
+                if let Some(svg) = tab_close_svg {
+                    let pad = Px(2.0);
+                    let rect = Rect {
+                        origin: Point::new(
+                            Px(close_rect.origin.x.0 + pad.0),
+                            Px(close_rect.origin.y.0 + pad.0),
+                        ),
+                        size: Size::new(
+                            Px((close_rect.size.width.0 - pad.0 * 2.0).max(1.0)),
+                            Px((close_rect.size.height.0 - pad.0 * 2.0).max(1.0)),
+                        ),
+                    };
+                    scene.push(SceneOp::SvgMaskIcon {
+                        order: fret_core::DrawOrder(6),
+                        rect,
+                        svg,
+                        fit: fret_core::SvgFit::Contain,
+                        color,
+                        opacity: 1.0,
+                    });
+                } else if let Some(glyph) = tab_close_glyph {
                     let text_x = Px(close_rect.origin.x.0
                         + (close_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5);
                     let inner_y = close_rect.origin.y.0
                         + ((close_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5);
                     let text_y = Px(inner_y + glyph.metrics.baseline.0);
-                    let color = if close_pressed || close_hovered {
-                        fg
-                    } else {
-                        fg_muted
-                    };
                     scene.push(SceneOp::Text {
                         order: fret_core::DrawOrder(6),
                         origin: Point::new(text_x, text_y),
@@ -227,13 +311,33 @@ pub(super) fn paint_dock(
                     corner_radii: fret_core::Corners::all(radius_sm),
                 });
             }
-            if let Some(glyph) = tab_overflow_glyph {
+            let color = if hovered || open { fg } else { fg_muted };
+            if let Some(svg) = tab_overflow_svg {
+                let pad = Px(4.0);
+                let rect = Rect {
+                    origin: Point::new(
+                        Px(button_rect.origin.x.0 + pad.0),
+                        Px(button_rect.origin.y.0 + pad.0),
+                    ),
+                    size: Size::new(
+                        Px((button_rect.size.width.0 - pad.0 * 2.0).max(1.0)),
+                        Px((button_rect.size.height.0 - pad.0 * 2.0).max(1.0)),
+                    ),
+                };
+                scene.push(SceneOp::SvgMaskIcon {
+                    order: fret_core::DrawOrder(11),
+                    rect,
+                    svg,
+                    fit: fret_core::SvgFit::Contain,
+                    color,
+                    opacity: 1.0,
+                });
+            } else if let Some(glyph) = tab_overflow_glyph {
                 let text_x = Px(button_rect.origin.x.0
                     + (button_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5);
                 let inner_y = button_rect.origin.y.0
                     + ((button_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5);
                 let text_y = Px(inner_y + glyph.metrics.baseline.0);
-                let color = if hovered || open { fg } else { fg_muted };
                 scene.push(SceneOp::Text {
                     order: fret_core::DrawOrder(11),
                     origin: Point::new(text_x, text_y),

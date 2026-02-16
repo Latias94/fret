@@ -24,6 +24,12 @@ use super::GlobalElementId;
 use super::hash::stable_hash;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum TimerTarget {
+    Element(GlobalElementId),
+    Node(NodeId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum EnvironmentQueryKey {
     ViewportSize,
     ScaleFactor,
@@ -348,7 +354,7 @@ pub struct WindowElementState {
     layout_query_regions_changed_this_frame: HashSet<GlobalElementId>,
     environment_revisions: HashMap<EnvironmentQueryKey, u64>,
     environment_changed_this_frame: HashSet<EnvironmentQueryKey>,
-    pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    pub(super) timer_targets: HashMap<TimerToken, TimerTarget>,
     scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_stack: Vec<GlobalElementId>,

@@ -22,6 +22,77 @@ Non-goals (v2):
 - Full-document code-editor virtualization (separate higher-level layer).
 - Rich clipboard formats (tracked by ADR 0106/0137).
 
+## Capability Snapshot (2026-02-15)
+
+This section is a **non-normative** convenience overview for “self-drawn UI” consumers. The
+contracts remain ADR-driven; treat this as an implementation status dashboard.
+
+### Rich text (attributed spans)
+
+Supported (mechanism-level):
+
+- Per-span paint attributes (`TextPaintStyle`):
+  - `fg`, `bg`, `underline`, `strikethrough`
+  - Evidence: `crates/fret-core/src/text/mod.rs` (`TextSpan`, `TextPaintStyle`)
+- Per-span shaping overrides (`TextShapingStyle`, best-effort):
+  - `font` (semantic `FontId`), `weight`, `slant`, `letter_spacing_em`
+  - OpenType features (e.g. `calt`, `liga`, `ss01`) via `TextShapingStyle.features`
+  - Variable font axes (e.g. `wght`, `wdth`) via `TextShapingStyle.axes`
+  - Evidence: `crates/fret-core/src/text/mod.rs`, `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+
+Behavioral maturity:
+
+- Theme/paint-only changes are intended to **reuse shaping/layout**:
+  - paint changes may produce a new prepared blob (palette change), but should hit the shape cache
+    and avoid reshaping/re-wrapping.
+  - Evidence: `docs/workstreams/text-system-v2-parley.md` (WP4), `crates/fret-render-wgpu/src/text/mod.rs`
+
+Known limitations (v2 scope):
+
+- Per-span `font size` and per-span `line height` are not supported (uniform per layout).
+- Decoration styles are intentionally minimal in v1 surfaces (expand only with clear consumers).
+
+### Wrapping and overflow
+
+Supported:
+
+- `TextWrap::{None, Word, Grapheme}`.
+- `TextOverflow::Ellipsis` is implemented as a deterministic **single-line** policy (paired with
+  `TextWrap::None`).
+- Word wrap is Parley-driven paragraph line breaking (`TextWrap::Word`):
+  - this is the baseline for self-drawn UI text wrapping,
+  - conformance fixtures lock the behavior for key edge cases (CJK punctuation, identifiers, etc.).
+  - Evidence: `crates/fret-render-wgpu/src/text/parley_shaper.rs`, `crates/fret-render-wgpu/src/text/wrapper.rs`,
+    `docs/workstreams/text-line-breaking-v1.md`
+
+### Geometry queries (editor-grade correctness baseline)
+
+Supported:
+
+- `caret_rect`, `hit_test_point`/`hit_test_x`, `selection_rects(_clipped)`.
+- Mixed-direction (LTR/RTL) geometry correctness is gated with unit tests.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+
+### Font system (selection, fallback, invalidation)
+
+Supported:
+
+- Semantic `FontId` + configurable family overrides (`TextFontFamilyConfig`).
+- Deterministic invalidation via `font_stack_key` / runtime-global `TextFontStackKey` (font changes
+  must not reuse stale shaping/raster caches).
+- Bundled-only conformance gates for mixed-script + emoji fallback.
+  - Evidence: `docs/workstreams/font-system-v1.md`, `docs/workstreams/font-fallback-conformance-v1.md`
+
+### Observability and performance
+
+Supported:
+
+- Diagnostics/perf snapshots for cache/atlas behavior (hits/misses, atlas live pages, missing glyph
+  counts), plus font trace snapshots.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
+- Multi-page, budgeted, evictable text atlases (mask/color/subpixel).
+  - Evidence: `docs/workstreams/text-system-v2-parley.md` (B4), `crates/fret-render-wgpu/src/text/mod.rs`
+
 ## Milestones
 
 ### M0 — Contract landed (core API shape)

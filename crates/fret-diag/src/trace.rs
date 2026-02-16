@@ -75,6 +75,18 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 .and_then(|m| m.get("hit_test_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let ui_thread_cpu_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_delta_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_delta_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_total_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_total_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
             let layout_obs_record_time_us = stats
                 .and_then(|m| m.get("layout_observation_record_time_us"))
@@ -151,6 +163,13 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 continue;
             }
 
+            let frame_wall_us = frame_end_us_hint.saturating_sub(frame_start_us);
+            let cpu_pct_denom_us = if frame_wall_us > 0 {
+                frame_wall_us
+            } else {
+                frame_dur_us
+            };
+
             let frame_ts_us = frame_start_us.min(frame_end_us_hint.saturating_sub(frame_dur_us));
 
             events.push(chrome_x(
@@ -164,6 +183,14 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                     "window": window_id_u64,
                     "tick_id": tick_id,
                     "frame_id": frame_id,
+                    "ui_thread_cpu_time_us": ui_thread_cpu_time_us,
+                    "ui_thread_cpu_cycle_time_delta_cycles": ui_thread_cpu_cycle_time_delta_cycles,
+                    "ui_thread_cpu_cycle_time_total_cycles": ui_thread_cpu_cycle_time_total_cycles,
+                    "ui_thread_cpu_pct_of_wall": if frame_dur_us > 0 {
+                        (ui_thread_cpu_time_us as f64) * 100.0 / (cpu_pct_denom_us as f64)
+                    } else {
+                        0.0
+                    },
                 }),
             ));
 

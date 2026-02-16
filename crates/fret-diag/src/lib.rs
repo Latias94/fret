@@ -343,6 +343,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut devtools_session_id: Option<String> = None;
     let mut exit_after_run: bool = false;
     let mut suite_script_inputs: Vec<String> = Vec::new();
+    let mut suite_prewarm_scripts: Vec<PathBuf> = Vec::new();
+    let mut suite_prelude_scripts: Vec<PathBuf> = Vec::new();
+    let mut suite_prelude_each_run: bool = false;
 
     fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
         if env.iter().any(|(k, _v)| k == key) {
@@ -542,6 +545,26 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --glob".to_string());
                 };
                 suite_script_inputs.push(v);
+                i += 1;
+            }
+            "--suite-prewarm" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --suite-prewarm".to_string());
+                };
+                suite_prewarm_scripts.push(PathBuf::from(v));
+                i += 1;
+            }
+            "--suite-prelude" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --suite-prelude".to_string());
+                };
+                suite_prelude_scripts.push(PathBuf::from(v));
+                i += 1;
+            }
+            "--suite-prelude-each-run" => {
+                suite_prelude_each_run = true;
                 i += 1;
             }
             "--pick-trigger-path" => {
@@ -7081,6 +7104,84 @@ See: `docs/tracy.md`.\n";
             let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
+            let perf_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
+                .iter()
+                .cloned()
+                .map(|p| resolve_path(&workspace_root, p))
+                .collect();
+            let perf_suite_prelude_scripts: Vec<PathBuf> = suite_prelude_scripts
+                .iter()
+                .cloned()
+                .map(|p| resolve_path(&workspace_root, p))
+                .collect();
+
+            let run_suite_aux_script_must_pass =
+                |src: &PathBuf, child: &mut Option<LaunchedDemo>| -> Result<(), String> {
+                    if !reuse_process {
+                        clear_script_result_files(
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                        );
+                    }
+
+                    let mut result = run_script_and_wait(
+                        src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
+                            }
+                        }
+                    }
+                    let result = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            stop_launched_demo(child, &resolved_exit_path, poll_ms);
+                            return Err(e);
+                        }
+                    };
+
+                    match result.stage.as_deref() {
+                        Some("passed") => Ok(()),
+                        Some("failed") => {
+                            eprintln!(
+                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                src.display(),
+                                result.run_id,
+                                result.step_index.unwrap_or(0),
+                                result.reason.as_deref().unwrap_or("unknown"),
+                                result.last_bundle_dir.as_deref().unwrap_or("")
+                            );
+                            stop_launched_demo(child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                        _ => {
+                            eprintln!(
+                                "unexpected script stage for {}: {:?}",
+                                src.display(),
+                                result
+                            );
+                            stop_launched_demo(child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                    }
+                };
 
             if let Some(baseline) = perf_baseline.as_ref() {
                 for src in &scripts {
@@ -7109,6 +7210,12 @@ See: `docs/tracy.md`.\n";
                 )?;
             }
 
+            if reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                for prewarm in &perf_suite_prewarm_scripts {
+                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                }
+            }
+
             for src in scripts {
                 if repeat == 1 {
                     if !reuse_process {
@@ -7131,6 +7238,17 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &resolved_script_result_trigger_path,
                         );
+                    }
+
+                    if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                        for prewarm in &perf_suite_prewarm_scripts {
+                            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                        }
+                    }
+                    if !perf_suite_prelude_scripts.is_empty() {
+                        for prelude in &perf_suite_prelude_scripts {
+                            run_suite_aux_script_must_pass(prelude, &mut child)?;
+                        }
                     }
 
                     let mut result = run_script_and_wait(
@@ -7840,6 +7958,8 @@ See: `docs/tracy.md`.\n";
                                 pointer_move_snapshots_with_global_changes,
                                 run_paint_cache_hit_test_only_replay_allowed_max,
                                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                Some(bundle_path.as_path()),
+                                None,
                             ));
                         }
 
@@ -7907,6 +8027,19 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &resolved_script_result_trigger_path,
                         );
+                    }
+
+                    if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                        for prewarm in &perf_suite_prewarm_scripts {
+                            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                        }
+                    }
+                    if !perf_suite_prelude_scripts.is_empty()
+                        && (!reuse_process || suite_prelude_each_run || run_index == 0)
+                    {
+                        for prelude in &perf_suite_prelude_scripts {
+                            run_suite_aux_script_must_pass(prelude, &mut child)?;
+                        }
                     }
 
                     let mut result = run_script_and_wait(
@@ -9101,6 +9234,8 @@ See: `docs/tracy.md`.\n";
                             max_pointer_move_global_changes,
                             max_run_paint_cache_hit_test_only_replay_allowed_max,
                             max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            script_worst.as_ref().map(|(_us, bundle)| bundle.as_path()),
+                            None,
                         ));
                     }
                 }
@@ -9145,6 +9280,11 @@ See: `docs/tracy.md`.\n";
                     "out_dir": resolved_out_dir.display().to_string(),
                     "warmup_frames": warmup_frames,
                     "observed_aggregate": perf_threshold_agg.as_str(),
+                    "suite_hooks": {
+                        "prewarm": perf_suite_prewarm_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "prelude": perf_suite_prelude_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                        "prelude_each_run": suite_prelude_each_run,
+                    },
                     "thresholds": {
                         "max_top_total_us": cli_thresholds.max_top_total_us,
                         "max_top_layout_us": cli_thresholds.max_top_layout_us,
@@ -19001,6 +19141,8 @@ mod tests {
             0,
             0,
             0,
+            None,
+            None,
         );
         assert!(failures.is_empty());
     }
@@ -19037,8 +19179,26 @@ mod tests {
             1,
             0,
             0,
+            Some(Path::new("bundle.json")),
+            Some(7),
         );
         assert_eq!(failures.len(), 6);
+        for failure in &failures {
+            assert_eq!(
+                failure
+                    .get("evidence_bundle")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(""),
+                "bundle.json"
+            );
+            assert_eq!(
+                failure
+                    .get("evidence_run_index")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                7
+            );
+        }
         let metrics: Vec<String> = failures
             .iter()
             .filter_map(|v| {
@@ -21085,6 +21245,22 @@ mod tests {
                             "frame_id": 3,
                             "debug": { "semantics": { "nodes": [
                                 { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [2,2] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 4,
+                            "frame_id": 4,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [2,2], "text_composition": [0,2] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 5,
+                            "frame_id": 5,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,5] },
                                 { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-composition-gate-viewport", "parent": 2 }
                             ] } }
                         }

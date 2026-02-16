@@ -394,12 +394,40 @@ impl SubsecondTrigger {
                 tracing::debug!("hotpatch(subsecond): connected to devserver");
                 hotpatch_diag_log("hotpatch(subsecond): connected");
 
+                let mut last_skip_diag_at: Option<std::time::Instant> = None;
                 while let Ok(msg) = websocket.read() {
                     let tungstenite::Message::Text(text) = msg else {
+                        if hotpatch_diag_enabled() {
+                            let now = std::time::Instant::now();
+                            let emit = match last_skip_diag_at {
+                                None => true,
+                                Some(t) => now.duration_since(t) > Duration::from_secs(5),
+                            };
+                            if emit {
+                                last_skip_diag_at = Some(now);
+                                hotpatch_diag_log(
+                                    "hotpatch(subsecond): ignoring non-text websocket message",
+                                );
+                            }
+                        }
                         continue;
                     };
 
                     let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+                        if hotpatch_diag_enabled() {
+                            let now = std::time::Instant::now();
+                            let emit = match last_skip_diag_at {
+                                None => true,
+                                Some(t) => now.duration_since(t) > Duration::from_secs(5),
+                            };
+                            if emit {
+                                last_skip_diag_at = Some(now);
+                                hotpatch_diag_log(&format!(
+                                    "hotpatch(subsecond): ignoring invalid json (len={})",
+                                    text.len()
+                                ));
+                            }
+                        }
                         continue;
                     };
 
@@ -412,12 +440,38 @@ impl SubsecondTrigger {
                         .and_then(|v| v.as_u64())
                         .and_then(|v| u32::try_from(v).ok());
                     if for_pid != Some(pid) {
+                        if hotpatch_diag_enabled() {
+                            let now = std::time::Instant::now();
+                            let emit = match last_skip_diag_at {
+                                None => true,
+                                Some(t) => now.duration_since(t) > Duration::from_secs(5),
+                            };
+                            if emit {
+                                last_skip_diag_at = Some(now);
+                                hotpatch_diag_log(&format!(
+                                    "hotpatch(subsecond): ignoring HotReload for_pid={for_pid:?} (expected {pid})"
+                                ));
+                            }
+                        }
                         continue;
                     }
 
                     if let Some(build_id) = build_id {
                         let for_build_id = hotreload.get("for_build_id").and_then(|v| v.as_u64());
                         if for_build_id != Some(build_id) {
+                            if hotpatch_diag_enabled() {
+                                let now = std::time::Instant::now();
+                                let emit = match last_skip_diag_at {
+                                    None => true,
+                                    Some(t) => now.duration_since(t) > Duration::from_secs(5),
+                                };
+                                if emit {
+                                    last_skip_diag_at = Some(now);
+                                    hotpatch_diag_log(&format!(
+                                        "hotpatch(subsecond): ignoring HotReload for_build_id={for_build_id:?} (expected {build_id})"
+                                    ));
+                                }
+                            }
                             continue;
                         }
                     }
@@ -432,6 +486,19 @@ impl SubsecondTrigger {
                     let Ok(jump_table) =
                         serde_json::from_value::<subsecond::JumpTable>(jump_table_value.clone())
                     else {
+                        if hotpatch_diag_enabled() {
+                            let now = std::time::Instant::now();
+                            let emit = match last_skip_diag_at {
+                                None => true,
+                                Some(t) => now.duration_since(t) > Duration::from_secs(5),
+                            };
+                            if emit {
+                                last_skip_diag_at = Some(now);
+                                hotpatch_diag_log(
+                                    "hotpatch(subsecond): ignoring HotReload with invalid jump_table payload",
+                                );
+                            }
+                        }
                         continue;
                     };
 

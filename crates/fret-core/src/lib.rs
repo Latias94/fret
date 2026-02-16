@@ -99,9 +99,9 @@ pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
     StrikethroughStyle, TextAlign, TextCommonFallbackInjection, TextConstraints,
-    TextFontAxisSetting, TextFontFamilyConfig, TextInput, TextInputRef, TextMetrics, TextOverflow,
-    TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap,
-    UnderlineStyle,
+    TextFontAxisSetting, TextFontFamilyConfig, TextFontFeatureSetting, TextInput, TextInputRef,
+    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
+    TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

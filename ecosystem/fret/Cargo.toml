@@ -29,6 +29,9 @@ desktop = [
     "fret-bootstrap/ui-app-driver",
 ]
 
+# Dev-only iteration helpers (fast restart state restore, etc).
+devloop = ["fret-launch/dev-state"]
+
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
 tracing = ["fret-bootstrap/tracing"]

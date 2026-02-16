@@ -22,6 +22,7 @@ hotpatch = [
     "dep:fret-core",
     "dep:fret-runtime",
     "dep:fret-ui",
+    "dep:fret-ui-literals",
     "dep:fret-ui-kit",
     "dep:fret-ui-shadcn",
 ]
@@ -34,6 +35,7 @@ fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core", optional = true }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-ui-literals = { path = "../../ecosystem/fret-ui-literals", optional = true }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }

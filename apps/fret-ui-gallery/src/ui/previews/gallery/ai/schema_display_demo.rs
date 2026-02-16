@@ -1,0 +1,86 @@
+use super::super::super::super::*;
+
+pub(in crate::ui) fn preview_ai_schema_display_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let request_props: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("request", "object")
+            .required(true)
+            .description("Request payload")
+            .properties(Arc::from(vec![
+                ui_ai::SchemaProperty::new("prompt", "string")
+                    .required(true)
+                    .description("User prompt"),
+                ui_ai::SchemaProperty::new("temperature", "number")
+                    .description("Sampling temperature"),
+            ])),
+    ]);
+
+    let response_props: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("response", "object")
+            .required(true)
+            .description("Response payload")
+            .properties(Arc::from(vec![
+                ui_ai::SchemaProperty::new("text", "string").description("Assistant output"),
+                ui_ai::SchemaProperty::new("usage", "object").properties(Arc::from(vec![
+                    ui_ai::SchemaProperty::new("prompt_tokens", "number"),
+                    ui_ai::SchemaProperty::new("completion_tokens", "number"),
+                ])),
+            ])),
+    ]);
+
+    let request_section = ui_ai::SchemaDisplayRequest::new(request_props)
+        .default_open(true)
+        .test_id_first_property_trigger("ui-ai-schema-display-request-prop0-trigger")
+        .test_id_first_property_child0_trigger("ui-ai-schema-display-request-prop0-child0-trigger")
+        .into_element(cx);
+
+    let response_section = ui_ai::SchemaDisplayResponse::new(response_props)
+        .default_open(true)
+        .test_id_first_property_trigger("ui-ai-schema-display-response-prop0-trigger")
+        .test_id_first_property_child0_trigger("ui-ai-schema-display-response-prop0-child0-trigger")
+        .into_element(cx);
+
+    let schema = ui_ai::SchemaDisplay::new(ui_ai::HttpMethod::Post, "/v1/chat")
+        .description("SchemaDisplay is a chrome surface for request/response shapes.")
+        .children([
+            ui_ai::SchemaDisplayHeader::new([stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N3)
+                    .items_center()
+                    .layout(LayoutRefinement::default().min_w_0()),
+                move |cx| {
+                    vec![
+                        ui_ai::SchemaDisplayMethod::new(ui_ai::HttpMethod::Post).into_element(cx),
+                        ui_ai::SchemaDisplayPath::new(Arc::<str>::from("/v1/chat"))
+                            .into_element(cx),
+                    ]
+                },
+            )])
+            .into_element(cx),
+            ui_ai::SchemaDisplayContent::new([request_section, response_section]).into_element(cx),
+        ])
+        .test_id_root("ui-ai-schema-display-root")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("SchemaDisplay (AI Elements)"),
+                cx.text("Expandable schema sections with stable per-property selectors."),
+                schema,
+            ]
+        },
+    )]
+}

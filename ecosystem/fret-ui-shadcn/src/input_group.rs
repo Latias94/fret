@@ -9,7 +9,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnKeyDown;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
-    PressableProps, SemanticsProps, TextAreaProps, TextInputProps, TextProps,
+    PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -664,7 +664,7 @@ impl InputGroup {
                                 let theme = Theme::global(&*cx.app);
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().size_full(),
+                                    LayoutRefinement::default().w_full().min_w_0(),
                                 )
                             },
                             direction: Axis::Vertical,
@@ -839,13 +839,10 @@ impl InputGroup {
             return root;
         };
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Group,
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            move |_cx| vec![root],
+        root.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
         )
     }
 }

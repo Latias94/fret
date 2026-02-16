@@ -38,21 +38,6 @@ fn is_card_action_marker(element: &AnyElement) -> bool {
         }
 }
 
-fn is_card_footer_marker(element: &AnyElement) -> bool {
-    element
-        .semantics_decoration
-        .as_ref()
-        .and_then(|d| d.test_id.as_deref())
-        .is_some_and(|id| matches_marker(id, CARD_FOOTER_MARKER_PREFIX))
-        || match &element.kind {
-            ElementKind::Semantics(props) => props
-                .test_id
-                .as_deref()
-                .is_some_and(|id| matches_marker(id, CARD_FOOTER_MARKER_PREFIX)),
-            _ => false,
-        }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CardSize {
     #[default]
@@ -89,7 +74,7 @@ fn with_card_size_provider<H: UiHost, R>(
     out
 }
 
-fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
+fn card_chrome(theme: &Theme, _size: CardSize) -> ChromeRefinement {
     let bg = theme.color_token("card");
     let border = theme.color_token("border");
 
@@ -105,20 +90,14 @@ fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
     let base_radius = theme.metric_token("metric.radius.lg");
     let rounded_xl = Px(base_radius.0 + 4.0);
 
-    let py = match size {
-        CardSize::Default => Space::N4,
-        CardSize::Sm => Space::N3,
-    };
-
     // shadcn/ui v4 card base:
     // - `overflow-hidden rounded-xl ring-1 ring-foreground/10 bg-card text-card-foreground`
-    // - `flex flex-col gap-4 py-4` (gap handled by the inner vstack)
+    // - `flex flex-col` (spacing comes from section padding)
     ChromeRefinement::default()
         .radius(rounded_xl)
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
-        .py(py)
 }
 
 #[derive(Debug, Clone)]
@@ -160,24 +139,13 @@ impl Card {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
             let children = self.children;
-            let has_footer = children.iter().any(is_card_footer_marker);
 
-            let (props, gap) = {
+            let props = {
                 let theme = Theme::global(&*cx.app);
-                let mut chrome = card_chrome(theme, size).merge(self.chrome);
-                if has_footer {
-                    // shadcn/ui v4: `has-data-[slot=card-footer]:pb-0` so the footer's own
-                    // padding becomes the only bottom inset.
-                    chrome = chrome.merge(ChromeRefinement::default().pb(Space::N0));
-                }
+                let chrome = card_chrome(theme, size).merge(self.chrome);
                 let mut props = decl_style::container_props(theme, chrome, self.layout);
                 props.layout.overflow = Overflow::Clip;
-
-                let gap = match size {
-                    CardSize::Default => Space::N4,
-                    CardSize::Sm => Space::N3,
-                };
-                (props, gap)
+                props
             };
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
@@ -186,7 +154,7 @@ impl Card {
                 cx,
                 props,
                 stack::VStackProps::default()
-                    .gap(gap)
+                    .gap(Space::N0)
                     .layout(LayoutRefinement::default().w_full()),
                 children,
             )
@@ -230,16 +198,16 @@ impl CardHeader {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
-        let px = match size {
-            CardSize::Default => Space::N4,
-            CardSize::Sm => Space::N3,
+        let p = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
         };
         let props = {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `px-4` (no default y padding; gap comes from the Card root).
-                ChromeRefinement::default().px(px),
+                // shadcn/ui: `p-6` (and `p-4` for smaller cards).
+                ChromeRefinement::default().p(p),
                 LayoutRefinement::default().w_full(),
             )
         };
@@ -260,7 +228,7 @@ impl CardHeader {
             let left_col = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .gap(Space::N1)
+                    .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().flex_1().min_w_0()),
                 move |_cx| left,
             );
@@ -280,7 +248,7 @@ impl CardHeader {
                 cx,
                 props,
                 stack::VStackProps::default()
-                    .gap(Space::N1)
+                    .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().w_full()),
                 left,
             )
@@ -384,7 +352,7 @@ mod tests {
     }
 
     #[test]
-    fn card_root_sets_overflow_clip_and_pb0_when_footer_present() {
+    fn card_root_sets_overflow_clip_and_has_no_padding_by_default() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -393,8 +361,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let footer = CardFooter::new([cx.text("footer")]).into_element(cx);
-            let el = Card::new([cx.text("body"), footer]).into_element(cx);
+            let el = Card::new([cx.text("body")]).into_element(cx);
 
             let ElementKind::Container(ContainerProps {
                 layout, padding, ..
@@ -404,7 +371,10 @@ mod tests {
             };
 
             assert_eq!(layout.overflow, Overflow::Clip);
+            assert_eq!(padding.top, Px(0.0));
+            assert_eq!(padding.right, Px(0.0));
             assert_eq!(padding.bottom, Px(0.0));
+            assert_eq!(padding.left, Px(0.0));
         });
     }
 }
@@ -423,16 +393,16 @@ impl CardContent {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
-        let px = match size {
-            CardSize::Default => Space::N4,
-            CardSize::Sm => Space::N3,
+        let p = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
         };
         let props = {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `px-4` (no default y padding; gap comes from the Card root).
-                ChromeRefinement::default().px(px),
+                // shadcn/ui: `p-6 pt-0` (content sits closer to the header).
+                ChromeRefinement::default().p(p).pt(Space::N0),
                 LayoutRefinement::default().w_full(),
             )
         };
@@ -463,8 +433,8 @@ impl CardFooter {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let p = match size {
-            CardSize::Default => Space::N4,
-            CardSize::Sm => Space::N3,
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
         };
         let mut props = {
             let theme = Theme::global(&*cx.app);
@@ -476,9 +446,10 @@ impl CardFooter {
             let border = theme.color_required("border");
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `bg-muted/50 ... p-4` (and root `pb-0` when footer exists).
+                // `bg-muted/50 ... p-6 pt-0` (stylistic footer variant).
                 ChromeRefinement::default()
                     .p(p)
+                    .pt(Space::N0)
                     .bg(ColorRef::Color(bg))
                     .border_color(ColorRef::Color(border)),
                 LayoutRefinement::default().w_full(),

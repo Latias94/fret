@@ -38,11 +38,14 @@
     "color.viewport.gizmo.handle.border": "#D7DEE9FF",
     "color.viewport.rotate_gizmo": "#FFC44AFF",
 
-    "sidebar.background": "#2B3038",
-    "sidebar.foreground": "#D7DEE9",
-    "sidebar.border": "#3A424D",
-    "sidebar.accent": "#363C46",
-    "sidebar.accent.foreground": "#D7DEE9",
+    "sidebar": "#2B3038",
+    "sidebar-foreground": "#D7DEE9",
+    "sidebar-primary": "#3D8BFF",
+    "sidebar-primary-foreground": "#FFFFFF",
+    "sidebar-accent": "#363C46",
+    "sidebar-accent-foreground": "#D7DEE9",
+    "sidebar-border": "#3A424D",
+    "sidebar-ring": "#3D8BFFCC",
 
     "background": "#24272E",
     "foreground": "#D7DEE9",
@@ -75,11 +78,11 @@
     "input.background": "#2B3038",
     "input.foreground": "#D7DEE9",
 
-    "chart.1": "#93C5FD",
-    "chart.2": "#3B82F6",
-    "chart.3": "#2563EB",
-    "chart.4": "#1D4ED8",
-    "chart.5": "#1E40AF"
+    "chart-1": "#93C5FD",
+    "chart-2": "#3B82F6",
+    "chart-3": "#2563EB",
+    "chart-4": "#1D4ED8",
+    "chart-5": "#1E40AF"
   },
   "metrics": {
     "metric.radius.sm": 6.0,
@@ -179,5 +182,51 @@
     "component.sidebar.group_label_line_height": 16.0,
     "component.sidebar.menu_button_px": 13.0,
     "component.sidebar.menu_button_line_height": 16.0
+  },
+  "numbers": {
+    "number.shadcn.motion.spring.drawer.settle.bounce": 0.0,
+    "number.shadcn.motion.spring.drawer.inertia_bounce.bounce": 0.25,
+    "number.motion.spring.drag_release_settle.bounce": 0.25
+  },
+  "durations_ms": {
+    "duration.shadcn.motion.100": 100,
+    "duration.shadcn.motion.200": 200,
+    "duration.shadcn.motion.300": 300,
+    "duration.shadcn.motion.500": 500,
+
+    "duration.shadcn.motion.overlay.open": 200,
+    "duration.shadcn.motion.overlay.close": 200,
+    "duration.shadcn.motion.sidebar.toggle": 200,
+    "duration.shadcn.motion.collapsible.toggle": 200,
+
+    "duration.shadcn.motion.toast.enter": 160,
+    "duration.shadcn.motion.toast.exit": 120,
+    "duration.shadcn.motion.toast.stack.shift": 160,
+    "duration.shadcn.motion.toast.stack.shift.stagger": 20,
+
+    "duration.shadcn.motion.spring.drawer.settle": 240,
+    "duration.shadcn.motion.spring.drawer.inertia_bounce": 240,
+
+    "duration.motion.presence.enter": 200,
+    "duration.motion.presence.exit": 200,
+    "duration.motion.collapsible.toggle": 200,
+    "duration.motion.layout.expand": 200,
+    "duration.motion.stack.shift": 160,
+    "duration.motion.stack.shift.stagger": 20,
+    "duration.motion.spring.drag_release_settle": 240
+  },
+  "easings": {
+    "easing.shadcn.motion": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.shadcn.motion.overlay": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.shadcn.motion.sidebar": { "x1": 0.0, "y1": 0.0, "x2": 1.0, "y2": 1.0 },
+    "easing.shadcn.motion.toast": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.shadcn.motion.collapsible.toggle": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.shadcn.motion.toast.stack.shift": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+
+    "easing.motion.standard": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.motion.emphasized": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.motion.layout.expand": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.motion.collapsible.toggle": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 },
+    "easing.motion.stack.shift": { "x1": 0.22, "y1": 1.0, "x2": 0.36, "y2": 1.0 }
   }
 }

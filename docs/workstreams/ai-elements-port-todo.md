@@ -38,6 +38,14 @@ Each TODO is labeled:
 - [x] AIEL-MVP7-workflow-001 Add an engine-backed workflow demo (reuse `fret-node`) gated via diag.
   - Demo: `apps/fret-ui-gallery` page `ai_workflow_node_graph_demo`
   - Gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
+- [x] AIEL-MVP8-gallery-001 Add missing UI Gallery detail pages for core AI Elements surfaces.
+  - Pages: `ai_conversation_demo`, `ai_message_demo`, `ai_inline_citation_demo`, `ai_sources_demo`, `ai_snippet_demo`, `ai_image_demo`
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs`
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/*.rs`
+- [x] AIEL-MVP8-gallery-002 Add UI Gallery detail pages for workflow chrome subcomponents (docs parity with upstream).
+  - Pages: `ai_workflow_canvas_demo`, `ai_workflow_node_demo`, `ai_workflow_edge_demo`, `ai_workflow_connection_demo`, `ai_workflow_controls_demo`, `ai_workflow_panel_demo`, `ai_workflow_toolbar_demo`
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs`
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_*_demo.rs`
 
 ## Post-port (optional): XYFlow parity gaps
 
@@ -520,6 +528,7 @@ Keep this list in sync with the pinned upstream commit recorded in
     (e.g. a toolbar button/menu item that triggers `on_add_attachments`).
   - Add a diag script gate:
     - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
+    - Note: the gate currently submits via keyboard `Enter` after focusing the textarea. Pointer-click on the send button is still not a reliable hit-test target and needs a follow-up parity pass.
   - UI Gallery page: `ai_prompt_input_provider_demo`.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).

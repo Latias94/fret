@@ -105,6 +105,7 @@ pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
 pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
+pub(crate) const PAGE_TEXT_FEATURE_TOGGLES: &str = "text_feature_toggles";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
@@ -118,6 +119,8 @@ pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
+pub(crate) const PAGE_AI_CONVERSATION_DEMO: &str = "ai_conversation_demo";
+pub(crate) const PAGE_AI_MESSAGE_DEMO: &str = "ai_message_demo";
 pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
 pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
 pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
@@ -132,12 +135,21 @@ pub(crate) const PAGE_AI_AGENT_DEMO: &str = "ai_agent_demo";
 pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
 pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
 pub(crate) const PAGE_AI_WORKFLOW_CHROME_DEMO: &str = "ai_workflow_chrome_demo";
+pub(crate) const PAGE_AI_WORKFLOW_CANVAS_DEMO: &str = "ai_workflow_canvas_demo";
+pub(crate) const PAGE_AI_WORKFLOW_NODE_DEMO: &str = "ai_workflow_node_demo";
+pub(crate) const PAGE_AI_WORKFLOW_EDGE_DEMO: &str = "ai_workflow_edge_demo";
+pub(crate) const PAGE_AI_WORKFLOW_CONNECTION_DEMO: &str = "ai_workflow_connection_demo";
+pub(crate) const PAGE_AI_WORKFLOW_CONTROLS_DEMO: &str = "ai_workflow_controls_demo";
+pub(crate) const PAGE_AI_WORKFLOW_PANEL_DEMO: &str = "ai_workflow_panel_demo";
+pub(crate) const PAGE_AI_WORKFLOW_TOOLBAR_DEMO: &str = "ai_workflow_toolbar_demo";
 pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
 pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
     "ai_prompt_input_referenced_sources_demo";
+pub(crate) const PAGE_AI_INLINE_CITATION_DEMO: &str = "ai_inline_citation_demo";
+pub(crate) const PAGE_AI_SOURCES_DEMO: &str = "ai_sources_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
 pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
@@ -147,6 +159,7 @@ pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
 pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
+pub(crate) const PAGE_AI_SNIPPET_DEMO: &str = "ai_snippet_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
 pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
 pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
@@ -162,6 +175,7 @@ pub(crate) const PAGE_AI_TOOL_DEMO: &str = "ai_tool_demo";
 pub(crate) const PAGE_AI_WEB_PREVIEW_DEMO: &str = "ai_web_preview_demo";
 pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
 pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
+pub(crate) const PAGE_AI_IMAGE_DEMO: &str = "ai_image_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -286,6 +300,7 @@ pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
 pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
     "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
+pub(crate) const CMD_NAV_TEXT_FEATURE_TOGGLES: &str = "ui_gallery.nav.select.text_feature_toggles";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
@@ -303,6 +318,8 @@ pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
+pub(crate) const CMD_NAV_AI_CONVERSATION_DEMO: &str = "ui_gallery.nav.select.ai_conversation_demo";
+pub(crate) const CMD_NAV_AI_MESSAGE_DEMO: &str = "ui_gallery.nav.select.ai_message_demo";
 pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_context_demo";
 pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
 pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str = "ui_gallery.nav.select.ai_package_info_demo";
@@ -320,6 +337,20 @@ pub(crate) const CMD_NAV_AI_SANDBOX_DEMO: &str = "ui_gallery.nav.select.ai_sandb
 pub(crate) const CMD_NAV_AI_PERSONA_DEMO: &str = "ui_gallery.nav.select.ai_persona_demo";
 pub(crate) const CMD_NAV_AI_WORKFLOW_CHROME_DEMO: &str =
     "ui_gallery.nav.select.ai_workflow_chrome_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_CANVAS_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_canvas_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_node_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_EDGE_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_edge_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_CONNECTION_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_connection_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_CONTROLS_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_controls_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_PANEL_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_panel_demo";
+pub(crate) const CMD_NAV_AI_WORKFLOW_TOOLBAR_DEMO: &str =
+    "ui_gallery.nav.select.ai_workflow_toolbar_demo";
 pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO: &str =
     "ui_gallery.nav.select.ai_workflow_node_graph_demo";
 pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
@@ -330,6 +361,9 @@ pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_referenced_sources_demo";
+pub(crate) const CMD_NAV_AI_INLINE_CITATION_DEMO: &str =
+    "ui_gallery.nav.select.ai_inline_citation_demo";
+pub(crate) const CMD_NAV_AI_SOURCES_DEMO: &str = "ui_gallery.nav.select.ai_sources_demo";
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
 pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
@@ -340,6 +374,7 @@ pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
     "ui_gallery.nav.select.ai_message_branch_demo";
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
+pub(crate) const CMD_NAV_AI_SNIPPET_DEMO: &str = "ui_gallery.nav.select.ai_snippet_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str = "ui_gallery.nav.select.ai_commit_large_demo";
 pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
@@ -361,6 +396,7 @@ pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
     "ui_gallery.nav.select.ai_model_selector_demo";
 pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
     "ui_gallery.nav.select.ai_chain_of_thought_demo";
+pub(crate) const CMD_NAV_AI_IMAGE_DEMO: &str = "ui_gallery.nav.select.ai_image_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -777,6 +813,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_TEXT_MEASURE_OVERLAY,
             ),
             PageSpec::new(
+                PAGE_TEXT_FEATURE_TOGGLES,
+                "Text Features (OpenType)",
+                "Text / OpenType Feature Toggles",
+                "Text shaping surface v1",
+                CMD_NAV_TEXT_FEATURE_TOGGLES,
+                &[
+                    "text", "shaping", "opentype", "features", "liga", "calt", "tsv1",
+                ],
+                docs::DOC_TEXT_FEATURE_TOGGLES,
+                docs::USAGE_TEXT_FEATURE_TOGGLES,
+            ),
+            PageSpec::new(
                 PAGE_WEB_IME_HARNESS,
                 "Web IME (Harness)",
                 "Web / IME + TextInput Bridge Harness",
@@ -971,6 +1019,33 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_AI_CHAT_DEMO,
             ),
             PageSpec::new(
+                PAGE_AI_CONVERSATION_DEMO,
+                "AI Conversation (Demo)",
+                "AI Elements Conversation / Transcript Surface Demo",
+                "fret-ui-ai (conversation transcript)",
+                CMD_NAV_AI_CONVERSATION_DEMO,
+                &[
+                    "ai",
+                    "conversation",
+                    "transcript",
+                    "scroll",
+                    "virtualized",
+                    "demo",
+                ],
+                docs::DOC_AI_CONVERSATION_DEMO,
+                docs::USAGE_AI_CONVERSATION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MESSAGE_DEMO,
+                "AI Message (Demo)",
+                "AI Elements Message / Bubble + Actions Demo",
+                "fret-ui-ai (message building blocks)",
+                CMD_NAV_AI_MESSAGE_DEMO,
+                &["ai", "message", "bubble", "actions", "demo"],
+                docs::DOC_AI_MESSAGE_DEMO,
+                docs::USAGE_AI_MESSAGE_DEMO,
+            ),
+            PageSpec::new(
                 PAGE_AI_CONTEXT_DEMO,
                 "AI Context (Demo)",
                 "AI Elements Context / Context Usage HoverCard Demo",
@@ -1121,6 +1196,76 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_AI_WORKFLOW_CHROME_DEMO,
             ),
             PageSpec::new(
+                PAGE_AI_WORKFLOW_CANVAS_DEMO,
+                "AI Workflow Canvas (Demo)",
+                "AI Elements workflow Canvas / Host Surface Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_CANVAS_DEMO,
+                &["ai", "workflow", "canvas", "pan", "zoom", "demo"],
+                docs::DOC_AI_WORKFLOW_CANVAS_DEMO,
+                docs::USAGE_AI_WORKFLOW_CANVAS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_NODE_DEMO,
+                "AI Workflow Node (Demo)",
+                "AI Elements workflow Node / Chrome Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_NODE_DEMO,
+                &["ai", "workflow", "node", "handles", "demo"],
+                docs::DOC_AI_WORKFLOW_NODE_DEMO,
+                docs::USAGE_AI_WORKFLOW_NODE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_EDGE_DEMO,
+                "AI Workflow Edge (Demo)",
+                "AI Elements workflow Edge / Dashed + Animated Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_EDGE_DEMO,
+                &["ai", "workflow", "edge", "dash", "demo"],
+                docs::DOC_AI_WORKFLOW_EDGE_DEMO,
+                docs::USAGE_AI_WORKFLOW_EDGE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_CONNECTION_DEMO,
+                "AI Workflow Connection (Demo)",
+                "AI Elements workflow Connection / Line Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_CONNECTION_DEMO,
+                &["ai", "workflow", "connection", "demo"],
+                docs::DOC_AI_WORKFLOW_CONNECTION_DEMO,
+                docs::USAGE_AI_WORKFLOW_CONNECTION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_CONTROLS_DEMO,
+                "AI Workflow Controls (Demo)",
+                "AI Elements workflow Controls / Button Stack Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_CONTROLS_DEMO,
+                &["ai", "workflow", "controls", "buttons", "demo"],
+                docs::DOC_AI_WORKFLOW_CONTROLS_DEMO,
+                docs::USAGE_AI_WORKFLOW_CONTROLS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_PANEL_DEMO,
+                "AI Workflow Panel (Demo)",
+                "AI Elements workflow Panel / Container Chrome Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_PANEL_DEMO,
+                &["ai", "workflow", "panel", "demo"],
+                docs::DOC_AI_WORKFLOW_PANEL_DEMO,
+                docs::USAGE_AI_WORKFLOW_PANEL_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WORKFLOW_TOOLBAR_DEMO,
+                "AI Workflow Toolbar (Demo)",
+                "AI Elements workflow Toolbar / Row Chrome Demo",
+                "fret-ui-ai (workflow chrome)",
+                CMD_NAV_AI_WORKFLOW_TOOLBAR_DEMO,
+                &["ai", "workflow", "toolbar", "demo"],
+                docs::DOC_AI_WORKFLOW_TOOLBAR_DEMO,
+                docs::USAGE_AI_WORKFLOW_TOOLBAR_DEMO,
+            ),
+            PageSpec::new(
                 PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
                 "AI Workflow Node Graph (Demo)",
                 "Workflow editor surface / fret-node engine + fret-ui-ai chrome Demo",
@@ -1183,6 +1328,26 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
                 docs::USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_INLINE_CITATION_DEMO,
+                "AI Inline Citation (Demo)",
+                "AI Elements InlineCitation / HoverCard + Pager Demo",
+                "fret-ui-ai (sources)",
+                CMD_NAV_AI_INLINE_CITATION_DEMO,
+                &["ai", "inline", "citation", "hovercard", "demo"],
+                docs::DOC_AI_INLINE_CITATION_DEMO,
+                docs::USAGE_AI_INLINE_CITATION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SOURCES_DEMO,
+                "AI Sources (Demo)",
+                "AI Elements Sources / Collapsible List Demo",
+                "fret-ui-ai (sources)",
+                CMD_NAV_AI_SOURCES_DEMO,
+                &["ai", "sources", "collapsible", "demo"],
+                docs::DOC_AI_SOURCES_DEMO,
+                docs::USAGE_AI_SOURCES_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ARTIFACT_DEMO,
@@ -1288,6 +1453,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "code", "block", "snippet", "copy", "demo"],
                 docs::DOC_AI_CODE_BLOCK_DEMO,
                 docs::USAGE_AI_CODE_BLOCK_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SNIPPET_DEMO,
+                "AI Snippet (Demo)",
+                "AI Elements Snippet / Inline Copy Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_SNIPPET_DEMO,
+                &["ai", "snippet", "copy", "code", "demo"],
+                docs::DOC_AI_SNIPPET_DEMO,
+                docs::USAGE_AI_SNIPPET_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_COMMIT_DEMO,
@@ -1453,6 +1628,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "schema", "openapi", "json", "demo"],
                 docs::DOC_AI_SCHEMA_DISPLAY_DEMO,
                 docs::USAGE_AI_SCHEMA_DISPLAY_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_IMAGE_DEMO,
+                "AI Image (Demo)",
+                "AI Elements Image / Generated Image Surface Demo",
+                "fret-ui-ai (utilities)",
+                CMD_NAV_AI_IMAGE_DEMO,
+                &["ai", "image", "media", "demo"],
+                docs::DOC_AI_IMAGE_DEMO,
+                docs::USAGE_AI_IMAGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,

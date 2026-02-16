@@ -3,8 +3,8 @@ use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
 };
 use fret_diag_protocol::{
-    DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
-    DiagTransportMessageV1,
+    DevtoolsBundleDumpedV1, DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1,
+    DevtoolsSessionListV1, DiagTransportMessageV1,
 };
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -359,10 +359,10 @@ fn wait_for_bundle_dumped(
     let deadline = Instant::now() + timeout;
     let mut last_script_stage: Option<String> = None;
     let mut last_script_step_index: Option<u64> = None;
-    let mut bundle_dir: Option<String> = None;
-    let mut bundle_chunks: Vec<Option<String>> = Vec::new();
-    let mut bundle_chunks_received: usize = 0;
-    let mut bundle_chunk_count: Option<u32> = None;
+
+    let mut chunk_exported_unix_ms: Option<u64> = None;
+    let mut chunk_dir: Option<String> = None;
+    let mut chunks: Vec<Option<String>> = Vec::new();
 
     while Instant::now() < deadline {
         while let Some(msg) = client.try_recv() {
@@ -399,71 +399,43 @@ fn wait_for_bundle_dumped(
                     }
                 }
                 "bundle.dumped" => {
-                    let dir = msg
-                        .payload
-                        .get("dir")
-                        .and_then(|v| v.as_str())
-                        .filter(|s| !s.trim().is_empty())
-                        .map(|s| s.to_string())
-                        .context("bundle.dumped missing dir")?;
+                    let dumped = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload)
+                        .context("bundle.dumped payload was not DevtoolsBundleDumpedV1")?;
 
-                    if let Some(bundle) = msg.payload.get("bundle").cloned() {
-                        return Ok((dir, bundle));
+                    if let Some(bundle) = dumped.bundle {
+                        return Ok((dumped.dir, bundle));
                     }
 
-                    if bundle_dir.as_deref() != Some(dir.as_str()) {
-                        bundle_dir = Some(dir.clone());
-                        bundle_chunks.clear();
-                        bundle_chunks_received = 0;
-                        bundle_chunk_count = None;
-                    }
+                    if let (Some(chunk), Some(chunk_index), Some(chunk_count)) = (
+                        dumped.bundle_json_chunk,
+                        dumped.bundle_json_chunk_index,
+                        dumped.bundle_json_chunk_count,
+                    ) {
+                        let chunk_count = chunk_count.max(1).min(10_000);
+                        let need_reset = chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
+                            || chunk_dir.as_deref() != Some(dumped.dir.as_str())
+                            || chunks.len() != chunk_count as usize;
 
-                    let chunk = msg
-                        .payload
-                        .get("bundle_json_chunk")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
-                    let chunk_index = msg
-                        .payload
-                        .get("bundle_json_chunk_index")
-                        .and_then(|v| v.as_u64())
-                        .map(|v| v as u32);
-                    let chunk_count = msg
-                        .payload
-                        .get("bundle_json_chunk_count")
-                        .and_then(|v| v.as_u64())
-                        .map(|v| v as u32);
-
-                    let (Some(chunk), Some(chunk_index), Some(chunk_count)) =
-                        (chunk, chunk_index, chunk_count)
-                    else {
-                        continue;
-                    };
-
-                    if chunk_index >= chunk_count {
-                        continue;
-                    }
-
-                    if bundle_chunk_count != Some(chunk_count) {
-                        bundle_chunk_count = Some(chunk_count);
-                        bundle_chunks = vec![None; chunk_count as usize];
-                        bundle_chunks_received = 0;
-                    }
-
-                    let slot = &mut bundle_chunks[chunk_index as usize];
-                    if slot.is_none() {
-                        bundle_chunks_received += 1;
-                    }
-                    *slot = Some(chunk);
-
-                    if bundle_chunks_received == chunk_count as usize {
-                        let mut json = String::new();
-                        for part in bundle_chunks.drain(..).flatten() {
-                            json.push_str(&part);
+                        if need_reset {
+                            chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
+                            chunk_dir = Some(dumped.dir.clone());
+                            chunks = vec![None; chunk_count as usize];
                         }
-                        let v = serde_json::from_str::<serde_json::Value>(&json)
-                            .context("failed to parse reassembled bundle JSON")?;
-                        return Ok((dir, v));
+
+                        if let Some(slot) = chunks.get_mut(chunk_index as usize) {
+                            *slot = Some(chunk);
+                        }
+
+                        if chunks.iter().all(|c| c.is_some()) {
+                            let mut json = String::new();
+                            for part in chunks.iter().flatten() {
+                                json.push_str(part);
+                            }
+                            let bundle = serde_json::from_str::<serde_json::Value>(&json)
+                                .context("bundle.dumped chunked JSON was not valid JSON")?;
+                            let dir = chunk_dir.clone().unwrap_or_else(|| dumped.dir);
+                            return Ok((dir, bundle));
+                        }
                     }
                 }
                 _ => {}

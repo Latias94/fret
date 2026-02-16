@@ -77,6 +77,12 @@ impl Interpreter {
                     pushed_transform: self.current_transform(),
                 });
             }
+            SceneOp::PushClipPath { .. } => {
+                self.clip_stack.push(ClipEntry {
+                    kind: ClipKind::Path,
+                    pushed_transform: self.current_transform(),
+                });
+            }
             SceneOp::PopClip => {
                 self.clip_stack.pop();
             }
@@ -97,6 +103,7 @@ impl Interpreter {
             | SceneOp::SvgImage { .. }
             | SceneOp::Text { .. }
             | SceneOp::Path { .. }
+            | SceneOp::StrokeRRect { .. }
             | SceneOp::ViewportSurface { .. } => {}
             SceneOp::PushClipPath { .. } => {
                 // Clip-path entries are captured in the renderer; this conformance interpreter only

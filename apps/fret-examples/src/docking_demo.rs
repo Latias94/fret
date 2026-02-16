@@ -11,8 +11,9 @@ use fret_docking::{
     render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    DevStateExport, DevStateHook, DevStateHooks, WindowCreateSpec, WinitAppDriver,
+    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
@@ -27,6 +28,17 @@ const DOCKING_DEMO_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_DEMO_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 
 const CMD_DOCK_DEMO_SPLIT_TOGGLE: &str = "dock_demo.split.toggle";
+const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking.layout";
+
+#[derive(Debug, Default)]
+struct DockingDemoDevStateIncoming {
+    layout: Option<fret_core::DockLayout>,
+}
+
+#[derive(Debug, Default)]
+struct DockingDemoDevStateModels {
+    main_window: Option<AppWindowId>,
+}
 
 struct DockingDemoDragAnchor {
     test_id: &'static str,
@@ -249,6 +261,7 @@ struct DockingDemoWindowState {
 #[derive(Default)]
 struct DockingDemoDriver {
     docking_runtime: Option<DockingRuntime>,
+    main_window: Option<AppWindowId>,
 }
 
 impl DockingDemoDriver {
@@ -267,6 +280,11 @@ impl DockingDemoDriver {
     fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
         use fret_core::{Axis, DockNode, PanelKey};
 
+        let incoming_layout = app
+            .with_global_mut_untracked(DockingDemoDevStateIncoming::default, |st, _app| {
+                st.layout.take()
+            });
+
         app.with_global_mut(DockManager::default, |dock, _app| {
             dock.ensure_panel(&PanelKey::new("core.hierarchy"), || DockPanel {
                 title: "Hierarchy".to_string(),
@@ -281,6 +299,13 @@ impl DockingDemoDriver {
 
             if dock.graph.window_root(window).is_some() {
                 return;
+            }
+
+            if let Some(layout) = incoming_layout.as_ref() {
+                let windows = [(window, "main".to_string())];
+                if dock.graph.import_layout_for_windows(layout, &windows) {
+                    return;
+                }
             }
 
             let left = dock.graph.insert_node(DockNode::Tabs {
@@ -347,8 +372,12 @@ impl DockingDemoDriver {
 impl WinitAppDriver for DockingDemoDriver {
     type WindowState = DockingDemoWindowState;
 
-    fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
+    fn init(&mut self, app: &mut App, main_window: AppWindowId) {
         self.docking_runtime = Some(DockingRuntime::new(main_window));
+        self.main_window = Some(main_window);
+        app.with_global_mut_untracked(DockingDemoDevStateModels::default, |st, _app| {
+            st.main_window = Some(main_window);
+        });
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -432,13 +461,14 @@ impl WinitAppDriver for DockingDemoDriver {
             };
 
             let target = if first_fraction < 0.2 { 0.5 } else { 0.12 };
-            let _ = rt.on_dock_op(
+            let changed = rt.on_dock_op(
                 app,
                 fret_core::DockOp::SetSplitFractionTwo {
                     split,
                     first_fraction: target,
                 },
             );
+            let _ = changed;
             return;
         }
         if command.as_str() == "dock_demo.close" {
@@ -475,11 +505,12 @@ impl WinitAppDriver for DockingDemoDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.on_dock_op(app, op))
             .unwrap_or(false);
+        let _ = changed;
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -614,19 +645,21 @@ impl WinitAppDriver for DockingDemoDriver {
         request: &fret_app::CreateWindowRequest,
         new_window: AppWindowId,
     ) {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.on_window_created(app, request, new_window))
             .unwrap_or(false);
+        let _ = changed;
     }
 
     fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
-        let _ = self
+        let changed = self
             .docking_runtime
             .as_ref()
             .map(|rt| rt.before_close_window(app, window))
             .unwrap_or(false);
+        let _ = changed;
         true
     }
 
@@ -752,6 +785,37 @@ pub fn run() -> anyhow::Result<()> {
     });
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks));
+    });
+    app.with_global_mut_untracked(DevStateHooks::default, |hooks, _app| {
+        hooks.register(
+            DevStateHook::new(DEV_STATE_DOCKING_LAYOUT_KEY, |app| {
+                let Some(models) = app.global::<DockingDemoDevStateModels>() else {
+                    return DevStateExport::Noop;
+                };
+                let Some(window) = models.main_window else {
+                    return DevStateExport::Noop;
+                };
+                let Some(dock) = app.global::<DockManager>() else {
+                    return DevStateExport::Noop;
+                };
+                if dock.graph.window_root(window).is_none() {
+                    return DevStateExport::Noop;
+                }
+
+                let layout = dock.graph.export_layout(&[(window, "main".to_string())]);
+                match serde_json::to_value(layout) {
+                    Ok(value) => DevStateExport::Set(value),
+                    Err(_) => DevStateExport::Noop,
+                }
+            })
+            .with_import(|app, value| {
+                let layout = serde_json::from_value(value).map_err(|e| e.to_string())?;
+                app.with_global_mut_untracked(DockingDemoDevStateIncoming::default, |st, _app| {
+                    st.layout = Some(layout);
+                });
+                Ok(())
+            }),
+        );
     });
 
     let config = WinitRunnerConfig {

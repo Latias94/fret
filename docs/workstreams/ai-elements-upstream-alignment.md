@@ -49,12 +49,12 @@ Legend:
 
 | Upstream file | Fret owner | Rust module | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Parts-first transcript + default shell (`AiChat`). |
-| `message.tsx` | `fret-ui-ai` | `message*.rs`, `message_response.rs` | Ported (prototype) | Split into message wrapper, toolbar/actions, and response rendering. |
+| `conversation.tsx` | `fret-ui-ai` | `conversation*.rs`, `ai_chat.rs`, `ai_conversation.rs` | Ported (prototype) | Parts-first transcript + default shell (`AiChat`). UI Gallery pages: `ai_chat_demo`, `ai_transcript_torture`, `ai_conversation_demo`. |
+| `message.tsx` | `fret-ui-ai` | `message*.rs`, `message_response.rs` | Ported (prototype) | Split into message wrapper, toolbar/actions, and response rendering. UI Gallery pages: `ai_message_demo`, `ai_message_branch_demo`, `ai_chat_demo`. |
 | `prompt-input.tsx` | `fret-ui-ai` | `prompt_input.rs` | Ported (prototype) | Effects remain app-owned; interaction gated via diag. |
 | `tool.tsx` | `fret-ui-ai` | `tool.rs`, `tool_call_block.rs` | Ported (prototype) | Collapsible tool call blocks + status outcomes. |
-| `sources.tsx` | `fret-ui-ai` | `sources_block.rs`, `inline_citation.rs` | Ported (prototype) | Split into `SourcesBlock` + `InlineCitation` policy. |
-| `inline-citation.tsx` | `fret-ui-ai` | `inline_citation.rs` | Ported (prototype) | HoverCard outcomes + selection seam. |
+| `sources.tsx` | `fret-ui-ai` | `sources_block.rs`, `inline_citation.rs` | Ported (prototype) | Split into `SourcesBlock` + `InlineCitation` policy. UI Gallery pages: `ai_sources_demo`, `ai_chat_demo`. |
+| `inline-citation.tsx` | `fret-ui-ai` | `inline_citation.rs` | Ported (prototype) | HoverCard outcomes + selection seam. UI Gallery pages: `ai_inline_citation_demo`, `ai_chat_demo`. |
 | `reasoning.tsx` | `fret-ui-ai` | `reasoning.rs` | Ported (prototype) | Streaming-driven auto-open/close policy. |
 | `suggestion.tsx` | `fret-ui-ai` | `suggestions.rs` | Ported (prototype) | Fret uses plural module name; surfaces `Suggestions`/`Suggestion`. |
 | `queue.tsx` | `fret-ui-ai` | `queue.rs` | Ported (prototype) | Policy-heavy; gated via diag. |
@@ -68,7 +68,7 @@ Legend:
 | `shimmer.tsx` | `fret-ui-ai` | `shimmer.rs` | Ported (prototype) | Animated shimmer text surface. |
 | `artifact.tsx` | `fret-ui-ai` | `artifact.rs` | Ported (prototype) | Artifact container chrome. |
 | `code-block.tsx` | `fret-ui-ai` | `code_block.rs` | Ported (prototype) | Backed by `ecosystem/fret-code-view`. |
-| `snippet.tsx` | `fret-ui-ai` | `snippet.rs` | Ported (prototype) | Copyable snippet outcomes. |
+| `snippet.tsx` | `fret-ui-ai` | `snippet.rs` | Ported (prototype) | Copyable snippet outcomes. UI Gallery pages: `ai_snippet_demo`, `ai_code_block_demo`. |
 | `file-tree.tsx` | `fret-ui-ai` | `file_tree.rs` | Ported (prototype) | Flattens via UI Kit tree + `VirtualList`; small-tree focused. |
 | `commit.tsx` | `fret-ui-ai` | `commit.rs` | Ported (prototype) | Disclosure + copy actions + file rows. |
 | `stack-trace.tsx` | `fret-ui-ai` | `stack_trace.rs` | Ported (prototype) | Parsed frames + copy + seams. |
@@ -76,7 +76,7 @@ Legend:
 | `test-results.tsx` | `fret-ui-ai` | `test_results.rs` | Ported (prototype) | Suite/test disclosures + optional activate seam. |
 | `environment-variables.tsx` | `fret-ui-ai` | `environment_variables.rs` | Ported (prototype) | Table-like key/value outcomes. |
 | `web-preview.tsx` | `fret-ui-ai` | `web_preview.rs` | Ported (prototype) | Chrome always available; native embed via `webview-wry` behind feature flags. |
-| `image.tsx` | `fret-ui-ai` | `image.rs` | Ported (prototype) | Rendering only; decoding/upload is app-owned. |
+| `image.tsx` | `fret-ui-ai` | `image.rs` | Ported (prototype) | Rendering only; decoding/upload is app-owned. UI Gallery page: `ai_image_demo`. |
 | `terminal.tsx` | `fret-ui-ai` | `terminal.rs` | Ported (prototype) | Viewer-only (output + copy/clear + auto-scroll); no PTY/TTY in v1. |
 | `package-info.tsx` | `fret-ui-ai` | `package_info.rs` | Ported (prototype) | Package card (name/change badge + version row + deps list building blocks). |
 | `open-in-chat.tsx` | `fret-ui-ai` | `open_in_chat.rs` | Ported (prototype) | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl` (URLs match upstream). |
@@ -90,13 +90,13 @@ Legend:
 | `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
-| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
-| `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` | Ported (prototype) | UI-only node chrome + handle indicators. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
-| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` | Ported (prototype) | UI-only edge chrome (temporary + animated). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
-| `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
-| `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
-| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
-| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). UI Gallery pages: `ai_workflow_canvas_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
+| `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` | Ported (prototype) | UI-only node chrome + handle indicators. UI Gallery pages: `ai_workflow_node_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` | Ported (prototype) | UI-only edge chrome (temporary + animated). UI Gallery pages: `ai_workflow_edge_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
+| `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. UI Gallery pages: `ai_workflow_panel_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. UI Gallery pages: `ai_workflow_toolbar_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. UI Gallery pages: `ai_workflow_controls_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. UI Gallery page: `ai_workflow_connection_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 
 ## Known upstream files not yet ported
 

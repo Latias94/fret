@@ -521,6 +521,8 @@ pub(super) enum BundleStatsSort {
     #[default]
     Invalidation,
     Time,
+    UiThreadCpuTime,
+    UiThreadCpuCycles,
     Dispatch,
     HitTest,
     RendererEncodeScene,
@@ -551,6 +553,8 @@ impl BundleStatsSort {
         match s.trim() {
             "invalidation" => Ok(Self::Invalidation),
             "time" => Ok(Self::Time),
+            "cpu_time" | "cpu_us" | "ui_thread_cpu_time" => Ok(Self::UiThreadCpuTime),
+            "cpu_cycles" | "cycles" | "ui_thread_cpu_cycles" => Ok(Self::UiThreadCpuCycles),
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
             "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
@@ -617,7 +621,7 @@ impl BundleStatsSort {
                 Ok(Self::RendererIntermediatePoolFreeTextures)
             }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
+                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -626,6 +630,8 @@ impl BundleStatsSort {
         match self {
             Self::Invalidation => "invalidation",
             Self::Time => "time",
+            Self::UiThreadCpuTime => "cpu_time",
+            Self::UiThreadCpuCycles => "cpu_cycles",
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
             Self::RendererEncodeScene => "encode_scene",
@@ -701,6 +707,8 @@ pub(super) struct BundleStatsReport {
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
+    sum_ui_thread_cpu_time_us: u64,
+    sum_ui_thread_cpu_cycle_time_delta_cycles: u64,
     sum_layout_engine_solve_time_us: u64,
     sum_cache_roots: u64,
     sum_cache_roots_reused: u64,
@@ -725,6 +733,8 @@ pub(super) struct BundleStatsReport {
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    max_ui_thread_cpu_time_us: u64,
+    max_ui_thread_cpu_cycle_time_delta_cycles: u64,
     max_layout_engine_solve_time_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
@@ -733,6 +743,10 @@ pub(super) struct BundleStatsReport {
     pub(super) max_hover_layout_invalidations: u32,
     p50_total_time_us: u64,
     p95_total_time_us: u64,
+    p50_ui_thread_cpu_time_us: u64,
+    p95_ui_thread_cpu_time_us: u64,
+    p50_ui_thread_cpu_cycle_time_delta_cycles: u64,
+    p95_ui_thread_cpu_cycle_time_delta_cycles: u64,
     p50_layout_time_us: u64,
     p95_layout_time_us: u64,
     p50_prepaint_time_us: u64,
@@ -765,6 +779,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) frame_arena_grow_events: u32,
     pub(super) element_children_vec_pool_reuses: u32,
     pub(super) element_children_vec_pool_misses: u32,
+    pub(super) ui_thread_cpu_time_us: u64,
+    pub(super) ui_thread_cpu_total_time_us: u64,
+    pub(super) ui_thread_cpu_cycle_time_delta_cycles: u64,
+    pub(super) ui_thread_cpu_cycle_time_total_cycles: u64,
     pub(super) layout_time_us: u64,
     pub(super) layout_collect_roots_time_us: u64,
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
@@ -1149,9 +1167,11 @@ impl BundleStatsReport {
             self.sum_paint_time_us
         );
         println!(
-            "time p50/p95 (us): total={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+            "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
             self.p50_total_time_us,
             self.p95_total_time_us,
+            self.p50_ui_thread_cpu_time_us,
+            self.p95_ui_thread_cpu_time_us,
             self.p50_layout_time_us,
             self.p95_layout_time_us,
             self.p50_prepaint_time_us,
@@ -1163,6 +1183,17 @@ impl BundleStatsReport {
             self.p50_hit_test_time_us,
             self.p95_hit_test_time_us
         );
+        if self.p50_ui_thread_cpu_cycle_time_delta_cycles > 0
+            || self.p95_ui_thread_cpu_cycle_time_delta_cycles > 0
+            || self.max_ui_thread_cpu_cycle_time_delta_cycles > 0
+        {
+            println!(
+                "cpu cycles p50/p95/max: {}/{}/{}",
+                self.p50_ui_thread_cpu_cycle_time_delta_cycles,
+                self.p95_ui_thread_cpu_cycle_time_delta_cycles,
+                self.max_ui_thread_cpu_cycle_time_delta_cycles
+            );
+        }
         println!(
             "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
             self.p50_layout_engine_solve_time_us,
@@ -1275,11 +1306,13 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} cpu.us={} cpu.cycles={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
+                row.ui_thread_cpu_time_us,
+                row.ui_thread_cpu_cycle_time_delta_cycles,
                 row.total_time_us,
                 row.layout_time_us,
                 row.prepaint_time_us,
@@ -1937,6 +1970,14 @@ impl BundleStatsReport {
             Value::from(self.sum_total_time_us),
         );
         sum.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.sum_ui_thread_cpu_time_us),
+        );
+        sum.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.sum_ui_thread_cpu_cycle_time_delta_cycles),
+        );
+        sum.insert(
             "layout_engine_solve_time_us".to_string(),
             Value::from(self.sum_layout_engine_solve_time_us),
         );
@@ -2031,6 +2072,14 @@ impl BundleStatsReport {
         max.insert(
             "total_time_us".to_string(),
             Value::from(self.max_total_time_us),
+        );
+        max.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.max_ui_thread_cpu_time_us),
+        );
+        max.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.max_ui_thread_cpu_cycle_time_delta_cycles),
         );
         max.insert(
             "layout_engine_solve_time_us".to_string(),
@@ -2153,6 +2202,20 @@ impl BundleStatsReport {
             Value::from(avg_us(self.sum_total_time_us, self.snapshots_considered)),
         );
         avg.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_ui_thread_cpu_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(avg_us(
+                self.sum_ui_thread_cpu_cycle_time_delta_cycles,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_engine_solve_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_engine_solve_time_us,
@@ -2199,6 +2262,14 @@ impl BundleStatsReport {
             Value::from(self.p50_total_time_us),
         );
         p50.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.p50_ui_thread_cpu_time_us),
+        );
+        p50.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.p50_ui_thread_cpu_cycle_time_delta_cycles),
+        );
+        p50.insert(
             "layout_time_us".to_string(),
             Value::from(self.p50_layout_time_us),
         );
@@ -2236,6 +2307,14 @@ impl BundleStatsReport {
         p95.insert(
             "total_time_us".to_string(),
             Value::from(self.p95_total_time_us),
+        );
+        p95.insert(
+            "ui_thread_cpu_time_us".to_string(),
+            Value::from(self.p95_ui_thread_cpu_time_us),
+        );
+        p95.insert(
+            "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+            Value::from(self.p95_ui_thread_cpu_cycle_time_delta_cycles),
         );
         p95.insert(
             "layout_time_us".to_string(),
@@ -2324,6 +2403,22 @@ impl BundleStatsReport {
                     row.timestamp_unix_ms
                         .map(Value::from)
                         .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "ui_thread_cpu_time_us".to_string(),
+                    Value::from(row.ui_thread_cpu_time_us),
+                );
+                obj.insert(
+                    "ui_thread_cpu_total_time_us".to_string(),
+                    Value::from(row.ui_thread_cpu_total_time_us),
+                );
+                obj.insert(
+                    "ui_thread_cpu_cycle_time_delta_cycles".to_string(),
+                    Value::from(row.ui_thread_cpu_cycle_time_delta_cycles),
+                );
+                obj.insert(
+                    "ui_thread_cpu_cycle_time_total_cycles".to_string(),
+                    Value::from(row.ui_thread_cpu_cycle_time_total_cycles),
                 );
                 obj.insert(
                     "layout_time_us".to_string(),
@@ -8759,6 +8854,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("hit_test_fallback_traversal_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let ui_thread_cpu_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_total_time_us = stats
+                .and_then(|m| m.get("ui_thread_cpu_total_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_delta_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_delta_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let ui_thread_cpu_cycle_time_total_cycles = stats
+                .and_then(|m| m.get("ui_thread_cpu_cycle_time_total_cycles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -9361,6 +9472,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
+            out.sum_ui_thread_cpu_time_us = out
+                .sum_ui_thread_cpu_time_us
+                .saturating_add(ui_thread_cpu_time_us);
+            out.sum_ui_thread_cpu_cycle_time_delta_cycles = out
+                .sum_ui_thread_cpu_cycle_time_delta_cycles
+                .saturating_add(ui_thread_cpu_cycle_time_delta_cycles);
             out.sum_layout_engine_solve_time_us = out
                 .sum_layout_engine_solve_time_us
                 .saturating_add(layout_engine_solve_time_us);
@@ -9449,6 +9566,11 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_ui_thread_cpu_time_us =
+                out.max_ui_thread_cpu_time_us.max(ui_thread_cpu_time_us);
+            out.max_ui_thread_cpu_cycle_time_delta_cycles = out
+                .max_ui_thread_cpu_cycle_time_delta_cycles
+                .max(ui_thread_cpu_cycle_time_delta_cycles);
             out.max_layout_engine_solve_time_us = out
                 .max_layout_engine_solve_time_us
                 .max(layout_engine_solve_time_us);
@@ -9462,6 +9584,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 frame_arena_grow_events,
                 element_children_vec_pool_reuses,
                 element_children_vec_pool_misses,
+                ui_thread_cpu_time_us,
+                ui_thread_cpu_total_time_us,
+                ui_thread_cpu_cycle_time_delta_cycles,
+                ui_thread_cpu_cycle_time_total_cycles,
                 layout_time_us,
                 layout_collect_roots_time_us,
                 layout_invalidate_scroll_handle_bindings_time_us,
@@ -9679,6 +9805,12 @@ pub(super) fn bundle_stats_from_json_with_options(
     }
 
     (out.p50_total_time_us, out.p95_total_time_us) = p50_p95(rows.iter().map(|r| r.total_time_us));
+    (out.p50_ui_thread_cpu_time_us, out.p95_ui_thread_cpu_time_us) =
+        p50_p95(rows.iter().map(|r| r.ui_thread_cpu_time_us));
+    (
+        out.p50_ui_thread_cpu_cycle_time_delta_cycles,
+        out.p95_ui_thread_cpu_cycle_time_delta_cycles,
+    ) = p50_p95(rows.iter().map(|r| r.ui_thread_cpu_cycle_time_delta_cycles));
     (out.p50_layout_time_us, out.p95_layout_time_us) =
         p50_p95(rows.iter().map(|r| r.layout_time_us));
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
@@ -9720,6 +9852,27 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows.sort_by(|a, b| {
                 b.total_time_us
                     .cmp(&a.total_time_us)
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::UiThreadCpuTime => {
+            rows.sort_by(|a, b| {
+                b.ui_thread_cpu_time_us
+                    .cmp(&a.ui_thread_cpu_time_us)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::UiThreadCpuCycles => {
+            rows.sort_by(|a, b| {
+                b.ui_thread_cpu_cycle_time_delta_cycles
+                    .cmp(&a.ui_thread_cpu_cycle_time_delta_cycles)
+                    .then_with(|| b.ui_thread_cpu_time_us.cmp(&a.ui_thread_cpu_time_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
                     .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
@@ -19728,7 +19881,10 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
     // 0: waiting for caret=2 (collapsed), no composition
     // 1: waiting for composition=2..4 and caret=4 (collapsed)
     // 2: waiting for caret=2 (collapsed), no composition
-    // 3: success
+    // 3: waiting for selection=0..5 (no composition) OR selection=2..2 + composition=0..2
+    // 4: waiting for selection=2..2 + composition=0..2
+    // 5: waiting for selection=0..5 (no composition)
+    // 6: success
     let mut state: u8 = 0;
 
     for w in windows {
@@ -19875,6 +20031,26 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
                         state = 3;
                     }
                 }
+                3 => {
+                    // The platform-style button sets selection 0..5 and immediately begins a
+                    // selection-replacing composition. Depending on snapshot timing we may see
+                    // either intermediate selection state or the composed view directly.
+                    if sel_lo == 0 && sel_hi == 5 && comp_norm.is_none() {
+                        state = 4;
+                    } else if sel_lo == 2 && sel_hi == 2 && comp_norm == Some((0, 2)) {
+                        state = 5;
+                    }
+                }
+                4 => {
+                    if sel_lo == 2 && sel_hi == 2 && comp_norm == Some((0, 2)) {
+                        state = 5;
+                    }
+                }
+                5 => {
+                    if sel_lo == 0 && sel_hi == 5 && comp_norm.is_none() {
+                        state = 6;
+                    }
+                }
                 _ => {}
             }
         }
@@ -19898,7 +20074,9 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
         "expected_sequence_normalized": [
             {"text_selection":[2,2],"text_composition":null},
             {"text_selection":[4,4],"text_composition":[2,4]},
-            {"text_selection":[2,2],"text_composition":null}
+            {"text_selection":[2,2],"text_composition":null},
+            {"text_selection":[2,2],"text_composition":[0,2]},
+            {"text_selection":[0,5],"text_composition":null}
         ],
     });
     write_json_value(&evidence_path, &payload)?;
@@ -19911,12 +20089,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
         ));
     }
 
-    if state == 3 {
+    if state == 6 {
         return Ok(());
     }
 
     Err(format!(
-        "ui-gallery code-editor a11y-composition gate failed (expected selection/composition sequence: caret 2..2 (no composition) -> caret 4..4 (composition 2..4) -> caret 2..2 (no composition))\n  bundle: {}\n  evidence: {}",
+        "ui-gallery code-editor a11y-composition gate failed (expected selection/composition sequence: caret 2..2 (no composition) -> caret 4..4 (composition 2..4) -> caret 2..2 (no composition) -> selection-replacing composition -> cancel restores selection)\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))

@@ -104,6 +104,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 - Review/audit a Fret UI: `fret-ui-review`
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
 - Measure or gate performance (numbers/baselines) + attribute worst-frame hitches: `fret-diag-workflow`
+- Optimize performance + make it a contract (tail vs typical, suite normalization, reversible fixes): `fret-perf-optimization` (then `fret-diag-workflow`)
 - Maintain/author framework components (parity work + gates): `fret-shadcn-source-alignment` (framework/eco authors)
 - Maintain the framework safely (contracts + gates): `fret-framework-maintainer-guide`
 - Debug on real mobile devices (Android + iOS evidence): `fret-mobile-real-device-debug`
@@ -125,6 +126,7 @@ Common adjacent pulls:
 - `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
 - `fret-mobile-real-device-debug`: Real-device mobile debugging workflow (Android + iOS): run the smallest mobile target, verify Vulkan/Metal constraints, and capture diagnostics bundle evidence for ADRs/workstreams.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
+- `fret-perf-optimization`: Perf optimization workflow: turn “jank” into a durable perf contract (tail vs typical), normalize suites, attribute worst bundles, and land reversible fixes with evidence.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
 - `fret-boundary-checks`: Guardrails for crate boundary/portability refactors (layering, module-size drift, crate audit snapshot).

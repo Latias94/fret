@@ -74,8 +74,57 @@ pub(in crate::ui) fn preview_web_ime_harness(
     let mut region_props = fret_ui::element::TextInputRegionProps::default();
     region_props.layout.size.width = fret_ui::element::Length::Fill;
     region_props.layout.size.height = fret_ui::element::Length::Fill;
+    region_props.a11y_label = Some(std::sync::Arc::from("Web IME harness"));
 
-    let region = cx.text_input_region(region_props, |cx| {
+    let (a11y_value, a11y_text_selection, a11y_text_composition, desired_ime_cursor_area) = {
+        let st = state.borrow();
+        let committed = st.committed.as_str();
+        let preedit = st.preedit.as_deref().unwrap_or("");
+
+        let value = if preedit.is_empty() {
+            committed.to_string()
+        } else {
+            format!("{committed}{preedit}")
+        };
+
+        // The harness caret is modeled at the end of the composed value.
+        // Ranges are UTF-8 byte offsets within `a11y_value` (ADR 0071).
+        let caret_utf8 = u32::try_from(value.len()).unwrap_or(u32::MAX);
+        let selection = Some((caret_utf8, caret_utf8));
+        let composition = (!preedit.is_empty()).then(|| {
+            let start = u32::try_from(committed.len()).unwrap_or(u32::MAX);
+            let end = caret_utf8;
+            (start, end)
+        });
+
+        // Best-effort: place the IME cursor near the bottom of the region and advance X based on
+        // the displayed composed text length. This is only for visual verification in the gallery.
+        let bounds = cx.bounds;
+        let cols = value.chars().count();
+        let min_x = bounds.origin.x.0 + 16.0;
+        let max_x = (bounds.origin.x.0 + bounds.size.width.0 - 16.0).max(min_x);
+        let x = Px((bounds.origin.x.0 + 16.0 + cols as f32 * 8.0).clamp(min_x, max_x));
+
+        let min_y = bounds.origin.y.0 + 16.0;
+        let max_y = (bounds.origin.y.0 + bounds.size.height.0 - 16.0).max(min_y);
+        let y = Px((bounds.origin.y.0 + bounds.size.height.0 - 28.0).clamp(min_y, max_y));
+        let ime_cursor_area = Rect::new(fret_core::Point::new(x, y), Size::new(Px(1.0), Px(18.0)));
+
+        (
+            Some(std::sync::Arc::<str>::from(value)),
+            selection,
+            composition,
+            Some(ime_cursor_area),
+        )
+    };
+
+    region_props.a11y_value = a11y_value;
+    region_props.a11y_text_selection = a11y_text_selection;
+    region_props.a11y_text_composition = a11y_text_composition;
+    region_props.ime_cursor_area = desired_ime_cursor_area;
+
+    let region = cx
+        .text_input_region(region_props, |cx| {
         let state_for_text_input = state.clone();
         cx.text_input_region_on_text_input(std::sync::Arc::new(
             move |host: &mut dyn fret_ui::action::UiActionHost,
@@ -181,6 +230,10 @@ pub(in crate::ui) fn preview_web_ime_harness(
                         let mut lines = vec![
                             cx.text(format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"
+                            )),
+                            cx.text(format!(
+                                "desired_ime_cursor_area={:?}",
+                                desired_ime_cursor_area
                             )),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
@@ -375,7 +428,8 @@ pub(in crate::ui) fn preview_web_ime_harness(
         );
 
         vec![panel]
-    });
+    })
+        .test_id("ui-gallery-web-ime-region");
 
     vec![header, inputs, region]
 }

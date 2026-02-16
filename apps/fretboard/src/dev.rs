@@ -1,5 +1,6 @@
 use std::path::Path;
-use std::process::Command;
+use std::process::{Child, Command};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::cli::{help, workspace_root};
 use crate::demos::{
@@ -7,9 +8,171 @@ use crate::demos::{
     validate_web_demo, web_demos_as_vec,
 };
 use crate::hotpatch::{
-    HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, generate_hotpatch_build_id,
-    parse_hotpatch_build_id, resolve_workspace_relative,
+    HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, parse_hotpatch_build_id,
+    resolve_workspace_relative,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HotpatchModeSummary {
+    None,
+    DxAuto,
+    DxExplicit,
+    Devserver,
+    ReloadBoundary,
+}
+
+fn print_hotpatch_summary(
+    mode: HotpatchModeSummary,
+    bin: &str,
+    demo_hotpatch_ready: bool,
+    dx_available: bool,
+    ws: Option<&str>,
+    build_id: Option<u64>,
+    trigger_path: Option<&std::path::Path>,
+) {
+    if mode == HotpatchModeSummary::None {
+        return;
+    }
+
+    let mode_str = match mode {
+        HotpatchModeSummary::None => "none",
+        HotpatchModeSummary::DxAuto => "dx (auto)",
+        HotpatchModeSummary::DxExplicit => "dx",
+        HotpatchModeSummary::Devserver => "devserver",
+        HotpatchModeSummary::ReloadBoundary => "reload-boundary",
+    };
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum ViewCallStrategy {
+        Auto,
+        HotFn,
+        Direct,
+    }
+
+    fn parse_view_call_strategy(raw: &str) -> Option<ViewCallStrategy> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(ViewCallStrategy::Auto),
+            "hotfn" => Some(ViewCallStrategy::HotFn),
+            "direct" => Some(ViewCallStrategy::Direct),
+            _ => None,
+        }
+    }
+
+    let legacy_direct =
+        std::env::var_os("FRET_HOTPATCH_VIEW_CALL_DIRECT").is_some_and(|v| !v.is_empty());
+    let env_strategy = if legacy_direct {
+        Some(ViewCallStrategy::Direct)
+    } else if let Ok(raw) = std::env::var("FRET_HOTPATCH_VIEW_CALL_STRATEGY") {
+        parse_view_call_strategy(&raw).or(Some(ViewCallStrategy::Auto))
+    } else {
+        Some(ViewCallStrategy::Auto)
+    };
+
+    let effective_use_direct = match env_strategy.unwrap_or(ViewCallStrategy::Auto) {
+        ViewCallStrategy::Direct => true,
+        ViewCallStrategy::HotFn => false,
+        ViewCallStrategy::Auto => cfg!(windows),
+    };
+
+    let view_call = match (effective_use_direct, legacy_direct, env_strategy) {
+        (true, true, _) => {
+            "direct (view hotpatch disabled; FRET_HOTPATCH_VIEW_CALL_DIRECT=1)".to_string()
+        }
+        (true, false, Some(ViewCallStrategy::Direct)) => {
+            "direct (view hotpatch disabled; FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct)".to_string()
+        }
+        (true, false, Some(ViewCallStrategy::Auto)) if cfg!(windows) => {
+            "direct (view hotpatch disabled; auto Windows safety default)".to_string()
+        }
+        (true, _, _) => "direct (view hotpatch disabled)".to_string(),
+        (false, _, Some(ViewCallStrategy::HotFn)) => {
+            "hotfn (FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn)".to_string()
+        }
+        (false, _, Some(ViewCallStrategy::Auto)) if !cfg!(windows) => "hotfn".to_string(),
+        (false, _, _) => "hotfn".to_string(),
+    };
+
+    eprintln!("Hotpatch Summary:");
+    eprintln!("  bin: {bin}");
+    eprintln!("  demo_hotpatch_ready: {demo_hotpatch_ready}");
+    eprintln!("  mode: {mode_str}");
+    eprintln!("  dx_available: {dx_available}");
+    eprintln!("  view_call: {view_call}");
+    if let Some(ws) = ws {
+        eprintln!("  ws: {ws}");
+    }
+    if let Some(build_id) = build_id {
+        eprintln!("  build_id: {build_id}");
+    }
+    if let Some(trigger_path) = trigger_path {
+        eprintln!("  trigger: {}", trigger_path.display());
+    }
+    eprintln!("  logs:");
+    eprintln!("    runner: .fret/hotpatch_runner.log");
+    eprintln!("    view:   .fret/hotpatch_bootstrap.log");
+    eprintln!("  status: fretboard hotpatch status --tail 40");
+}
+
+fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
+    // Subsecond uses `main` as an ASLR anchor on native platforms. Some toolchains don't export
+    // `main` by default, which makes `subsecond::aslr_reference()` return 0 and disables hotpatch.
+    //
+    // Dioxus's `dx serve --hotpatch` injects equivalent linker args; in "devserver-only" mode we
+    // set them explicitly so connecting to a Dioxus-style devserver can work.
+    let extra: &'static str = {
+        #[cfg(all(windows, not(target_arch = "wasm32")))]
+        {
+            "-C link-arg=/HIGHENTROPYVA:NO -C link-arg=/EXPORT:main"
+        }
+
+        #[cfg(all(target_os = "macos", not(target_arch = "wasm32"), not(windows)))]
+        {
+            "-C link-arg=-Wl,-exported_symbol,_main"
+        }
+
+        #[cfg(all(
+            any(target_os = "linux", target_os = "android", target_os = "freebsd"),
+            not(target_arch = "wasm32"),
+            not(windows)
+        ))]
+        {
+            "-C link-arg=-Wl,--export-dynamic-symbol,main"
+        }
+
+        #[cfg(any(target_arch = "wasm32", target_family = "wasm"))]
+        {
+            ""
+        }
+
+        #[cfg(all(
+            not(windows),
+            not(target_os = "macos"),
+            not(any(target_os = "linux", target_os = "android", target_os = "freebsd")),
+            not(any(target_arch = "wasm32", target_family = "wasm"))
+        ))]
+        {
+            ""
+        }
+    };
+
+    if extra.is_empty() {
+        return;
+    }
+
+    let mut rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
+    if rustflags.contains("/EXPORT:main")
+        || rustflags.contains("--export-dynamic-symbol,main")
+        || rustflags.contains("-exported_symbol,_main")
+    {
+        return;
+    }
+
+    if !rustflags.trim().is_empty() {
+        rustflags.push(' ');
+    }
+    rustflags.push_str(extra);
+    cmd.env("RUSTFLAGS", rustflags);
+}
 
 pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let root = workspace_root()?;
@@ -18,12 +181,17 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let mut bin: Option<String> = None;
     let mut choose = false;
     let mut hotpatch = false;
+    let mut hotpatch_reload_only = false;
     let mut hotpatch_trigger_path: Option<String> = None;
     let mut hotpatch_poll_ms: Option<u64> = None;
     let mut hotpatch_devserver_ws: Option<String> = None;
     let mut hotpatch_build_id: Option<HotpatchBuildIdArg> = None;
     let mut hotpatch_dx = false;
     let mut hotpatch_dx_ws: Option<String> = None;
+    let mut supervise: Option<bool> = None;
+    let mut watch: Option<bool> = None;
+    let mut watch_poll_ms: Option<u64> = None;
+    let mut dev_state_reset = false;
     let mut passthrough: Vec<String> = Vec::new();
 
     let mut it = args.into_iter();
@@ -37,6 +205,10 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             }
             "--choose" => choose = true,
             "--hotpatch" => hotpatch = true,
+            "--hotpatch-reload" => {
+                hotpatch = true;
+                hotpatch_reload_only = true;
+            }
             "--hotpatch-trigger-path" => {
                 hotpatch_trigger_path = Some(
                     it.next()
@@ -61,6 +233,17 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                     it.next()
                         .ok_or_else(|| "--hotpatch-dx-ws requires a value".to_string())?,
                 );
+            }
+            "--supervise" => supervise = Some(true),
+            "--no-supervise" => supervise = Some(false),
+            "--watch" => watch = Some(true),
+            "--no-watch" => watch = Some(false),
+            "--dev-state-reset" => dev_state_reset = true,
+            "--watch-poll-ms" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--watch-poll-ms requires a value".to_string())?;
+                watch_poll_ms = Some(raw.parse::<u64>().map_err(|e| e.to_string())?);
             }
             "--hotpatch-build-id" => {
                 let raw = it
@@ -100,13 +283,42 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         (None, false) => "todo_demo".to_string(),
     };
 
+    let dx_available = dx_available();
+    let hotpatch_auto_uses_dx = hotpatch
+        && !hotpatch_reload_only
+        && hotpatch_devserver_ws.is_none()
+        && dx_available
+        && is_hotpatch_ready_native_demo(&bin);
+
+    let mode_summary = if hotpatch_dx {
+        HotpatchModeSummary::DxExplicit
+    } else if hotpatch_auto_uses_dx {
+        HotpatchModeSummary::DxAuto
+    } else if hotpatch_devserver_ws.is_some() {
+        HotpatchModeSummary::Devserver
+    } else if hotpatch {
+        HotpatchModeSummary::ReloadBoundary
+    } else {
+        HotpatchModeSummary::None
+    };
+
     if (hotpatch || hotpatch_devserver_ws.is_some()) && !is_hotpatch_ready_native_demo(&bin) {
         eprintln!(
             "warning: `{bin}` is not a hotpatch-ready demo. Hotpatch will only trigger a safe runner reload boundary.\n  try: `--bin todo_demo` or `--bin assets_demo` for the FnDriver/UiAppDriver hotpatch path"
         );
     }
 
-    if hotpatch_dx {
+    if hotpatch_dx || hotpatch_auto_uses_dx {
+        let ws = hotpatch_dx_ws.as_deref().unwrap_or("<dx-managed>");
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            Some(ws),
+            None,
+            None,
+        );
         return dev_native_hotpatch_dx(
             &root,
             &bin,
@@ -116,8 +328,38 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         );
     }
 
+    let effective_watch =
+        watch.unwrap_or(hotpatch && !dx_available && hotpatch_devserver_ws.is_none());
+    let effective_watch_poll = Duration::from_millis(watch_poll_ms.unwrap_or(800));
+
+    // In reload-boundary/devserver mode, `cargo run` is the supervisor. If the app crashes,
+    // it's easy to end up in a frustrating "rerun command manually" loop.
+    //
+    // For hotpatch-focused workflows, default to a lightweight restart supervisor that prints
+    // actionable guidance on repeated failures. This keeps the inner loop closer to `dx serve`
+    // without embedding a full file-watcher build system in `fretboard` (L1 scope).
+    let effective_supervise =
+        supervise.unwrap_or(hotpatch || hotpatch_devserver_ws.is_some() || effective_watch);
+
     let mut cmd = Command::new("cargo");
-    cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
+    cmd.current_dir(&root);
+
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() || dev_state_reset {
+        cmd.env("FRET_DEV_STATE", "1");
+    }
+    if effective_watch || hotpatch || hotpatch_devserver_ws.is_some() {
+        // In watch/hotpatch workflows, favor a tighter "state is always there after restart"
+        // loop over minimizing JSON writes.
+        cmd.env("FRET_DEV_STATE_DEBOUNCE_MS", "0");
+    }
+    if dev_state_reset {
+        cmd.env("FRET_DEV_STATE_RESET", "1");
+    }
+
+    // When `--watch` is enabled, prefer `cargo build` + running the produced binary directly so we can
+    // reliably terminate and restart the app process on Windows.
+    let cargo_subcommand = if effective_watch { "build" } else { "run" };
+    cmd.args([cargo_subcommand, "-p", "fret-demo"]);
     let mut cargo_features: Vec<&str> = Vec::new();
     if hotpatch || hotpatch_devserver_ws.is_some() {
         cargo_features.push("hotpatch");
@@ -136,6 +378,26 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
             .unwrap_or(".fret/hotpatch.touch");
         let trigger_path = resolve_workspace_relative(&root, trigger_path);
 
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            None,
+            None,
+            Some(&trigger_path),
+        );
+        if hotpatch_reload_only {
+            eprintln!("  note: forced reload-boundary mode (--hotpatch-reload)");
+        } else if dx_available {
+            eprintln!(
+                "  note: dx (dioxus-cli) is available, but this run is using reload-boundary mode"
+            );
+            eprintln!(
+                "    tip: omit --hotpatch-reload or use --hotpatch to run in dx hotpatch mode"
+            );
+        }
+
         // Ensure the trigger file exists before the app starts so the runner can capture the
         // initial marker without forcing an immediate hot reload.
         ensure_hotpatch_trigger_file_initialized(&trigger_path)?;
@@ -152,33 +414,499 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
     }
     if let Some(ws) = hotpatch_devserver_ws.as_deref() {
-        eprintln!("Hotpatch(devserver): enabled");
-        eprintln!("  ws: {}", ws);
-        eprintln!(
-            "  note: this expects an external devserver that delivers Subsecond JumpTables (e.g. dioxus-cli)"
-        );
         cmd.env("FRET_HOTPATCH_DEVSERVER_WS", ws);
 
         let build_id = match hotpatch_build_id.unwrap_or(HotpatchBuildIdArg::Auto) {
             HotpatchBuildIdArg::None => None,
-            HotpatchBuildIdArg::Auto => Some(generate_hotpatch_build_id()),
+            // Default to not forcing a build id. Dioxus devservers often assign their own build id,
+            // and filtering can accidentally ignore valid patches ("no ASLR reference"/no match).
+            HotpatchBuildIdArg::Auto => None,
             HotpatchBuildIdArg::Value(v) => Some(v),
         };
+
+        print_hotpatch_summary(
+            mode_summary,
+            &bin,
+            is_hotpatch_ready_native_demo(&bin),
+            dx_available,
+            Some(ws),
+            build_id,
+            None,
+        );
+        eprintln!(
+            "  note: this expects an external devserver that delivers Subsecond JumpTables (e.g. dioxus-cli)"
+        );
+
         if let Some(build_id) = build_id {
-            eprintln!("  build_id: {build_id}");
             cmd.env("FRET_HOTPATCH_BUILD_ID", build_id.to_string());
+        }
+
+        // Ensure `main` is exported so `subsecond::aslr_reference()` can succeed.
+        append_subsecond_main_export_rustflags(&mut cmd);
+
+        #[cfg(windows)]
+        {
+            eprintln!(
+                "  windows note: default view_call strategy is `direct` (safe; view hotpatch disabled); see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+            );
+            eprintln!(
+                "    to force view-level hotpatching: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn (may crash)"
+            );
         }
     }
     cmd.args(["--bin", &bin]);
-    if !passthrough.is_empty() {
-        cmd.arg("--").args(passthrough);
+
+    if !effective_watch {
+        if !passthrough.is_empty() {
+            cmd.arg("--").args(passthrough);
+        }
+
+        if effective_supervise {
+            run_with_restart_supervisor(
+                cmd,
+                RestartSupervisorOptions {
+                    bin: bin.clone(),
+                    dx_available,
+                    demo_hotpatch_ready: is_hotpatch_ready_native_demo(&bin),
+                    hotpatch_enabled: hotpatch || hotpatch_devserver_ws.is_some(),
+                    max_restarts: 5,
+                    crash_window: Duration::from_secs(60),
+                    crash_threshold: Duration::from_secs(10),
+                },
+            )?;
+        } else {
+            let status = cmd.status().map_err(|e| e.to_string())?;
+            if !status.success() {
+                return Err(format!("cargo exited with status: {status}"));
+            }
+        }
+
+        return Ok(());
     }
 
-    let status = cmd.status().map_err(|e| e.to_string())?;
-    if !status.success() {
-        return Err(format!("cargo exited with status: {status}"));
+    let build_env = capture_command_env(&cmd);
+    dev_native_watch_build_and_run(
+        &root,
+        &bin,
+        cmd,
+        build_env,
+        passthrough,
+        WorkspaceWatchOptions {
+            poll_interval: effective_watch_poll,
+        },
+        RestartSupervisorOptions {
+            bin: bin.clone(),
+            dx_available,
+            demo_hotpatch_ready: is_hotpatch_ready_native_demo(&bin),
+            hotpatch_enabled: hotpatch || hotpatch_devserver_ws.is_some(),
+            max_restarts: 20,
+            crash_window: Duration::from_secs(60),
+            crash_threshold: Duration::from_secs(10),
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WorkspaceWatchOptions {
+    poll_interval: Duration,
+}
+
+#[derive(Debug, Clone)]
+struct CapturedEnv(Vec<(std::ffi::OsString, std::ffi::OsString)>);
+
+fn capture_command_env(cmd: &Command) -> CapturedEnv {
+    let pairs = cmd
+        .get_envs()
+        .filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())));
+    CapturedEnv(pairs.collect())
+}
+
+fn apply_captured_env(cmd: &mut Command, env: &CapturedEnv) {
+    for (k, v) in env.0.iter() {
+        cmd.env(k, v);
     }
+}
+
+fn dev_native_watch_build_and_run(
+    workspace_root: &Path,
+    bin: &str,
+    mut build_cmd: Command,
+    build_env: CapturedEnv,
+    passthrough: Vec<String>,
+    watch: WorkspaceWatchOptions,
+    supervisor_opts: RestartSupervisorOptions,
+) -> Result<(), String> {
+    eprintln!(
+        "Watch: enabled (poll_ms={})",
+        watch.poll_interval.as_millis()
+    );
+    eprintln!("  note: this is a rebuild+restart loop (not Subsecond patch building)");
+
+    let mut watcher = WorkspaceWatch::new(workspace_root, watch.poll_interval);
+    watcher.baseline()?;
+
+    let restart_trigger_path = workspace_root.join(".fret").join("watch_restart.touch");
+    ensure_restart_trigger_file_initialized(&restart_trigger_path)?;
+
+    loop {
+        // Build step
+        let status = build_cmd.status().map_err(|e| e.to_string())?;
+        if !status.success() {
+            eprintln!("error: build failed (status: {status})");
+            eprintln!("  waiting for changes...");
+            watcher.wait_for_change()?;
+            continue;
+        }
+
+        // Run step
+        let exe = dev_native_exe_path(workspace_root, bin);
+        if !exe.is_file() {
+            return Err(format!(
+                "expected built binary at `{}` but it was not found",
+                exe.display()
+            ));
+        }
+
+        let mut run_cmd = Command::new(&exe);
+        run_cmd.current_dir(workspace_root);
+        apply_captured_env(&mut run_cmd, &build_env);
+        run_cmd.env("FRET_WATCH_RESTART_TRIGGER_PATH", &restart_trigger_path);
+        if !passthrough.is_empty() {
+            run_cmd.args(passthrough.iter());
+        }
+
+        let mut child = run_cmd.spawn().map_err(|e| e.to_string())?;
+        let start = Instant::now();
+
+        loop {
+            if watcher.poll_changed()? {
+                eprintln!("Watch: change detected, restarting...");
+                request_graceful_watch_restart(&mut child, &restart_trigger_path)?;
+
+                // Re-create the build command to ensure any transient state is cleared.
+                let mut next_build = Command::new("cargo");
+                next_build.current_dir(workspace_root);
+                next_build.args(build_cmd.get_args());
+                apply_captured_env(&mut next_build, &build_env);
+                build_cmd = next_build;
+                break;
+            }
+
+            if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
+                if status.success() {
+                    return Ok(());
+                }
+
+                let elapsed = Instant::now().duration_since(start);
+                if elapsed <= supervisor_opts.crash_threshold {
+                    print_repeated_crash_guidance(&supervisor_opts, "fast exit detected");
+                } else {
+                    eprintln!("warning: process exited with status: {status}");
+                    eprintln!("  waiting for changes (or press Ctrl+C to stop)...");
+                }
+
+                watcher.wait_for_change()?;
+
+                // Ensure we rebuild after a crash once a change occurs.
+                break;
+            }
+
+            std::thread::sleep(watch.poll_interval);
+        }
+    }
+}
+
+fn ensure_restart_trigger_file_initialized(path: &Path) -> Result<(), String> {
+    if path.is_file() {
+        return Ok(());
+    }
+    poke_restart_trigger_file(path)
+}
+
+fn poke_restart_trigger_file(path: &Path) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let marker = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| format!("restart-{}", d.as_millis()))
+        .unwrap_or_else(|_| "restart".to_string());
+    std::fs::write(path, marker).map_err(|e| e.to_string())
+}
+
+fn request_graceful_watch_restart(child: &mut Child, trigger_path: &Path) -> Result<(), String> {
+    // Best-effort: ask the app process to exit cleanly so it can flush dev-state, then fall back
+    // to killing it if it doesn't exit in time.
+    if child.try_wait().map_err(|e| e.to_string())?.is_some() {
+        return Ok(());
+    }
+
+    let _ = poke_restart_trigger_file(trigger_path);
+    let start = Instant::now();
+    let timeout = Duration::from_millis(1500);
+    loop {
+        if child.try_wait().map_err(|e| e.to_string())?.is_some() {
+            return Ok(());
+        }
+        if start.elapsed() >= timeout {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
     Ok(())
+}
+
+fn dev_native_exe_path(workspace_root: &Path, bin: &str) -> std::path::PathBuf {
+    let mut p = workspace_root.join("target").join("debug").join(bin);
+    if cfg!(windows) {
+        p.set_extension("exe");
+    }
+    p
+}
+
+struct WorkspaceWatch {
+    root: std::path::PathBuf,
+    poll_interval: Duration,
+    last_sig: Option<u64>,
+}
+
+impl WorkspaceWatch {
+    fn new(root: &Path, poll_interval: Duration) -> Self {
+        Self {
+            root: root.to_path_buf(),
+            poll_interval,
+            last_sig: None,
+        }
+    }
+
+    fn baseline(&mut self) -> Result<(), String> {
+        self.last_sig = Some(self.scan_signature()?);
+        Ok(())
+    }
+
+    fn poll_changed(&mut self) -> Result<bool, String> {
+        let sig = self.scan_signature()?;
+        let changed = self.last_sig.is_some_and(|prev| prev != sig);
+        self.last_sig = Some(sig);
+        Ok(changed)
+    }
+
+    fn wait_for_change(&mut self) -> Result<(), String> {
+        loop {
+            if self.poll_changed()? {
+                return Ok(());
+            }
+            std::thread::sleep(self.poll_interval);
+        }
+    }
+
+    fn scan_signature(&self) -> Result<u64, String> {
+        use std::hash::Hasher as _;
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+        // Always include root-level build configuration files.
+        for path in [
+            self.root.join("Cargo.toml"),
+            self.root.join("Cargo.lock"),
+            self.root.join("rust-toolchain.toml"),
+        ] {
+            self.hash_file_stamp(&path, &mut hasher)?;
+        }
+
+        // Watch the Rust workspace surface but exclude extremely large areas (`repo-ref`, `target`, `.git`).
+        for dir in ["apps", "crates", "ecosystem"] {
+            let p = self.root.join(dir);
+            self.walk_and_hash(&p, &mut hasher)?;
+        }
+
+        Ok(hasher.finish())
+    }
+
+    fn walk_and_hash(
+        &self,
+        root: &Path,
+        hasher: &mut std::collections::hash_map::DefaultHasher,
+    ) -> Result<(), String> {
+        let mut stack = vec![root.to_path_buf()];
+        while let Some(dir) = stack.pop() {
+            let read_dir = match std::fs::read_dir(&dir) {
+                Ok(rd) => rd,
+                Err(_) => continue,
+            };
+
+            for entry in read_dir.flatten() {
+                let path = entry.path();
+                let file_name = entry.file_name();
+                let file_name = file_name.to_string_lossy();
+
+                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    if file_name == "target"
+                        || file_name == ".git"
+                        || file_name == ".fret"
+                        || file_name == "repo-ref"
+                        || file_name == "docs"
+                    {
+                        continue;
+                    }
+                    stack.push(path);
+                    continue;
+                }
+
+                if !self.should_watch_file(&path) {
+                    continue;
+                }
+
+                self.hash_file_stamp(&path, hasher)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn should_watch_file(&self, path: &Path) -> bool {
+        let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
+            return false;
+        };
+        matches!(ext, "rs" | "toml" | "lock" | "wgsl" | "ron")
+    }
+
+    fn hash_file_stamp(
+        &self,
+        path: &Path,
+        hasher: &mut std::collections::hash_map::DefaultHasher,
+    ) -> Result<(), String> {
+        use std::hash::Hash as _;
+
+        let meta = match std::fs::metadata(path) {
+            Ok(m) => m,
+            Err(_) => {
+                // Missing files affect the signature; include the path only.
+                path.to_string_lossy().hash(hasher);
+                return Ok(());
+            }
+        };
+
+        let modified = meta.modified().ok();
+        let nanos = modified
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+
+        path.to_string_lossy().hash(hasher);
+        meta.len().hash(hasher);
+        nanos.hash(hasher);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RestartSupervisorOptions {
+    bin: String,
+    dx_available: bool,
+    demo_hotpatch_ready: bool,
+    hotpatch_enabled: bool,
+    max_restarts: usize,
+    crash_window: Duration,
+    crash_threshold: Duration,
+}
+
+fn run_with_restart_supervisor(
+    mut cmd: Command,
+    opts: RestartSupervisorOptions,
+) -> Result<(), String> {
+    let mut crash_times: std::collections::VecDeque<Instant> = std::collections::VecDeque::new();
+    let mut restarts = 0usize;
+
+    loop {
+        let start = Instant::now();
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if status.success() {
+            return Ok(());
+        }
+
+        // Ctrl+C or similar user interrupt: exit cleanly without "crash" guidance.
+        if status.code() == Some(130) {
+            return Ok(());
+        }
+
+        // Cargo uses 101 for "compilation failed". Restarting doesn't help without a rebuild trigger.
+        if status.code() == Some(101) {
+            return Err(format!("cargo exited with status: {status}"));
+        }
+
+        let elapsed = Instant::now().duration_since(start);
+        if elapsed <= opts.crash_threshold {
+            crash_times.push_back(Instant::now());
+        }
+        while crash_times
+            .front()
+            .is_some_and(|t| Instant::now().duration_since(*t) > opts.crash_window)
+        {
+            crash_times.pop_front();
+        }
+
+        restarts += 1;
+        if restarts > opts.max_restarts {
+            eprintln!(
+                "error: dev supervisor exceeded max restarts ({}).",
+                opts.max_restarts
+            );
+            print_repeated_crash_guidance(&opts, "too many restarts");
+            return Err(format!("cargo exited with status: {status}"));
+        }
+
+        if crash_times.len() >= 3 {
+            print_repeated_crash_guidance(&opts, "repeated fast exits detected");
+        } else {
+            eprintln!(
+                "warning: process exited with status: {status} (restart {restarts}/{})",
+                opts.max_restarts
+            );
+        }
+
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+fn print_repeated_crash_guidance(opts: &RestartSupervisorOptions, reason: &str) {
+    eprintln!("warning: {reason} (bin={})", opts.bin);
+    eprintln!("  status: fretboard hotpatch status --tail 80");
+    eprintln!("  logs:");
+    eprintln!("    runner: .fret/hotpatch_runner.log");
+    eprintln!("    view:   .fret/hotpatch_bootstrap.log");
+
+    if opts.dx_available && opts.demo_hotpatch_ready {
+        eprintln!("  try: fretboard dev native --bin {} --hotpatch", opts.bin);
+    }
+
+    if opts.hotpatch_enabled {
+        eprintln!(
+            "  try: fretboard dev native --bin {} --hotpatch-reload (disable Subsecond; reload boundary only)",
+            opts.bin
+        );
+    }
+
+    if opts.hotpatch_enabled && !cfg!(windows) {
+        eprintln!(
+            "  try: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=direct (disables view-level hotpatching)"
+        );
+    }
+
+    eprintln!(
+        "  fallback: do a full rebuild/restart (hotpatch is best-effort; structural changes require rebuild)"
+    );
+}
+
+fn dx_available() -> bool {
+    let out = Command::new("dx")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+    out.is_ok_and(|s| s.success())
 }
 
 fn is_hotpatch_ready_native_demo(name: &str) -> bool {
@@ -277,6 +1005,16 @@ fn dev_native_hotpatch_dx(
         let (addr, port) = parse_ws_endpoint_addr(ws)?;
         cmd.args(["--addr", &addr, "--port", &port.to_string()]);
         cmd.env("FRET_HOTPATCH_DEVSERVER_WS", ws);
+    }
+
+    #[cfg(windows)]
+    {
+        eprintln!(
+            "Hotpatch(dx): windows note: default view_call strategy is `direct` (safe; view hotpatch disabled); see docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md"
+        );
+        eprintln!(
+            "  to force view-level hotpatching: set FRET_HOTPATCH_VIEW_CALL_STRATEGY=hotfn (may crash)"
+        );
     }
 
     let resolved_build_id = match hotpatch_build_id.unwrap_or(HotpatchBuildIdArg::Auto) {
