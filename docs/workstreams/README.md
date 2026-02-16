@@ -67,6 +67,9 @@ Active workstreams:
 - `docs/workstreams/external-texture-imports-v1.md`
 - `docs/workstreams/external-texture-imports-v1-todo.md`
 - `docs/workstreams/external-texture-imports-v1-milestones.md`
+- `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+- `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md`
+- `docs/workstreams/external-texture-imports-v2-zero-low-copy-milestones.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`
