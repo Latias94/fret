@@ -1,5 +1,14 @@
 # ADR 0196: `delinea` Multi-Axis + Layout Contract (Cartesian v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Apache ECharts: https://github.com/apache/echarts
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (P0)
 
 ## Context
@@ -120,6 +129,6 @@ P1:
 
 ## References
 
-- ECharts axis config concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\coord\\cartesian\\AxisModel.ts`
+- ECharts axis config concepts: `repo-ref/echarts/src/coord/cartesian/AxisModel.ts`
 - ADR 0190: `docs/adr/0190-delinea-headless-chart-engine.md`
 - ADR 0195: `docs/adr/0195-delinea-interaction-and-hit-testing-contract.md`

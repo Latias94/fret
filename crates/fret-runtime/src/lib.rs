@@ -4,8 +4,26 @@
 //! force a global async runtime (Tokio, etc.).
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-runtime/README.md`.
+//!
+//! ## Where to start
+//!
+//! - Commands: [`CommandId`], [`CommandRegistry`], [`CommandMeta`]
+//! - Models/state: [`Model`], [`ModelStore`], [`ModelCx`]
+//! - Effects: [`Effect`]
+//! - Host integration: [`UiHost`], [`GlobalsHost`], [`ModelsHost`]
+//! - Portability contracts: [`PlatformCapabilities`]
+//!
+//! ## Minimal example
+//!
+//! ```
+//! use fret_runtime::{CommandId, CommandMeta, CommandRegistry};
+//!
+//! let mut commands = CommandRegistry::default();
+//! commands.register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
+//! ```
 
 pub mod capabilities;
+pub mod clipboard_diagnostics;
 pub mod command;
 pub mod commands;
 pub mod docking_settings;
@@ -50,6 +68,7 @@ pub use capabilities::{
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
     WindowHoverDetectionQuality, WindowSetOuterPositionQuality, WindowZLevelQuality,
 };
+pub use clipboard_diagnostics::{ClipboardReadDiagnostics, WindowClipboardDiagnosticsStore};
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{

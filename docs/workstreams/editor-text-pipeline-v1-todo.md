@@ -1,5 +1,14 @@
 # Editor Text Pipeline v1 — TODO
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Scope: `docs/workstreams/editor-text-pipeline-v1.md`
 
 ## M0 — Document boundary + invariants
@@ -96,8 +105,43 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
     - [x] allow breaks around punctuation runs (`.`, `,`, `:`, `;`),
     - [x] allow breaks at identifier boundaries (snake `_`, camelCase transitions),
     - [x] allow breaks around common operator tokens (`::`, `->`, `.`, `=`) (optional).
-- [ ] Ensure the policy matches cursor movement and selection semantics (no drift between row
+- [x] Ensure the policy matches cursor movement and selection semantics (no drift between row
   segmentation and rendered geometry).
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_clamps_in_display_row_space_when_wrapped`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_steps_through_code_wrap_policy_rows`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_uses_row_fold_map_for_inlay_insertions_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`move_caret_vertical_uses_row_fold_map_for_fold_placeholders_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_click_extends_selection_to_inlay_insertion_point_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_drag_preserves_anchor_when_dragging_across_fold_placeholder_mapping`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`pointer_down_cancels_preedit_replacement_and_snaps_to_replace_start`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`pointer_down_double_click_selects_word_on_inlay_only_row_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`pointer_down_double_click_cancels_preedit_replacement_and_selects_word`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`triple_click_selects_logical_line_on_inlay_only_row_under_soft_wrap`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`triple_click_cancels_preedit_replacement_and_selects_logical_line`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`home_end_move_within_wrapped_display_rows`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_vertical_extends_selection_in_display_row_space_when_wrapped`)
+    - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+      (`shift_home_end_extends_selection_within_wrapped_display_rows`)
+    - `ecosystem/fret-code-editor-view/src/lib.rs`
+      (`display_map_code_wrap_policy_does_not_split_arrow_operator_token`)
+    - `ecosystem/fret-code-editor-view/src/lib.rs`
+      (`byte_to_display_point_respects_code_wrap_policy_rows`)
+    - `ecosystem/fret-code-editor-view/src/lib.rs`
+      (`inline_preedit_replacement_roundtrips_under_wrap_and_code_wrap_policy`)
 - [~] Add fixture-driven conformance tests for the policy (ecosystem-owned, deterministic):
   - Status: initial JSON suite landed; expand coverage as new edge-cases are found.
   - Evidence:
@@ -108,7 +152,7 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - [x] punctuation (`.`) and operator tokens (`::`, `->`) avoid obviously-bad splits,
   - [x] grapheme clusters (ZWJ/VS16/combining marks) do not split inside clusters,
   - [x] long tokens have a bounded emergency-break behavior.
-- [ ] Coordinate with `docs/workstreams/text-line-breaking-v1.md`:
+- [x] Coordinate with `docs/workstreams/text-line-breaking-v1.md`:
   - UI wrap improvements must not change editor wrap policy implicitly.
   - Evidence anchors:
     - `ecosystem/fret-code-editor-view/src/code_wrap_policy.rs` (`row_starts_for_code_wrap`)
@@ -122,6 +166,14 @@ Scope: `docs/workstreams/editor-text-pipeline-v1.md`
   - Evidence: `crates/fret-ui/src/declarative/tests/semantics.rs`
 - [x] Wire `TextInputRegionProps.ime_cursor_area` from the editor caret geometry (data-only):
   - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs`
+- [x] Add a regression gate for `ime_cursor_area` correctness and stability:
+  - It must match the caret rect for the active selection under:
+    - preedit injection (including selection-replacing composition),
+    - wrapped + code-wrap-policy display rows,
+    - surrogate pairs / mixed scripts (UTF-8 ↔ UTF-16 clamps),
+    - stale-geometry invalidation paths (font stack changes, wrap width changes).
+  - Evidence: `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+    (`ime_cursor_area_matches_caret_rect_for_selection_under_preedit_and_wrap`)
 - [x] Add ecosystem-owned bounds/hit-test support for `TextInputRegion` (not `fret-ui` mechanism):
   - `BoundsForRange` / `CharacterIndexForPoint` via cached row geometry + fallbacks.
 - [x] Add ecosystem-owned replace support for platform text input (not `fret-ui` mechanism):
@@ -166,11 +218,18 @@ folds/inlays/preedit, resize jitter, font stack changes, and theme changes.
   - Evidence:
     - `ecosystem/fret-code-editor/src/editor/geom/mod.rs` (`RowGeomKey`)
     - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (geometry cache hit uses `RowGeomKey`)
+    - pointer / hit-test mapping across folds/inlays/preedit:
+      - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+        (`caret_for_pointer_snaps_inside_inlay_only_row_to_insertion_point_under_soft_wrap`)
+      - `ecosystem/fret-code-editor/src/editor/tests/mod.rs`
+        (`caret_for_pointer_snaps_inside_preedit_replacement_span_under_wrap_and_code_wrap_policy`)
 - [x] Ensure paint-only changes never invalidate row geometry caches.
   - Regression gate:
     - `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (`row_geom_key_ignores_paint_only_changes`)
-- [ ] Add a catastrophic regression guard for “resize jitter + visible viewport”:
-  - reuse the UI wrap smoke gate as a baseline,
+- [x] Add a catastrophic regression guard for “resize jitter + visible viewport”:
+  - reuse the UI wrap smoke gate as a baseline:
+    - `tools/perf/diag_text_wrap_resize_jitter_smoke_gate.py`
+    - default script: `tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json`
   - [x] add a code-editor-specific smoke gate (no calibrated baseline required):
     - `tools/perf/diag_code_editor_resize_jitter_smoke_gate.py`
     - default script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`

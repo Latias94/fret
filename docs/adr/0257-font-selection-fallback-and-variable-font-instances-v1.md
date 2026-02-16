@@ -1,5 +1,14 @@
 # ADR 0257: Font Selection, Fallback, and Variable Font Instance Identity (Fontique-backed)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Parley: https://github.com/linebender/parley
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 - Status: Proposed
 - Date: 2026-02-11
 

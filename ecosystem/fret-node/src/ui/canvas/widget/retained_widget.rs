@@ -56,10 +56,11 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             return CommandAvailability::NotHandled;
         }
 
-        let clipboard_text = cx.input_ctx.caps.clipboard.text;
+        let clipboard_read = cx.input_ctx.caps.clipboard.text.read;
+        let clipboard_write = cx.input_ctx.caps.clipboard.text.write;
         match command.as_str() {
             "edit.copy" | CMD_NODE_GRAPH_COPY => {
-                if !clipboard_text {
+                if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
 
@@ -78,7 +79,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 }
             }
             "edit.cut" | CMD_NODE_GRAPH_CUT => {
-                if !clipboard_text {
+                if !clipboard_write {
                     return CommandAvailability::Blocked;
                 }
 
@@ -99,7 +100,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
                 }
             }
             "edit.paste" | CMD_NODE_GRAPH_PASTE => {
-                if !clipboard_text || cx.window.is_none() {
+                if !clipboard_read || cx.window.is_none() {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available

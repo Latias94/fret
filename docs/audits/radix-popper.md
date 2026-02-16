@@ -1,5 +1,15 @@
 # Radix Primitives Audit — Popper
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Floating UI: https://github.com/floating-ui/floating-ui
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's floating placement substrate against the upstream Radix
 `@radix-ui/react-popper` implementation pinned in `repo-ref/primitives`.
 

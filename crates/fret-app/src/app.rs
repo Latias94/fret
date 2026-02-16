@@ -50,6 +50,16 @@ fn strict_runtime_enabled() -> bool {
     *ENABLED.get_or_init(fret_runtime::strict_runtime::strict_runtime_enabled_from_env)
 }
 
+/// Application container holding globals, models, commands, and effects.
+///
+/// `App` is backend-agnostic and is intended to be driven by a runner/driver layer
+/// (`fret-launch`, `fret-bootstrap`, or the ecosystem `fret` facade).
+///
+/// Responsibilities:
+/// - store app-global services (`with_global*` APIs),
+/// - host the model store and track changed models,
+/// - maintain the command registry,
+/// - collect effects emitted by services and UI.
 pub struct App {
     globals: HashMap<TypeId, Box<dyn Any>>,
     global_type_names: HashMap<TypeId, &'static str>,
@@ -277,6 +287,13 @@ impl App {
         value.downcast_ref::<T>()
     }
 
+    /// Mutates a global service/value, participating in global-change tracking.
+    ///
+    /// This is the "tracked" path:
+    /// - callers mutating globals via this API should expect the host to mark the global as
+    ///   changed, so UI drivers can propagate global changes and schedule invalidation.
+    /// - nested mutable access to the same global type is guarded by the lease marker; in strict
+    ///   runtime mode this will panic to surface contract violations early.
     #[track_caller]
     pub fn with_global_mut<T: Any, R>(
         &mut self,
@@ -287,6 +304,11 @@ impl App {
         self.with_global_mut_impl(init, f, leased_at, true)
     }
 
+    /// Mutates a global service/value without participating in global-change tracking.
+    ///
+    /// This is intended for caches/registries whose internal mutations should not, by themselves,
+    /// trigger UI invalidation. For example: frame-local memoization tables, debug-only stores, or
+    /// host-maintained registries that are invalidated by other signals.
     #[track_caller]
     pub fn with_global_mut_untracked<T: Any, R>(
         &mut self,

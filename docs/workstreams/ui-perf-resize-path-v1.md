@@ -5,6 +5,15 @@ date: 2026-02-09
 scope: performance, resize, layout, gpui-gap
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # UI Performance: Resize Path (Fret vs GPUI) v1
 
 This note exists to stop “resize feels janky” work from turning into untracked experiments.

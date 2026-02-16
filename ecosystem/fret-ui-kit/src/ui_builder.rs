@@ -31,6 +31,10 @@ impl UiPatch {
 ///
 /// This is intentionally an ecosystem-only authoring surface (see ADR 0160).
 pub trait UiPatchTarget: Sized {
+    /// Applies an aggregated authoring patch (chrome + layout) and returns the refined value.
+    ///
+    /// Most types will merge the relevant parts of the patch into their internal refinement
+    /// structs (or ignore fields they don't support).
     fn apply_ui_patch(self, patch: UiPatch) -> Self;
 }
 
@@ -44,6 +48,16 @@ pub trait UiSupportsLayout {}
 ///
 /// This trait exists so `UiBuilder::into_element(cx)` can be implemented without relying on
 /// inherent methods.
+///
+/// In practice you usually don't call this directly in app code; you typically keep using the
+/// fluent authoring surface and call `into_element(cx)` on the `UiBuilder` wrapper.
+///
+/// ```ignore
+/// use fret_ui_kit::prelude::*;
+///
+/// // Inside a view function where `cx: &mut ElementContext<'_, App>` is available:
+/// let el = ui::text("Hello").into_element(cx);
+/// ```
 pub trait UiIntoElement: Sized {
     #[track_caller]
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
@@ -1023,6 +1037,33 @@ where
 }
 
 /// Extension trait providing the `ui()` entrypoint for types that opt into `UiPatchTarget`.
+///
+/// Most of the `ui::*` helpers already return a `UiBuilder<T>`. This trait is primarily useful for:
+/// - custom patch targets (your own boxes/components),
+/// - values constructed via inherent constructors that return `T` (not `UiBuilder<T>`).
+///
+/// ```
+/// use fret_ui_kit::{ChromeRefinement, LayoutRefinement, UiExt, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout};
+///
+/// #[derive(Debug, Default, Clone)]
+/// struct MyBox {
+///     chrome: ChromeRefinement,
+///     layout: LayoutRefinement,
+/// }
+///
+/// impl UiPatchTarget for MyBox {
+///     fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+///         self.chrome = self.chrome.merge(patch.chrome);
+///         self.layout = self.layout.merge(patch.layout);
+///         self
+///     }
+/// }
+///
+/// impl UiSupportsChrome for MyBox {}
+/// impl UiSupportsLayout for MyBox {}
+///
+/// let _refined = MyBox::default().ui().px_2().w_full().build();
+/// ```
 pub trait UiExt: UiPatchTarget + Sized {
     fn ui(self) -> UiBuilder<Self> {
         UiBuilder::new(self)

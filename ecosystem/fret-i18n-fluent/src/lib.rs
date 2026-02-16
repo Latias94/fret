@@ -1,3 +1,11 @@
+//! Fluent backend integration for `fret-i18n`.
+//!
+//! This crate provides a small catalog + lookup implementation backed by
+//! [`fluent_bundle`](https://crates.io/crates/fluent-bundle).
+//!
+//! It is an ecosystem crate: apps can opt in to Fluent without hard-coupling the portable
+//! `fret-i18n` contract to any specific backend.
+
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -9,6 +17,7 @@ use fret_i18n::{
 use unic_langid::LanguageIdentifier;
 
 #[derive(Default)]
+/// In-memory Fluent bundles keyed by [`LocaleId`].
 pub struct FluentCatalog {
     bundles: HashMap<LocaleId, Rc<FluentBundle<FluentResource>>>,
 }

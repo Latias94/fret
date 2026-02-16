@@ -1,5 +1,14 @@
 # Text System Audit: Fret vs Zed (GPUI)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document compares Fret’s current text stack with Zed/GPUI’s text system implementation
 (`repo-ref/zed/crates/gpui/src/text_system.rs`) and identifies refactor work needed for a future-proof
 editor-grade text pipeline.

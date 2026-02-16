@@ -1,5 +1,14 @@
 # ADR 0094: Menu Open Modality and Entry Focus
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

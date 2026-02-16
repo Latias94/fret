@@ -119,6 +119,12 @@ Stage the work as:
 3) M2: Replace the legacy wrapper with Parley-driven paragraph line breaking (Option A). Do not
    retain a long-lived compatibility wrapper: rely on conformance + invariants to keep the behavior
    auditable, and keep code wrap policy in the ecosystem/editor layer.
+   - Editor wrap is *not* renderer-owned: editor surfaces segment display rows themselves and
+     typically render each display row with `TextWrap::None`. UI wrap improvements must not change
+     editor wrapping implicitly.
+   - Evidence anchors:
+     - `ecosystem/fret-code-editor-view/src/code_wrap_policy.rs` (`row_starts_for_code_wrap`)
+     - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::new_with_code_wrap_policy`)
 
 This sequencing keeps risk bounded while still converging on a simpler, more correct architecture.
 

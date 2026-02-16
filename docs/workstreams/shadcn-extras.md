@@ -5,6 +5,15 @@ date: 2026-02-09
 scope: ecosystem/fret-ui-shadcn, component ecosystem, blocks/recipes
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- kibo: https://github.com/haydenbleasel/kibo
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # Shadcn Extras (`fret-ui-shadcn::extras`) — Workstream
 
 This workstream defines and tracks an **extras** surface under `ecosystem/fret-ui-shadcn`:

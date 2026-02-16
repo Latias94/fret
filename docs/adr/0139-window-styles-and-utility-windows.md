@@ -1,5 +1,14 @@
 # ADR 0139: Window Styles and Utility Windows (Transparent / Frameless / Always-on-top)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

@@ -285,10 +285,9 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
             return CommandAvailability::NotHandled;
         }
 
-        let clipboard_text = cx.input_ctx.caps.clipboard.text;
         match cmd {
             "text.copy" | "text.cut" => {
-                if !clipboard_text {
+                if !cx.input_ctx.caps.clipboard.text.write {
                     return CommandAvailability::Blocked;
                 }
                 if self.input.has_selection() {
@@ -298,7 +297,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                 }
             }
             "text.paste" => {
-                if !clipboard_text {
+                if !cx.input_ctx.caps.clipboard.text.read {
                     return CommandAvailability::Blocked;
                 }
                 CommandAvailability::Available

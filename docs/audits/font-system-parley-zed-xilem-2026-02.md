@@ -1,5 +1,16 @@
 # Font System Audit (2026-02): Parley/fontique vs Zed (cosmic-text) vs Xilem (Parley)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Parley: https://github.com/linebender/parley
+- Xilem: https://github.com/linebender/xilem
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Scope: **font enumeration**, **caching**, **fallback chain semantics**, and **variable font instance identity**.
 
 This audit is intended to inform and de-risk the active font-system workstream:

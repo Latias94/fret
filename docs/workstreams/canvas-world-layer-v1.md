@@ -5,6 +5,15 @@ date: 2026-02-13
 scope: ecosystem/fret-canvas/ui, ecosystem/fret-ui-kit, apps (UI Gallery demos + diag gates)
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- XYFlow: https://github.com/xyflow/xyflow
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # Declarative Canvas World Layer v1
 
 This workstream explores a reusable “world layer” substrate for **canvas-space element subtrees**

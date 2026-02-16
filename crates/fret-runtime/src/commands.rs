@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{CommandId, DefaultKeybinding, WhenExpr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// A command that should be forwarded to the host OS when supported (e.g. menu integration).
 pub enum OsAction {
     Cut,
     Copy,
@@ -13,11 +14,16 @@ pub enum OsAction {
 }
 
 #[derive(Default)]
+/// Registry of known commands and their metadata.
+///
+/// Apps typically populate this during startup and use it to drive keybinding resolution,
+/// command palettes, and menu surfaces.
 pub struct CommandRegistry {
     commands: HashMap<CommandId, CommandMeta>,
 }
 
 #[derive(Debug, Clone)]
+/// Metadata describing a command (title, keybindings, visibility, routing scope).
 pub struct CommandMeta {
     pub title: Arc<str>,
     pub description: Option<Arc<str>>,
@@ -32,6 +38,7 @@ pub struct CommandMeta {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Routing scope for a command.
 pub enum CommandScope {
     /// Routed through the focused UI node (with bubbling), per ADR 0020.
     Widget,

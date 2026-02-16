@@ -2,6 +2,15 @@
 title: "ADR 0159: UI Diagnostics Snapshot + Scripted Interaction Tests (GPUI Inspector-Aligned)"
 ---
 
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
+
 # ADR 0159: UI Diagnostics Snapshot + Scripted Interaction Tests (GPUI Inspector-Aligned)
 
 Status: Proposed

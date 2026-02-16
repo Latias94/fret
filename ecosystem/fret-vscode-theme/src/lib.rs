@@ -1,3 +1,11 @@
+//! VS Code theme import helpers for Fret.
+//!
+//! This crate reads VS Code theme JSON and produces a `ThemeConfig` patch that populates
+//! `color.syntax.*` tokens used by Fret's syntax highlighting stack (`fret-syntax`).
+//!
+//! The import is intentionally conservative by default and can be customized via
+//! [`VscodeSyntaxImportOptions`] and an optional [`VscodeImportMapping`].
+
 use std::collections::HashMap;
 
 use fret_syntax::HIGHLIGHT_NAMES;
@@ -52,6 +60,7 @@ struct TokenRule {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Options controlling how VS Code theme JSON is mapped into `ThemeConfig` syntax tokens.
 pub struct VscodeSyntaxImportOptions {
     /// Generate `color.syntax.<tag>` for every `fret-syntax` highlight tag.
     ///

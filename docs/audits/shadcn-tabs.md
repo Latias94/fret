@@ -1,5 +1,15 @@
 # shadcn/ui v4 Audit - Tabs
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- MUI Base UI: https://github.com/mui/base-ui
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's shadcn-aligned `Tabs` against upstream shadcn/ui v4 recipes and
 Base UI `Tabs.Root` behavior.
 

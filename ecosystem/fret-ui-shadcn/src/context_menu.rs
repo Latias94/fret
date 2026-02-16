@@ -2,8 +2,8 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
+use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};

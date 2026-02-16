@@ -1,5 +1,14 @@
 # Perf Devtools: Skills and Workflow (v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- AgentSkills (skills-ref): https://github.com/agentskills/agentskills
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Draft (workstream note; ADRs remain the source of truth)
 
 This workstream documents how we want contributors to **investigate, explain, and prevent** performance regressions

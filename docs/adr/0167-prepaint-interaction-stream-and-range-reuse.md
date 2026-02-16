@@ -1,5 +1,14 @@
 # ADR 0167: Prepaint Interaction Stream + Range Reuse (GPUI-Aligned)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Proposed
 
 ## Context

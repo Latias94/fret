@@ -1,3 +1,12 @@
+//! Diagnostics tooling for the Fret workspace.
+//!
+//! This crate is primarily used by `fretboard` to:
+//! - run scripted UI interactions,
+//! - capture diagnostics bundles (JSON + optional screenshots),
+//! - compare runs and enforce performance/behavior gates.
+//!
+//! This is a tooling-focused crate (not a runtime dependency for apps).
+
 #![recursion_limit = "512"]
 
 use std::collections::BTreeSet;

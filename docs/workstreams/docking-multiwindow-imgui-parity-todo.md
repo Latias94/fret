@@ -1,5 +1,14 @@
 # Docking Tear-off (Multi-Window) — TODO Tracker (ImGui Parity v1)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- winit: https://github.com/rust-windowing/winit
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Active (workstream tracker; keep updated during implementation)
 
 This document tracks executable TODOs for multi-window docking parity. It is intentionally task-first:

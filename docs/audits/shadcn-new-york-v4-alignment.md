@@ -1,5 +1,14 @@
 # shadcn/ui new-york-v4 Alignment Audit (Fret)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit tracks visual/behavior alignment gaps between:
 
 - Upstream baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*.tsx`

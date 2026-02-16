@@ -2,6 +2,15 @@
 
 # MVP: Vector Paths + SVG Icons (GPUI-Aligned)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: MVP-PATH-0..2 implemented; SVG alpha-mask+tint implemented; SVG RGBA implemented; Path MSAA+composite implemented
 
 Last updated: 2025-12-26

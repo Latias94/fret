@@ -1,5 +1,16 @@
 # Docking — Dear ImGui Docking Branch Parity Matrix (Fret)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- imgui-rs: https://github.com/imgui-rs/imgui-rs
+- dockview: https://github.com/mathuo/dockview
+- Dear ImGui: https://github.com/ocornut/imgui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This document is the **detailed** capability-by-capability parity map between:
 
 - **Dear ImGui docking branch** (core docking in `repo-ref/imgui/imgui.cpp` + multi-viewport platform backends), and

@@ -1,4 +1,9 @@
 //! Markdown renderer component(s) for Fret.
+//!
+//! This crate renders Markdown into Fret declarative elements with a focus on editor-grade UI:
+//! - streaming/blocked rendering via `mdstream`,
+//! - code fences via `fret-code-view`,
+//! - optional Mermaid and MathJax integrations behind feature flags.
 
 use std::sync::Arc;
 

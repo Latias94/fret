@@ -1,5 +1,14 @@
 # ADR 0105: Dev Hotpatch (Subsecond) Integration and Hot-Reload Safety Rules
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Dioxus: https://github.com/DioxusLabs/dioxus
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 
 ## Context

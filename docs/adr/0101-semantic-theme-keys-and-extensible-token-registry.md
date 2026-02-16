@@ -1,5 +1,15 @@
 # ADR 0101: Semantic Theme Keys, Extensible Token Registry, and shadcn/new-york Alignment
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- shadcn/ui: https://github.com/shadcn-ui/ui
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted
 Scope: `fret-ui` theme resolution + config keys; impacts component ecosystems (`fret-ui-kit`, `fret-ui-shadcn`)
 

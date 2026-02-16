@@ -1,5 +1,15 @@
 # Carousel Embla parity (v1) — TODO
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- `embla-carousel`: https://github.com/search?q=embla-carousel&type=repositories
+- shadcn/ui: https://github.com/shadcn-ui/ui
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This file is the *living checklist* for the workstream. It should stay short and actionable.
 Use `carousel-embla-parity-v1-milestones.md` for timeline/phase planning.
 

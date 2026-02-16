@@ -1,5 +1,15 @@
 # ADR 0116: Renderer Architecture v3 - Render Plan and Post-Processing Substrate
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Bevy: https://github.com/bevyengine/bevy
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Accepted (initial implementation landed)
 
 ## Context

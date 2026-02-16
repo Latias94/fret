@@ -1,4 +1,4 @@
-use std::time::Instant;
+use fret_core::time::Instant;
 
 use fret_app::Effect;
 use fret_core::Event;

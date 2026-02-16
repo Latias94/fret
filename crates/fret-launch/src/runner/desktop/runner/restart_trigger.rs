@@ -1,5 +1,7 @@
 use std::path::PathBuf;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
+
+use fret_core::time::Instant;
 
 #[derive(Debug)]
 pub(crate) struct RestartTrigger {

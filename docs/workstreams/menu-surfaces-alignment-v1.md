@@ -1,5 +1,15 @@
 # Menu Surfaces Alignment v1 (OS menubar + in-window menubar + context menus)
 
+
+## Upstream references (non-normative)
+
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
+
+- Godot: https://github.com/godotengine/godot
+- Zed: https://github.com/zed-industries/zed
+
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 Status: Completed (v1 scope delivered; workstream note, not an ADR)
 Last updated: 2026-02-06
 

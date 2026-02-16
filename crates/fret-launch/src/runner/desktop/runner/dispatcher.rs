@@ -2,9 +2,9 @@ use std::{
     collections::VecDeque,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
 };
 
+use fret_core::time::{Duration, Instant};
 use fret_runtime::{DispatchPriority, Dispatcher, ExecCapabilities, Runnable};
 use winit::event_loop::EventLoopProxy;
 

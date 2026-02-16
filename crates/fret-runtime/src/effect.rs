@@ -25,6 +25,10 @@ pub enum DiagIncomingOpenItem {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Effects emitted by the portable runtime surface.
+///
+/// Effects are collected by the host (e.g. `fret-app::App`) and are expected to be handled by a
+/// runner/backend integration layer (native or web).
 pub enum Effect {
     /// Request a window redraw (one-shot).
     ///
@@ -75,9 +79,14 @@ pub enum Effect {
         window: Option<AppWindowId>,
         menu_bar: MenuBar,
     },
+    /// Sets the platform clipboard text (best-effort).
     ClipboardSetText {
         text: String,
     },
+    /// Requests reading platform clipboard text (best-effort).
+    ///
+    /// Runners/backends should eventually complete this request by emitting a corresponding event
+    /// carrying `token` (see `ClipboardToken` contract in `fret-core`).
     ClipboardGetText {
         window: AppWindowId,
         token: ClipboardToken,
@@ -106,6 +115,10 @@ pub enum Effect {
     ExternalDropRelease {
         token: ExternalDropToken,
     },
+    /// Requests opening a URL using the platform's default handler (best-effort).
+    ///
+    /// Callers should ensure the URL is safe/expected. Component-layer helpers may apply
+    /// additional policies (e.g. `rel="noreferrer"`).
     OpenUrl {
         url: String,
         target: Option<String>,

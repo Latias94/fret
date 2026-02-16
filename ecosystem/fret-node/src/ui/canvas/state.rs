@@ -1,6 +1,6 @@
+use fret_core::time::Instant;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Instant;
 
 use fret_core::{ClipboardToken, Modifiers, MouseButton, Point, PointerId, Rect};
 use fret_runtime::{TickId, TimerToken};
