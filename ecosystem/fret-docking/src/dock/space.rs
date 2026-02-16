@@ -1507,7 +1507,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(10_051),
             origin: text_origin,
             text: tooltip.blob,
-            color: theme.color_token("muted-foreground"),
+            paint: (theme.color_token("muted-foreground")).into(),
         });
     }
 
@@ -1657,7 +1657,7 @@ impl DockSpace {
                 order: fret_core::DrawOrder(20_020),
                 origin: Point::new(Px(rect.origin.x.0 + pad), Px(text_y)),
                 text: title.blob,
-                color: if item.enabled { fg } else { fg_muted },
+                paint: (if item.enabled { fg } else { fg_muted }).into(),
             });
         }
     }
