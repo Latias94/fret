@@ -3793,30 +3793,6 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let tt = clamp(t, 0.0, 1.0);
     return paint_sample_stops(p, tt);
   }
-  if (p.kind == 4u) {
-    let center = p.params0.xy;
-    let start = p.params0.z;
-    let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
-    let a = atan2(v.y, v.x);
-    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
-    let rel = fract(turns - fract(start) + 1.0);
-    let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 4u) {
-    let center = p.params0.xy;
-    let start = p.params0.z;
-    let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
-    let a = atan2(v.y, v.x);
-    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
-    let rel = fract(turns - fract(start) + 1.0);
-    let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
-    return paint_sample_stops(p, tt);
-  }
   return vec4<f32>(0.0);
 }
 

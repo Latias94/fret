@@ -16,6 +16,8 @@ Current status (as of 2026-02-16):
   - Renderer perf snapshot surfaces per-update ingest strategy breakdown for imported render targets
     (requested vs effective) and a downgrade counter.
   - Diagnostics bundle (`UiFrameStatsV1`) exposes the same ingest counters for devtools/perf baselines.
+  - Web runner now records renderer perf samples when DevTools WS is configured, and keeps the app
+    rendering while devtools is attached so WS-driven scripts/bundles can run on otherwise-idle pages.
 - Sweep gradient paint v1 landed:
   - ADR 0280 (`Paint::SweepGradient`).
   - GPU readback conformance is exercised via `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`.

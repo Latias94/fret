@@ -219,10 +219,14 @@ milestones) when implementation begins.
 - [x] REN-VNEXT-sem-020 General path stroke: introduce a “stroke arbitrary vector paths” surface with bounded stroke style.
   - Landed via: `PathStyle::StrokeV2(StrokeStyleV2)` for vector path preparation + `SceneOp::Path` rendering.
   - Evidence: `docs/workstreams/path-stroke-style-v2.md`, `crates/fret-core/src/vector_path.rs`.
-- [~] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter + dash semantics (and constant-px stroke width semantics as an explicit follow-up).
+- [x] REN-VNEXT-sem-030 `StrokeStyleV2`: join/cap/miter + dash semantics (and constant-px stroke width semantics as an explicit follow-up).
   - Landed: join/cap/miter + dash for vector path strokes (deterministic, scale-aware).
   - Deferred: constant-px stroke width under non-uniform transforms (requires a transform-aware contract).
   - Tracking: `docs/workstreams/path-stroke-style-v2.md`.
+  - Evidence:
+    - `crates/fret-core/src/vector_path.rs` (`StrokeStyleV2`, `PathStyle::StrokeV2`)
+    - `crates/fret-render-wgpu/src/renderer/path.rs` (`build_dashed_lyon_path`, `tessellate_path_commands`)
+    - `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`
 - [x] REN-VNEXT-sem-040 Sweep/conic gradient (bounded): add `Paint::SweepGradient`.
   - Contract: `docs/adr/0280-sweep-gradient-paint-v1.md`
   - Evidence:
