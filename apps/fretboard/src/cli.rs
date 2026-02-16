@@ -88,7 +88,7 @@ Usage:
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
-  fretboard dev web [--port <port>] [--demo <demo> | --choose]
+  fretboard dev web [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
 
 Examples:
   fretboard new todo --name my-todo

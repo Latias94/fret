@@ -88,10 +88,8 @@ Evidence:
       - `cargo run -p fret-devtools-ws`
       - Copy the printed `token` (and keep the server running).
     - Terminal 2 (Trunk dev server):
-      - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo`
-      - Open the printed URL and append:
-        - `&fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
-        - (The web runtime reads these from the query string.)
+      - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
+      - Open the printed URL (it already includes `fret_devtools_ws` + `fret_devtools_token`).
     - Terminal 3 (run the steady script + compare to baseline):
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
   - Baseline record:
