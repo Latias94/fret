@@ -904,4 +904,40 @@ mod tests {
         let local = local_pos_for_screen_pos(origin, scale, screen_pos);
         assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
     }
+
+    #[test]
+    fn screen_pos_in_client_respects_outer_plus_decoration_offset() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(12, 34);
+        let origin = client_origin_screen(outer, deco);
+        let size = PhysicalSize::new(100u32, 50u32);
+
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(112.0, 234.0)
+        ));
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(111.9, 234.0)
+        ));
+    }
+
+    #[test]
+    fn local_pos_for_screen_pos_roundtrips_with_outer_plus_decoration_and_scale() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let origin = client_origin_screen(outer, deco);
+        let scale = 1.5;
+
+        let desired_local = Point::new(Px(20.0), Px(40.0));
+        let screen_pos = PhysicalPosition::new(
+            origin.x + desired_local.x.0 as f64 * scale,
+            origin.y + desired_local.y.0 as f64 * scale,
+        );
+
+        let local = local_pos_for_screen_pos(origin, scale, screen_pos);
+        assert_eq!(local, desired_local);
+    }
 }
