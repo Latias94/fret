@@ -1,4 +1,5 @@
 use fret_core::geometry::{Point, Px, Rect, Size};
+use lyon::path::iterator::PathIterator;
 use lyon::tessellation::{
     BuffersBuilder, FillOptions, FillTessellator, FillVertex, StrokeOptions, StrokeTessellator,
     StrokeVertex, VertexBuffers,
@@ -69,11 +70,17 @@ fn mix_path_style(state: u64, style: fret_core::PathStyle) -> u64 {
             state = mix_u64(state, stable_join_key(stroke.join));
             state = mix_u64(state, stable_cap_key(stroke.cap));
             state = mix_f32(state, stable_f32(stroke.miter_limit));
-            // v2 note: dash is a contract field but is implemented incrementally in the default
-            // renderer. Until deterministic dash segmentation is implemented, we degrade any dash
-            // request to a solid stroke and intentionally do *not* key the path cache on dash
-            // fields (avoid cache/key-space blowups with no visual effect).
-            state = mix_u64(state, 0);
+            match stroke.dash {
+                None => {
+                    state = mix_u64(state, 0);
+                }
+                Some(dash) => {
+                    state = mix_u64(state, 1);
+                    state = mix_f32(state, stable_f32(dash.dash.0));
+                    state = mix_f32(state, stable_f32(dash.gap.0));
+                    state = mix_f32(state, stable_f32(dash.phase.0));
+                }
+            }
             state
         }
     }
@@ -189,17 +196,28 @@ pub(super) fn metrics_from_path_commands(
         return fret_core::PathMetrics::default();
     };
 
-    let stroke_width = match style {
-        fret_core::PathStyle::Stroke(stroke) => Some(stroke.width),
-        fret_core::PathStyle::StrokeV2(stroke) => Some(stroke.width),
-        fret_core::PathStyle::Fill(_) => None,
+    let expand = match style {
+        fret_core::PathStyle::Fill(_) => 0.0,
+        fret_core::PathStyle::Stroke(stroke) => stroke.width.0.max(0.0) * 0.5,
+        fret_core::PathStyle::StrokeV2(stroke) => {
+            let half = stroke.width.0.max(0.0) * 0.5;
+            if stroke.join == fret_core::StrokeJoinV1::Miter {
+                let miter_limit = if stroke.miter_limit.is_finite() {
+                    stroke.miter_limit.clamp(1.0, 64.0)
+                } else {
+                    4.0
+                };
+                half * miter_limit
+            } else {
+                half
+            }
+        }
     };
-    if let Some(width) = stroke_width {
-        let half = width.0.max(0.0) * 0.5;
-        min_x -= half;
-        min_y -= half;
-        max_x += half;
-        max_y += half;
+    if expand > 0.0 {
+        min_x -= expand;
+        min_y -= expand;
+        max_x += expand;
+        max_y += expand;
     }
 
     let w = (max_x - min_x).max(0.0);
@@ -268,6 +286,182 @@ fn build_lyon_path(commands: &[fret_core::PathCommand]) -> lyon::path::Path {
     }
 
     builder.build()
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DashState {
+    dash: f32,
+    gap: f32,
+    period: f32,
+    phase: f32,
+    on: bool,
+    remaining: f32,
+}
+
+impl DashState {
+    fn new(pattern: fret_core::scene::DashPatternV1) -> Option<Self> {
+        let dash = pattern.dash.0;
+        let gap = pattern.gap.0;
+        let phase = pattern.phase.0;
+        if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() {
+            return None;
+        }
+        let period = dash + gap;
+        if dash <= 0.0 || period <= 0.0 {
+            return None;
+        }
+        let phase = phase.rem_euclid(period);
+        let on = phase < dash;
+        let remaining = if on { dash - phase } else { period - phase };
+        Some(Self {
+            dash,
+            gap,
+            period,
+            phase,
+            on,
+            remaining,
+        })
+    }
+
+    fn reset(&mut self) {
+        let phase = self.phase.rem_euclid(self.period);
+        self.on = phase < self.dash;
+        self.remaining = if self.on {
+            self.dash - phase
+        } else {
+            self.period - phase
+        };
+        self.normalize_remaining();
+    }
+
+    fn normalize_remaining(&mut self) {
+        // Handle zero-length phases (e.g. gap == 0) without getting stuck toggling forever.
+        for _ in 0..4 {
+            if self.remaining > 1e-6 {
+                break;
+            }
+            self.on = !self.on;
+            self.remaining = if self.on { self.dash } else { self.gap };
+        }
+        if self.remaining <= 0.0 {
+            self.remaining = 1e-6;
+        }
+    }
+
+    fn consume(&mut self, amount: f32) {
+        self.remaining -= amount;
+        if self.remaining <= 1e-6 {
+            self.on = !self.on;
+            self.remaining = if self.on { self.dash } else { self.gap };
+            self.normalize_remaining();
+        }
+    }
+}
+
+fn build_dashed_lyon_path(
+    path: &lyon::path::Path,
+    pattern: fret_core::scene::DashPatternV1,
+    tolerance: f32,
+) -> Option<lyon::path::Path> {
+    use lyon::math::point;
+
+    let mut dash = DashState::new(pattern)?;
+    let mut builder = lyon::path::Path::builder();
+    let mut active = false;
+
+    for evt in path.iter().flattened(tolerance) {
+        match evt {
+            lyon::path::Event::Begin { .. } => {
+                if active {
+                    builder.end(false);
+                    active = false;
+                }
+                dash.reset();
+            }
+            lyon::path::Event::Line { from, to } => {
+                let dx = to.x - from.x;
+                let dy = to.y - from.y;
+                let len = (dx * dx + dy * dy).sqrt();
+                if !(len > 0.0) {
+                    continue;
+                }
+
+                let inv_len = 1.0 / len;
+                let mut traveled = 0.0f32;
+                let mut cur = from;
+
+                while traveled < len {
+                    let step = dash.remaining.min(len - traveled);
+                    if !(step > 0.0) {
+                        break;
+                    }
+
+                    traveled += step;
+                    let t = traveled * inv_len;
+                    let next = point(from.x + dx * t, from.y + dy * t);
+
+                    if dash.on {
+                        if !active {
+                            builder.begin(cur);
+                            active = true;
+                        }
+                        builder.line_to(next);
+                    } else if active {
+                        builder.end(false);
+                        active = false;
+                    }
+
+                    cur = next;
+                    dash.consume(step);
+                }
+            }
+            lyon::path::Event::End { last, first, close } => {
+                if close {
+                    let dx = first.x - last.x;
+                    let dy = first.y - last.y;
+                    let len = (dx * dx + dy * dy).sqrt();
+                    if len > 0.0 {
+                        let inv_len = 1.0 / len;
+                        let mut traveled = 0.0f32;
+                        let mut cur = last;
+                        while traveled < len {
+                            let step = dash.remaining.min(len - traveled);
+                            if !(step > 0.0) {
+                                break;
+                            }
+                            traveled += step;
+                            let t = traveled * inv_len;
+                            let next = point(last.x + dx * t, last.y + dy * t);
+                            if dash.on {
+                                if !active {
+                                    builder.begin(cur);
+                                    active = true;
+                                }
+                                builder.line_to(next);
+                            } else if active {
+                                builder.end(false);
+                                active = false;
+                            }
+                            cur = next;
+                            dash.consume(step);
+                        }
+                    }
+                }
+
+                if active {
+                    builder.end(false);
+                    active = false;
+                }
+            }
+            lyon::path::Event::Quadratic { .. } | lyon::path::Event::Cubic { .. } => {}
+        }
+    }
+
+    if active {
+        builder.end(false);
+    }
+
+    Some(builder.build())
 }
 
 pub(super) fn tessellate_path_commands(
@@ -342,10 +536,10 @@ pub(super) fn tessellate_path_commands(
                 4.0
             };
 
-            // v2 note: dash is a contract field but may be implemented incrementally. Until we
-            // implement deterministic dash segmentation for arbitrary vector paths, we treat a
-            // dash request as a solid stroke (deterministic degradation).
-            let _dash = stroke.dash;
+            let dashed_path = stroke
+                .dash
+                .and_then(|pattern| build_dashed_lyon_path(&path, pattern, tolerance));
+            let path = dashed_path.as_ref().unwrap_or(&path);
 
             let opts = StrokeOptions::default()
                 .with_line_width(width)
@@ -356,7 +550,7 @@ pub(super) fn tessellate_path_commands(
                 .with_end_cap(cap);
             let mut tessellator = StrokeTessellator::new();
             let _ = tessellator.tessellate_path(
-                &path,
+                path,
                 &opts,
                 &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
                     let p = v.position();
