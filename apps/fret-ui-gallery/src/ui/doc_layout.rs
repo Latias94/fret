@@ -2,6 +2,7 @@ use super::*;
 
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
+    pub title_test_id: Option<&'static str>,
     pub description: Vec<&'static str>,
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
@@ -18,12 +19,18 @@ impl DocSection {
     pub(in crate::ui) fn new(title: &'static str, preview: AnyElement) -> Self {
         Self {
             title,
+            title_test_id: None,
             description: Vec::new(),
             preview,
             code: None,
             max_w: Px(820.0),
             test_id_prefix: None,
         }
+    }
+
+    pub(in crate::ui) fn title_test_id(mut self, title_test_id: &'static str) -> Self {
+        self.title_test_id = Some(title_test_id);
+        self
     }
 
     pub(in crate::ui) fn description(mut self, description: &'static str) -> Self {
@@ -84,6 +91,7 @@ pub(in crate::ui) fn render_doc_page(
 fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {
     let DocSection {
         title,
+        title_test_id,
         description,
         preview,
         code,
@@ -107,7 +115,12 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
-            out.push(section_title(cx, title));
+            let title_el = section_title(cx, title);
+            out.push(if let Some(test_id) = title_test_id {
+                title_el.test_id(test_id)
+            } else {
+                title_el
+            });
             if !description.is_empty() {
                 let description_stack = stack::vstack(
                     cx,

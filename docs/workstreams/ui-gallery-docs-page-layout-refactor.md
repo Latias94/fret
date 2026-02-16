@@ -62,7 +62,7 @@ Legend:
 
 | Component | Entry point | Layout | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|
-| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Legacy tabs | Partial | Tab-only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Candidate: small surface; easy migration. |
+| Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
 | Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: state matrix sections. |
 | Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: single/multi + orientation. |
 | Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Legacy tabs | Partial | Tab-only | None yet | Candidate: sections per token preset + truncation/wrap behavior. |

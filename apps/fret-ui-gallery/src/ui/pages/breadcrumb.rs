@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
 pub(super) fn preview_breadcrumb(
@@ -27,75 +28,6 @@ pub(super) fn preview_breadcrumb(
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    fn slugify_section_title(title: &str) -> String {
-        title
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() {
-                    c.to_ascii_lowercase()
-                } else {
-                    '-'
-                }
-            })
-            .collect::<String>()
-            .trim_matches('-')
-            .split('-')
-            .filter(|part| !part.is_empty())
-            .collect::<Vec<_>>()
-            .join("-")
-    }
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        let title_test_id = format!(
-            "ui-gallery-breadcrumb-section-title-{}",
-            slugify_section_title(title)
-        );
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| {
-                vec![
-                    shadcn::typography::h4(cx, title).test_id(title_test_id),
-                    body,
-                ]
-            },
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let trunc_layout = LayoutRefinement::default().max_w(Px(112.0));
 
     let demo_content = shadcn::Breadcrumb::new()
@@ -107,7 +39,7 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-demo");
-    let demo = section_card(cx, "Demo", demo_content);
+    let demo = demo_content;
 
     let basic_content = shadcn::Breadcrumb::new()
         .items([
@@ -117,7 +49,7 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-basic");
-    let basic = section_card(cx, "Basic", basic_content);
+    let basic = basic_content;
 
     let custom_separator_content = shadcn::Breadcrumb::new()
         .separator(shadcn::BreadcrumbSeparator::Icon {
@@ -131,7 +63,7 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-separator");
-    let custom_separator = section_card(cx, "Custom Separator", custom_separator_content);
+    let custom_separator = custom_separator_content;
 
     let dropdown_content = {
         let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
@@ -241,7 +173,7 @@ pub(super) fn preview_breadcrumb(
         });
         crumb.test_id("ui-gallery-breadcrumb-dropdown")
     };
-    let dropdown = section_card(cx, "Dropdown", dropdown_content);
+    let dropdown = dropdown_content;
 
     let collapsed_content = shadcn::Breadcrumb::new()
         .items([
@@ -253,7 +185,7 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-collapsed");
-    let collapsed = section_card(cx, "Collapsed", collapsed_content);
+    let collapsed = collapsed_content;
 
     let link_component_content = shadcn::Breadcrumb::new()
         .items([
@@ -265,7 +197,7 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-link");
-    let link_component = section_card(cx, "Link Component", link_component_content);
+    let link_component = link_component_content;
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -364,91 +296,16 @@ pub(super) fn preview_breadcrumb(
         },
     )
     .test_id("ui-gallery-breadcrumb-rtl");
-    let rtl = section_card(cx, "RTL", rtl_content);
+    let rtl = rtl_content;
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Breadcrumb docs order for quick lookup and side-by-side behavior checks.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                basic,
-                custom_separator,
-                dropdown,
-                collapsed,
-                link_component,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-breadcrumb-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"Breadcrumb::new().items([
-    BreadcrumbItem::new("Home"),
-    BreadcrumbItem::new("Components"),
-    BreadcrumbItem::new("Breadcrumb"),
-])"#,
-                ),
-                code_block(
-                    cx,
-                    "Custom Separator + Collapsed",
-                    r#"Breadcrumb::new()
-    .separator(BreadcrumbSeparator::Icon {
-        icon: IconId::new_static("lucide.dot"),
-        size: Px(14.0),
-    })
-    .items([BreadcrumbItem::new("Home"), BreadcrumbItem::ellipsis(), ...])"#,
-                ),
-                code_block(
-                    cx,
-                    "Link + RTL",
-                    r#"BreadcrumbItem::new("Home (router link)").truncate(true)
-with_direction_provider(LayoutDirection::Rtl, |cx| Breadcrumb::new().items([...]).into_element(cx))"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
@@ -468,13 +325,58 @@ with_direction_provider(LayoutDirection::Rtl, |cx| Breadcrumb::new().items([...]
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-breadcrumb",
-        component_panel,
-        code_panel,
-        notes_panel,
+        Some(
+            "Preview follows shadcn Breadcrumb docs order for quick lookup and side-by-side behavior checks.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .title_test_id("ui-gallery-breadcrumb-section-title-demo")
+                .description("Basic breadcrumb recipe with ellipsis and current page.")
+                .code(
+                    "rust",
+                    r#"let breadcrumb = shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home"),
+    shadcn::BreadcrumbItem::ellipsis(),
+    shadcn::BreadcrumbItem::new("Components"),
+    shadcn::BreadcrumbItem::new("Breadcrumb"),
+]);"#,
+                ),
+            DocSection::new("Basic", basic)
+                .title_test_id("ui-gallery-breadcrumb-section-title-basic")
+                .description("A minimal breadcrumb list with three items."),
+            DocSection::new("Custom Separator", custom_separator)
+                .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
+                .description("Use a custom separator icon for parity with docs.")
+                .code(
+                    "rust",
+                    r#"shadcn::Breadcrumb::new()
+    .separator(shadcn::BreadcrumbSeparator::Icon {
+        icon: fret_icons::IconId::new_static("lucide.dot"),
+        size: Px(14.0),
+    })
+    .items([/* ... */]);"#,
+                ),
+            DocSection::new("Dropdown", dropdown)
+                .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
+                .description("Collapsed middle segment can expand via a dropdown menu."),
+            DocSection::new("Collapsed", collapsed)
+                .title_test_id("ui-gallery-breadcrumb-section-title-collapsed")
+                .description("Use `BreadcrumbItem::ellipsis` to keep paths readable in narrow layouts."),
+            DocSection::new("Link Component", link_component)
+                .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
+                .description("Example of a truncated router-link style item."),
+            DocSection::new("RTL", rtl)
+                .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
+                .description("Breadcrumb layout should follow right-to-left direction context."),
+            DocSection::new("Notes", notes)
+                .title_test_id("ui-gallery-breadcrumb-section-title-notes")
+                .description("Implementation notes and regression guidelines."),
+        ],
     )
+    .test_id("ui-gallery-breadcrumb-component");
+
+    vec![body]
 }
