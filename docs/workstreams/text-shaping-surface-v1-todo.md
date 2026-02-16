@@ -44,8 +44,17 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
 
 ## Open questions
 
-- [ ] Do we need a feature behavior conformance fixture beyond “keying correctness”?
-  - Current tests validate deterministic canonicalization and cache invalidation.
-  - A behavior-visible fixture should likely use bundled fonts (`fret_fonts`) to avoid platform
-    font drift.
-- [ ] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
+- [~] Do we need a feature behavior conformance fixture beyond “keying correctness”?
+  - Status: deferred until we add a stable, bundled-font-backed fixture that is guaranteed to
+    visibly change shaping under a feature toggle (e.g. `liga`).
+  - Rationale: current tests validate deterministic canonicalization + cache invalidation. Behavior
+    assertions are fragile if they depend on system fonts or on subset font bundles that may not
+    contain the necessary GSUB/ligature tables.
+  - Trigger to revisit:
+    - add a small test-only font fixture under `crates/fret-fonts/assets/` (or similar) with a
+      known ligature substitution, and gate on a glyph/cluster delta; or
+    - switch the relevant test suite to `bootstrap-full` (accepting the payload increase).
+- [~] Do we want to support a CSS-like `font-feature-settings` parser, or keep the struct-only API?
+  - Status: deferred.
+  - Recommendation: keep the struct-only API for v1. Introduce a parser only when there is a
+    product requirement for string-based configuration and we are ready to freeze an input grammar.
