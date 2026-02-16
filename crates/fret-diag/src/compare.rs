@@ -1861,6 +1861,7 @@ pub(super) fn scan_perf_threshold_failures(
     }
     if pointer_move_frames_present {
         if let Some(threshold_us) = threshold_pointer_move_dispatch
+            && threshold_us > 0
             && max_pointer_move_dispatch_time_us > threshold_us
         {
             out.push(serde_json::json!({
@@ -1875,6 +1876,7 @@ pub(super) fn scan_perf_threshold_failures(
             }));
         }
         if let Some(threshold_us) = threshold_pointer_move_hit_test
+            && threshold_us > 0
             && max_pointer_move_hit_test_time_us > threshold_us
         {
             out.push(serde_json::json!({
@@ -1889,6 +1891,7 @@ pub(super) fn scan_perf_threshold_failures(
             }));
         }
         if let Some(threshold) = threshold_pointer_move_global_changes
+            && threshold > 0
             && max_pointer_move_global_changes > threshold
         {
             out.push(serde_json::json!({
