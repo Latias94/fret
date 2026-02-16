@@ -1888,206 +1888,6 @@ fn metrics_for_uniform_lines(
     }
 }
 
-fn is_word_char_for_wrap(c: char) -> bool {
-    c.is_alphanumeric()
-        || matches!(c, '\u{0300}'..='\u{036F}')
-        || matches!(c, '\u{200C}' | '\u{200D}')
-        || matches!(
-            c,
-            '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
-        )
-}
-
-fn word_wrap_line_stats(
-    text: &str,
-    clusters: &[parley_shaper::ShapedCluster],
-    max_width_px: f32,
-) -> (usize, f32) {
-    let end = text.len();
-    if end == 0 || clusters.is_empty() {
-        return (1, 0.0);
-    }
-
-    let mut line_count: usize = 0;
-    let mut max_w_px: f32 = 0.0;
-
-    let mut line_start_byte: usize = 0;
-    let mut cluster_idx: usize = 0;
-
-    while line_start_byte < end && cluster_idx < clusters.len() {
-        let line_start_x = clusters[cluster_idx].x0;
-
-        let mut last_fit_cluster_idx: Option<usize> = None;
-        let mut last_fit_end_byte: usize = line_start_byte;
-
-        let mut last_candidate_cluster_idx: Option<usize> = None;
-        let mut last_candidate_byte: usize = line_start_byte;
-
-        let mut first_non_whitespace: Option<usize> = None;
-        let mut prev_ch: char = '\0';
-
-        for (i, c) in clusters.iter().enumerate().skip(cluster_idx) {
-            if c.text_range.start >= end {
-                break;
-            }
-            if c.text_range.start < line_start_byte {
-                continue;
-            }
-
-            let rel_x1 = c.x1 - line_start_x;
-            if rel_x1 > max_width_px + 0.5 {
-                break;
-            }
-
-            last_fit_cluster_idx = Some(i);
-            last_fit_end_byte = c.text_range.end.min(end);
-
-            let Some(ch) = text[c.text_range.start..].chars().next() else {
-                continue;
-            };
-
-            if ch != ' ' && first_non_whitespace.is_none() {
-                first_non_whitespace = Some(c.text_range.start);
-            }
-
-            if first_non_whitespace.is_some() {
-                if is_word_char_for_wrap(ch) {
-                    if prev_ch == ' ' && ch != ' ' {
-                        last_candidate_cluster_idx = Some(i);
-                        last_candidate_byte = c.text_range.start;
-                    }
-                } else if ch != ' ' {
-                    last_candidate_cluster_idx = Some(i);
-                    last_candidate_byte = c.text_range.start;
-                }
-            }
-
-            prev_ch = ch;
-        }
-
-        let (cut_byte, next_cluster_idx, line_w_px) = if last_fit_end_byte >= end {
-            let fit_idx = last_fit_cluster_idx.unwrap_or(cluster_idx);
-            let end_x = clusters[fit_idx].x1;
-            (end, clusters.len(), (end_x - line_start_x).max(0.0))
-        } else if let Some(candidate_idx) = last_candidate_cluster_idx
-            && last_candidate_byte > line_start_byte
-        {
-            let end_cluster_idx = candidate_idx.saturating_sub(1).max(cluster_idx);
-            let end_x = clusters[end_cluster_idx].x1;
-            (
-                last_candidate_byte,
-                candidate_idx,
-                (end_x - line_start_x).max(0.0),
-            )
-        } else if let Some(fit_idx) = last_fit_cluster_idx {
-            let end_x = clusters[fit_idx].x1;
-            (
-                last_fit_end_byte,
-                fit_idx.saturating_add(1),
-                (end_x - line_start_x).max(0.0),
-            )
-        } else {
-            let c = &clusters[cluster_idx];
-            let cut = c
-                .text_range
-                .end
-                .min(end)
-                .max(line_start_byte.saturating_add(1));
-            let end_x = c.x1;
-            (
-                cut,
-                cluster_idx.saturating_add(1),
-                (end_x - line_start_x).max(0.0),
-            )
-        };
-
-        max_w_px = max_w_px.max(line_w_px);
-        line_count = line_count.saturating_add(1);
-
-        if cut_byte <= line_start_byte {
-            break;
-        }
-        line_start_byte = cut_byte;
-        cluster_idx = next_cluster_idx;
-    }
-
-    (line_count.max(1), max_w_px)
-}
-
-fn grapheme_wrap_line_stats(
-    text: &str,
-    clusters: &[parley_shaper::ShapedCluster],
-    max_width_px: f32,
-) -> (usize, f32) {
-    let end = text.len();
-    if end == 0 || clusters.is_empty() {
-        return (1, 0.0);
-    }
-
-    let mut line_count: usize = 0;
-    let mut max_w_px: f32 = 0.0;
-
-    let mut line_start_byte: usize = 0;
-    let mut cluster_idx: usize = 0;
-
-    while line_start_byte < end && cluster_idx < clusters.len() {
-        let line_start_x = clusters[cluster_idx].x0;
-
-        let mut last_fit_cluster_idx: Option<usize> = None;
-        let mut last_fit_end_byte: usize = line_start_byte;
-
-        for (i, c) in clusters.iter().enumerate().skip(cluster_idx) {
-            if c.text_range.start >= end {
-                break;
-            }
-            if c.text_range.start < line_start_byte {
-                continue;
-            }
-
-            let rel_x1 = c.x1 - line_start_x;
-            if rel_x1 > max_width_px + 0.5 {
-                break;
-            }
-
-            last_fit_cluster_idx = Some(i);
-            last_fit_end_byte = c.text_range.end.min(end);
-        }
-
-        let (cut_byte, next_cluster_idx, line_w_px) = if let Some(fit_idx) = last_fit_cluster_idx {
-            let end_x = clusters[fit_idx].x1;
-            (
-                last_fit_end_byte,
-                fit_idx.saturating_add(1),
-                (end_x - line_start_x).max(0.0),
-            )
-        } else {
-            let c = &clusters[cluster_idx];
-            let cut = c
-                .text_range
-                .end
-                .min(end)
-                .max(line_start_byte.saturating_add(1));
-            let end_x = c.x1;
-            (
-                cut,
-                cluster_idx.saturating_add(1),
-                (end_x - line_start_x).max(0.0),
-            )
-        };
-
-        max_w_px = max_w_px.max(line_w_px);
-        line_count = line_count.saturating_add(1);
-
-        if cut_byte <= line_start_byte {
-            break;
-        }
-        line_start_byte = cut_byte;
-        cluster_idx = next_cluster_idx;
-    }
-
-    (line_count.max(1), max_w_px)
-}
-
 impl TextSystem {
     /// Returns a sorted list of available font family names.
     ///
@@ -3917,7 +3717,7 @@ impl TextSystem {
             let max_width_px = max_width.0 * scale;
 
             if allow_shaping_cache {
-                let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
                     self.measure_shaping_cache.get(&shaping_key)
                     && hit.text.as_ref() == text
                     && hit.spans.is_none()
@@ -3962,20 +3762,22 @@ impl TextSystem {
                     (line.width, line.baseline, line.line_height, clusters)
                 };
 
-                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                    (1, width_px.max(0.0))
+                if width_px <= max_width_px + 0.5 {
+                    metrics_for_uniform_lines(
+                        width_px.max(0.0),
+                        1,
+                        baseline_px,
+                        line_height_px,
+                        scale,
+                    )
                 } else {
-                    match constraints.wrap {
-                        TextWrap::Word => {
-                            word_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                        }
-                        TextWrap::Grapheme => {
-                            grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                        }
-                        TextWrap::None => unreachable!(),
-                    }
-                };
-                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    );
+                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                }
             } else {
                 let line = self
                     .parley_shaper
@@ -3983,22 +3785,24 @@ impl TextSystem {
                 let width_px = line.width;
                 let baseline_px = line.baseline;
                 let line_height_px = line.line_height;
-                let clusters = line.clusters;
+                let _clusters = line.clusters;
 
-                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                    (1, width_px.max(0.0))
+                if width_px <= max_width_px + 0.5 {
+                    metrics_for_uniform_lines(
+                        width_px.max(0.0),
+                        1,
+                        baseline_px,
+                        line_height_px,
+                        scale,
+                    )
                 } else {
-                    match constraints.wrap {
-                        TextWrap::Word => {
-                            word_wrap_line_stats(text, clusters.as_slice(), max_width_px)
-                        }
-                        TextWrap::Grapheme => {
-                            grapheme_wrap_line_stats(text, clusters.as_slice(), max_width_px)
-                        }
-                        TextWrap::None => unreachable!(),
-                    }
-                };
-                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    );
+                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                }
             }
         } else {
             // Prefer the same wrap policy as `prepare` so `measure` stays layout-consistent.
@@ -4136,7 +3940,7 @@ impl TextSystem {
             let text = rich.text.as_ref();
 
             if allow_shaping_cache {
-                let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
                     self.measure_shaping_cache.get(&shaping_key)
                     && hit.text.as_ref() == rich.text.as_ref()
                     && hit.spans.as_ref().is_some_and(|s| {
@@ -4187,20 +3991,26 @@ impl TextSystem {
                     (line.width, line.baseline, line.line_height, clusters)
                 };
 
-                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                    (1, width_px.max(0.0))
+                if width_px <= max_width_px + 0.5 {
+                    metrics_for_uniform_lines(
+                        width_px.max(0.0),
+                        1,
+                        baseline_px,
+                        line_height_px,
+                        scale,
+                    )
                 } else {
-                    match constraints.wrap {
-                        TextWrap::Word => {
-                            word_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                        }
-                        TextWrap::Grapheme => {
-                            grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                        }
-                        TextWrap::None => unreachable!(),
-                    }
-                };
-                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::Attributed {
+                            text,
+                            base: base_style,
+                            spans: rich.spans.as_ref(),
+                        },
+                        normalized_constraints,
+                    );
+                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                }
             } else {
                 let line = self.parley_shaper.shape_single_line_metrics(
                     TextInputRef::Attributed {
@@ -4213,22 +4023,28 @@ impl TextSystem {
                 let width_px = line.width;
                 let baseline_px = line.baseline;
                 let line_height_px = line.line_height;
-                let clusters = line.clusters;
+                let _clusters = line.clusters;
 
-                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                    (1, width_px.max(0.0))
+                if width_px <= max_width_px + 0.5 {
+                    metrics_for_uniform_lines(
+                        width_px.max(0.0),
+                        1,
+                        baseline_px,
+                        line_height_px,
+                        scale,
+                    )
                 } else {
-                    match constraints.wrap {
-                        TextWrap::Word => {
-                            word_wrap_line_stats(text, clusters.as_slice(), max_width_px)
-                        }
-                        TextWrap::Grapheme => {
-                            grapheme_wrap_line_stats(text, clusters.as_slice(), max_width_px)
-                        }
-                        TextWrap::None => unreachable!(),
-                    }
-                };
-                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::Attributed {
+                            text,
+                            base: base_style,
+                            spans: rich.spans.as_ref(),
+                        },
+                        normalized_constraints,
+                    );
+                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                }
             }
         } else {
             let text = rich.text.as_ref();
@@ -5207,24 +5023,6 @@ mod tests {
             x += advance;
         }
         out
-    }
-
-    #[test]
-    fn word_wrap_stats_do_not_wrap_when_full_line_fits() {
-        let text = "hello world";
-        let clusters = synthetic_clusters_for_text(text, 10.0);
-        let (lines, max_w) = super::word_wrap_line_stats(text, &clusters, 1000.0);
-        assert_eq!(lines, 1);
-        assert_eq!(max_w, 110.0);
-    }
-
-    #[test]
-    fn word_wrap_stats_wrap_at_space_boundary() {
-        let text = "hello world";
-        let clusters = synthetic_clusters_for_text(text, 10.0);
-        let (lines, max_w) = super::word_wrap_line_stats(text, &clusters, 60.0);
-        assert_eq!(lines, 2);
-        assert_eq!(max_w, 60.0);
     }
 
     #[test]

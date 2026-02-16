@@ -137,6 +137,11 @@ pub(crate) fn wrap_with_constraints_measure_only(
             wrap: TextWrap::Word,
             ..
         } => wrap_word_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Grapheme,
+            ..
+        } => wrap_grapheme_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
         _ => WrappedLayout {
             text_len,
             kept_end: text_len,
@@ -414,6 +419,26 @@ fn push_paragraph_measure_only(
             out_ranges.extend(ranges);
             out_lines.extend(lines);
         }
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::Grapheme,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) = wrap_grapheme_range_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                paragraph_range,
+                max_w,
+                scale,
+            );
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
         _ => {
             let line =
                 shape_slice_measure_only(shaper, text, base, spans, paragraph_range.clone(), scale);
@@ -572,6 +597,36 @@ fn wrap_word_measure_only(
     }
 }
 
+fn wrap_grapheme_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let (line_ranges, lines) = wrap_grapheme_range_measure_only(
+        shaper,
+        text,
+        base,
+        spans,
+        0..text_len,
+        max_width_px,
+        scale,
+    );
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
 fn wrap_grapheme_range(
     shaper: &mut ParleyShaper,
     text: &str,
@@ -622,6 +677,86 @@ fn wrap_grapheme_range(
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
                 kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
+            }
+        }
+
+        if cut_end == 0 {
+            break;
+        }
+
+        lines.push(kept);
+        line_ranges.push(offset..(offset + cut_end));
+        offset = offset.saturating_add(cut_end);
+    }
+
+    (line_ranges, lines)
+}
+
+fn wrap_grapheme_range_measure_only(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![Range { start, end: start }],
+            vec![shape_slice_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                start..start,
+                scale,
+            )],
+        );
+    }
+
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut offset = start;
+    while offset < end {
+        let slice = &text[offset..end];
+        let full = shape_slice_measure_only(shaper, text, base, spans, offset..end, scale);
+
+        if full.width <= max_width_px + 0.5 {
+            lines.push(full);
+            line_ranges.push(offset..end);
+            break;
+        }
+
+        let mut cut_end = wrap_grapheme_cut_end(slice, &full.clusters, max_width_px);
+        cut_end = clamp_to_grapheme_boundary_down(slice, cut_end);
+
+        if cut_end == 0 {
+            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = clamp_to_grapheme_boundary_up(slice, cut_end);
+        }
+        if cut_end == 0 {
+            cut_end = first_grapheme_end(slice);
+        }
+
+        let mut kept =
+            shape_slice_measure_only(shaper, text, base, spans, offset..(offset + cut_end), scale);
+        if kept.width > max_width_px + 0.5 && cut_end > 0 {
+            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
+            if cut2 > 0 && cut2 < cut_end {
+                cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
+                kept = shape_slice_measure_only(
+                    shaper,
+                    text,
+                    base,
+                    spans,
+                    offset..(offset + cut_end),
+                    scale,
+                );
             }
         }
 
@@ -1360,6 +1495,45 @@ mod tests {
                 base: &base,
                 spans: &spans,
             },
+            constraints,
+        );
+
+        assert_eq!(full.line_ranges, measure.line_ranges);
+        assert_eq!(full.lines.len(), measure.lines.len());
+        for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
+            assert!((a.width - b.width).abs() < 0.01);
+            assert!((a.line_height - b.line_height).abs() < 0.01);
+        }
+        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
+    }
+
+    #[test]
+    fn wrap_measure_only_matches_line_ranges_and_sizes_for_grapheme_wrap() {
+        let mut shaper_full = shaper_with_bundled_fonts();
+        let mut shaper_measure = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let constraints = TextConstraints {
+            max_width: Some(Px(40.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let full = wrap_with_constraints(
+            &mut shaper_full,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+        let measure = wrap_with_constraints_measure_only(
+            &mut shaper_measure,
+            TextInputRef::plain(text, &base),
             constraints,
         );
 
