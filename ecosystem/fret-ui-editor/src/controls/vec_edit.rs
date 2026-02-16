@@ -19,6 +19,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::controls::{DragValue, NumericFormatFn, NumericParseFn, NumericValidateFn};
+use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{
     EditorWidgetVisuals, editor_icon_button_bg, editor_icon_button_border,
 };
@@ -442,7 +443,8 @@ where
 
         let (density, x_color, y_color, auto_below) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
 
             let x_color = axis_color(
                 theme,
@@ -468,8 +470,7 @@ where
             let auto_below = self
                 .options
                 .auto_stack_below
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::VEC_AUTO_STACK_BELOW))
-                .unwrap_or(Px(280.0));
+                .unwrap_or(style.vec_auto_stack_below);
 
             (density, x_color, y_color, auto_below)
         };
@@ -633,7 +634,8 @@ where
 
         let (density, x_color, y_color, z_color, auto_below) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
 
             let x_color = axis_color(
                 theme,
@@ -669,8 +671,7 @@ where
             let auto_below = self
                 .options
                 .auto_stack_below
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::VEC_AUTO_STACK_BELOW))
-                .unwrap_or(Px(320.0));
+                .unwrap_or(style.vec_auto_stack_below);
 
             (density, x_color, y_color, z_color, auto_below)
         };
@@ -858,7 +859,8 @@ where
 
         let (density, x_color, y_color, z_color, w_color, auto_below) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
 
             let x_color = axis_color(
                 theme,
@@ -904,8 +906,7 @@ where
             let auto_below = self
                 .options
                 .auto_stack_below
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::VEC_AUTO_STACK_BELOW))
-                .unwrap_or(Px(380.0));
+                .unwrap_or(style.vec_auto_stack_below);
 
             (density, x_color, y_color, z_color, w_color, auto_below)
         };

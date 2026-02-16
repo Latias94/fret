@@ -8,6 +8,14 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
+use crate::controls::numeric_input::{
+    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
+    NumericValidateFn,
+};
+use crate::primitives::drag_value_core::DragValueScalar;
+use crate::primitives::style::EditorStyle;
+use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::{DragValueCore, DragValueCoreOptions};
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
@@ -17,17 +25,6 @@ use fret_ui::element::{
     PositionStyle, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::recipes::input::InputTokenKeys;
-use fret_ui_kit::{ChromeRefinement, Size};
-
-use crate::controls::numeric_input::{
-    NumericFormatFn, NumericInput, NumericInputOptions, NumericInputOutcome, NumericParseFn,
-    NumericValidateFn,
-};
-use crate::primitives::chrome::resolve_editor_frame_chrome;
-use crate::primitives::drag_value_core::DragValueScalar;
-use crate::primitives::visuals::{EditorFrameState, EditorWidgetVisuals};
-use crate::primitives::{DragValueCore, DragValueCoreOptions, EditorDensity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -154,26 +151,8 @@ where
 
         let (density, scrub_chrome) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
-            let resolved = resolve_editor_frame_chrome(
-                theme,
-                Size::Small,
-                &ChromeRefinement::default(),
-                InputTokenKeys {
-                    padding_x: Some("component.text_field.padding_x"),
-                    padding_y: Some("component.text_field.padding_y"),
-                    min_height: Some("component.text_field.min_height"),
-                    radius: Some("component.text_field.radius"),
-                    border_width: Some("component.text_field.border_width"),
-                    bg: Some("component.text_field.bg"),
-                    border: Some("component.text_field.border"),
-                    border_focus: Some("component.text_field.border_focus"),
-                    fg: Some("component.text_field.fg"),
-                    text_px: Some("component.text_field.text_px"),
-                    selection: Some("component.text_field.selection"),
-                },
-            );
-            (density, resolved)
+            let style = EditorStyle::resolve(theme);
+            (style.density, style.frame_chrome_small())
         };
 
         let model_for_change = self.model.clone();

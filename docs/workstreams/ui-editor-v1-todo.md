@@ -145,6 +145,7 @@ Goal: make the editor-proof harness readable and stable (no overlapped text, no 
     - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - [~] Define a shared `EditorChrome` recipe (optional): centralize token keys and defaults so controls don’t drift.
     - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+    - Evidence: `ecosystem/fret-ui-editor/src/primitives/style.rs`
   - [x] Ensure docking tabs remain legible under the demo theme (tab text, hover/active states, close/overflow icons).
     - Evidence anchor: `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - Implementation evidence: `ecosystem/fret-docking/src/dock/paint.rs`
@@ -169,6 +170,7 @@ adding new runtime contracts unless evidence demands it.
   - input-like frame chrome (bg/border/radius/padding) + state variants
   - icon sizing + spacing defaults
   - Evidence: `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+  - Evidence: `ecosystem/fret-ui-editor/src/primitives/style.rs`
 - [x] Add an editor-facing `Slider<T>` control:
   - horizontal first; clamping + step policy
   - value display + double-click typing mode (via `NumericInput`)

@@ -10,8 +10,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
+use crate::primitives::EditorTokenKeys;
+use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
-use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 
@@ -132,7 +133,8 @@ impl PropertyRow {
 
         let (density, gap, reset_fg, auto_below) = {
             let theme = Theme::global(&*cx.app);
-            let density = EditorDensity::resolve(theme);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
             let gap = self
                 .options
                 .gap
@@ -145,8 +147,7 @@ impl PropertyRow {
             let auto_below = self
                 .options
                 .auto_stack_below
-                .or_else(|| theme.metric_by_key(EditorTokenKeys::PROPERTY_AUTO_STACK_BELOW))
-                .unwrap_or(Px(520.0));
+                .unwrap_or(style.property_auto_stack_below);
 
             (density, gap, reset_fg, auto_below)
         };
