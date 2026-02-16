@@ -43,6 +43,7 @@ struct GfxState {
     surface_state: SurfaceState<'static>,
     renderer: Renderer,
     last_surface_error: Option<wgpu::SurfaceError>,
+    diag_keepalive_redraw: bool,
 }
 
 pub struct WinitRunner<D: WinitAppDriver> {

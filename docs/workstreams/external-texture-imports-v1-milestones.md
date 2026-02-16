@@ -91,10 +91,15 @@ Evidence:
       - `cargo run -p fretboard -- dev web --demo external_texture_imports_web_demo --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
       - Open the printed URL (it already includes `fret_devtools_ws` + `fret_devtools_token`).
       - If you opened the demo earlier, refresh using the printed URL so the app actually connects to DevTools WS.
+      - Note: the web runner keeps requesting redraw while DevTools WS is configured so scripts/bundles are
+        processed even when the UI would otherwise be idle. If you see `timeout waiting for script result`,
+        confirm you're on a freshly rebuilt page (hard refresh) and that the tab is visible (not backgrounded).
     - Terminal 3 (run the steady script + compare to baseline):
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token> --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
       - Troubleshooting:
         - `error: no DevTools sessions available (is the app connected?)` means the demo page is not connected to the WS server (missing query params, wrong token, or the page is not open).
+        - `error: timeout waiting for script result` usually means the page is not rendering / not polling WS messages (backgrounded tab, stale page without WS keepalive redraw, or you didn’t refresh after rebuilding).
+          Quick smoke: run `tools/diag-scripts/external-texture-imports-web-copy-smoke.json` via `diag perf` or `fret-diag-export` to confirm scripts/bundles are flowing before running the steady perf script.
         - If multiple sessions exist, pass `--devtools-session-id <id>` (or list sessions via `cargo run -p fret-diag-export -- --list-sessions`).
   - Baseline record:
     - Date: 2026-02-15
@@ -122,6 +127,8 @@ Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (perf snapshot plumbing)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` fields)
     - `crates/fret-diag/src/lib.rs` (`renderer.external_import_ingest_fallbacks` perf hint)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (web: enable renderer perf when DevTools WS is configured)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (web: record `RendererPerfFrameStore` samples + WS keepalive redraw)
 
 ## M5 — Zero/low-copy ceiling (v2; capability-gated)
 

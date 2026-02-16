@@ -77,6 +77,95 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             let msaa = self.config.path_msaa_samples;
             let font_config = self.config.text_font_families.clone();
             spawn_local(async move {
+                struct WebDiagFlags {
+                    devtools_ws_configured: bool,
+                    renderer_perf_enabled: bool,
+                }
+
+                fn diag_flags_from_location() -> WebDiagFlags {
+                    let Some(window) = web_sys::window() else {
+                        return WebDiagFlags {
+                            devtools_ws_configured: false,
+                            renderer_perf_enabled: false,
+                        };
+                    };
+
+                    let location = window.location();
+                    let search = location.search().unwrap_or_default();
+                    let hash = location.hash().unwrap_or_default();
+
+                    fn parse_query_params(query: &str) -> Option<web_sys::UrlSearchParams> {
+                        let query = query.trim();
+                        if query.is_empty() {
+                            return None;
+                        }
+                        let query = query.trim_start_matches('?');
+                        web_sys::UrlSearchParams::new_with_str(query).ok()
+                    }
+
+                    fn parse_hash_query_params(hash: &str) -> Option<web_sys::UrlSearchParams> {
+                        let hash = hash.trim();
+                        if hash.is_empty() {
+                            return None;
+                        }
+
+                        let hash = hash.trim_start_matches('#');
+                        let query = hash.split_once('?').map(|(_, q)| q).unwrap_or(hash);
+                        parse_query_params(query)
+                    }
+
+                    fn is_truthy_flag(v: Option<String>) -> bool {
+                        v.as_deref()
+                            .is_some_and(|v| matches!(v.trim(), "1" | "true" | "yes" | "on"))
+                    }
+
+                    fn has_devtools_params(params: &web_sys::UrlSearchParams) -> bool {
+                        params.get("fret_devtools_ws").is_some()
+                            && params.get("fret_devtools_token").is_some()
+                    }
+
+                    let mut devtools_ws_configured = false;
+                    let mut renderer_perf_enabled = false;
+
+                    if let Some(params) = parse_query_params(&search) {
+                        devtools_ws_configured |= has_devtools_params(&params);
+                        renderer_perf_enabled |=
+                            is_truthy_flag(params.get("fret_diag_renderer_perf"));
+                    }
+                    if let Some(params) = parse_hash_query_params(&hash) {
+                        devtools_ws_configured |= has_devtools_params(&params);
+                        renderer_perf_enabled |=
+                            is_truthy_flag(params.get("fret_diag_renderer_perf"));
+                    }
+
+                    if !devtools_ws_configured {
+                        let ws_global = js_sys::Reflect::get(
+                            window.as_ref(),
+                            &wasm_bindgen::JsValue::from_str("__FRET_DEVTOOLS_WS"),
+                        )
+                        .ok()
+                        .and_then(|v| v.as_string());
+                        let token_global = js_sys::Reflect::get(
+                            window.as_ref(),
+                            &wasm_bindgen::JsValue::from_str("__FRET_DEVTOOLS_TOKEN"),
+                        )
+                        .ok()
+                        .and_then(|v| v.as_string());
+                        devtools_ws_configured |= ws_global.is_some() && token_global.is_some();
+                    }
+
+                    if devtools_ws_configured {
+                        renderer_perf_enabled = true;
+                    }
+
+                    WebDiagFlags {
+                        devtools_ws_configured,
+                        renderer_perf_enabled,
+                    }
+                }
+
+                let diag_flags = diag_flags_from_location();
+
                 let (width, height) = {
                     let web_window = match web_sys::window() {
                         Some(w) => w,
@@ -112,12 +201,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.set_intermediate_budget_bytes(intermediate_budget);
                 renderer.set_path_msaa_samples(msaa);
                 let _ = renderer.set_text_font_families(&font_config);
+                if diag_flags.renderer_perf_enabled {
+                    renderer.set_perf_enabled(true);
+                }
 
                 *gfx_slot.borrow_mut() = Some(GfxState {
                     ctx,
                     surface_state,
                     renderer,
                     last_surface_error: None,
+                    diag_keepalive_redraw: diag_flags.devtools_ws_configured,
                 });
                 if let Some(proxy) = proxy {
                     proxy.wake_up();

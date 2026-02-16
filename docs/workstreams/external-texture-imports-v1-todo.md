@@ -31,6 +31,8 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (`perf_pending_render_target_updates_by_ingest`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (snapshot fields + breakdown)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` renderer fields)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (web: enable `Renderer::set_perf_enabled` when DevTools WS is configured)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (web: record `RendererPerfFrameStore` samples per frame)
 
 - [!] EXT-web-100 Web v1 zero-copy import: WebCodecs `VideoFrame` → WebGPU `ExternalTexture`
       (capability-gated) with deterministic fallback.
@@ -95,3 +97,11 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - Exports:
       - `target/fret-diag-web-copy/exports/1771140829044-bundle`
       - `target/fret-diag-web-copy/exports/1771140845261-bundle`
+
+- [x] EXT-web-diag-212 Web DevTools WS scripts are runnable while the app is otherwise idle:
+      keep the web runner rendering while DevTools WS is configured so inbound WS messages (scripts,
+      bundle dumps) are processed even when the UI would otherwise not request redraw.
+  - Evidence anchors:
+    - `crates/fret-launch/src/runner/web/mod.rs` (`GfxState.diag_keepalive_redraw`)
+    - `crates/fret-launch/src/runner/web/app_handler.rs` (detect DevTools WS query params + set keepalive)
+    - `crates/fret-launch/src/runner/web/render_loop.rs` (re-request redraw when keepalive enabled)
