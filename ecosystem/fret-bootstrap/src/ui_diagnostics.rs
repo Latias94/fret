@@ -1253,11 +1253,10 @@ impl UiDiagnosticsService {
         #[cfg(not(feature = "diagnostics-ws"))]
         let devtools_request_redraw = false;
 
-        if !self.active_scripts.contains_key(&window)
-            && let Some(script) = self.pending_script.clone()
+        if self.active_scripts.is_empty()
+            && let Some(script) = self.pending_script.take()
         {
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
-            self.pending_script = None;
             let mut active_script = ActiveScript {
                 steps: script.steps,
                 run_id,
@@ -1316,13 +1315,48 @@ impl UiDiagnosticsService {
         }
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
-            return UiScriptFrameOutput {
-                request_redraw: self.cfg.script_keepalive || devtools_request_redraw,
-                ..UiScriptFrameOutput::default()
-            };
+            let mut output = UiScriptFrameOutput::default();
+            output.request_redraw = self.cfg.script_keepalive || devtools_request_redraw;
+
+            if !self.active_scripts.is_empty() {
+                let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
+                for other in windows {
+                    output.effects.push(Effect::RequestAnimationFrame(other));
+                }
+            }
+
+            return output;
         };
 
         if active.next_step >= active.steps.len() {
+            let passed_step_index = active.steps.len().saturating_sub(1) as u32;
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_passed".to_string(),
+                    step_index: Some(passed_step_index),
+                    note: Some("script_already_complete".to_string()),
+                    bundle_dir: None,
+                },
+            );
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Passed,
+                step_index: Some(passed_step_index),
+                reason_code: None,
+                reason: None,
+                evidence: script_evidence_for_active(&active),
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+            });
             return UiScriptFrameOutput {
                 request_redraw: devtools_request_redraw,
                 ..UiScriptFrameOutput::default()
@@ -1561,6 +1595,46 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-set_cursor_in_window-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::SetCursorInWindowLogical {
+                window: target_window,
+                x_px,
+                y_px,
+            } => {
+                let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window_logical-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                let payload = format!(
+                    "schema_version=1\nkind=window_client_logical\nwindow={}\nx_px={}\ny_px={}\n",
+                    target_window.data().as_ffi(),
+                    x_px,
+                    y_px
+                );
+                let text_path = self.cfg.out_dir.join("cursor_screen_pos.override.txt");
+                let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
+                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
+                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window_logical-write-failed"
                     ));
                     stop_script = true;
                     failure_reason = Some("cursor_override_write_failed".to_string());
@@ -5758,6 +5832,11 @@ impl UiDiagnosticsService {
                     last_bundle_artifact: self.last_dump_artifact_stats.clone(),
                 });
             } else if active.next_step < active.steps.len() {
+                // Keep the app ticking while a script is active, even if the last injected events
+                // did not invalidate UI state. This ensures `wait_until`/timeouts progress and
+                // cross-window gates (tear-off, hover detection) do not stall.
+                output.request_redraw = true;
+                output.effects.push(Effect::RequestAnimationFrame(window));
                 self.active_scripts.insert(window, active);
             }
         }
@@ -7249,6 +7328,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
+        | UiActionStepV2::SetCursorInWindowLogical { .. }
         | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
         | UiActionStepV2::PointerUp { .. } => false,

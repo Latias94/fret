@@ -7,25 +7,48 @@
     "target_hints": [
       "This script exercises a cross-window tab drag: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
       "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
-      "Note: cursor overrides are expressed in window-client physical pixels."
+      "Note: cursor overrides are expressed in window-client logical pixels."
     ]
   },
   "steps": [
-    { "type": "press_key", "key": "escape" },
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
-    { "type": "set_window_outer_position", "x_px": 120.0, "y_px": 120.0 },
-    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
     { "type": "wait_frames", "n": 2 },
 
     {
       "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "min_w_px": 700.0,
+        "min_h_px": 500.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "stable_frames": 12,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
       "timeout_frames": 240
     },
 
     {
       "type": "drag_pointer",
+      "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
       "delta_x": 2400.0,
       "delta_y": 0.0,
@@ -55,7 +78,7 @@
     { "type": "wait_frames", "n": 2 },
 
     { "type": "raise_window" },
-    { "type": "set_cursor_in_window", "x_px": 640.0, "y_px": 260.0 },
+    { "type": "set_cursor_in_window_logical", "x_px": 640.0, "y_px": 260.0 },
     { "type": "wait_frames", "n": 2 },
 
     {
@@ -76,7 +99,7 @@
     { "type": "wait_frames", "n": 2 },
 
     { "type": "raise_window", "window": { "kind": "last_seen_other" } },
-    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
 
     {

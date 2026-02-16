@@ -13225,10 +13225,17 @@ fn run_script_over_transport(
 
             // Transport-agnostic streaming hook: persist incremental script progress so external
             // tooling can observe long runs without waiting for completion.
-            let _ = write_json_value(
-                script_result_path,
-                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
-            );
+            //
+            // Note: in filesystem transport mode the app owns `script.result.json` and advances
+            // `script.result.touch`. Writing here can clobber an in-flight app update and cause the
+            // tooling poller to miss the terminal stage.
+            if connected.devtools.client().kind() != crate::transport::DiagTransportKind::FileSystem
+            {
+                let _ = write_json_value(
+                    script_result_path,
+                    &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
+                );
+            }
             write_run_id_script_result(out_dir, parsed.run_id, &parsed);
 
             if matches!(
@@ -13298,37 +13305,62 @@ fn run_script_over_transport(
             }
             None
         };
-        let dumped = match wait_for_devtools_bundle_dumped(
-            &connected.devtools,
-            &connected.selected_session_id,
-            expected_request_id,
-            timeout_ms,
-            poll_ms,
-        ) {
-            Ok(v) => v,
-            Err(err) => {
-                let reason_code = if err.contains("timed out waiting") {
-                    "timeout.tooling.bundle_dump"
-                } else {
-                    "tooling.bundle_dump.failed"
-                };
-                push_tooling_event_log_entry(
-                    &mut result,
-                    "tooling_bundle_dump_failed",
-                    Some(err.clone()),
-                );
-                if matches!(result.stage, UiScriptStageV1::Passed) {
-                    result.stage = UiScriptStageV1::Failed;
-                    result.reason_code = Some(reason_code.to_string());
-                    result.reason = Some(err.clone());
+        let dumped = (|| {
+            // Filesystem transport can miss the first `trigger.touch` edge if the app has not yet
+            // established its baseline stamp (similar to the `script.touch` baseline race).
+            //
+            // Mitigate by doing a short initial wait and re-touching once before consuming the
+            // full timeout budget.
+            if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
+                && expected_request_id.is_none()
+            {
+                let short_ms = timeout_ms.min(2_000);
+                match wait_for_devtools_bundle_dumped(
+                    &connected.devtools,
+                    &connected.selected_session_id,
+                    None,
+                    short_ms,
+                    poll_ms,
+                ) {
+                    Ok(v) => return Ok(v),
+                    Err(err) if err.contains("timed out waiting") => {
+                        // Re-touch and fall through to the full wait below.
+                        connected.devtools.bundle_dump(None, bundle_label);
+                    }
+                    Err(err) => return Err(err),
                 }
-                let _ = write_json_value(
-                    script_result_path,
-                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                );
-                return Err(err);
             }
-        };
+
+            wait_for_devtools_bundle_dumped(
+                &connected.devtools,
+                &connected.selected_session_id,
+                expected_request_id,
+                timeout_ms,
+                poll_ms,
+            )
+        })()
+        .map_err(|err| {
+            let reason_code = if err.contains("timed out waiting") {
+                "timeout.tooling.bundle_dump"
+            } else {
+                "tooling.bundle_dump.failed"
+            };
+            push_tooling_event_log_entry(
+                &mut result,
+                "tooling_bundle_dump_failed",
+                Some(err.clone()),
+            );
+            if matches!(result.stage, UiScriptStageV1::Passed) {
+                result.stage = UiScriptStageV1::Failed;
+                result.reason_code = Some(reason_code.to_string());
+                result.reason = Some(err.clone());
+            }
+            let _ = write_json_value(
+                script_result_path,
+                &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+            );
+            err
+        })?;
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
             Ok(v) => v,

@@ -671,6 +671,19 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override using window-local client coordinates.
+    ///
+    /// This is identical to `set_cursor_in_window`, except the coordinates are in window-client
+    /// **logical pixels** (pre-DPI scale). The runner converts to physical pixels using the
+    /// current window scale factor.
+    ///
+    /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    SetCursorInWindowLogical {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
     RaiseWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
