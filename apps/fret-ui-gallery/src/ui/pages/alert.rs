@@ -20,7 +20,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id(test_id)
     };
 
-    let demo_content = stack::vstack(
+    let demo = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -49,9 +49,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     )
     .test_id("ui-gallery-alert-demo");
-    let demo = demo_content;
 
-    let basic_content = build_alert(
+    let basic = build_alert(
         cx,
         "ui-gallery-alert-basic",
         shadcn::AlertVariant::Default,
@@ -59,9 +58,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         "Account updated successfully",
         "Your profile information has been saved and applied immediately.",
     );
-    let basic = basic_content;
 
-    let destructive_content = build_alert(
+    let destructive = build_alert(
         cx,
         "ui-gallery-alert-destructive",
         shadcn::AlertVariant::Destructive,
@@ -69,9 +67,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         "Payment failed",
         "Please verify card details, billing address, and available funds.",
     );
-    let destructive = destructive_content;
 
-    let action_content = {
+    let action = {
         let action = stack::hstack(
             cx,
             stack::HStackProps::default()
@@ -99,9 +96,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-alert-action")
     };
-    let action = action_content;
 
-    let custom_colors_content = shadcn::Alert::new([
+    let custom_colors = shadcn::Alert::new([
         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
         shadcn::AlertTitle::new("Your subscription expires in 3 days").into_element(cx),
         shadcn::AlertDescription::new(
@@ -127,7 +123,6 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-alert-colors");
-    let custom_colors = custom_colors_content;
 
     let rtl = doc_layout::rtl(cx, |cx| {
         stack::vstack(

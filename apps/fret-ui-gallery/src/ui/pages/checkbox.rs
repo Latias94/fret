@@ -174,7 +174,7 @@ pub(super) fn preview_checkbox(
         .get_model_copied(&checked_optional, Invalidation::Layout)
         .unwrap_or(None);
 
-    let demo_content = stack::hstack(
+    let demo = stack::hstack(
         cx,
         stack::HStackProps::default()
             .layout(LayoutRefinement::default().w_full())
@@ -203,9 +203,8 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-demo");
-    let demo = demo_content;
 
-    let checked_state_content = stack::vstack(
+    let checked_state = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -272,9 +271,8 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-checked-state");
-    let checked_state = checked_state_content;
 
-    let invalid_content = shadcn::Field::new([
+    let invalid_state = shadcn::Field::new([
         shadcn::FieldContent::new([
             shadcn::FieldLabel::new("Accept terms")
                 .for_control("ui-gallery-checkbox-invalid")
@@ -300,9 +298,8 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-invalid-field");
-    let invalid_state = invalid_content;
 
-    let basic_content = shadcn::Field::new([
+    let basic = shadcn::Field::new([
         shadcn::Checkbox::new(model.clone())
             .control_id("ui-gallery-checkbox-basic")
             .a11y_label("Basic checkbox")
@@ -316,9 +313,8 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-basic-field");
-    let basic = basic_content;
 
-    let description_content = shadcn::Field::new([
+    let description_section = shadcn::Field::new([
         shadcn::FieldContent::new([
             shadcn::FieldLabel::new("Enable notifications")
                 .for_control("ui-gallery-checkbox-description")
@@ -339,9 +335,8 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-description-field");
-    let description_section = description_content;
 
-    let disabled_content = shadcn::Field::new([
+    let disabled_section = shadcn::Field::new([
         shadcn::Checkbox::new(disabled.clone())
             .control_id("ui-gallery-checkbox-disabled")
             .disabled(true)
@@ -361,7 +356,6 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-disabled-field");
-    let disabled_section = disabled_content;
 
     let group_item = |cx: &mut ElementContext<'_, App>,
                       label: &'static str,
@@ -386,7 +380,7 @@ pub(super) fn preview_checkbox(
         .into_element(cx)
     };
 
-    let group_content = stack::vstack(
+    let group = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -419,7 +413,6 @@ pub(super) fn preview_checkbox(
         },
     )
     .test_id("ui-gallery-checkbox-group");
-    let group = group_content;
 
     let table_row = |cx: &mut ElementContext<'_, App>,
                      id: &'static str,
@@ -444,7 +437,7 @@ pub(super) fn preview_checkbox(
         .into_element(cx)
     };
 
-    let table_content = shadcn::Table::new(vec![
+    let table = shadcn::Table::new(vec![
         shadcn::TableHeader::new(vec![
             shadcn::TableRow::new(
                 3,
@@ -492,7 +485,6 @@ pub(super) fn preview_checkbox(
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-table");
-    let table = table_content;
 
     let rtl_section = doc_layout::rtl(cx, |cx| {
         shadcn::Field::new([

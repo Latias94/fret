@@ -271,19 +271,18 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         .test_id(test_id_prefix)
     };
 
-    let demo_content = details_collapsible(
+    let demo = details_collapsible(
         cx,
         "ui-gallery-collapsible-demo",
         None,
         "Order #4189",
         "Shipped",
     );
-    let demo = demo_content;
 
     let controlled_now = cx
         .get_model_copied(&controlled_open, Invalidation::Layout)
         .unwrap_or(false);
-    let controlled_content = stack::vstack(
+    let controlled_state = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -325,9 +324,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         },
     )
     .test_id("ui-gallery-collapsible-controlled");
-    let controlled_state = controlled_content;
 
-    let basic_content = shadcn::Collapsible::uncontrolled(false)
+    let basic = shadcn::Collapsible::uncontrolled(false)
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
@@ -357,7 +355,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             },
         )
         .test_id("ui-gallery-collapsible-basic");
-    let basic = basic_content;
 
     let input_field = |cx: &mut ElementContext<'_, App>,
                        test_id: &'static str,
@@ -491,7 +488,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
     };
 
-    let file_tree_content = {
+    let file_tree = {
         let ui_button = file_leaf(cx, "button.rs");
         let ui_dialog = file_leaf(cx, "dialog.rs");
         let ui_folder = folder(
@@ -532,7 +529,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
         .test_id("ui-gallery-collapsible-file-tree")
     };
-    let file_tree = file_tree_content;
 
     let rtl = doc_layout::rtl(cx, |cx| {
         details_collapsible(

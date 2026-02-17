@@ -252,7 +252,7 @@ pub(super) fn preview_dropdown_menu(
         },
     );
 
-    let basic_content = shadcn::DropdownMenu::new(basic_open.clone()).into_element(
+    let basic = shadcn::DropdownMenu::new(basic_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -277,9 +277,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let basic = basic_content;
 
-    let submenu_content = shadcn::DropdownMenu::new(submenu_open.clone()).into_element(
+    let submenu = shadcn::DropdownMenu::new(submenu_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -309,9 +308,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let submenu = submenu_content;
 
-    let shortcuts_content = shadcn::DropdownMenu::new(shortcuts_open.clone()).into_element(
+    let shortcuts = shadcn::DropdownMenu::new(shortcuts_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -336,9 +334,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let shortcuts = shortcuts_content;
 
-    let icons_content = shadcn::DropdownMenu::new(icons_open.clone()).into_element(
+    let icons = shadcn::DropdownMenu::new(icons_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -363,9 +360,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let icons = icons_content;
 
-    let checkboxes_content = shadcn::DropdownMenu::new(checkboxes_open.clone()).into_element(
+    let checkboxes = shadcn::DropdownMenu::new(checkboxes_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -388,41 +384,35 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let checkboxes = checkboxes_content;
 
-    let checkboxes_icons_content = shadcn::DropdownMenu::new(checkboxes_icons_open.clone())
-        .into_element(
-            cx,
-            |cx| {
-                button_trigger(
-                    cx,
-                    checkboxes_icons_open.clone(),
-                    "Checkboxes Icons",
-                    "ui-gallery-dropdown-menu-checkboxes-icons-trigger",
-                )
-            },
-            |cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::CheckboxItem(
-                        shadcn::DropdownMenuCheckboxItem::new(
-                            show_status_bar.clone(),
-                            "Status Bar",
-                        )
+    let checkboxes_icons = shadcn::DropdownMenu::new(checkboxes_icons_open.clone()).into_element(
+        cx,
+        |cx| {
+            button_trigger(
+                cx,
+                checkboxes_icons_open.clone(),
+                "Checkboxes Icons",
+                "ui-gallery-dropdown-menu-checkboxes-icons-trigger",
+            )
+        },
+        |cx| {
+            vec![
+                shadcn::DropdownMenuEntry::CheckboxItem(
+                    shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
                         .leading(icon(cx, "lucide.panel-bottom")),
-                    ),
-                    shadcn::DropdownMenuEntry::CheckboxItem(
-                        shadcn::DropdownMenuCheckboxItem::new(
-                            show_activity_bar.clone(),
-                            "Activity Bar",
-                        )
-                        .leading(icon(cx, "lucide.panel-left")),
-                    ),
-                ]
-            },
-        );
-    let checkboxes_icons = checkboxes_icons_content;
+                ),
+                shadcn::DropdownMenuEntry::CheckboxItem(
+                    shadcn::DropdownMenuCheckboxItem::new(
+                        show_activity_bar.clone(),
+                        "Activity Bar",
+                    )
+                    .leading(icon(cx, "lucide.panel-left")),
+                ),
+            ]
+        },
+    );
 
-    let radio_group_content = shadcn::DropdownMenu::new(radio_open.clone()).into_element(
+    let radio_group = shadcn::DropdownMenu::new(radio_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -441,9 +431,8 @@ pub(super) fn preview_dropdown_menu(
             )]
         },
     );
-    let radio_group = radio_group_content;
 
-    let radio_icons_content = shadcn::DropdownMenu::new(radio_icons_open.clone()).into_element(
+    let radio_icons = shadcn::DropdownMenu::new(radio_icons_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -471,9 +460,8 @@ pub(super) fn preview_dropdown_menu(
             )]
         },
     );
-    let radio_icons = radio_icons_content;
 
-    let destructive_content = shadcn::DropdownMenu::new(destructive_open.clone()).into_element(
+    let destructive = shadcn::DropdownMenu::new(destructive_open.clone()).into_element(
         cx,
         |cx| {
             button_trigger(
@@ -496,9 +484,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let destructive = destructive_content;
 
-    let avatar_content = shadcn::DropdownMenu::new(avatar_open.clone()).into_element(
+    let avatar = shadcn::DropdownMenu::new(avatar_open.clone()).into_element(
         cx,
         |cx| {
             shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
@@ -519,9 +506,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let avatar = avatar_content;
 
-    let complex_content = shadcn::DropdownMenu::new(complex_open.clone())
+    let complex = shadcn::DropdownMenu::new(complex_open.clone())
         .arrow(true)
         .into_element(
             cx,
@@ -566,7 +552,6 @@ pub(super) fn preview_dropdown_menu(
                 ]
             },
         );
-    let complex = complex_content;
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::DropdownMenu::new(rtl_open.clone()).into_element(

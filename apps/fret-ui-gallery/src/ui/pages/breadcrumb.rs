@@ -30,7 +30,7 @@ pub(super) fn preview_breadcrumb(
 
     let trunc_layout = LayoutRefinement::default().max_w(Px(112.0));
 
-    let demo_content = shadcn::Breadcrumb::new()
+    let demo = shadcn::Breadcrumb::new()
         .items([
             shadcn::BreadcrumbItem::new("Home"),
             shadcn::BreadcrumbItem::ellipsis(),
@@ -39,9 +39,8 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-demo");
-    let demo = demo_content;
 
-    let basic_content = shadcn::Breadcrumb::new()
+    let basic = shadcn::Breadcrumb::new()
         .items([
             shadcn::BreadcrumbItem::new("Home"),
             shadcn::BreadcrumbItem::new("Components"),
@@ -49,9 +48,8 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-basic");
-    let basic = basic_content;
 
-    let custom_separator_content = shadcn::Breadcrumb::new()
+    let custom_separator = shadcn::Breadcrumb::new()
         .separator(shadcn::BreadcrumbSeparator::Icon {
             icon: fret_icons::IconId::new_static("lucide.dot"),
             size: Px(14.0),
@@ -63,9 +61,8 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-separator");
-    let custom_separator = custom_separator_content;
 
-    let dropdown_content = {
+    let dropdown = {
         let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
             let list =
                 shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
@@ -173,9 +170,8 @@ pub(super) fn preview_breadcrumb(
         });
         crumb.test_id("ui-gallery-breadcrumb-dropdown")
     };
-    let dropdown = dropdown_content;
 
-    let collapsed_content = shadcn::Breadcrumb::new()
+    let collapsed = shadcn::Breadcrumb::new()
         .items([
             shadcn::BreadcrumbItem::new("Home"),
             shadcn::BreadcrumbItem::ellipsis(),
@@ -185,9 +181,8 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-collapsed");
-    let collapsed = collapsed_content;
 
-    let link_component_content = shadcn::Breadcrumb::new()
+    let link_component = shadcn::Breadcrumb::new()
         .items([
             shadcn::BreadcrumbItem::new("Home (router link)")
                 .truncate(true)
@@ -197,7 +192,6 @@ pub(super) fn preview_breadcrumb(
         ])
         .into_element(cx)
         .test_id("ui-gallery-breadcrumb-link");
-    let link_component = link_component_content;
 
     let rtl = doc_layout::rtl(cx, |cx| {
         let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {

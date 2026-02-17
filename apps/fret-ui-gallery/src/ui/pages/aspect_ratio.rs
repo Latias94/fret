@@ -40,7 +40,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             .test_id(test_id)
     };
 
-    let demo_content = ratio_example(
+    let demo = ratio_example(
         cx,
         16.0 / 9.0,
         Px(384.0),
@@ -48,9 +48,8 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Landscape media",
         "ui-gallery-aspect-ratio-demo",
     );
-    let demo = demo_content;
 
-    let square_content = ratio_example(
+    let square = ratio_example(
         cx,
         1.0,
         Px(192.0),
@@ -58,9 +57,8 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Square media",
         "ui-gallery-aspect-ratio-square",
     );
-    let square = square_content;
 
-    let portrait_content = ratio_example(
+    let portrait = ratio_example(
         cx,
         9.0 / 16.0,
         Px(160.0),
@@ -68,7 +66,6 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Portrait media",
         "ui-gallery-aspect-ratio-portrait",
     );
-    let portrait = portrait_content;
 
     let rtl = doc_layout::rtl(cx, |cx| {
         ratio_example(
