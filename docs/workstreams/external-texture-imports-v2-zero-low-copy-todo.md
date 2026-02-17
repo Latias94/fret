@@ -75,6 +75,22 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
       - Correctness script (requires `FRET_DIAG_SCREENSHOTS=1` + `--check-pixels-changed external-video-imports-mf-surface`):
         - `tools/diag-scripts/external-video-imports-mf-cpu-upload-correctness.json`
+    - Tooling note (native gates):
+      - Native sessions may omit embedding `bundle.json` into WS messages. `fret-diag-export`
+        supports this by reading the exported bundle from disk using `out_dir` + `dir`.
+        - Evidence: `apps/fret-diag-export/src/main.rs` (`wait_for_bundle_dumped` filesystem fallback)
+  - Local verification (Windows, 2026-02-17):
+    - Start a devtools WS hub (token can be fixed for repeatable scripts):
+      - `FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-devtools-ws`
+    - Run the demo (DX12 optional; any native backend works for CPU upload):
+      - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> FRET_MF_VIDEO_PATH=<dir_or_file> cargo run -p fret-demo --features devtools-ws --bin external_video_imports_mf_demo`
+      - `FRET_MF_VIDEO_PATH` may point to a directory; the demo picks the first supported video file (sorted by filename).
+    - List sessions and run the correctness script:
+      - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --list-sessions --token <token>`
+      - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --script tools/diag-scripts/external-video-imports-mf-cpu-upload-correctness.json --token <token> --session-id <id> --out-dir target/fret-diag-mf/exports`
+    - Expected artifacts:
+      - Bundles: `target/fret-diag-mf/exports/<ts>-bundle/bundle.json`
+      - Screenshots (if `FRET_DIAG_DIR` is set): `<diag_dir>/screenshots/<ts>-script-step-*/window-*.png`
 
 - [x] EXTV2-native-103 M2B: prove a capability-gated **shared allocation** write path on native:
       a synthetic producer writes into a renderer-owned `wgpu::Texture` via the backend’s native queue,
@@ -101,16 +117,21 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Notes:
     - This is intentionally capability-gated and experimental; it should not be considered portable until
       the constraints are understood across driver/backends.
-    - Known failure mode (observed on some MP4s): the MF SourceReader may return a CPU-backed
-      `IMFMediaBuffer` even when a DXGI device manager is configured and RGB32 is requested, so the
-      DX12 path cannot obtain an `IMFDXGIBuffer` and deterministically falls back to `CpuUpload`.
-      Likely next step: request a DXGI-friendly subtype (e.g. NV12) and perform a GPU conversion
-      into the shared allocation.
+    - Known failure modes:
+      - The MF SourceReader may still return a CPU-backed `IMFMediaBuffer` even when a DXGI device
+        manager is configured, so the DX12 path cannot obtain an `IMFDXGIBuffer` and deterministically
+        falls back to `CpuUpload`.
+      - Some codecs / drivers deliver DXGI-backed frames as NV12 surfaces. The demo handles this by
+        converting NV12 -> BGRA on GPU (D3D11 video processor) into a temporary texture before copying
+        into the DX12 shared allocation.
   - Evidence anchors:
     - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`ExternalVideoImportsMode::MfVideoDx12GpuCopy`)
     - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard::export_raw`)
     - Correctness script (requires `FRET_WGPU_BACKEND=dx12`, `FRET_EXTV2_MF_DX12_GPU_COPY=1`, and a playable `FRET_MF_VIDEO_PATH`):
       - `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
+  - Local verification (Windows DX12, 2026-02-17):
+    - `FRET_WGPU_BACKEND=dx12 FRET_EXTV2_MF_DX12_GPU_COPY=1 FRET_MF_VIDEO_PATH=<dir_or_file> ... external_video_imports_mf_demo`
+    - Run: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json` via `fret-diag-export` and confirm screenshots show decoded video frames.
 
 - [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
