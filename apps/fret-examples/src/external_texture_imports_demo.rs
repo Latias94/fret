@@ -748,15 +748,13 @@ fn record_engine_frame(
         .expect("texture must exist after allocation");
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let mut metadata = RenderTargetMetadata::default();
+    let metadata = RenderTargetMetadata::default();
     let effective_strategy = match st.mode {
         ExternalTextureImportsMode::CheckerGpu => RenderTargetIngestStrategy::Owned,
         ExternalTextureImportsMode::DecodedPngCpuCopy => RenderTargetIngestStrategy::CpuUpload,
         #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
         ExternalTextureImportsMode::Dx12ClearSharedAllocation => RenderTargetIngestStrategy::Owned,
     };
-    metadata.requested_ingest_strategy = effective_strategy;
-    metadata.ingest_strategy = effective_strategy;
 
     if st.use_native_adapter {
         let renderer_caps = app
@@ -815,8 +813,14 @@ fn record_engine_frame(
             }
         }
     } else {
-        st.target
-            .push_update_with_metadata(&mut update, view.clone(), st.target_px_size, metadata);
+        st.target.push_update_with_ingest_strategies(
+            &mut update,
+            view.clone(),
+            st.target_px_size,
+            metadata,
+            RenderTargetIngestStrategy::ExternalZeroCopy,
+            effective_strategy,
+        );
     }
 
     match st.mode {
