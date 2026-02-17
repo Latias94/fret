@@ -1,0 +1,89 @@
+Status: Draft (workstream tracker)
+
+This workstream defines a bounded, portable **drop shadow** surface for general UI content (not
+just text). The goal is to support the common “elevation shadow” vocabulary in a way that:
+
+- is deterministic and capability-gated,
+- remains viable on wasm/WebGPU and mobile GPUs,
+- and does not require an unbounded custom shader contract.
+
+Text already has a cheap `TextShadowV1` (single layer, no blur). This workstream targets the
+general, blur-based shadow that many UI designs expect for cards, popovers, and overlays.
+
+## Why this exists
+
+Without a first-class shadow surface, authors often approximate shadows by:
+
+- emitting many quads (expensive op count, difficult to standardize),
+- or building bespoke offscreen pipelines at call sites (drift-prone, hard to gate).
+
+A bounded shadow contract lets the renderer:
+
+- centralize intermediate reuse and downsample policy,
+- keep batching and budgeting honest,
+- and provide stable conformance + perf gates.
+
+## Non-goals (v1)
+
+- No “CSS filter: drop-shadow()” parity surface with arbitrary blur/spread semantics.
+- No inner shadows.
+- No multi-layer elevation stacks in core (recipes remain ecosystem policy).
+
+## Proposed contract surface (v1)
+
+Add a new effect step variant to `fret-core::scene::EffectStep`:
+
+- `EffectStep::DropShadowV1 { offset, blur_radius_px, color }` (name is a placeholder until ADR lock)
+
+Contract properties:
+
+- **single layer**
+- **bounded blur radius** (clamped)
+- **solid color**
+- `offset` is in logical pixels (pre-scale-factor)
+
+This step is intended for `EffectMode::FilterContent` (content is rendered to an intermediate).
+Under `EffectMode::Backdrop`, renderers should deterministically degrade (ADR must lock behavior).
+
+## Semantics (v1)
+
+For an effect layer with children:
+
+1. Render children into an offscreen intermediate (as `FilterContent` already requires).
+2. Compute the shadow image from the children’s coverage:
+   - blur coverage by `blur_radius_px` (downsample permitted),
+   - tint by `color`,
+   - translate by `offset`.
+3. Composite shadow **behind** the original children content within the effect bounds.
+4. Continue any subsequent effect steps (if the chain includes additional steps).
+
+Deterministic degradation rules:
+
+- If budgets cannot satisfy the blur:
+  - reduce quality/downsample first,
+  - then deterministically skip the shadow step (no shadow).
+
+## Cost model notes
+
+- Blur implies extra passes and bandwidth (offscreen + filter).
+- Shadow is most stable when:
+  - bounds are tight and scissored,
+  - intermediate reuse is effective,
+  - and downsample is budget-driven and deterministic.
+
+## Gates (required)
+
+- `python3 tools/check_layering.py`
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+- GPU readback conformance proving:
+  - shadow exists behind content,
+  - offset is applied,
+  - color is applied,
+  - degradation is deterministic when disabled/budgeted.
+- Perf gate with a checked-in baseline for a shadow-heavy scene (cards/popovers).
+
+## Tracking
+
+- TODOs: `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
+- Milestones: `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+

@@ -7,6 +7,12 @@ Tracking files:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
+Related semantic workstreams (drafts; 3-doc format):
+
+- `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
+- `docs/workstreams/renderer-drop-shadow-effect-v1.md`
+- `docs/workstreams/renderer-clip-mask-closure-v1.md`
+
 Current status (as of 2026-02-16):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
@@ -67,6 +73,7 @@ This workstream exists to make the renderer implementation **fearlessly evolvabl
 - New or clarified scene semantics where parity and portability demand it:
   - isolated opacity / `saveLayer(alpha)` (group alpha),
   - more general clip/mask sources (clip path, image mask) with bounded cost.
+  - bounded backdrop warp/refraction for true liquid-glass distortion (displacement + optional chromatic aberration).
 - “Paint/Material” evolution work that reduces long-term churn:
   - keep `Paint` and `MaterialId` as the controlled extensibility seam (Tier B),
   - ensure capability-gated fallbacks remain deterministic on wasm/mobile.
