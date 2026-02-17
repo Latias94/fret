@@ -114,19 +114,15 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::KbdGroup::new([
-                shadcn::Kbd::new("Ctrl").into_element(cx),
-                shadcn::Kbd::new("Shift").into_element(cx),
-                shadcn::Kbd::new("B").into_element(cx),
-            ])
-            .into_element(cx)
-        })
-        .test_id("ui-gallery-kbd-rtl");
-
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::KbdGroup::new([
+            shadcn::Kbd::new("Ctrl").into_element(cx),
+            shadcn::Kbd::new("Shift").into_element(cx),
+            shadcn::Kbd::new("B").into_element(cx),
+        ])
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-kbd-rtl");
 
     let notes = doc_layout::notes(
         cx,

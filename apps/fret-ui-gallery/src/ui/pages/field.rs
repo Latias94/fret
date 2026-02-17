@@ -491,37 +491,34 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-field-group");
         content
     };
-    let rtl = {
-        let content = doc_layout::rtl(cx, |cx| {
-            shadcn::FieldSet::new([
-                shadcn::FieldLegend::new("طريقة الدفع").into_element(cx),
-                shadcn::FieldDescription::new("جميع المعاملات آمنة ومشفرة").into_element(cx),
-                shadcn::FieldGroup::new([
-                    shadcn::Field::new([
-                        shadcn::FieldLabel::new("الاسم على البطاقة").into_element(cx),
-                        shadcn::Input::new(rtl_name)
-                            .a11y_label("الاسم على البطاقة")
-                            .placeholder("Evil Rabbit")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::Field::new([
-                        shadcn::FieldLabel::new("رقم البطاقة").into_element(cx),
-                        shadcn::Input::new(rtl_number)
-                            .a11y_label("رقم البطاقة")
-                            .placeholder("1234 5678 9012 3456")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::FieldSet::new([
+            shadcn::FieldLegend::new("طريقة الدفع").into_element(cx),
+            shadcn::FieldDescription::new("جميع المعاملات آمنة ومشفرة").into_element(cx),
+            shadcn::FieldGroup::new([
+                shadcn::Field::new([
+                    shadcn::FieldLabel::new("الاسم على البطاقة").into_element(cx),
+                    shadcn::Input::new(rtl_name)
+                        .a11y_label("الاسم على البطاقة")
+                        .placeholder("Evil Rabbit")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Field::new([
+                    shadcn::FieldLabel::new("رقم البطاقة").into_element(cx),
+                    shadcn::Input::new(rtl_number)
+                        .a11y_label("رقم البطاقة")
+                        .placeholder("1234 5678 9012 3456")
+                        .into_element(cx),
                 ])
                 .into_element(cx),
             ])
-            .refine_layout(max_w_md.clone())
-            .into_element(cx)
-        })
-        .test_id("ui-gallery-field-rtl");
-        content
-    };
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_md.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-field-rtl");
 
     let responsive = {
         let content = shadcn::FieldSet::new([

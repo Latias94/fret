@@ -295,14 +295,12 @@ pub(super) fn preview_date_picker(
         "ui-gallery-date-picker-natural-gap",
     );
 
-    let rtl = {
-        doc_layout::rtl(cx, |cx| {
-            shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
-                .placeholder("Pick a date")
-                .into_element(cx)
-        })
-        .test_id("ui-gallery-date-picker-rtl")
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
+            .placeholder("Pick a date")
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-date-picker-rtl");
 
     let notes_stack = doc_layout::notes(
         cx,

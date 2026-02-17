@@ -129,7 +129,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .test_id("ui-gallery-alert-colors");
     let custom_colors = custom_colors_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         stack::vstack(
             cx,
             stack::VStackProps::default().gap(Space::N3).items_start(),
@@ -145,7 +145,6 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             },
         )
     });
-    let rtl = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

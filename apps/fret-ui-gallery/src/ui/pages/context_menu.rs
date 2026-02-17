@@ -491,39 +491,34 @@ pub(super) fn preview_context_menu(
         menu
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::ContextMenu::new(rtl_open.clone()).into_element(
-                cx,
-                |cx| {
-                    trigger_surface(
-                        cx,
-                        "Right click in RTL",
-                        "ui-gallery-context-menu-rtl-trigger",
-                    )
-                },
-                |_cx| {
-                    vec![
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Open").on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Settings")
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                        shadcn::ContextMenuEntry::Separator,
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Delete")
-                                .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                    ]
-                },
-            )
-        });
-
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::ContextMenu::new(rtl_open.clone()).into_element(
+            cx,
+            |cx| {
+                trigger_surface(
+                    cx,
+                    "Right click in RTL",
+                    "ui-gallery-context-menu-rtl-trigger",
+                )
+            },
+            |_cx| {
+                vec![
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Open").on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Settings").on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Separator,
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Delete")
+                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                ]
+            },
+        )
+    });
 
     let notes = doc_layout::notes(
         cx,

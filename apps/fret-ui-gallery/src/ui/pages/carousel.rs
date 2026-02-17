@@ -547,7 +547,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         },
     );
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         carousel(
             cx,
             "ui-gallery-carousel-rtl",
@@ -683,7 +683,7 @@ shadcn::Card::new([/* content */])
     "Upstream supports Embla plugins (e.g. autoplay). Fret Carousel does not expose plugin injection yet.",
 );"#,
                 ),
-            DocSection::new("RTL", rtl_content)
+            DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-rtl")
                 .code(

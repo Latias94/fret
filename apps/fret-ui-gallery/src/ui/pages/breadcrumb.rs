@@ -199,7 +199,7 @@ pub(super) fn preview_breadcrumb(
         .test_id("ui-gallery-breadcrumb-link");
     let link_component = link_component_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         let crumb = shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
             let list =
                 shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
@@ -306,7 +306,6 @@ pub(super) fn preview_breadcrumb(
         crumb
     })
     .test_id("ui-gallery-breadcrumb-rtl");
-    let rtl = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

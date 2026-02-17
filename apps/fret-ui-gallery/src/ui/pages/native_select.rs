@@ -117,17 +117,13 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::NativeSelect::new("Select language")
-                .a11y_label("RTL native select")
-                .refine_layout(select_width.clone())
-                .into_element(cx)
-        })
-        .test_id("ui-gallery-native-select-rtl");
-
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::NativeSelect::new("Select language")
+            .a11y_label("RTL native select")
+            .refine_layout(select_width.clone())
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-native-select-rtl");
 
     let notes = doc_layout::notes(
         cx,

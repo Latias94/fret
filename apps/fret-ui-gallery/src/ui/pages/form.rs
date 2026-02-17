@@ -180,39 +180,35 @@ pub(super) fn preview_forms(
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::FieldSet::new([
-                shadcn::FieldLegend::new("?????").into_element(cx),
-                shadcn::FieldDescription::new("??? ????? ??????? ????? RTL ?? ?????? ????????")
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::FieldSet::new([
+            shadcn::FieldLegend::new("?????").into_element(cx),
+            shadcn::FieldDescription::new("??? ????? ??????? ????? RTL ?? ?????? ????????")
+                .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("?????? ??????????").into_element(cx),
+                shadcn::Input::new(text_input.clone())
+                    .a11y_label("?????? ??????????")
+                    .placeholder("name@example.com")
                     .into_element(cx),
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("?????? ??????????").into_element(cx),
-                    shadcn::Input::new(text_input.clone())
-                        .a11y_label("?????? ??????????")
-                        .placeholder("name@example.com")
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("????? ??????")
-                        .for_control("ui-gallery-form-switch-rtl")
-                        .into_element(cx),
-                    shadcn::Switch::new(switch.clone())
-                        .control_id("ui-gallery-form-switch-rtl")
-                        .a11y_label("????? ??????")
-                        .into_element(cx),
-                ])
-                .orientation(shadcn::FieldOrientation::Horizontal)
-                .into_element(cx),
             ])
-            .refine_layout(max_w_md.clone())
-            .into_element(cx)
-        })
-        .test_id("ui-gallery-form-rtl");
-
-        rtl_content
-    };
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("????? ??????")
+                    .for_control("ui-gallery-form-switch-rtl")
+                    .into_element(cx),
+                shadcn::Switch::new(switch.clone())
+                    .control_id("ui-gallery-form-switch-rtl")
+                    .a11y_label("????? ??????")
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_md.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-form-rtl");
 
     let notes = doc_layout::notes(
         cx,

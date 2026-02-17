@@ -90,29 +90,25 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(max_w.clone()),
-                |cx| {
-                    vec![
-                        shadcn::Label::new("????? ??????").into_element(cx),
-                        shadcn::Input::new(rtl_name)
-                            .placeholder("???? ???")
-                            .a11y_label("????? ??????")
-                            .into_element(cx),
-                    ]
-                },
-            )
-        })
-        .test_id("ui-gallery-label-rtl");
-
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(max_w.clone()),
+            |cx| {
+                vec![
+                    shadcn::Label::new("????? ??????").into_element(cx),
+                    shadcn::Input::new(rtl_name)
+                        .placeholder("???? ???")
+                        .a11y_label("????? ??????")
+                        .into_element(cx),
+                ]
+            },
+        )
+    })
+    .test_id("ui-gallery-label-rtl");
 
     let notes = doc_layout::notes(
         cx,

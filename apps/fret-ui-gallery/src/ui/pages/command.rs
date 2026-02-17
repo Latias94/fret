@@ -237,7 +237,7 @@ pub(super) fn preview_command_palette(
         .heading("RTL")
         .into(),
     ];
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
             .placeholder("Type a command or search...")
             .a11y_label("RTL command list")
@@ -352,7 +352,7 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
     shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx)
 });"#,
                 ),
-            DocSection::new("RTL", rtl_content).max_w(Px(760.0)).code(
+            DocSection::new("RTL", rtl).max_w(Px(760.0)).code(
                 "rust",
                 r#"fret_ui_kit::primitives::direction::with_direction_provider(
     cx,

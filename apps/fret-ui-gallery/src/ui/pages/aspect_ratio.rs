@@ -70,7 +70,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     );
     let portrait = portrait_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         ratio_example(
             cx,
             16.0 / 9.0,
@@ -80,7 +80,6 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             "ui-gallery-aspect-ratio-rtl",
         )
     });
-    let rtl = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

@@ -583,23 +583,19 @@ pub(super) fn preview_input(
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::Field::new([
-                shadcn::FieldLabel::new("????? API").into_element(cx),
-                shadcn::Input::new(rtl_value)
-                    .a11y_label("????? API")
-                    .placeholder("sk-...")
-                    .into_element(cx),
-                shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.")
-                    .into_element(cx),
-            ])
-            .refine_layout(max_w_xs.clone())
-            .into_element(cx)
-        })
-        .test_id("ui-gallery-input-rtl");
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("????? API").into_element(cx),
+            shadcn::Input::new(rtl_value)
+                .a11y_label("????? API")
+                .placeholder("sk-...")
+                .into_element(cx),
+            shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.").into_element(cx),
+        ])
+        .refine_layout(max_w_xs.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-input-rtl");
 
     let notes = doc_layout::notes(
         cx,

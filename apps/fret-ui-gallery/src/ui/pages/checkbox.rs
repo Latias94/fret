@@ -494,7 +494,7 @@ pub(super) fn preview_checkbox(
     .test_id("ui-gallery-checkbox-table");
     let table = table_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl_section = doc_layout::rtl(cx, |cx| {
         shadcn::Field::new([
             shadcn::Checkbox::new(rtl.clone())
                 .control_id("ui-gallery-checkbox-rtl")
@@ -510,7 +510,6 @@ pub(super) fn preview_checkbox(
         .into_element(cx)
     })
     .test_id("ui-gallery-checkbox-rtl-field");
-    let rtl_section = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

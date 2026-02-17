@@ -383,32 +383,28 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         content
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            let props = cx.with_theme(|theme| {
-                decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default(),
-                    LayoutRefinement::default().w_full().max_w(Px(720.0)),
-                )
-            });
-            cx.container(props, |cx| {
-                vec![item_row_icon(
-                    cx,
-                    "???? ??????",
-                    "???? ???? ??? ?????",
-                    "lucide.layout-dashboard",
-                    shadcn::ItemVariant::Default,
-                    shadcn::ItemSize::Default,
-                    true,
-                    "ui-gallery-item-rtl-row",
-                )]
-            })
+    let rtl = doc_layout::rtl(cx, |cx| {
+        let props = cx.with_theme(|theme| {
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().w_full().max_w(Px(720.0)),
+            )
+        });
+        cx.container(props, |cx| {
+            vec![item_row_icon(
+                cx,
+                "???? ??????",
+                "???? ???? ??? ?????",
+                "lucide.layout-dashboard",
+                shadcn::ItemVariant::Default,
+                shadcn::ItemSize::Default,
+                true,
+                "ui-gallery-item-rtl-row",
+            )]
         })
-        .test_id("ui-gallery-item-rtl");
-
-        rtl_content
-    };
+    })
+    .test_id("ui-gallery-item-rtl");
 
     let notes = doc_layout::notes(
         cx,

@@ -183,7 +183,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -293,7 +293,7 @@ shadcn::Alert::new([
 ])
 .into_element(cx);"#,
                 ),
-            DocSection::new("RTL", rtl_content)
+            DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-rtl")
                 .code(

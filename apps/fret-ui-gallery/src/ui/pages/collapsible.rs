@@ -534,7 +534,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
     let file_tree = file_tree_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         details_collapsible(
             cx,
             "ui-gallery-collapsible-rtl",
@@ -543,7 +543,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             "Shipped",
         )
     });
-    let rtl = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

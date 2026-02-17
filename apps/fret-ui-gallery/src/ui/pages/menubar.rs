@@ -248,28 +248,25 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .into_element(cx)
     };
 
-    let rtl = {
-        doc_layout::rtl(cx, |cx| {
-            let file = MenubarMenu::new("ملف").entries([
-                MenubarEntry::Item(
-                    MenubarItem::new("علامة تبويب جديدة")
-                        .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
-                ),
-                MenubarEntry::Item(
-                    MenubarItem::new("نافذة جديدة")
-                        .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
-                ),
-                MenubarEntry::Separator,
-                MenubarEntry::Item(
-                    MenubarItem::new("طباعة...")
-                        .trailing(MenubarShortcut::new("⌘P").into_element(cx)),
-                ),
-            ]);
-            Menubar::new([file])
-                .refine_layout(width.clone())
-                .into_element(cx)
-        })
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        let file = MenubarMenu::new("ملف").entries([
+            MenubarEntry::Item(
+                MenubarItem::new("علامة تبويب جديدة")
+                    .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("نافذة جديدة")
+                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("طباعة...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+            ),
+        ]);
+        Menubar::new([file])
+            .refine_layout(width.clone())
+            .into_element(cx)
+    });
 
     let body = doc_layout::render_doc_page(
         cx,
