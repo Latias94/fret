@@ -1896,7 +1896,6 @@ pub(super) fn scan_perf_threshold_failures(
             }));
         }
         if let Some(threshold) = threshold_pointer_move_global_changes
-            && threshold > 0
             && max_pointer_move_global_changes > threshold
         {
             out.push(serde_json::json!({
