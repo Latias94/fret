@@ -55,6 +55,8 @@ pub mod error_bars_demo;
 pub mod external_texture_imports_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod external_texture_imports_web_demo;
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+pub mod external_video_imports_mf_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod extras_marquee_perf_demo;
 #[cfg(not(target_arch = "wasm32"))]

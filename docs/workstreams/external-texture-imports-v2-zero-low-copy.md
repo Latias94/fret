@@ -43,6 +43,9 @@ It builds on v1’s contract-path closure:
 1. Lock the bounded strategy set + metadata semantics (ADR 0282 exit criteria).
 2. Land metadata additions (if required) in `fret-render-core`, with deterministic degradation.
 3. Land native/mobile low-copy improvements behind capabilities + counters.
+   - Recommended staging:
+     - M2A: wire a real frame source end-to-end (can start as `CpuUpload`/`GpuCopy`).
+     - M2B: add a true zero/low-copy fast path behind explicit capabilities (e.g. Windows D3D12).
 4. Keep web zero-copy explicitly blocked until the backend supports it; keep copy-path perf baselines green.
 
 ## Web DevTools WS notes (practical)

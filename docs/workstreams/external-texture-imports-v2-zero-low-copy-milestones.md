@@ -34,7 +34,12 @@ Deliverables:
 
 - A capability-gated native ingestion path exists where feasible (platform decoder / GPU frame
   integration), with deterministic fallback and per-frame attribution in perf snapshots.
-- A steady-state perf baseline exists for the new path (non-regression + expected delta recorded).
+- The implementation is staged to reduce risk:
+  - **M2A (real source closure)**: a real native frame source is wired end-to-end (e.g. Windows MF),
+    even if it initially lands as `CpuUpload`/`GpuCopy`, with stable metadata semantics and gates.
+  - **M2B (ceiling uplift)**: a true zero/low-copy path is added behind explicit capabilities
+    (e.g. D3D12-only fast path on Windows), with deterministic fallback to the copy path.
+- A steady-state perf baseline exists for each landed path (non-regression + expected delta recorded).
 
 Exit criteria:
 
@@ -58,4 +63,3 @@ Deliverables:
 - Once backend support exists, land WebGPU `ExternalTexture` sampling behind capabilities with
   deterministic fallback to the existing GPU-copy path.
 - Add web steady-state perf baselines for zero-copy vs copy (explicit headroom).
-

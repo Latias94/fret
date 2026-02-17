@@ -70,6 +70,13 @@ fret-launch = { path = "../../crates/fret-launch", features = ["dev-state", "dia
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
 
+[target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_Media_MediaFoundation",
+] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-launch = { path = "../../crates/fret-launch" }
 web-sys = { version = "0.3", features = [

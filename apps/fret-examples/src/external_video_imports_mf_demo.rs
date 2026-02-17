@@ -1,0 +1,553 @@
+use anyhow::Context as _;
+use fret_app::App;
+use fret_core::{AppWindowId, Event, KeyCode};
+use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
+use fret_render::{
+    RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer, WgpuContext,
+};
+use fret_runtime::PlatformCapabilities;
+use fret_ui::element::{
+    ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
+    ViewportSurfaceProps,
+};
+use fret_ui::{ElementContext, Invalidation, Theme};
+
+#[cfg(target_os = "windows")]
+mod wmf {
+    use anyhow::Context as _;
+    use windows::Win32::Media::MediaFoundation::{
+        IMFMediaBuffer, IMFSample, IMFSourceReader, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
+        MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateMediaType, MFCreateSourceReaderFromURL,
+        MFMediaType_Video, MFShutdown, MFStartup, MFVideoFormat_ARGB32,
+    };
+    use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
+    use windows::core::HSTRING;
+
+    pub struct VideoFrame {
+        pub size: (u32, u32),
+        pub bytes_per_row: u32,
+        pub bgra8: Vec<u8>,
+    }
+
+    pub struct MfVideoReader {
+        path: String,
+        reader: IMFSourceReader,
+        size: (u32, u32),
+        bytes_per_row: u32,
+    }
+
+    impl MfVideoReader {
+        pub fn new(path: impl Into<String>) -> anyhow::Result<Self> {
+            let path = path.into();
+
+            unsafe {
+                // Best-effort: if COM is already initialized in another mode, keep going.
+                let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+                MFStartup(MF_VERSION, 0).context("MFStartup")?;
+            }
+
+            let hpath = HSTRING::from(path.as_str());
+            let reader = unsafe {
+                MFCreateSourceReaderFromURL(&hpath, None).context("MFCreateSourceReaderFromURL")?
+            };
+
+            // Request a predictable software-decoded output format first: ARGB32 (little-endian BGRA).
+            // This keeps stage M2A focused on contract/metadata/gates; a D3D12-only fast path is M2B.
+            let media_type = unsafe { MFCreateMediaType().context("MFCreateMediaType")? };
+            unsafe {
+                media_type
+                    .SetGUID(
+                        &windows::Win32::Media::MediaFoundation::MF_MT_MAJOR_TYPE,
+                        &MFMediaType_Video,
+                    )
+                    .context("SetGUID major")?;
+                media_type
+                    .SetGUID(
+                        &windows::Win32::Media::MediaFoundation::MF_MT_SUBTYPE,
+                        &MFVideoFormat_ARGB32,
+                    )
+                    .context("SetGUID subtype")?;
+                reader
+                    .SetCurrentMediaType(
+                        MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32,
+                        None,
+                        &media_type,
+                    )
+                    .context("SetCurrentMediaType")?;
+            }
+
+            let (size, bytes_per_row) = Self::query_video_layout(&reader)?;
+
+            Ok(Self {
+                path,
+                reader,
+                size,
+                bytes_per_row,
+            })
+        }
+
+        fn query_video_layout(reader: &IMFSourceReader) -> anyhow::Result<((u32, u32), u32)> {
+            let media_type = unsafe {
+                reader
+                    .GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)
+                    .context("GetCurrentMediaType")?
+            };
+
+            let frame_size = unsafe {
+                media_type
+                    .GetUINT64(&windows::Win32::Media::MediaFoundation::MF_MT_FRAME_SIZE)
+                    .context("GetUINT64(MF_MT_FRAME_SIZE)")?
+            };
+            let w = (frame_size >> 32) as u32;
+            let h = (frame_size & 0xffff_ffff) as u32;
+
+            // Default stride can be absent; for ARGB32 it's usually width*4.
+            let bytes_per_row = unsafe {
+                media_type
+                    .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_DEFAULT_STRIDE)
+                    .unwrap_or(w.saturating_mul(4))
+            };
+
+            Ok(((w.max(1), h.max(1)), bytes_per_row.max(w.saturating_mul(4))))
+        }
+
+        fn reset(&mut self) -> anyhow::Result<()> {
+            // The simplest deterministic reset is to recreate the reader.
+            // Stage M2B can replace this with a true seek once the path is stable.
+            *self = Self::new(self.path.clone())?;
+            Ok(())
+        }
+
+        pub fn read_next(&mut self) -> anyhow::Result<Option<VideoFrame>> {
+            loop {
+                let mut actual_stream_index = 0u32;
+                let mut flags = 0u32;
+                let mut timestamp = 0i64;
+                let mut sample: Option<IMFSample> = None;
+
+                unsafe {
+                    self.reader
+                        .ReadSample(
+                            MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32,
+                            0,
+                            Some(&mut actual_stream_index),
+                            Some(&mut flags),
+                            Some(&mut timestamp),
+                            Some(&mut sample),
+                        )
+                        .context("ReadSample")?;
+                }
+
+                if (flags & (MF_SOURCE_READERF_STREAMTICK.0 as u32)) != 0 {
+                    continue;
+                }
+
+                if (flags & (MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED.0 as u32)) != 0 {
+                    let (size, bytes_per_row) = Self::query_video_layout(&self.reader)?;
+                    self.size = size;
+                    self.bytes_per_row = bytes_per_row;
+                }
+
+                if (flags & (MF_SOURCE_READERF_ENDOFSTREAM.0 as u32)) != 0 {
+                    self.reset()?;
+                    continue;
+                }
+
+                let Some(sample) = sample else {
+                    return Ok(None);
+                };
+
+                let buffer = unsafe {
+                    sample
+                        .ConvertToContiguousBuffer()
+                        .context("ConvertToContiguousBuffer")?
+                };
+                let bytes = lock_and_copy(&buffer)?;
+                return Ok(Some(VideoFrame {
+                    size: self.size,
+                    bytes_per_row: self.bytes_per_row,
+                    bgra8: bytes,
+                }));
+            }
+        }
+    }
+
+    impl Drop for MfVideoReader {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = MFShutdown();
+            }
+        }
+    }
+
+    fn lock_and_copy(buffer: &IMFMediaBuffer) -> anyhow::Result<Vec<u8>> {
+        let mut ptr = std::ptr::null_mut::<u8>();
+        let mut max_len = 0u32;
+        let mut cur_len = 0u32;
+        unsafe {
+            buffer
+                .Lock(&mut ptr, Some(&mut max_len), Some(&mut cur_len))
+                .context("IMFMediaBuffer::Lock")?;
+        }
+        let len = cur_len.min(max_len) as usize;
+        let bytes = unsafe { std::slice::from_raw_parts(ptr, len) }.to_vec();
+        unsafe {
+            buffer.Unlock().ok().context("IMFMediaBuffer::Unlock")?;
+        }
+        Ok(bytes)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExternalVideoImportsMode {
+    CheckerGpu,
+    #[cfg(target_os = "windows")]
+    MfVideoCpuUpload,
+}
+
+struct ExternalVideoImportsState {
+    show: fret_runtime::Model<bool>,
+    mode: ExternalVideoImportsMode,
+
+    target: ImportedViewportRenderTarget,
+    target_px_size: (u32, u32),
+    desired_target_px_size: (u32, u32),
+    texture: Option<wgpu::Texture>,
+
+    #[cfg(target_os = "windows")]
+    mf: Option<wmf::MfVideoReader>,
+}
+
+fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
+    ExternalVideoImportsState {
+        show: app.models_mut().insert(true),
+        // Use BGRA to align with Media Foundation's ARGB32 output (little-endian BGRA).
+        target: ImportedViewportRenderTarget::new(
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+            RenderTargetColorSpace::Srgb,
+        ),
+        target_px_size: (1, 1),
+        desired_target_px_size: (1280, 720),
+        texture: None,
+        mode: ExternalVideoImportsMode::CheckerGpu,
+        #[cfg(target_os = "windows")]
+        mf: None,
+    }
+}
+
+fn on_event(
+    app: &mut App,
+    _services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    st: &mut ExternalVideoImportsState,
+    event: &Event,
+) {
+    if let Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyV
+    {
+        let _ = app.models_mut().update(&st.show, |v| *v = !*v);
+        app.request_redraw(window);
+    }
+
+    if let Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyI
+    {
+        st.mode = match st.mode {
+            ExternalVideoImportsMode::CheckerGpu => {
+                #[cfg(target_os = "windows")]
+                {
+                    ExternalVideoImportsMode::MfVideoCpuUpload
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    ExternalVideoImportsMode::CheckerGpu
+                }
+            }
+            #[cfg(target_os = "windows")]
+            ExternalVideoImportsMode::MfVideoCpuUpload => ExternalVideoImportsMode::CheckerGpu,
+        };
+        app.request_redraw(window);
+    }
+}
+
+fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsState) -> Elements {
+    cx.observe_model(&st.show, Invalidation::Layout);
+
+    let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
+    let w_px = (cx.bounds.size.width.0.max(1.0) * scale_factor).round() as u32;
+    let h_px = (cx.bounds.size.height.0.max(1.0) * scale_factor).round() as u32;
+    st.desired_target_px_size = (w_px.max(1).min(4096), h_px.max(1).min(4096));
+
+    let show = cx.app.models().read(&st.show, |v| *v).unwrap_or(true);
+
+    let theme = Theme::global(&*cx.app).snapshot();
+
+    let mut fill = LayoutStyle::default();
+    fill.size.width = Length::Fill;
+    fill.size.height = Length::Fill;
+
+    let mut panel_layout = LayoutStyle::default();
+    panel_layout.size.width = Length::Px(fret_core::Px(980.0));
+    panel_layout.size.height = Length::Px(fret_core::Px(720.0));
+
+    let mut row = FlexProps {
+        layout: fill,
+        direction: fret_core::Axis::Horizontal,
+        gap: fret_core::Px(12.0),
+        padding: fret_core::Edges::all(fret_core::Px(16.0)),
+        justify: MainAlign::Start,
+        align: CrossAlign::Start,
+        wrap: false,
+    };
+    row.layout.size.width = Length::Fill;
+    row.layout.size.height = Length::Fill;
+
+    let target = st.target.id();
+    let target_px_size = st.target_px_size;
+
+    vec![
+        cx.container(
+            ContainerProps {
+                layout: fill,
+                background: Some(theme.color_token("background")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.flex(row, |cx| {
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: panel_layout,
+                                border: fret_core::Edges::all(fret_core::Px(1.0)),
+                                border_paint: Some(fret_core::scene::Paint::Solid(
+                                    theme.color_token("border"),
+                                )),
+                                background: Some(theme.color_token("muted")),
+                                corner_radii: fret_core::Corners::all(fret_core::Px(10.0)),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                vec![
+                                    cx.viewport_surface_props(ViewportSurfaceProps {
+                                        layout,
+                                        target,
+                                        target_px_size,
+                                        fit: fret_core::ViewportFit::Contain,
+                                        opacity: if show { 1.0 } else { 0.0 },
+                                    })
+                                    .test_id("external-video-imports-mf-surface"),
+                                ]
+                            },
+                        )
+                        .test_id("external-video-imports-mf-root"),
+                    ]
+                })]
+            },
+        )
+        .test_id("external-video-imports-mf-app"),
+    ]
+    .into()
+}
+
+fn record_engine_frame(
+    app: &mut App,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    st: &mut ExternalVideoImportsState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    _scale_factor: f32,
+    _tick_id: fret_runtime::TickId,
+    frame_id: fret_runtime::FrameId,
+) -> EngineFrameUpdate {
+    let show = app.models().read(&st.show, |v| *v).unwrap_or(true);
+    let mut update = EngineFrameUpdate::default();
+
+    if !show {
+        st.target.push_unregister(&mut update);
+        st.texture = None;
+        st.target_px_size = (1, 1);
+        return update;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if st.mode == ExternalVideoImportsMode::MfVideoCpuUpload && st.mf.is_none() {
+            if let Ok(path) = std::env::var("FRET_MF_VIDEO_PATH")
+                && !path.trim().is_empty()
+            {
+                match wmf::MfVideoReader::new(path) {
+                    Ok(reader) => st.mf = Some(reader),
+                    Err(err) => {
+                        tracing::warn!(?err, "failed to initialize MF reader; falling back");
+                        st.mode = ExternalVideoImportsMode::CheckerGpu;
+                    }
+                }
+            } else {
+                tracing::info!("FRET_MF_VIDEO_PATH is not set; staying on checker mode");
+                st.mode = ExternalVideoImportsMode::CheckerGpu;
+            }
+        }
+    }
+
+    // Decide target size:
+    // - checker mode: follow viewport size (stress the contract-path update shapes),
+    // - MF mode: follow decoded frame size (avoid per-frame rescale churn in M2A).
+    let mut decoded_frame: Option<((u32, u32), u32, Vec<u8>)> = None;
+    let desired = match st.mode {
+        ExternalVideoImportsMode::CheckerGpu => st.desired_target_px_size,
+        #[cfg(target_os = "windows")]
+        ExternalVideoImportsMode::MfVideoCpuUpload => {
+            if let Some(reader) = st.mf.as_mut() {
+                if let Some(frame) = reader.read_next().ok().flatten() {
+                    decoded_frame = Some((frame.size, frame.bytes_per_row, frame.bgra8));
+                    frame.size
+                } else {
+                    st.desired_target_px_size
+                }
+            } else {
+                st.desired_target_px_size
+            }
+        }
+    };
+
+    let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
+    if needs_realloc {
+        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("external video imports texture"),
+            size: wgpu::Extent3d {
+                width: desired.0.max(1),
+                height: desired.1.max(1),
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: st.target.format(),
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        if !st.target.is_registered() {
+            let _ = st.target.ensure_registered(renderer, view.clone(), desired);
+        }
+
+        st.texture = Some(texture);
+        st.target_px_size = desired;
+    }
+
+    let texture = st.texture.as_ref().expect("texture allocated");
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let metadata = RenderTargetMetadata::default();
+    match st.mode {
+        ExternalVideoImportsMode::CheckerGpu => {
+            st.target.push_update_with_ingest_strategies(
+                &mut update,
+                view.clone(),
+                st.target_px_size,
+                metadata,
+                RenderTargetIngestStrategy::Owned,
+                RenderTargetIngestStrategy::Owned,
+            );
+
+            // A tiny animated clear tint is enough to keep the contract-path hot.
+            let t = frame_id.0 as f32 * (1.0 / 60.0);
+            let pulse = (t * 0.5).sin() * 0.5 + 0.5;
+            let color = wgpu::Color {
+                r: 0.06 + pulse as f64 * 0.02,
+                g: 0.08 + pulse as f64 * 0.03,
+                b: 0.11 + pulse as f64 * 0.04,
+                a: 1.0,
+            };
+            let mut encoder =
+                context
+                    .device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("external video imports checker encoder"),
+                    });
+            {
+                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("external video imports checker pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        depth_slice: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(color),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                });
+                let _ = &mut pass;
+            }
+            update.push_command_buffer(encoder.finish());
+        }
+        #[cfg(target_os = "windows")]
+        ExternalVideoImportsMode::MfVideoCpuUpload => {
+            // Stage M2A: request the v2 ceiling, but deterministically degrade to CPU upload.
+            // The requested/effective split is visible in perf bundles.
+            st.target.push_update_with_ingest_strategies(
+                &mut update,
+                view.clone(),
+                st.target_px_size,
+                metadata,
+                RenderTargetIngestStrategy::ExternalZeroCopy,
+                RenderTargetIngestStrategy::CpuUpload,
+            );
+
+            if let Some((size, bytes_per_row, bgra8)) = decoded_frame.as_ref() {
+                // The helper pads rows to wgpu alignment; the bytes are BGRA8 matching the texture format.
+                fret_render::write_rgba8_texture_region(
+                    &context.queue,
+                    texture,
+                    (0, 0),
+                    *size,
+                    *bytes_per_row,
+                    bgra8,
+                );
+            }
+        }
+    }
+
+    app.push_effect(fret_app::Effect::RequestAnimationFrame(window));
+    update
+}
+
+pub fn run() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("fret=info".parse().unwrap())
+                .add_directive("fret_render=info".parse().unwrap())
+                .add_directive("fret_launch=info".parse().unwrap()),
+        )
+        .try_init();
+
+    let builder = fret::app_with_hooks("external-video-imports-mf", init_window, view, |driver| {
+        driver
+            .on_event(on_event)
+            .record_engine_frame(record_engine_frame)
+    })?
+    .init_app(|app| {
+        app.set_global(PlatformCapabilities::default());
+    })
+    .with_main_window(
+        "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
+        (980.0, 720.0),
+    );
+
+    builder.run().context("run external_video_imports_mf_demo")
+}
