@@ -661,13 +661,12 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
                 .description("Leading icons for visual scanning.")
                 .code(
                     "rust",
-                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-};
-
-shadcn::DropdownMenuEntry::Item(
+                    r#"shadcn::DropdownMenuEntry::Item(
     shadcn::DropdownMenuItem::new("Settings")
-        .leading(icon(cx, "lucide.settings"))
+        .leading(shadcn::icon::icon(
+            cx,
+            fret_icons::IconId::new_static("lucide.settings"),
+        ))
         .on_select(CMD_MENU_DROPDOWN_ORANGE),
 );"#,
                 ),
@@ -687,13 +686,11 @@ shadcn::DropdownMenuEntry::CheckboxItem(shadcn::DropdownMenuCheckboxItem::new(
                 .code(
                     "rust",
                     r#"let show_activity_bar = cx.app.models_mut().insert(false);
-let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-};
 
 shadcn::DropdownMenuEntry::CheckboxItem(
-    shadcn::DropdownMenuCheckboxItem::new(show_activity_bar, "Activity Bar")
-        .leading(icon(cx, "lucide.panel-left")),
+    shadcn::DropdownMenuCheckboxItem::new(show_activity_bar, "Activity Bar").leading(
+        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.panel-left")),
+    ),
 );"#,
                 ),
             DocSection::new("Radio Group", radio_group)
@@ -710,19 +707,19 @@ shadcn::DropdownMenuEntry::CheckboxItem(
                 .description("Radio items can render leading icons.")
                 .code(
                     "rust",
-                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-};
-
-shadcn::DropdownMenuEntry::RadioGroup(
+                    r#"shadcn::DropdownMenuEntry::RadioGroup(
     shadcn::DropdownMenuRadioGroup::new(theme_mode)
         .item(
-            shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
-                .leading(icon(cx, "lucide.sun")),
+            shadcn::DropdownMenuRadioItemSpec::new("light", "Light").leading(shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.sun"),
+            )),
         )
         .item(
-            shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
-                .leading(icon(cx, "lucide.moon")),
+            shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark").leading(shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.moon"),
+            )),
         ),
 );"#,
                 ),
