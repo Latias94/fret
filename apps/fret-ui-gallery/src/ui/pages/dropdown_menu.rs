@@ -568,7 +568,7 @@ pub(super) fn preview_dropdown_menu(
         );
     let complex = complex_content;
 
-    let rtl_content = doc_layout::rtl(cx, |cx| {
+    let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::DropdownMenu::new(rtl_open.clone()).into_element(
             cx,
             |cx| {
@@ -593,7 +593,6 @@ pub(super) fn preview_dropdown_menu(
             },
         )
     });
-    let rtl = rtl_content;
 
     let notes = doc_layout::notes(
         cx,

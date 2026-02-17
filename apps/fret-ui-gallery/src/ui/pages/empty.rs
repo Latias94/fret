@@ -221,39 +221,35 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         empty
     };
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::Empty::new([
-                shadcn::empty::EmptyHeader::new([
-                    shadcn::empty::EmptyMedia::new([icon(cx, "lucide.folder-search")])
-                        .variant(shadcn::empty::EmptyMediaVariant::Icon)
-                        .into_element(cx),
-                    shadcn::empty::EmptyTitle::new("RTL Empty State").into_element(cx),
-                    shadcn::empty::EmptyDescription::new(
-                        "This empty state uses RTL direction context for layout and alignment.",
-                    )
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Empty::new([
+            shadcn::empty::EmptyHeader::new([
+                shadcn::empty::EmptyMedia::new([icon(cx, "lucide.folder-search")])
+                    .variant(shadcn::empty::EmptyMediaVariant::Icon)
                     .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::empty::EmptyContent::new([
-                    shadcn::InputGroup::new(rtl_search_query.clone())
-                        .a11y_label("RTL search")
-                        .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
-                        .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
-                        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
-                        .test_id("ui-gallery-empty-rtl-input-group")
-                        .into_element(cx),
-                    shadcn::Button::new("Create Project").into_element(cx),
-                ])
+                shadcn::empty::EmptyTitle::new("RTL Empty State").into_element(cx),
+                shadcn::empty::EmptyDescription::new(
+                    "This empty state uses RTL direction context for layout and alignment.",
+                )
                 .into_element(cx),
             ])
-            .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
-            .into_element(cx)
-        })
-        .test_id("ui-gallery-empty-rtl");
-
-        rtl_content
-    };
+            .into_element(cx),
+            shadcn::empty::EmptyContent::new([
+                shadcn::InputGroup::new(rtl_search_query.clone())
+                    .a11y_label("RTL search")
+                    .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
+                    .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
+                    .test_id("ui-gallery-empty-rtl-input-group")
+                    .into_element(cx),
+                shadcn::Button::new("Create Project").into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-empty-rtl");
 
     let notes = doc_layout::notes(
         cx,

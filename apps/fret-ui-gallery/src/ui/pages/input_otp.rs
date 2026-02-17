@@ -294,18 +294,14 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
     .into_element(cx);
 
-    let rtl = {
-        let rtl_content = doc_layout::rtl(cx, |cx| {
-            shadcn::InputOtp::new(rtl_value)
-                .length(6)
-                .group_size(Some(3))
-                .refine_layout(otp_width.clone())
-                .into_element(cx)
-        })
-        .test_id("ui-gallery-input-otp-rtl");
-
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::InputOtp::new(rtl_value)
+            .length(6)
+            .group_size(Some(3))
+            .refine_layout(otp_width.clone())
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-input-otp-rtl");
 
     let notes_panel_body = doc_layout::notes(
         cx,
