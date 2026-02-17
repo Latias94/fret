@@ -1077,7 +1077,7 @@ fn record_engine_frame(
                                 ?err,
                                 "MF DX12 GPU copy mode requested but backend is not DX12; falling back"
                             );
-                            st.mode = ExternalVideoImportsMode::CheckerGpu;
+                            st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                             return update;
                         }
                     };
@@ -1089,14 +1089,14 @@ fn record_engine_frame(
                     Err(err) => {
                         tracing::warn!(?err, "failed to init MF DX12 interop; falling back");
                         st.mf_dx12 = None;
-                        st.mode = ExternalVideoImportsMode::CheckerGpu;
+                        st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                         return update;
                     }
                 }
             }
 
             let Some(interop) = st.mf_dx12.as_mut() else {
-                st.mode = ExternalVideoImportsMode::CheckerGpu;
+                st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                 return update;
             };
             metadata.color_encoding = interop.color_encoding();
@@ -1120,7 +1120,7 @@ fn record_engine_frame(
                 Err(err) => {
                     tracing::warn!(?err, "MF DX12 GPU copy read failed; falling back");
                     st.mf_dx12 = None;
-                    st.mode = ExternalVideoImportsMode::CheckerGpu;
+                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                     return update;
                 }
             };
@@ -1136,7 +1136,7 @@ fn record_engine_frame(
                         ?err,
                         "MF DX12 GPU copy mode: shared allocation write unavailable; falling back"
                     );
-                    st.mode = ExternalVideoImportsMode::CheckerGpu;
+                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                     return update;
                 }
             };
@@ -1144,7 +1144,7 @@ fn record_engine_frame(
             if let Err(err) = interop.copy_into_dx12_shared_allocation(guard.resource(), &src) {
                 tracing::warn!(?err, "MF DX12 GPU copy mode: copy failed; falling back");
                 st.mf_dx12 = None;
-                st.mode = ExternalVideoImportsMode::CheckerGpu;
+                st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                 return update;
             }
             guard.finish();
