@@ -165,7 +165,17 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("RTL", rtl)
                 .description("Label and input alignment under an RTL direction provider.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Label::new("????? ??????").into_element(cx);
+        shadcn::Input::new(model).a11y_label("????? ??????").into_element(cx);
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

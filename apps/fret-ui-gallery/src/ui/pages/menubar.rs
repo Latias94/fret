@@ -286,22 +286,123 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         vec![
             DocSection::new("Demo", demo)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu, MenubarShortcut};
+
+let file = MenubarMenu::new("File").entries([
+    MenubarEntry::Group(MenubarGroup::new([
+        MenubarEntry::Item(
+            MenubarItem::new("New Tab")
+                .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+        ),
+        MenubarEntry::Item(MenubarItem::new("New Window")),
+    ])),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(MenubarItem::new("Print...")),
+]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
             DocSection::new("Checkbox", checkbox)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"use shadcn::{
+    Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarShortcut,
+};
+
+let show_bookmarks = cx.app.models_mut().insert(false);
+
+let view = MenubarMenu::new("View").entries([
+    MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+        show_bookmarks,
+        "Always Show Bookmarks Bar",
+    )),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(
+        MenubarItem::new("Reload").trailing(MenubarShortcut::new("⌘R").into_element(cx)),
+    ),
+]);
+
+Menubar::new([view]).into_element(cx);"#,
+                ),
             DocSection::new("Radio", radio)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"use shadcn::{
+    Menubar, MenubarEntry, MenubarMenu, MenubarRadioGroup, MenubarRadioItemSpec,
+};
+
+let theme = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
+
+let theme_menu = MenubarMenu::new("Theme").entries([MenubarEntry::RadioGroup(
+    MenubarRadioGroup::new(theme)
+        .item(MenubarRadioItemSpec::new("light", "Light"))
+        .item(MenubarRadioItemSpec::new("dark", "Dark"))
+        .item(MenubarRadioItemSpec::new("system", "System")),
+)]);
+
+Menubar::new([theme_menu]).into_element(cx);"#,
+                ),
             DocSection::new("Submenu", submenu)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+
+let file = MenubarMenu::new("File").entries([
+    MenubarEntry::Submenu(MenubarItem::new("Share").submenu([
+        MenubarEntry::Item(MenubarItem::new("Email link")),
+        MenubarEntry::Item(MenubarItem::new("Messages")),
+        MenubarEntry::Item(MenubarItem::new("Notes")),
+    ])),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(MenubarItem::new("Print...")),
+]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
             DocSection::new("With Icons", with_icons)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+
+let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+let file = MenubarMenu::new("File").entries([MenubarEntry::Group(shadcn::MenubarGroup::new([
+    MenubarEntry::Item(MenubarItem::new("Help").leading(icon(cx, "lucide.info"))),
+    MenubarEntry::Item(
+        MenubarItem::new("Delete")
+            .leading(icon(cx, "lucide.trash"))
+            .variant(shadcn::menubar::MenubarItemVariant::Destructive),
+    ),
+]))]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(520.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        let file = shadcn::MenubarMenu::new("ملف").entries([
+            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("علامة تبويب جديدة")),
+            shadcn::MenubarEntry::Separator,
+            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("طباعة...")),
+        ]);
+
+        shadcn::Menubar::new([file]).into_element(cx)
+    },
+);"#,
+                ),
         ],
     );
 

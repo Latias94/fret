@@ -133,13 +133,35 @@ shadcn::AspectRatio::new(16.0 / 9.0, content)
                 ),
             DocSection::new("Square", square)
                 .description("1:1 square media for avatars/thumbnails.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let content = cx.text("1:1");
+shadcn::AspectRatio::new(1.0, content)
+    .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Portrait", portrait)
                 .description("9:16 portrait media for reels/short video cards.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let content = cx.text("9:16");
+shadcn::AspectRatio::new(9.0 / 16.0, content)
+    .refine_layout(LayoutRefinement::default().max_w(Px(240.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("AspectRatio should remain direction-agnostic.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        let content = cx.text("RTL layout sample");
+        shadcn::AspectRatio::new(16.0 / 9.0, content).into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
         ],
     );

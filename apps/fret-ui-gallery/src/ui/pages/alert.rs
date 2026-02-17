@@ -207,23 +207,91 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Basic", basic)
                 .description("Default variant for neutral info.")
                 .max_w(Px(720.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-check")),
+    shadcn::AlertTitle::new("Account updated successfully").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.variant(shadcn::AlertVariant::Default)
+.into_element(cx);"#,
+                ),
             DocSection::new("Destructive", destructive)
                 .description("Destructive variant for critical errors.")
                 .max_w(Px(720.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
+    shadcn::AlertTitle::new("Payment failed").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.variant(shadcn::AlertVariant::Destructive)
+.into_element(cx);"#,
+                ),
             DocSection::new("Action", action)
                 .description("Inline action row composed inside the alert.")
                 .max_w(Px(720.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let action_row = stack::hstack(
+    cx,
+    stack::HStackProps::default()
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end(),
+    |cx| {
+        ui::children![cx;
+            shadcn::Button::new("Enable")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm),
+        ]
+    },
+);
+
+shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.moon")),
+    shadcn::AlertTitle::new("Dark mode is now available").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+    action_row,
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
                 .max_w(Px(720.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
+    shadcn::AlertTitle::new("Your subscription expires soon").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.refine_style(
+    ChromeRefinement::default()
+        .bg(ColorRef::Color(CoreColor { r: 1.0, g: 0.98, b: 0.92, a: 1.0 }))
+        .border_color(ColorRef::Color(CoreColor { r: 0.98, g: 0.85, b: 0.45, a: 1.0 })),
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
                 .max_w(Px(720.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Alert::new([
+            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+            shadcn::AlertTitle::new("RTL alert sample").into_element(cx),
+            shadcn::AlertDescription::new("...").into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

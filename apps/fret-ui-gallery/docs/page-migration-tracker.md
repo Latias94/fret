@@ -25,9 +25,9 @@ this is intentionally searchable so we can drive the remaining cleanup.
 
 | Page id | Module | Uses DocSection | Code tabs status |
 | --- | --- | --- | --- |
-| `alert` | `ui/pages/alert.rs` | Yes | Stubbed |
+| `alert` | `ui/pages/alert.rs` | Yes | Complete |
 | `alert_dialog` | `ui/pages/alert_dialog.rs` | Yes | Stubbed |
-| `aspect_ratio` | `ui/pages/aspect_ratio.rs` | Yes | Stubbed |
+| `aspect_ratio` | `ui/pages/aspect_ratio.rs` | Yes | Complete |
 | `breadcrumb` | `ui/pages/breadcrumb.rs` | Yes | Stubbed |
 | `carousel` | `ui/pages/carousel.rs` | Yes | Stubbed |
 | `chart` | `ui/pages/chart.rs` | Yes | Stubbed |
@@ -50,11 +50,11 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `input_otp` | `ui/pages/input_otp.rs` | Yes | Complete |
 | `item` | `ui/pages/item.rs` | Yes | Stubbed |
 | `kbd` | `ui/pages/kbd.rs` | Yes | Stubbed |
-| `label` | `ui/pages/label.rs` | Yes | Stubbed |
-| `menubar` | `ui/pages/menubar.rs` | Yes | Stubbed |
+| `label` | `ui/pages/label.rs` | Yes | Complete |
+| `menubar` | `ui/pages/menubar.rs` | Yes | Complete |
 | `motion_presets` | `ui/pages/motion_presets.rs` | Yes | Stubbed |
 | `native_select` | `ui/pages/native_select.rs` | Yes | Stubbed |
-| `navigation_menu` | `ui/pages/navigation_menu.rs` | Yes | Stubbed |
+| `navigation_menu` | `ui/pages/navigation_menu.rs` | Yes | Complete |
 | `shadcn_extras` | `ui/pages/shadcn_extras.rs` | Yes | Stubbed |
 | `toggle` | `ui/pages/toggle.rs` | Yes | Stubbed |
 | `toggle_group` | `ui/pages/toggle_group.rs` | Yes | Stubbed |
