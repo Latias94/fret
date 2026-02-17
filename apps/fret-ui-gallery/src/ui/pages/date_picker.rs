@@ -361,36 +361,21 @@ pub(super) fn preview_date_picker(
                 .max_w(Px(780.0))
                 .code(
                     "rust",
-                    r#"let (input_title, input) = doc_layout::gap_card(
-    cx,
-    "Input",
-    "Input-driven parsing is not yet exposed by current Fret DatePicker API.",
-    "ui-gallery-date-picker-input-gap",
-);"#,
+                    r#"// Not yet implemented: Input-driven parsing is not exposed by current DatePicker API yet."#,
                 ),
             DocSection::new(time_title, time_picker)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
                 .max_w(Px(780.0))
                 .code(
                     "rust",
-                    r#"let (time_title, time_picker) = doc_layout::gap_card(
-    cx,
-    "Time Picker",
-    "Time selection widgets are not yet unified into DatePicker API.",
-    "ui-gallery-date-picker-time-gap",
-);"#,
+                    r#"// Not yet implemented: Time selection widgets are not yet unified into DatePicker API."#,
                 ),
             DocSection::new(nl_title, natural_language)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
                 .max_w(Px(780.0))
                 .code(
                     "rust",
-                    r#"let (nl_title, natural_language) = doc_layout::gap_card(
-    cx,
-    "Natural Language Picker",
-    "Natural-language parsing is not available in this runtime surface yet.",
-    "ui-gallery-date-picker-natural-gap",
-);"#,
+                    r#"// Not yet implemented: Natural-language parsing is not available in this runtime surface yet."#,
                 ),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
