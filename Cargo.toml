@@ -25,7 +25,6 @@ documentation = "https://docs.rs/fret"
 anyhow = "1"
 bytemuck = { version = "1", features = ["derive"] }
 accesskit = "0.24.0"
-cocoa = "0.26"
 objc = "0.2"
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
