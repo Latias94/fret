@@ -90,6 +90,25 @@ Out of scope:
 7) **Escape cancels dock drag safely (P0)**
    - Cancels drag session, stops tear-off follow, clears internal-drag hover, and does not fight overlays.
 
+## Interaction model (what “ImGui-style” means in practice)
+
+This section exists to avoid a common confusion: in Dear ImGui, “multi-viewports” means **multiple OS
+platform windows**, but the gesture people remember as “drag the window title” is actually dragging the
+ImGui window/tab title **inside the client area**, not the OS window decoration title bar.
+
+For Fret, the intended UX contract is:
+
+- Re-docking a torn-off panel/tabs is performed by **dragging the tab** (or docking chrome title band)
+  inside the dock host widget.
+- Dragging the **OS window title bar** of a `DockFloating` window is treated as an OS-managed “move
+  the platform window” gesture and is not a docking interaction.
+
+Rationale:
+
+- It keeps the interaction portable and consistent across backends (winit + platform window managers).
+- It avoids coupling docking to platform-specific tracked window-move loops.
+- It aligns with ADR 0041: docking is an internal-drag/session problem, not a platform window-move problem.
+
 ## Baseline architecture (current shape)
 
 Non-normative summary of the current layering:

@@ -6,6 +6,11 @@ This document defines a backend/runner contract for **window-under-cursor detect
 ImGui-style multi-window docking (tear-off + re-dock), with the explicit goal of reducing
 heuristics in the “Reliable” path.
 
+Related:
+
+- Executable TODO tracker: `docs/workstreams/docking-hovered-window-contract-v1-todo.md`
+- Cross-platform parity plan: `docs/workstreams/docking-multiwindow-imgui-parity.md`
+
 ## Why this exists
 
 Multi-window docking hand-feel depends on correctly answering:
@@ -226,4 +231,3 @@ Recommended additions (future):
   rather than a docking-only path?
 - Do we want a platform-agnostic “hover provider contract test” harness, similar to how ImGui
   backends validate multi-viewport behavior?
-
