@@ -190,8 +190,15 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-dx12-gpu-copy.windows-local.v1.json`
       - Correctness script: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
 
-- [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
+- [x] EXTV2-mobile-110 Define iOS/Android capability-gated plans:
       document prerequisites and the deterministic fallback behavior.
+  - Status:
+    - Plan is documented and “honest” about upstream backend/API blockers.
+    - Implementation remains capability-gated and should be treated as blocked until the backend
+      exposes a supported import/export mechanism on real devices.
+  - Evidence anchors:
+    - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (Mobile plan section)
+    - `docs/workstreams/external-texture-imports-v2-zero-low-copy.md` (Mobile plan section)
 
 ## Web zero-copy (explicitly blocked)
 

@@ -88,3 +88,22 @@ It builds on v1’s contract-path closure:
   `cargo run -p fret-diag-export -- --list-sessions --token <token>`).
   - Note: web sessions may change across reloads; re-run `--list-sessions` if tooling reports an
     unknown session id.
+
+## Mobile plan (iOS/Android) — next evidence-backed closure
+
+Goal: keep v2’s bounded strategy set truthful on mobile, and only land “no/low-copy” paths behind
+explicit capabilities + real-device perf baselines.
+
+Practical approach:
+
+1. Start from **copy-first correctness** on mobile (`CpuUpload` and/or `GpuCopy`) and keep the UI
+   contract stable.
+2. Prefer **shared allocation** as the first “no-copy in practice” uplift (classifies as `Owned`)
+   when a platform exposes a safe export mechanism.
+3. Treat “true external-handle import into `wgpu::Texture`” as capability-gated and likely blocked
+   until upstream APIs exist.
+
+Evidence anchors:
+
+- ADR: `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (Mobile plan section)
+- TODO: `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md` (`EXTV2-mobile-110`)

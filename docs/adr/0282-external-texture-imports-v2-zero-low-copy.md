@@ -170,6 +170,79 @@ capability-gated (query, do not assume).
   - Strategy availability depends heavily on the backend + OS primitives; assume “copy-first” until
     proven and gated by real device perf baselines.
 
+## Mobile plan (iOS/Android) — capability-gated and honest
+
+This section documents a **capability-gated plan** for mobile. It is intentionally explicit about
+prerequisites, because “zero-copy” on mobile is frequently blocked by upstream APIs and/or
+platform constraints.
+
+The workstream goal on mobile is *not* “force a zero-copy path”; it is:
+
+1. keep the UI contract stable (`RenderTargetId` + `ViewportSurface`),
+2. keep strategy selection bounded + deterministic,
+3. preserve metadata semantics (alpha/orientation/color encoding) as far as the target allows,
+4. and gate with real-device perf baselines (power matters).
+
+### iOS (AVFoundation / CoreVideo)
+
+Typical frame source shapes:
+
+- `CVPixelBuffer` (often bi-planar YUV such as NV12),
+- or a producer that can render into a `MTLTexture`/IOSurface-backed texture.
+
+Candidate ingestion paths (ordered by desirability, but capability-gated):
+
+1. **Owned (shared allocation)**
+   - Runner/renderer allocates a `wgpu::Texture` that is backed by a `MTLTexture`/IOSurface (or an
+     equivalent shareable allocation).
+   - The producer/decoder writes directly into that allocation (no intermediate copy within Fret).
+   - This is “no-copy” in practice while classifying as `Owned` in the bounded strategy set.
+2. **GpuCopy**
+   - Producer yields a `MTLTexture` (or a `CVPixelBuffer` that can be bound as a Metal texture) and
+     we blit/copy into a renderer-owned texture.
+   - Still GPU-only, but introduces an extra pass + bandwidth cost.
+3. **CpuUpload**
+   - Producer yields bytes (or we map a pixel buffer) and upload via `Queue::write_texture`.
+   - Always available, but often too expensive for high-frequency 1080p/4K sources.
+4. **ExternalZeroCopy**
+   - Treat as **blocked** until upstream exposes a supported way to import a foreign Metal/IOSurface
+     texture handle into `wgpu::Texture` safely and portably.
+
+Prerequisites checklist (must be explicit before landing anything beyond `CpuUpload`):
+
+- A backend-supported shared allocation story (or a GPU-only copy story) on the chosen wgpu backend.
+- A deterministic “orientation + alpha + color encoding” mapping for the mobile rendering pipeline.
+- A real-device perf baseline for each landed path (iPhone/iPad classes).
+
+### Android (MediaCodec / AHardwareBuffer)
+
+Typical frame source shapes:
+
+- `MediaCodec` output to a `Surface`/`SurfaceTexture` (often GPU-backed),
+- `ImageReader` images (YUV planes, often mapped on CPU),
+- or `AHardwareBuffer` handles (shareable GPU allocations on modern Android).
+
+Candidate ingestion paths (ordered by desirability, but capability-gated):
+
+1. **Owned (shared allocation)**
+   - Runner/renderer allocates a renderer-owned `wgpu::Texture` whose underlying allocation can be
+     exported as an `AHardwareBuffer` (or equivalent), then hands it to the producer to write into.
+2. **GpuCopy**
+   - Producer yields a GPU allocation (e.g. `AHardwareBuffer`) and we copy/blit into a renderer-owned
+     texture on-GPU.
+3. **CpuUpload**
+   - Producer yields CPU-visible planes; we convert (if needed) and upload.
+4. **ExternalZeroCopy**
+   - Treat as **blocked** until wgpu exposes a supported import path for Android external image
+     handles into `wgpu::Texture` that remains portable (Vulkan/Metal backends differ).
+
+Prerequisites checklist:
+
+- A backend-supported export/import story for `AHardwareBuffer` (or a GPU copy path) that we can
+  capability-gate deterministically.
+- A YUV → RGB strategy that is stable on mobile GPUs (precision, banding, sampler state).
+- Real-device baselines (Android device classes vary widely; capture representative low/mid/high).
+
 ## Perf gates (must be explicit)
 
 For each landed v2 strategy, add:
