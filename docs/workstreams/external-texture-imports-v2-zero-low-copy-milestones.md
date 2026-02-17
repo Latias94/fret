@@ -42,6 +42,9 @@ Deliverables:
     even if it initially lands as `CpuUpload`/`GpuCopy`, with stable metadata semantics and gates.
   - **M2B (ceiling uplift)**: a true zero/low-copy path is added behind explicit capabilities
     (e.g. D3D12-only fast path on Windows), with deterministic fallback to the copy path.
+    - Note: “true external-handle import” may be blocked by upstream APIs. In that case, M2B may be
+      satisfied by a capability-gated **shared allocation** path (producer writes into a
+      renderer-owned `wgpu::Texture`), which can still be “no-copy” while classifying as `Owned`.
 - A steady-state perf baseline exists for each landed path (non-regression + expected delta recorded).
 
 Exit criteria:

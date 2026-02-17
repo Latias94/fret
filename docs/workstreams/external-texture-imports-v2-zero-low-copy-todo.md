@@ -91,14 +91,24 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
         into a `wgpu::Texture`/`TextureView` safely; treat as capability-gated and potentially blocked
         until upstream exposes the necessary APIs.
 
-- [ ] EXTV2-native-102 M2B (time-box): feasibility spike for a true `ExternalZeroCopy` path on
+- [x] EXTV2-native-102 M2B (time-box): feasibility spike for a true `ExternalZeroCopy` path on
       native, behind explicit capabilities (e.g. Windows D3D12-only import).
-  - Deliverable:
-    - either land a capability-gated fast path, or mark it explicitly blocked with a concrete
-      upstream/API limitation and a “next revisit” note.
+  - Resolution (2026-02-17):
+    - **Blocked** for “wrap a foreign platform texture handle into wgpu” as a general mechanism:
+      wgpu’s `Device::create_texture_from_hal` requires a `wgpu-hal` texture value that is created
+      by the same wgpu device, and `wgpu-hal` does not expose a public constructor for importing an
+      arbitrary platform handle (e.g. `ID3D12Resource`) into a `wgpu-hal::dx12::Texture`.
+    - **Viable alternative** for “no-copy” on native: **shared allocation** (allocate a
+      `wgpu::Texture` in the runner/renderer and hand its native handle to the producer/decoder),
+      which can often be classified as `Owned` rather than `ExternalZeroCopy` in our bounded
+      strategy set.
+  - Next revisit:
+    - Re-evaluate once wgpu exposes a safe, supported “import platform texture handle” API for the
+      relevant backends (D3D12/Metal/IOSurface), or once we adopt a backend that provides it.
   - Evidence anchors:
-    - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (capability gating)
-    - `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md` (this item’s resolution note)
+    - `apps/fret-examples/src/external_texture_imports_demo.rs` (env-gated DX12 handle probe:
+      `FRET_EXTV2_DX12_SHARED_TEXTURE_PROBE=1`)
+    - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (capability gating + strategy set)
 
 - [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
       document prerequisites and the deterministic fallback behavior.
