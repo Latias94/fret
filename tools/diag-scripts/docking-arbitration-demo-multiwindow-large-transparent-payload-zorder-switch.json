@@ -18,6 +18,11 @@
   "steps": [
     { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "platform_ui_window_hover_detection_is", "quality": "reliable" },
+      "timeout_frames": 240
+    },
 
     { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
     { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
