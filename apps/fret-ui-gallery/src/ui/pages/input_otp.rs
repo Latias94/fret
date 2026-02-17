@@ -307,28 +307,13 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         rtl_content
     };
 
-    let notes_panel_body = stack::vstack(
+    let notes_panel_body = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "InputOtp API maps docs `pattern` to `numeric_only`, and `separator` to `group_size`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "`Disabled` and `Invalid` are currently style approximations due missing explicit state APIs.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each section has stable test_id for future diag scripts.",
-                ),
-            ]
-        },
+        [
+            "InputOtp API maps docs `pattern` to `numeric_only`, and `separator` to `group_size`.",
+            "`Disabled` and `Invalid` are currently style approximations due missing explicit state APIs.",
+            "Each section has stable test_id for future diag scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

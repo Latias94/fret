@@ -25,9 +25,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-    };
+    let icon = doc_layout::icon;
 
     let demo = {
         let empty = shadcn::Empty::new([

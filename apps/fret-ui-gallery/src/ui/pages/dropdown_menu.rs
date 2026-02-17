@@ -193,9 +193,7 @@ pub(super) fn preview_dropdown_menu(
             .into_element(cx)
     };
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-    };
+    let icon = doc_layout::icon;
 
     let action_text = cx
         .app

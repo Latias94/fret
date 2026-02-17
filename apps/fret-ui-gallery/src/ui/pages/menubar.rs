@@ -20,10 +20,7 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     }
 
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-    };
+    let icon = doc_layout::icon;
 
     let view_bookmarks_bar =
         cx.with_state(MenubarModels::default, |st| st.view_bookmarks_bar.clone());

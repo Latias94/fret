@@ -192,6 +192,10 @@ pub(in crate::ui) fn rtl(
     )
 }
 
+pub(in crate::ui) fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+}
+
 pub(in crate::ui) fn gap_card(
     cx: &mut ElementContext<'_, App>,
     title: &'static str,
@@ -199,7 +203,7 @@ pub(in crate::ui) fn gap_card(
     test_id: &'static str,
 ) -> (&'static str, AnyElement) {
     let alert_content = shadcn::Alert::new([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+        icon(cx, "lucide.info"),
         shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
         shadcn::AlertDescription::new(details).into_element(cx),
     ])
