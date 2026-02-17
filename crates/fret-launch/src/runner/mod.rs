@@ -9,6 +9,9 @@ mod viewport_target;
 mod yuv;
 mod yuv_gpu;
 
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+pub mod windows_mf_video;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod desktop;
 #[cfg(target_arch = "wasm32")]

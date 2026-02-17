@@ -69,7 +69,8 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - Perf script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`
     - First real native frame source (Windows/MF, stage M2A = CPU upload):
-      - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`wmf::MfVideoReader`, CPU upload loop, test_ids)
+      - `crates/fret-launch/src/runner/windows_mf_video.rs` (`MfVideoReader`, URL resolver test, DX12 interop helpers)
+      - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (CPU upload loop, mode switching, test_ids)
       - `apps/fret-demo/src/bin/external_video_imports_mf_demo.rs` (demo entrypoint)
       - Perf script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
@@ -126,6 +127,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
         into the DX12 shared allocation.
   - Evidence anchors:
     - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`ExternalVideoImportsMode::MfVideoDx12GpuCopy`)
+    - `crates/fret-launch/src/runner/windows_mf_video.rs` (`Dx12Interop`)
     - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard::export_raw`)
     - Correctness script (requires `FRET_WGPU_BACKEND=dx12`, `FRET_EXTV2_MF_DX12_GPU_COPY=1`, and a playable `FRET_MF_VIDEO_PATH`):
       - `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`

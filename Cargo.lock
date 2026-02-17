@@ -2251,6 +2251,7 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "block2 0.6.2",
  "bytemuck",
  "fret-app",
