@@ -46,6 +46,11 @@ Defaults if unclear:
 - Run a script and launch the target app (recommended for reproducibility):
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
 
+- Fast “don’t grep bundle.json” triage helpers (native or web-exported bundles):
+  - Summary sidecar (cached): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
+  - Find the right `test_id` quickly (cached index): `cargo run -p fretboard -- diag query test-id [<bundle_dir|bundle.json>] <pattern> --mode contains --top 50`
+  - Export a minimal shareable slice for one target (instead of copying bundle fragments): `cargo run -p fretboard -- diag slice [<bundle_dir|bundle.json>] --test-id <test_id>`
+
 - Web runner (WASM): export bundles via DevTools WS (no filesystem access in-browser):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
   - Serve the WASM app: `cd apps/fret-ui-gallery-web && trunk serve --port 8080`
@@ -94,6 +99,7 @@ Defaults if unclear:
 6. Package and share.
    - `fretboard diag pack --include-screenshots` (bundle + screenshots)
    - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
+   - Note: packed bundles include cached sidecars under `_root/` when available (`bundle.meta.json`, `test_ids.index.json`, `test_ids.json`).
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
@@ -120,6 +126,7 @@ Fast paths (copy/paste):
 - VirtualList boundary: `python3 tools/perf/diag_vlist_boundary_gate.py --runs 3`
 - Triage an out-dir: `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot`
 - Inspect worst frames: `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+  - Note: `diag stats` defaults to a brief human report; use `--verbose` for the detailed breakdown or `--json` for machine output.
 
 See: `references/perf-handoff.md`.
 
@@ -127,6 +134,7 @@ See: `references/perf-handoff.md`.
 
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
+- Prefer `diag meta` / `diag query test-id` / `diag slice` over grepping `bundle.json` (bounded output, cached, shareable).
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
 - Use suites/repros when you want standardized runs:
   - `cargo run -p fretboard -- diag suite <suite-name>`
@@ -177,6 +185,9 @@ Start from these portable artifacts:
 - `script.result.json`: outcome + stable `reason_code` + step index + bounded evidence
 - `bundle.json`: full frame snapshots (semantics/layout/stats/debug surfaces)
 - `triage.json`: compact machine-readable summary derived from a bundle
+- `bundle.meta.json`: cached bundle summary (windows, snapshots, last-considered frame ids, `test_id` counts)
+- `test_ids.index.json`: cached `test_id` index used by `diag query test-id` (fast, bounded query output)
+- `slice.<test_id>.json`: minimal extracted slice for a single target (`diag slice`)
 
 Common `script.result.json` evidence fields (bounded ring buffers):
 
@@ -195,6 +206,14 @@ Reason-code first triage:
 - `focus.*` / “type_text_into stalls” ⇒ inspect `focus_trace` + `text_input_snapshot`
 - “overlay jumped/flipped/clipped” ⇒ inspect `overlay_placement_trace` (outer/collision/anchor + chosen side + shift delta)
 - `timeout` ⇒ prefer adding an intermediate `capture_bundle` and shrinking the script
+
+## Fast query & slices (avoid grepping `bundle.json`)
+
+Use these when you’re trying to quickly find a selector or share a small artifact:
+
+- `fretboard diag meta <bundle_dir|bundle.json> [--warmup-frames <n>] [--json]` (cached summary)
+- `fretboard diag query test-id [<bundle_dir|bundle.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json]` (cached index)
+- `fretboard diag slice [<bundle_dir|bundle.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json]` (minimal export)
 
 ## Component conformance playbooks (reference)
 
