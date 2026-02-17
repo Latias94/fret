@@ -33,7 +33,7 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `chart` | `ui/pages/chart.rs` | Yes | Stubbed |
 | `checkbox` | `ui/pages/checkbox.rs` | Yes | Stubbed |
 | `collapsible` | `ui/pages/collapsible.rs` | Yes | Stubbed |
-| `combobox` | `ui/pages/combobox.rs` | Yes | Stubbed |
+| `combobox` | `ui/pages/combobox.rs` | Yes | Complete |
 | `command` | `ui/pages/command.rs` | Yes | Stubbed |
 | `context_menu` | `ui/pages/context_menu.rs` | Yes | Stubbed |
 | `data_table` | `ui/pages/data_table.rs` | Yes | Stubbed |
@@ -45,8 +45,8 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `field` | `ui/pages/field.rs` | Yes | Stubbed |
 | `form` | `ui/pages/form.rs` | Yes | Stubbed |
 | `hover_card` | `ui/pages/hover_card.rs` | Yes | Stubbed |
-| `input` | `ui/pages/input.rs` | Yes | Stubbed |
-| `input_group` | `ui/pages/input_group.rs` | Yes | Stubbed |
+| `input` | `ui/pages/input.rs` | Yes | Complete |
+| `input_group` | `ui/pages/input_group.rs` | Yes | Complete |
 | `input_otp` | `ui/pages/input_otp.rs` | Yes | Complete |
 | `item` | `ui/pages/item.rs` | Yes | Stubbed |
 | `kbd` | `ui/pages/kbd.rs` | Yes | Stubbed |
@@ -59,7 +59,7 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `toggle` | `ui/pages/toggle.rs` | Yes | Stubbed |
 | `toggle_group` | `ui/pages/toggle_group.rs` | Yes | Stubbed |
 | `tooltip` | `ui/pages/tooltip.rs` | Yes | Stubbed |
-| `typography` | `ui/pages/typography.rs` | Yes | Stubbed |
+| `typography` | `ui/pages/typography.rs` | Yes | Complete |
 
 ## Legacy docs system (to delete)
 

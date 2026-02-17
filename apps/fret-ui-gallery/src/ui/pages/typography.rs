@@ -192,63 +192,163 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             DocSection::new("Demo", demo)
                 .description("A long-form story sample combining headings, paragraphs, and lists.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N3).items_start(),
+    |cx| {
+        vec![
+            shadcn::typography::h1(cx, "Taxing Laughter: The Joke Tax Chronicles"),
+            shadcn::typography::lead(cx, "Once upon a time..."),
+            shadcn::typography::h2(cx, "The King's Plan"),
+            shadcn::typography::p(cx, "The king thought long and hard..."),
+            shadcn::typography::blockquote(cx, "After all, everyone enjoys a good joke..."),
+            shadcn::typography::h3(cx, "The Joke Tax"),
+            shadcn::typography::list(
+                cx,
+                [
+                    Arc::<str>::from("1st level of puns: 5 gold coins"),
+                    Arc::<str>::from("2nd level of jokes: 10 gold coins"),
+                    Arc::<str>::from("3rd level of one-liners: 20 gold coins"),
+                ],
+            ),
+        ]
+    },
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("h1", h1)
                 .description("Top-level heading.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code("rust", r#"shadcn::typography::h1(cx, "The Joke Tax Chronicles");"#),
             DocSection::new("h2", h2)
                 .description("Section heading.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code("rust", r#"shadcn::typography::h2(cx, "People stopped telling jokes");"#),
             DocSection::new("h3", h3)
                 .description("Sub-section heading.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code("rust", r#"shadcn::typography::h3(cx, "Jokester's Revolt");"#),
             DocSection::new("h4", h4)
                 .description("Low-level heading for grouped content.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code("rust", r#"shadcn::typography::h4(cx, "The People's Rebellion");"#),
             DocSection::new("p", p)
                 .description("Body paragraph text.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::p(cx, "The king, seeing how much happier...");"#,
+                ),
             DocSection::new("blockquote", blockquote)
                 .description("Quoted callout text.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::blockquote(cx, "Never underestimate the power of a good laugh.");"#,
+                ),
             DocSection::new("table", table)
                 .description("Tabular content using shadcn Table parts.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Table::new(vec![
+    shadcn::TableHeader::new(vec![
+        shadcn::TableRow::new(
+            2,
+            vec![
+                shadcn::TableHead::new("King's Treasury").into_element(cx),
+                shadcn::TableHead::new("People's Happiness").into_element(cx),
+            ],
+        )
+        .border_bottom(true)
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::TableBody::new(vec![
+        shadcn::TableRow::new(
+            2,
+            vec![
+                shadcn::TableCell::new(cx.text("Empty")).into_element(cx),
+                shadcn::TableCell::new(cx.text("Overflowing")).into_element(cx),
+            ],
+        )
+        .into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("list", list)
                 .description("Bulleted/ordered list content.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::list(
+    cx,
+    [
+        Arc::<str>::from("Jokes are free speech."),
+        Arc::<str>::from("Laughter improves morale."),
+        Arc::<str>::from("Taxes should be fair."),
+    ],
+);"#,
+                ),
             DocSection::new("Inline Code", inline_code)
                 .description("Inline code styling for commands and identifiers.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery");"#,
+                ),
             DocSection::new("Lead", lead)
                 .description("Intro lead paragraph for sections.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::lead(cx, "A larger lead paragraph introduces a section.");"#,
+                ),
             DocSection::new("Large", large)
                 .description("Emphasis text for short callouts.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code("rust", r#"shadcn::typography::large(cx, "A large text block for emphasis.");"#),
             DocSection::new("Small", small)
                 .description("Helper text and metadata.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::small(cx, "Use small for helper text and metadata.");"#,
+                ),
             DocSection::new("Muted", muted)
                 .description("De-emphasized hint/explanation text.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(cx, "Muted text is suitable for non-primary explanations.");"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            |cx| {
+                vec![
+                    shadcn::typography::h3(cx, "RTL Sample"),
+                    shadcn::typography::p(cx, "This block validates right-to-left direction..."),
+                    shadcn::typography::muted(cx, "Check wrapping and alignment under RTL."),
+                ]
+            },
+        )
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

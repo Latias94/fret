@@ -98,48 +98,177 @@ pub(super) fn preview_combobox(
                 ),
             DocSection::new("Multiple Selection", multiple_selection)
                 .description("Parity gap marker: upstream supports chips + multiple values.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select.",
+);"#,
+                ),
             DocSection::new("Basic", basic)
                 .description("Small list of items with stable test IDs for diag scripts.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox basic")
+    .width(Px(260.0))
+    .placeholder("Select a framework")
+    .query_model(query)
+    .test_id_prefix("ui-gallery-combobox-basic")
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Long List", long_list)
                 .description(
                     "Supports long-list scroll regression gates (and future virtualization invariants).",
                 )
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let items: Vec<shadcn::ComboboxItem> = (0..250)
+    .map(|i| shadcn::ComboboxItem::new(format!("{i:03}"), format!("Item {i:03}")))
+    .collect();
+
+shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox long list")
+    .width(Px(320.0))
+    .placeholder("Pick an item")
+    .query_model(query)
+    .test_id_prefix("ui-gallery-combobox-long-list")
+    .items(items)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Multiple", multiple)
                 .description("Parity gap marker: `multiple` + chips behavior is not exposed yet.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "`multiple` + chips behavior is not exposed in current Fret `Combobox`.",
+);"#,
+                ),
             DocSection::new("Clear Button", clear_button)
                 .description("Parity gap marker: upstream `showClear` is not exposed yet.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream has `showClear`. Current Fret API can be cleared by resetting the value model.",
+);"#,
+                ),
             DocSection::new("Groups", groups)
                 .description(
                     "Grouped rows are approximated with prefix labels until group/separator APIs exist.",
                 )
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox groups")
+    .width(Px(300.0))
+    .placeholder("Filter commands")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("framework-next", "Frameworks / Next.js"),
+        shadcn::ComboboxItem::new("framework-nuxt", "Frameworks / Nuxt.js"),
+        shadcn::ComboboxItem::new("language-rust", "Languages / Rust"),
+        shadcn::ComboboxItem::new("tool-cargo", "Tools / Cargo"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Custom Items (Rich)", custom_items_example).description(
                 "Parity gap marker: render-rich item surfaces are currently approximated at label level.",
             )
-            .code("rust", doc_layout::TODO_RUST_CODE),
+            .code(
+                "rust",
+                r#"shadcn::typography::muted(
+    cx,
+    "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
+);"#,
+            ),
             DocSection::new("Invalid", invalid).description(
                 "Invalid visual is currently approximated via destructive border style on trigger.",
             )
-            .code("rust", doc_layout::TODO_RUST_CODE),
+            .code(
+                "rust",
+                r#"let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
+
+shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox invalid")
+    .width(Px(260.0))
+    .placeholder("Select required option")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("apple", "Apple"),
+        shadcn::ComboboxItem::new("banana", "Banana"),
+    ])
+    .refine_style(
+        ChromeRefinement::default()
+            .border_1()
+            .border_color(ColorRef::Color(destructive)),
+    )
+    .into_element(cx);"#,
+            ),
             DocSection::new("Disabled", disabled)
                 .description("Disabled state should block open/selection and use muted styling.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox disabled")
+    .placeholder("Disabled")
+    .query_model(query)
+    .items([shadcn::ComboboxItem::new("apple", "Apple")])
+    .disabled(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Auto Highlight", auto_highlight).description(
                 "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not surfaced yet.",
             )
-            .code("rust", doc_layout::TODO_RUST_CODE),
+            .code(
+                "rust",
+                r#"shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox auto highlight")
+    .placeholder("Type to filter")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("apple", "Apple"),
+        shadcn::ComboboxItem::new("banana", "Banana"),
+    ])
+    .into_element(cx);"#,
+            ),
             DocSection::new("Popup", popup).description(
                 "Parity gap marker: trigger-as-button popup recipe is not exposed yet.",
             )
-            .code("rust", doc_layout::TODO_RUST_CODE),
+            .code(
+                "rust",
+                r#"shadcn::typography::muted(
+    cx,
+    "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
+);"#,
+            ),
             DocSection::new("Input Group", input_group)
                 .description("Inline keybinding + input grouping example.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let combo = shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox input group")
+    .width(Px(220.0))
+    .placeholder("Search command")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("new-file", "New File"),
+        shadcn::ComboboxItem::new("open-file", "Open File"),
+    ])
+    .into_element(cx);
+
+stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N2).items_center(),
+    |cx| vec![shadcn::typography::muted(cx, "Cmd"), combo],
+);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(
