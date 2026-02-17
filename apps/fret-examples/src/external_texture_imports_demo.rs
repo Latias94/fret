@@ -767,25 +767,33 @@ fn record_engine_frame(
             size: st.target_px_size,
             ingest_strategy: effective_strategy,
         });
-        if let Err(err) = st
+        match st
             .target
-            .push_native_external_import_update_with_requested_ingest_strategy_or_fallback(
+            .push_native_external_import_update_with_deterministic_fallback(
                 renderer,
                 &mut update,
                 context,
                 &renderer_caps,
                 RenderTargetIngestStrategy::ExternalZeroCopy,
                 frame,
-                view.clone(),
-                st.target_px_size,
-                RenderTargetMetadata::default(),
-                effective_strategy,
-            )
-        {
-            tracing::warn!(
-                ?err,
-                "native external import adapter path failed; fell back"
-            );
+                std::slice::from_ref(&effective_strategy),
+                |fallback_effective| {
+                    debug_assert_eq!(fallback_effective, effective_strategy);
+                    (
+                        view.clone(),
+                        st.target_px_size,
+                        RenderTargetMetadata::default(),
+                        None,
+                    )
+                },
+            ) {
+            fret_launch::NativeExternalImportOutcome::Imported { .. } => {}
+            fret_launch::NativeExternalImportOutcome::FellBack { err, .. } => {
+                tracing::warn!(
+                    ?err,
+                    "native external import adapter path failed; fell back"
+                );
+            }
         }
     } else {
         st.target

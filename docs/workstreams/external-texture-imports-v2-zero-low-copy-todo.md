@@ -95,6 +95,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `crates/fret-launch/src/runner/native_external_import.rs`
     - `crates/fret-launch/src/runner/imported_viewport_target.rs`
       - `ImportedViewportRenderTarget::push_native_external_import_update_with_requested_ingest_strategy_or_fallback(...)`
+      - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
   - Remaining:
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
       produce the best available path on capable backends (and deterministically degrade otherwise):

@@ -7,6 +7,17 @@ use fret_render::{
 use super::EngineFrameUpdate;
 use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalTextureFrame};
 
+#[derive(Debug)]
+pub enum NativeExternalImportOutcome {
+    Imported {
+        effective: RenderTargetIngestStrategy,
+    },
+    FellBack {
+        effective: RenderTargetIngestStrategy,
+        err: NativeExternalImportError,
+    },
+}
+
 /// Per-frame imported render target intended to be embedded into the UI via `SceneOp::ViewportSurface`.
 ///
 /// Unlike [`super::ViewportRenderTarget`], this helper does **not** call `renderer.update_render_target(...)`
@@ -186,6 +197,48 @@ impl ImportedViewportRenderTarget {
         update.keepalive.push(keepalive);
     }
 
+    fn deterministic_fallback_chain_for_requested(
+        requested: RenderTargetIngestStrategy,
+    ) -> &'static [RenderTargetIngestStrategy] {
+        match requested {
+            RenderTargetIngestStrategy::Unknown => &[
+                RenderTargetIngestStrategy::Owned,
+                RenderTargetIngestStrategy::GpuCopy,
+                RenderTargetIngestStrategy::CpuUpload,
+            ],
+            RenderTargetIngestStrategy::ExternalZeroCopy => &[
+                RenderTargetIngestStrategy::ExternalZeroCopy,
+                RenderTargetIngestStrategy::GpuCopy,
+                RenderTargetIngestStrategy::CpuUpload,
+            ],
+            RenderTargetIngestStrategy::GpuCopy => &[
+                RenderTargetIngestStrategy::GpuCopy,
+                RenderTargetIngestStrategy::CpuUpload,
+            ],
+            RenderTargetIngestStrategy::CpuUpload => &[RenderTargetIngestStrategy::CpuUpload],
+            RenderTargetIngestStrategy::Owned => &[RenderTargetIngestStrategy::Owned],
+        }
+    }
+
+    fn select_deterministic_fallback_effective(
+        requested: RenderTargetIngestStrategy,
+        available: &[RenderTargetIngestStrategy],
+    ) -> RenderTargetIngestStrategy {
+        let chain = Self::deterministic_fallback_chain_for_requested(requested);
+        for candidate in chain {
+            if available.contains(candidate) {
+                return *candidate;
+            }
+        }
+
+        // Fallback: if the caller provided an "available" set that doesn't overlap with the
+        // deterministic chain, pick the first available value deterministically.
+        available
+            .first()
+            .copied()
+            .unwrap_or(RenderTargetIngestStrategy::CpuUpload)
+    }
+
     /// Attempt to import a platform-produced external frame and record a runner delta update.
     ///
     /// This helper implements ADR 0234's staging shape:
@@ -222,6 +275,93 @@ impl ImportedViewportRenderTarget {
         );
 
         Ok(())
+    }
+
+    /// Attempt a native external import, but deterministically fall back to a caller-provided
+    /// update when the import cannot be performed.
+    ///
+    /// This helper centralizes v2's "bounded strategy set + deterministic fallback chain"
+    /// selection (ADR 0282) so demos and call sites don't re-implement the same ordering.
+    ///
+    /// `fallback_available` declares which effective strategies the caller can provide a fallback
+    /// update for, and `fallback_for` must be able to produce an update for the selected strategy.
+    pub fn push_native_external_import_update_with_deterministic_fallback(
+        &mut self,
+        renderer: &mut Renderer,
+        update: &mut EngineFrameUpdate,
+        ctx: &fret_render::WgpuContext,
+        caps: &fret_render::RendererCapabilities,
+        requested: RenderTargetIngestStrategy,
+        frame: Box<dyn NativeExternalTextureFrame>,
+        fallback_available: &[RenderTargetIngestStrategy],
+        mut fallback_for: impl FnMut(
+            RenderTargetIngestStrategy,
+        ) -> (
+            wgpu::TextureView,
+            (u32, u32),
+            RenderTargetMetadata,
+            Option<EngineFrameKeepalive>,
+        ),
+    ) -> NativeExternalImportOutcome {
+        let imported = match frame.import(ctx, caps) {
+            Ok(imported) => imported,
+            Err(err) => {
+                let fallback_effective =
+                    Self::select_deterministic_fallback_effective(requested, fallback_available);
+                let (fallback_view, fallback_size, fallback_metadata, fallback_keepalive) =
+                    fallback_for(fallback_effective);
+                let metadata =
+                    Self::with_ingest_strategies(fallback_metadata, requested, fallback_effective);
+
+                if !self.is_registered() {
+                    let _ = self.ensure_registered_with_metadata(
+                        renderer,
+                        fallback_view.clone(),
+                        fallback_size,
+                        metadata,
+                    );
+                }
+
+                if let Some(keepalive) = fallback_keepalive {
+                    self.push_update_with_metadata_and_keepalive(
+                        update,
+                        fallback_view,
+                        fallback_size,
+                        metadata,
+                        keepalive,
+                    );
+                } else {
+                    self.push_update_with_metadata(update, fallback_view, fallback_size, metadata);
+                }
+
+                return NativeExternalImportOutcome::FellBack {
+                    effective: fallback_effective,
+                    err,
+                };
+            }
+        };
+
+        let effective = imported.metadata.ingest_strategy;
+        let metadata = Self::with_ingest_strategies(imported.metadata, requested, effective);
+
+        if !self.is_registered() {
+            let _ = self.ensure_registered_with_metadata(
+                renderer,
+                imported.view.clone(),
+                imported.size,
+                metadata,
+            );
+        }
+
+        self.push_update_with_metadata_and_keepalive(
+            update,
+            imported.view,
+            imported.size,
+            metadata,
+            imported.keepalive,
+        );
+
+        NativeExternalImportOutcome::Imported { effective }
     }
 
     /// Attempt to import a platform-produced external frame and record a runner delta update,
