@@ -3,8 +3,8 @@ use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{
-    EngineFrameKeepalive, EngineFrameUpdate, ImportedViewportRenderTarget,
-    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+    EngineFrameUpdate, ImportedViewportRenderTarget, NativeExternalTextureFrame,
+    OwnedWgpuTextureFrame,
 };
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer,
@@ -419,33 +419,6 @@ enum ExternalTextureImportsMode {
     DecodedPngCpuCopy,
     #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
     Dx12ClearSharedAllocation,
-}
-
-struct OwnedWgpuTextureFrame {
-    texture: wgpu::Texture,
-    size: (u32, u32),
-    ingest_strategy: RenderTargetIngestStrategy,
-}
-
-impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
-    fn import(
-        self: Box<Self>,
-        _ctx: &WgpuContext,
-        _caps: &fret_render::RendererCapabilities,
-    ) -> Result<NativeExternalImportedFrame, NativeExternalImportError> {
-        let view = self
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut metadata = RenderTargetMetadata::default();
-        metadata.requested_ingest_strategy = self.ingest_strategy;
-        metadata.ingest_strategy = self.ingest_strategy;
-        Ok(NativeExternalImportedFrame {
-            view,
-            size: self.size,
-            metadata,
-            keepalive: EngineFrameKeepalive::new(self),
-        })
-    }
 }
 
 struct DecodedPngSource {
