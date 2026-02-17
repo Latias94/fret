@@ -32,14 +32,22 @@ mod wmf {
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
     use windows::Win32::Graphics::Direct3D11::{
-        D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, ID3D11Device, ID3D11DeviceContext, ID3D11Resource,
-        ID3D11Texture2D,
+        D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, D3D11_TEX2D_VPIV, D3D11_TEX2D_VPOV,
+        D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT, D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+        D3D11_VIDEO_PROCESSOR_CONTENT_DESC, D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC,
+        D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC, D3D11_VIDEO_PROCESSOR_STREAM,
+        D3D11_VIDEO_USAGE_PLAYBACK_NORMAL, D3D11_VPIV_DIMENSION_TEXTURE2D,
+        D3D11_VPOV_DIMENSION_TEXTURE2D, ID3D11Device, ID3D11DeviceContext, ID3D11Resource,
+        ID3D11Texture2D, ID3D11VideoContext, ID3D11VideoDevice, ID3D11VideoProcessor,
+        ID3D11VideoProcessorEnumerator, ID3D11VideoProcessorInputView,
+        ID3D11VideoProcessorOutputView,
     };
     use windows::Win32::Graphics::Direct3D11on12::{
         D3D11_RESOURCE_FLAGS, D3D11On12CreateDevice, ID3D11On12Device,
     };
     use windows::Win32::Graphics::Direct3D12::{ID3D12CommandQueue, ID3D12Resource};
+    use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_NV12};
     use windows::Win32::Media::MediaFoundation::{
         IMFAttributes, IMFMediaBuffer, IMFSample, IMFSourceReader,
         MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, MF_SOURCE_READER_D3D_MANAGER,
@@ -47,15 +55,16 @@ mod wmf {
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
         MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateDXGIDeviceManager,
         MFCreateMediaType, MFCreateSourceReaderFromURL, MFMediaType_Video, MFNominalRange,
-        MFNominalRange_0_255, MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_RGB32,
-        MFVideoPrimaries, MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020, MFVideoPrimaries_DCI_P3,
-        MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
+        MFNominalRange_0_255, MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_NV12,
+        MFVideoFormat_RGB32, MFVideoPrimaries, MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020,
+        MFVideoPrimaries_DCI_P3, MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
         MFVideoTransFunc_Unknown, MFVideoTransFunc_sRGB, MFVideoTransferFunction,
         MFVideoTransferMatrix, MFVideoTransferMatrix_BT601, MFVideoTransferMatrix_BT709,
         MFVideoTransferMatrix_BT2020_10, MFVideoTransferMatrix_Unknown,
     };
     use windows::Win32::Media::MediaFoundation::{IMFDXGIBuffer, IMFDXGIDeviceManager};
     use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
+    use windows::core::BOOL;
     use windows::core::HSTRING;
     use windows::core::Interface as _;
 
@@ -321,10 +330,16 @@ mod wmf {
 
     pub struct Dx12Interop {
         on12: ID3D11On12Device,
+        video_device: ID3D11VideoDevice,
+        video_context: ID3D11VideoContext,
         context: ID3D11DeviceContext,
         mf_reader: IMFSourceReader,
         size: (u32, u32),
         color_encoding: RenderTargetColorEncoding,
+        tmp_bgra: Option<ID3D11Texture2D>,
+        tmp_bgra_size: (u32, u32),
+        vp_enum: Option<ID3D11VideoProcessorEnumerator>,
+        vp: Option<ID3D11VideoProcessor>,
     }
 
     impl Dx12Interop {
@@ -369,6 +384,10 @@ mod wmf {
             let d3d11 = d3d11.context("D3D11On12CreateDevice returned None device")?;
             let context = context.context("D3D11On12CreateDevice returned None context")?;
             let on12: ID3D11On12Device = d3d11.cast().context("cast to ID3D11On12Device")?;
+            let video_device: ID3D11VideoDevice =
+                d3d11.cast().context("cast to ID3D11VideoDevice")?;
+            let video_context: ID3D11VideoContext =
+                context.cast().context("cast to ID3D11VideoContext")?;
 
             // Create an MF DXGI device manager backed by our D3D11On12 device.
             let mut reset_token = 0u32;
@@ -397,21 +416,54 @@ mod wmf {
                 attributes
                     .SetUnknown(&MF_SOURCE_READER_D3D_MANAGER, &device_manager)
                     .context("SetUnknown(MF_SOURCE_READER_D3D_MANAGER)")?;
-                attributes
-                    .SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1)
-                    .context("SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS)")?;
-                attributes
-                    .SetUINT32(&MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1)
-                    .context("SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING)")?;
             }
 
-            let reader = unsafe {
-                MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
-                    .with_context(|| format!("MFCreateSourceReaderFromURL({path})"))?
+            fn try_create_source_reader(
+                hpath: &HSTRING,
+                attributes: &IMFAttributes,
+                resolved_path: &str,
+                enable_hw_transforms: u32,
+                enable_video_processing: u32,
+            ) -> anyhow::Result<IMFSourceReader> {
+                unsafe {
+                    attributes
+                        .SetUINT32(
+                            &MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS,
+                            enable_hw_transforms,
+                        )
+                        .context("SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS)")?;
+                    attributes
+                        .SetUINT32(
+                            &MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING,
+                            enable_video_processing,
+                        )
+                        .context("SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING)")?;
+                }
+                unsafe {
+                    MFCreateSourceReaderFromURL(hpath, Some(attributes)).with_context(|| {
+                        format!(
+                            "MFCreateSourceReaderFromURL({resolved_path}) hw_transforms={enable_hw_transforms} video_processing={enable_video_processing}"
+                        )
+                    })
+                }
+            }
+
+            // Prefer enabling video processing so MF can deliver RGB32 frames without forcing us to
+            // run an explicit NV12->BGRA conversion path in the demo. If this fails on a given
+            // machine/codec, fall back to the conservative configuration.
+            let reader = match try_create_source_reader(&hpath, &attributes, &resolved_path, 1, 1) {
+                Ok(v) => v,
+                Err(err) => {
+                    tracing::warn!(
+                        ?err,
+                        "MF DX12 interop: SourceReader init failed with video processing enabled; retrying with conservative flags"
+                    );
+                    try_create_source_reader(&hpath, &attributes, &resolved_path, 0, 0)?
+                }
             };
 
-            // Attempt to request RGB32 output. With a DXGI device manager configured, the source
-            // reader may still return DXGI-backed buffers for this format.
+            // Prefer RGB32 output so the `read_next_dxgi_texture` path can hand us a BGRA DXGI
+            // texture without additional per-frame conversion work in this demo.
             let media_type = unsafe { MFCreateMediaType().context("MFCreateMediaType")? };
             unsafe {
                 media_type
@@ -432,7 +484,7 @@ mod wmf {
                         None,
                         &media_type,
                     )
-                    .context("SetCurrentMediaType")?;
+                    .context("SetCurrentMediaType(RGB32)")?;
             }
 
             let (size, _bytes_per_row) = MfVideoReader::query_video_layout(&reader)?;
@@ -440,10 +492,16 @@ mod wmf {
 
             Ok(Self {
                 on12,
+                video_device,
+                video_context,
                 context,
                 mf_reader: reader,
                 size,
                 color_encoding,
+                tmp_bgra: None,
+                tmp_bgra_size: (0, 0),
+                vp_enum: None,
+                vp: None,
             })
         }
 
@@ -524,6 +582,28 @@ mod wmf {
             dst_resource: &ID3D12Resource,
             src_texture: &ID3D11Texture2D,
         ) -> anyhow::Result<()> {
+            let mut desc = D3D11_TEXTURE2D_DESC::default();
+            unsafe {
+                src_texture.GetDesc(&mut desc);
+            }
+
+            if desc.Format == DXGI_FORMAT_NV12 {
+                self.convert_nv12_into_bgra_tmp(src_texture, desc.Width, desc.Height)?;
+                let tmp = self
+                    .tmp_bgra
+                    .clone()
+                    .context("NV12 conversion produced no temporary BGRA texture")?;
+                return self.copy_resource_into_dx12_shared_allocation(dst_resource, &tmp);
+            }
+
+            self.copy_resource_into_dx12_shared_allocation(dst_resource, src_texture)
+        }
+
+        fn copy_resource_into_dx12_shared_allocation(
+            &mut self,
+            dst_resource: &ID3D12Resource,
+            src_texture: &ID3D11Texture2D,
+        ) -> anyhow::Result<()> {
             // Wrap the destination D3D12 resource for D3D11On12 CopyResource.
             let flags11 = D3D11_RESOURCE_FLAGS {
                 BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
@@ -550,6 +630,164 @@ mod wmf {
                 self.on12.ReleaseWrappedResources(&[Some(wrapped)]);
                 self.context.Flush();
             }
+            Ok(())
+        }
+
+        fn convert_nv12_into_bgra_tmp(
+            &mut self,
+            src_texture: &ID3D11Texture2D,
+            width: u32,
+            height: u32,
+        ) -> anyhow::Result<()> {
+            if self.tmp_bgra.is_none() || self.tmp_bgra_size != (width, height) {
+                let desc = D3D11_TEXTURE2D_DESC {
+                    Width: width,
+                    Height: height,
+                    MipLevels: 1,
+                    ArraySize: 1,
+                    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    SampleDesc: windows::Win32::Graphics::Dxgi::Common::DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+                    CPUAccessFlags: 0,
+                    MiscFlags: 0,
+                };
+
+                let d3d11: ID3D11Device = self
+                    .on12
+                    .cast()
+                    .context("cast ID3D11On12Device to ID3D11Device")?;
+                let mut tmp: Option<ID3D11Texture2D> = None;
+                unsafe {
+                    d3d11
+                        .CreateTexture2D(&desc, None, Some(&mut tmp))
+                        .context("CreateTexture2D(tmp_bgra)")?;
+                }
+                self.tmp_bgra = tmp;
+                self.tmp_bgra_size = (width, height);
+                self.vp_enum = None;
+                self.vp = None;
+            }
+
+            if self.vp_enum.is_none() || self.vp.is_none() {
+                let content = D3D11_VIDEO_PROCESSOR_CONTENT_DESC {
+                    InputFrameFormat: D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+                    InputFrameRate: windows::Win32::Graphics::Dxgi::Common::DXGI_RATIONAL {
+                        Numerator: 60,
+                        Denominator: 1,
+                    },
+                    InputWidth: width,
+                    InputHeight: height,
+                    OutputFrameRate: windows::Win32::Graphics::Dxgi::Common::DXGI_RATIONAL {
+                        Numerator: 60,
+                        Denominator: 1,
+                    },
+                    OutputWidth: width,
+                    OutputHeight: height,
+                    Usage: D3D11_VIDEO_USAGE_PLAYBACK_NORMAL,
+                };
+                let en = unsafe {
+                    self.video_device
+                        .CreateVideoProcessorEnumerator(&content)
+                        .context("CreateVideoProcessorEnumerator")?
+                };
+                let vp = unsafe {
+                    self.video_device
+                        .CreateVideoProcessor(&en, 0)
+                        .context("CreateVideoProcessor")?
+                };
+                self.vp_enum = Some(en);
+                self.vp = Some(vp);
+            }
+
+            let en = self
+                .vp_enum
+                .as_ref()
+                .context("video processor enumerator missing")?;
+            let vp = self.vp.as_ref().context("video processor missing")?;
+            let tmp = self.tmp_bgra.as_ref().context("tmp_bgra missing")?.clone();
+
+            let mut input_desc: D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC =
+                unsafe { std::mem::zeroed() };
+            input_desc.FourCC = 0;
+            input_desc.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
+            unsafe {
+                input_desc.Anonymous.Texture2D = D3D11_TEX2D_VPIV {
+                    MipSlice: 0,
+                    ArraySlice: 0,
+                };
+            }
+            let mut input_view: Option<ID3D11VideoProcessorInputView> = None;
+            unsafe {
+                self.video_device
+                    .CreateVideoProcessorInputView(
+                        src_texture,
+                        en,
+                        &input_desc,
+                        Some(&mut input_view),
+                    )
+                    .context("CreateVideoProcessorInputView")?;
+            }
+            let input_view = input_view.context("CreateVideoProcessorInputView returned None")?;
+
+            let mut output_desc: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC =
+                unsafe { std::mem::zeroed() };
+            output_desc.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
+            unsafe {
+                output_desc.Anonymous.Texture2D = D3D11_TEX2D_VPOV { MipSlice: 0 };
+            }
+            let mut output_view: Option<ID3D11VideoProcessorOutputView> = None;
+            unsafe {
+                self.video_device
+                    .CreateVideoProcessorOutputView(&tmp, en, &output_desc, Some(&mut output_view))
+                    .context("CreateVideoProcessorOutputView")?;
+            }
+            let output_view =
+                output_view.context("CreateVideoProcessorOutputView returned None")?;
+
+            let rect = windows::Win32::Foundation::RECT {
+                left: 0,
+                top: 0,
+                right: width as i32,
+                bottom: height as i32,
+            };
+            unsafe {
+                self.video_context.VideoProcessorSetStreamFrameFormat(
+                    vp,
+                    0,
+                    D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE,
+                );
+                self.video_context
+                    .VideoProcessorSetStreamSourceRect(vp, 0, true, Some(&rect));
+                self.video_context
+                    .VideoProcessorSetStreamDestRect(vp, 0, true, Some(&rect));
+                self.video_context
+                    .VideoProcessorSetOutputTargetRect(vp, true, Some(&rect));
+            }
+
+            let mut stream = D3D11_VIDEO_PROCESSOR_STREAM::default();
+            stream.Enable = BOOL(1);
+            stream.OutputIndex = 0;
+            stream.InputFrameOrField = 0;
+            stream.PastFrames = 0;
+            stream.FutureFrames = 0;
+            stream.ppPastSurfaces = std::ptr::null_mut();
+            stream.pInputSurface = std::mem::ManuallyDrop::new(Some(input_view));
+            stream.ppFutureSurfaces = std::ptr::null_mut();
+            stream.ppPastSurfacesRight = std::ptr::null_mut();
+            stream.pInputSurfaceRight = std::mem::ManuallyDrop::new(None);
+            stream.ppFutureSurfacesRight = std::ptr::null_mut();
+
+            unsafe {
+                self.video_context
+                    .VideoProcessorBlt(vp, &output_view, 0, std::slice::from_ref(&stream))
+                    .context("VideoProcessorBlt")?;
+                self.context.Flush();
+            }
+
             Ok(())
         }
     }
@@ -946,6 +1184,10 @@ fn record_engine_frame(
 
     let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
     if needs_realloc {
+        // Allocate the shared-allocation texture as *linear* BGRA8, but expose an sRGB view for
+        // the UI contract-path surface. This avoids relying on backend-specific support for
+        // wrapping SRGB-format resources in D3D11On12 interop.
+        let view_formats = [wgpu::TextureFormat::Bgra8UnormSrgb];
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("external video imports texture"),
             size: wgpu::Extent3d {
@@ -956,13 +1198,16 @@ fn record_engine_frame(
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: st.target.format(),
+            format: wgpu::TextureFormat::Bgra8Unorm,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
+            view_formats: &view_formats,
         });
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(st.target.format()),
+            ..Default::default()
+        });
 
         if !st.target.is_registered() {
             let _ = st.target.ensure_registered(renderer, view.clone(), desired);
@@ -973,7 +1218,10 @@ fn record_engine_frame(
     }
 
     let texture = st.texture.as_ref().expect("texture allocated");
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let view = texture.create_view(&wgpu::TextureViewDescriptor {
+        format: Some(st.target.format()),
+        ..Default::default()
+    });
 
     let mut metadata = RenderTargetMetadata::default();
     match st.mode {

@@ -437,6 +437,23 @@ fn wait_for_bundle_dumped(
                             return Ok((dir, bundle));
                         }
                     }
+
+                    // Native runtimes may omit embedding the bundle JSON in WS messages, and instead
+                    // rely on the fact that tooling is running on the same machine and can read the
+                    // exported bundle from the filesystem using `out_dir` + `dir`.
+                    //
+                    // This keeps WS messages bounded for large bundles while still allowing
+                    // `fret-diag-export` to work for native sessions.
+                    let bundle_path = PathBuf::from(&dumped.out_dir)
+                        .join(&dumped.dir)
+                        .join("bundle.json");
+                    if let Ok(text) = std::fs::read_to_string(&bundle_path) {
+                        let bundle = serde_json::from_str::<serde_json::Value>(&text)
+                            .with_context(|| {
+                                format!("bundle.json was not valid JSON: {}", bundle_path.display())
+                            })?;
+                        return Ok((dumped.dir, bundle));
+                    }
                 }
                 _ => {}
             }

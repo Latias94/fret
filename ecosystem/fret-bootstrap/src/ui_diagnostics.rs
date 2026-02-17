@@ -7066,7 +7066,7 @@ impl UiDiagnosticsService {
         &mut self,
         label: Option<&str>,
         dump_max_snapshots_override: Option<usize>,
-        _request_id: Option<u64>,
+        request_id: Option<u64>,
     ) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();

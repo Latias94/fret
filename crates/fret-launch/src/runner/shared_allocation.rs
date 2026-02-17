@@ -60,14 +60,6 @@ pub mod dx12 {
             texture: &wgpu::Texture,
             pre_uses: wgpu::wgt::TextureUses,
         ) -> Result<Self, SharedAllocationExportError> {
-            let (queue_guard, tex_guard) = match (
-                unsafe { ctx.queue.as_hal::<wgpu::hal::dx12::Api>() },
-                unsafe { texture.as_hal::<wgpu::hal::dx12::Api>() },
-            ) {
-                (Some(queue_guard), Some(tex_guard)) => (queue_guard, tex_guard),
-                _ => return Err(SharedAllocationExportError::UnsupportedBackend),
-            };
-
             let mut enc = ctx
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -83,16 +75,18 @@ pub mod dx12 {
             );
             ctx.queue.submit([enc.finish()]);
 
-            let queue_raw = queue_guard.as_raw().clone();
-            let resource = unsafe { tex_guard.raw_resource() }.clone();
+            // Export HAL handles *after* the transition submission. Holding `as_hal` guards while
+            // calling back into wgpu (encoder creation/submission) can trip lock-order checks in
+            // wgpu-core and is easy to accidentally regress. Keep the scopes disjoint.
+            let export = Self::export_raw(ctx, texture)?;
 
             Ok(Self {
                 device: ctx.device.clone(),
                 queue: ctx.queue.clone(),
                 texture: texture.clone(),
                 restore_uses: wgpu::wgt::TextureUses::RESOURCE,
-                queue_raw,
-                resource,
+                queue_raw: export.queue,
+                resource: export.resource,
                 finished: false,
             })
         }
