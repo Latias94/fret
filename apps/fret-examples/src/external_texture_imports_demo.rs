@@ -17,6 +17,40 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
 
+fn env_flag_default_false(name: &str) -> bool {
+    let Ok(raw) = std::env::var(name) else {
+        return false;
+    };
+    matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+fn log_dx12_shared_texture_probe_once(texture: &wgpu::Texture) -> bool {
+    if !env_flag_default_false("FRET_EXTV2_DX12_SHARED_TEXTURE_PROBE") {
+        return false;
+    }
+
+    let Some(hal_tex) = (unsafe { texture.as_hal::<wgpu::hal::dx12::Api>() }) else {
+        return false;
+    };
+
+    let raw = unsafe { hal_tex.raw_resource() }.clone();
+    let raw_ptr = windows::core::Interface::as_raw(&raw) as usize;
+    tracing::info!(
+        raw_ptr = format_args!("0x{raw_ptr:x}"),
+        "EXTV2 native spike: extracted ID3D12Resource from a wgpu-owned texture (shared-allocation path)"
+    );
+    true
+}
+
+#[cfg(any(target_arch = "wasm32", not(target_os = "windows")))]
+fn log_dx12_shared_texture_probe_once(_texture: &wgpu::Texture) -> bool {
+    false
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct CheckerUniforms {
@@ -260,6 +294,7 @@ struct ExternalTextureImportsState {
     show: fret_runtime::Model<bool>,
     mode: ExternalTextureImportsMode,
     use_native_adapter: bool,
+    dx12_probe_logged: bool,
 
     target: ImportedViewportRenderTarget,
     target_px_size: (u32, u32),
@@ -284,6 +319,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportsSta
         mode: ExternalTextureImportsMode::CheckerGpu,
         decoded: None,
         use_native_adapter: false,
+        dx12_probe_logged: false,
     }
 }
 
@@ -447,6 +483,9 @@ fn record_engine_frame(
                 | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
+        if !st.dx12_probe_logged {
+            st.dx12_probe_logged = log_dx12_shared_texture_probe_once(&texture);
+        }
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         if !st.target.is_registered() {
