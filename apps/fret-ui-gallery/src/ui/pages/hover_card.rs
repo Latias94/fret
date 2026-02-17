@@ -239,28 +239,24 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::HoverCard::new(
-                    shadcn::Button::new("??? ??????")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-hover-card-rtl-trigger")
-                        .into_element(cx),
-                    profile_card(
-                        cx,
-                        "????? ??????",
-                        "??? ???? RTL ??????? ???????.",
-                        "ui-gallery-hover-card-rtl-content",
-                    ),
-                )
-                .open_delay_frames(10)
-                .close_delay_frames(10)
-                .side(shadcn::HoverCardSide::Left)
-                .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::HoverCard::new(
+                shadcn::Button::new("??? ??????")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-hover-card-rtl-trigger")
+                    .into_element(cx),
+                profile_card(
+                    cx,
+                    "????? ??????",
+                    "??? ???? RTL ??????? ???????.",
+                    "ui-gallery-hover-card-rtl-content",
+                ),
+            )
+            .open_delay_frames(10)
+            .close_delay_frames(10)
+            .side(shadcn::HoverCardSide::Left)
+            .into_element(cx)
+        })
         .test_id("ui-gallery-hover-card-rtl");
 
         rtl_content

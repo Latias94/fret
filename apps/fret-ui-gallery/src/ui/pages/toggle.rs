@@ -114,21 +114,17 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     )
     .test_id("ui-gallery-toggle-disabled");
 
-    let rtl = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::Toggle::uncontrolled(false)
-                .variant(shadcn::ToggleVariant::Outline)
-                .size(shadcn::ToggleSize::Sm)
-                .a11y_label("Toggle bookmark rtl")
-                .children([
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
-                    cx.text("Bookmark"),
-                ])
-                .into_element(cx)
-        },
-    )
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Toggle::uncontrolled(false)
+            .variant(shadcn::ToggleVariant::Outline)
+            .size(shadcn::ToggleSize::Sm)
+            .a11y_label("Toggle bookmark rtl")
+            .children([
+                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
+                cx.text("Bookmark"),
+            ])
+            .into_element(cx)
+    })
     .test_id("ui-gallery-toggle-rtl");
 
     let notes = doc_layout::notes(

@@ -454,41 +454,37 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         let open_for_trigger = rtl_open.clone();
         let open_for_close = rtl_open.clone();
 
-        fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            move |cx| {
-                shadcn::Drawer::new(rtl_open.clone()).into_element(
-                    cx,
-                    move |cx| {
-                        shadcn::Button::new("Open RTL Drawer")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(open_for_trigger.clone())
-                            .test_id("ui-gallery-drawer-rtl-trigger")
-                            .into_element(cx)
-                    },
-                    move |cx| {
-                        shadcn::DrawerContent::new([
-                            shadcn::DrawerHeader::new([
-                                shadcn::DrawerTitle::new("RTL Drawer").into_element(cx),
-                                shadcn::DrawerDescription::new(
-                                    "Drawer layout should follow right-to-left direction context.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::DrawerFooter::new([shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(open_for_close.clone())
-                                .into_element(cx)])
+        doc_layout::rtl(cx, move |cx| {
+            shadcn::Drawer::new(rtl_open.clone()).into_element(
+                cx,
+                move |cx| {
+                    shadcn::Button::new("Open RTL Drawer")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open_for_trigger.clone())
+                        .test_id("ui-gallery-drawer-rtl-trigger")
+                        .into_element(cx)
+                },
+                move |cx| {
+                    shadcn::DrawerContent::new([
+                        shadcn::DrawerHeader::new([
+                            shadcn::DrawerTitle::new("RTL Drawer").into_element(cx),
+                            shadcn::DrawerDescription::new(
+                                "Drawer layout should follow right-to-left direction context.",
+                            )
                             .into_element(cx),
                         ])
-                        .into_element(cx)
-                        .test_id("ui-gallery-drawer-rtl-content")
-                    },
-                )
-            },
-        )
+                        .into_element(cx),
+                        shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(open_for_close.clone())
+                            .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id("ui-gallery-drawer-rtl-content")
+                },
+            )
+        })
     };
 
     let notes = doc_layout::notes(

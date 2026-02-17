@@ -181,6 +181,35 @@ where
     )
 }
 
+pub(in crate::ui) fn rtl(
+    cx: &mut ElementContext<'_, App>,
+    f: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement,
+) -> AnyElement {
+    fret_ui_kit::primitives::direction::with_direction_provider(
+        cx,
+        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+        f,
+    )
+}
+
+pub(in crate::ui) fn gap_card(
+    cx: &mut ElementContext<'_, App>,
+    title: &'static str,
+    details: &'static str,
+    test_id: &'static str,
+) -> (&'static str, AnyElement) {
+    let alert_content = shadcn::Alert::new([
+        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+        shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
+        shadcn::AlertDescription::new(details).into_element(cx),
+    ])
+    .variant(shadcn::AlertVariant::Default)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
+    .into_element(cx)
+    .test_id(test_id);
+    (title, alert_content)
+}
+
 fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {
     let DocSection {
         title,

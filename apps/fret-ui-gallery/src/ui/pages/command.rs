@@ -237,18 +237,14 @@ pub(super) fn preview_command_palette(
         .heading("RTL")
         .into(),
     ];
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
-                .placeholder("Type a command or search...")
-                .a11y_label("RTL command list")
-                .entries(rtl_entries)
-                .into_element(cx)
-                .test_id("ui-gallery-command-rtl")
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
+            .placeholder("Type a command or search...")
+            .a11y_label("RTL command list")
+            .entries(rtl_entries)
+            .into_element(cx)
+            .test_id("ui-gallery-command-rtl")
+    });
 
     let last = cx
         .app

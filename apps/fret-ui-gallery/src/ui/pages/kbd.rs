@@ -115,18 +115,14 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::KbdGroup::new([
-                    shadcn::Kbd::new("Ctrl").into_element(cx),
-                    shadcn::Kbd::new("Shift").into_element(cx),
-                    shadcn::Kbd::new("B").into_element(cx),
-                ])
-                .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::KbdGroup::new([
+                shadcn::Kbd::new("Ctrl").into_element(cx),
+                shadcn::Kbd::new("Shift").into_element(cx),
+                shadcn::Kbd::new("B").into_element(cx),
+            ])
+            .into_element(cx)
+        })
         .test_id("ui-gallery-kbd-rtl");
 
         rtl_content

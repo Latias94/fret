@@ -129,26 +129,22 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .test_id("ui-gallery-alert-colors");
     let custom_colors = custom_colors_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N3).items_start(),
-                |cx| {
-                    ui::children![cx; build_alert(
-                        cx,
-                        "ui-gallery-alert-rtl",
-                        shadcn::AlertVariant::Default,
-                        "lucide.info",
-                        "RTL alert sample",
-                        "This alert validates right-to-left layout and text alignment.",
-                    )]
-                },
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N3).items_start(),
+            |cx| {
+                ui::children![cx; build_alert(
+                    cx,
+                    "ui-gallery-alert-rtl",
+                    shadcn::AlertVariant::Default,
+                    "lucide.info",
+                    "RTL alert sample",
+                    "This alert validates right-to-left layout and text alignment.",
+                )]
+            },
+        )
+    });
     let rtl = rtl_content;
 
     let notes = doc_layout::notes(

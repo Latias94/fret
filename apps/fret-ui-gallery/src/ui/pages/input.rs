@@ -584,23 +584,19 @@ pub(super) fn preview_input(
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("????? API").into_element(cx),
-                    shadcn::Input::new(rtl_value)
-                        .a11y_label("????? API")
-                        .placeholder("sk-...")
-                        .into_element(cx),
-                    shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.")
-                        .into_element(cx),
-                ])
-                .refine_layout(max_w_xs.clone())
-                .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("????? API").into_element(cx),
+                shadcn::Input::new(rtl_value)
+                    .a11y_label("????? API")
+                    .placeholder("sk-...")
+                    .into_element(cx),
+                shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.")
+                    .into_element(cx),
+            ])
+            .refine_layout(max_w_xs.clone())
+            .into_element(cx)
+        })
         .test_id("ui-gallery-input-rtl");
         rtl_content
     };

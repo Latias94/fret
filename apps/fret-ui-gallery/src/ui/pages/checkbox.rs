@@ -494,25 +494,21 @@ pub(super) fn preview_checkbox(
     .test_id("ui-gallery-checkbox-table");
     let table = table_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::Field::new([
-                shadcn::Checkbox::new(rtl.clone())
-                    .control_id("ui-gallery-checkbox-rtl")
-                    .a11y_label("RTL notifications")
-                    .test_id("ui-gallery-checkbox-rtl")
-                    .into_element(cx),
-                shadcn::FieldLabel::new("Enable notifications (RTL)")
-                    .for_control("ui-gallery-checkbox-rtl")
-                    .into_element(cx),
-            ])
-            .orientation(shadcn::FieldOrientation::Horizontal)
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
-            .into_element(cx)
-        },
-    )
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        shadcn::Field::new([
+            shadcn::Checkbox::new(rtl.clone())
+                .control_id("ui-gallery-checkbox-rtl")
+                .a11y_label("RTL notifications")
+                .test_id("ui-gallery-checkbox-rtl")
+                .into_element(cx),
+            shadcn::FieldLabel::new("Enable notifications (RTL)")
+                .for_control("ui-gallery-checkbox-rtl")
+                .into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
+        .into_element(cx)
+    })
     .test_id("ui-gallery-checkbox-rtl-field");
     let rtl_section = rtl_content;
 

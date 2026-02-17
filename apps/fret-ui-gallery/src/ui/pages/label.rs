@@ -91,28 +91,24 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(max_w.clone()),
-                    |cx| {
-                        vec![
-                            shadcn::Label::new("????? ??????").into_element(cx),
-                            shadcn::Input::new(rtl_name)
-                                .placeholder("???? ???")
-                                .a11y_label("????? ??????")
-                                .into_element(cx),
-                        ]
-                    },
-                )
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(max_w.clone()),
+                |cx| {
+                    vec![
+                        shadcn::Label::new("????? ??????").into_element(cx),
+                        shadcn::Input::new(rtl_name)
+                            .placeholder("???? ???")
+                            .a11y_label("????? ??????")
+                            .into_element(cx),
+                    ]
+                },
+            )
+        })
         .test_id("ui-gallery-label-rtl");
 
         rtl_content

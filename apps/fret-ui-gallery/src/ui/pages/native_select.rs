@@ -118,16 +118,12 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::NativeSelect::new("Select language")
-                    .a11y_label("RTL native select")
-                    .refine_layout(select_width.clone())
-                    .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::NativeSelect::new("Select language")
+                .a11y_label("RTL native select")
+                .refine_layout(select_width.clone())
+                .into_element(cx)
+        })
         .test_id("ui-gallery-native-select-rtl");
 
         rtl_content

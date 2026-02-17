@@ -223,26 +223,22 @@ pub(super) fn preview_alert_dialog(
         Some("lucide.trash-2"),
     );
 
-    let rtl_dialog = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            build_dialog(
-                cx,
-                "ui-gallery-alert-dialog-rtl",
-                rtl_open,
-                "عرض الحوار",
-                shadcn::ButtonVariant::Outline,
-                "هل أنت متأكد تمامًا؟",
-                "لا يمكن التراجع عن هذا الإجراء. سيؤدي ذلك إلى حذف حسابك نهائيًا من خوادمنا.",
-                "إلغاء",
-                "متابعة",
-                shadcn::ButtonVariant::Default,
-                shadcn::AlertDialogContentSize::Default,
-                None,
-            )
-        },
-    );
+    let rtl_dialog = doc_layout::rtl(cx, |cx| {
+        build_dialog(
+            cx,
+            "ui-gallery-alert-dialog-rtl",
+            rtl_open,
+            "عرض الحوار",
+            shadcn::ButtonVariant::Outline,
+            "هل أنت متأكد تمامًا؟",
+            "لا يمكن التراجع عن هذا الإجراء. سيؤدي ذلك إلى حذف حسابك نهائيًا من خوادمنا.",
+            "إلغاء",
+            "متابعة",
+            shadcn::ButtonVariant::Default,
+            shadcn::AlertDialogContentSize::Default,
+            None,
+        )
+    });
 
     let notes = doc_layout::notes(
         cx,

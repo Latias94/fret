@@ -70,20 +70,16 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     );
     let portrait = portrait_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            ratio_example(
-                cx,
-                16.0 / 9.0,
-                Px(384.0),
-                "16:9",
-                "RTL layout sample",
-                "ui-gallery-aspect-ratio-rtl",
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        ratio_example(
+            cx,
+            16.0 / 9.0,
+            Px(384.0),
+            "16:9",
+            "RTL layout sample",
+            "ui-gallery-aspect-ratio-rtl",
+        )
+    });
     let rtl = rtl_content;
 
     let notes = doc_layout::notes(

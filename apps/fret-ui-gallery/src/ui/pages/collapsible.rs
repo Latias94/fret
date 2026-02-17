@@ -534,19 +534,15 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
     let file_tree = file_tree_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            details_collapsible(
-                cx,
-                "ui-gallery-collapsible-rtl",
-                Some(rtl_open.clone()),
-                "Order #4189",
-                "Shipped",
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        details_collapsible(
+            cx,
+            "ui-gallery-collapsible-rtl",
+            Some(rtl_open.clone()),
+            "Order #4189",
+            "Shipped",
+        )
+    });
     let rtl = rtl_content;
 
     let notes = doc_layout::notes(

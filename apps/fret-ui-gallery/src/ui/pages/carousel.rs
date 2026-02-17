@@ -547,26 +547,22 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         },
     );
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            carousel(
-                cx,
-                "ui-gallery-carousel-rtl",
-                shadcn::CarouselOrientation::Horizontal,
-                Px(129.328),
-                Space::N1,
-                Px(384.0),
-                None,
-                SlideVisual {
-                    text_px: Px(24.0),
-                    line_height_px: Px(32.0),
-                    aspect_square: true,
-                },
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        carousel(
+            cx,
+            "ui-gallery-carousel-rtl",
+            shadcn::CarouselOrientation::Horizontal,
+            Px(129.328),
+            Space::N1,
+            Px(384.0),
+            None,
+            SlideVisual {
+                text_px: Px(24.0),
+                line_height_px: Px(32.0),
+                aspect_square: true,
+            },
+        )
+    });
 
     let notes_stack = doc_layout::notes(
         cx,

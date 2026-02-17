@@ -183,38 +183,34 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    vec![
-                        tooltip(
-                            cx,
-                            "?????",
-                            shadcn::ChartTooltipIndicator::Dot,
-                            false,
-                            false,
-                            "ui-gallery-chart-rtl-tooltip",
-                        ),
-                        legend(
-                            cx,
-                            shadcn::ChartLegendVerticalAlign::Bottom,
-                            true,
-                            false,
-                            "ui-gallery-chart-rtl-legend",
-                        ),
-                    ]
-                },
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            |cx| {
+                vec![
+                    tooltip(
+                        cx,
+                        "?????",
+                        shadcn::ChartTooltipIndicator::Dot,
+                        false,
+                        false,
+                        "ui-gallery-chart-rtl-tooltip",
+                    ),
+                    legend(
+                        cx,
+                        shadcn::ChartLegendVerticalAlign::Bottom,
+                        true,
+                        false,
+                        "ui-gallery-chart-rtl-legend",
+                    ),
+                ]
+            },
+        )
+    });
 
     let notes_stack = doc_layout::notes(
         cx,

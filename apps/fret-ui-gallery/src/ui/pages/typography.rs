@@ -127,29 +127,25 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         shadcn::typography::muted(cx, "Muted text is suitable for non-primary explanations.");
     let muted = muted_sample;
 
-    let rtl_story = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2).items_start(),
-                |cx| {
-                    vec![
-                        shadcn::typography::h3(cx, "RTL Sample"),
-                        shadcn::typography::p(
-                            cx,
-                            "This block validates right-to-left direction in typography surfaces.",
-                        ),
-                        shadcn::typography::muted(
-                            cx,
-                            "Check paragraph wrapping and heading alignment under RTL.",
-                        ),
-                    ]
-                },
-            )
-        },
-    )
+    let rtl_story = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            |cx| {
+                vec![
+                    shadcn::typography::h3(cx, "RTL Sample"),
+                    shadcn::typography::p(
+                        cx,
+                        "This block validates right-to-left direction in typography surfaces.",
+                    ),
+                    shadcn::typography::muted(
+                        cx,
+                        "Check paragraph wrapping and heading alignment under RTL.",
+                    ),
+                ]
+            },
+        )
+    })
     .test_id("ui-gallery-typography-rtl");
     let rtl = rtl_story;
 

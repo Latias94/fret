@@ -570,35 +570,31 @@ pub(super) fn preview_dropdown_menu(
         );
     let complex = complex_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::DropdownMenu::new(rtl_open.clone()).into_element(
-                cx,
-                |cx| {
-                    button_trigger(
-                        cx,
-                        rtl_open.clone(),
-                        "RTL",
-                        "ui-gallery-dropdown-menu-rtl-trigger",
-                    )
-                },
-                |_cx| {
-                    vec![
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Dashboard")
-                                .on_select(CMD_MENU_DROPDOWN_APPLE),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Settings")
-                                .on_select(CMD_MENU_DROPDOWN_ORANGE),
-                        ),
-                    ]
-                },
-            )
-        },
-    );
+    let rtl_content = doc_layout::rtl(cx, |cx| {
+        shadcn::DropdownMenu::new(rtl_open.clone()).into_element(
+            cx,
+            |cx| {
+                button_trigger(
+                    cx,
+                    rtl_open.clone(),
+                    "RTL",
+                    "ui-gallery-dropdown-menu-rtl-trigger",
+                )
+            },
+            |_cx| {
+                vec![
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Dashboard")
+                            .on_select(CMD_MENU_DROPDOWN_APPLE),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Settings")
+                            .on_select(CMD_MENU_DROPDOWN_ORANGE),
+                    ),
+                ]
+            },
+        )
+    });
     let rtl = rtl_content;
 
     let notes = doc_layout::notes(

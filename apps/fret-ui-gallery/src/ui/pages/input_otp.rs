@@ -295,17 +295,13 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     .into_element(cx);
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::InputOtp::new(rtl_value)
-                    .length(6)
-                    .group_size(Some(3))
-                    .refine_layout(otp_width.clone())
-                    .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::InputOtp::new(rtl_value)
+                .length(6)
+                .group_size(Some(3))
+                .refine_layout(otp_width.clone())
+                .into_element(cx)
+        })
         .test_id("ui-gallery-input-otp-rtl");
 
         rtl_content

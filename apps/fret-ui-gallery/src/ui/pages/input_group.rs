@@ -375,18 +375,14 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::InputGroup::new(rtl_value)
-                    .a11y_label("RTL input group")
-                    .leading([shadcn::InputGroupText::new("lock").into_element(cx)])
-                    .trailing([shadcn::InputGroupText::new("sk-...").into_element(cx)])
-                    .refine_layout(max_w_xs.clone())
-                    .into_element(cx)
-            },
-        )
+        let rtl_content = doc_layout::rtl(cx, |cx| {
+            shadcn::InputGroup::new(rtl_value)
+                .a11y_label("RTL input group")
+                .leading([shadcn::InputGroupText::new("lock").into_element(cx)])
+                .trailing([shadcn::InputGroupText::new("sk-...").into_element(cx)])
+                .refine_layout(max_w_xs.clone())
+                .into_element(cx)
+        })
         .test_id("ui-gallery-input-group-rtl");
 
         rtl_content

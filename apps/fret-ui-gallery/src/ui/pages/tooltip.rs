@@ -105,10 +105,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .into_element(cx)
             .test_id("ui-gallery-tooltip-disabled");
 
-            let rtl_row = fret_ui_kit::primitives::direction::with_direction_provider(
-                cx,
-                fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-                |cx| {
+            let rtl_row = doc_layout::rtl(cx, |cx| {
                     stack::hstack(
                         cx,
                         stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -141,9 +138,8 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                             ]
                         },
                     )
-                },
-            )
-            .test_id("ui-gallery-tooltip-rtl");
+                })
+                .test_id("ui-gallery-tooltip-rtl");
 
             let notes = doc_layout::notes(
                 cx,

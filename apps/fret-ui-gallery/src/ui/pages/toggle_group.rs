@@ -123,20 +123,16 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-disabled");
 
-    let rtl = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::ToggleGroup::single_uncontrolled(Some("list"))
-                .variant(shadcn::ToggleVariant::Outline)
-                .items([
-                    text_item(cx, "list", "List"),
-                    text_item(cx, "grid", "Grid"),
-                    text_item(cx, "cards", "Cards"),
-                ])
-                .into_element(cx)
-        },
-    )
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::ToggleGroup::single_uncontrolled(Some("list"))
+            .variant(shadcn::ToggleVariant::Outline)
+            .items([
+                text_item(cx, "list", "List"),
+                text_item(cx, "grid", "Grid"),
+                text_item(cx, "cards", "Cards"),
+            ])
+            .into_element(cx)
+    })
     .test_id("ui-gallery-toggle-group-rtl");
     let notes = doc_layout::notes(
         cx,

@@ -393,48 +393,44 @@ pub(super) fn preview_dialog(
         let name_model = rtl_name.clone();
         let username_model = rtl_username.clone();
 
-        let content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            move |cx| {
-                shadcn::Dialog::new(rtl_open.clone()).into_element(
-                    cx,
-                    |cx| {
-                        shadcn::Button::new("Open RTL Dialog")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .test_id("ui-gallery-dialog-rtl-trigger")
-                            .toggle_model(open_for_trigger.clone())
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        shadcn::DialogContent::new([
-                            shadcn::DialogClose::new(close_open.clone()).into_element(cx),
-                            shadcn::DialogHeader::new([
-                                shadcn::DialogTitle::new("RTL Profile").into_element(cx),
-                                shadcn::DialogDescription::new(
-                                    "This example renders dialog layout in right-to-left direction.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            profile_fields(cx, name_model.clone(), username_model.clone()),
-                            shadcn::DialogFooter::new([
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .toggle_model(close_open.clone())
-                                    .into_element(cx),
-                                shadcn::Button::new("Save")
-                                    .toggle_model(save_open.clone())
-                                    .into_element(cx),
-                            ])
+        let content = doc_layout::rtl(cx, move |cx| {
+            shadcn::Dialog::new(rtl_open.clone()).into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open RTL Dialog")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-dialog-rtl-trigger")
+                        .toggle_model(open_for_trigger.clone())
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::DialogContent::new([
+                        shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                        shadcn::DialogHeader::new([
+                            shadcn::DialogTitle::new("RTL Profile").into_element(cx),
+                            shadcn::DialogDescription::new(
+                                "This example renders dialog layout in right-to-left direction.",
+                            )
                             .into_element(cx),
                         ])
-                        .into_element(cx)
-                        .test_id("ui-gallery-dialog-rtl-content")
-                    },
-                )
-            },
-        );
+                        .into_element(cx),
+                        profile_fields(cx, name_model.clone(), username_model.clone()),
+                        shadcn::DialogFooter::new([
+                            shadcn::Button::new("Cancel")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .toggle_model(close_open.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Save")
+                                .toggle_model(save_open.clone())
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-rtl-content")
+                },
+            )
+        });
         content
     };
 
