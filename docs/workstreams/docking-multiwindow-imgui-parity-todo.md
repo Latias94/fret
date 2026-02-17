@@ -102,8 +102,23 @@ Each TODO is labeled:
     - Sanity-check after cancel:
       - Move the cursor around: the window should not keep moving.
       - Try another tear-off immediately: follow should still work (no broken internal state).
-    - Log confirmation (macOS):
-      - `target/fret-dock-tearoff.log` should include a `[follow-stop]` line around the time you pressed Escape.
+- Log confirmation (macOS):
+  - `target/fret-dock-tearoff.log` should include a `[follow-stop]` line around the time you pressed Escape.
+
+- [!] DW-P0-diag-005 Stabilize multi-window docking diag gates (script_v2).
+  - Goal: lock multi-window docking hand-feel with executable scripts (avoid heuristic regressions).
+  - Current state: scripts exist under `tools/diag-scripts/`, but runs may fail due to tooling timeouts and/or
+    cross-window injection/capture edge-cases.
+  - Evidence anchors (scripts):
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
+  - Acceptance:
+    - On Windows (at minimum), `fretboard diag run <script> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
+      passes for the scripts listed above (or an explicitly documented subset).
+    - Failures dump a bundle with actionable evidence (which window saw `dock_drag`, pointer capture, hovered window source).
 
 ## P1 — Cross-platform robustness and capability modeling
 
