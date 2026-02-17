@@ -1118,6 +1118,23 @@ pub enum UiPredicateV1 {
     KnownWindowCountGe {
         n: u32,
     },
+    /// True when the diagnostics runtime has observed exactly `n` windows.
+    ///
+    /// This is useful for degradation gates where creating additional windows must be prevented
+    /// (e.g. Wayland-safe docking tear-off degradation).
+    KnownWindowCountIs {
+        n: u32,
+    },
+    /// True when the latest diagnostics snapshot includes platform capability information and it
+    /// reports `ui.window_hover_detection == quality`.
+    ///
+    /// Supported qualities:
+    /// - `none`
+    /// - `best_effort`
+    /// - `reliable`
+    PlatformUiWindowHoverDetectionIs {
+        quality: String,
+    },
     /// True when the latest docking diagnostics report an active dock drag whose `current_window`
     /// matches `window`.
     DockDragCurrentWindowIs {

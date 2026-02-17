@@ -61,6 +61,12 @@
       "predicate": { "kind": "dock_drag_transparent_payload_applied_is", "applied": true },
       "timeout_frames": 120
     },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" },
+      "timeout_frames": 120
+    },
 
     {
       "type": "wait_until",

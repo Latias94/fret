@@ -238,6 +238,19 @@ fn script_v2_roundtrip_click_modifiers() {
 }
 
 #[test]
+fn script_v2_roundtrip_platform_hover_detection_predicates() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "wait_until", "predicate": { "kind": "platform_ui_window_hover_detection_is", "quality": "none" }, "timeout_frames": 1 },
+    { "type": "assert", "predicate": { "kind": "known_window_count_is", "n": 1 } }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_click_count() {
     assert_script_v2_roundtrip(
         r#"{

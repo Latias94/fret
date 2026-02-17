@@ -145,4 +145,6 @@ Existing relevant gates:
 TODO gates:
 
 - [x] Add a “provider source is OS-backed” assertion for Windows.
-- [ ] Add a “capability downgraded” assertion for Wayland sessions.
+- [x] Add a “capability downgraded” assertion for Wayland sessions.
+  - Predicate: `crates/fret-diag-protocol/src/lib.rs` (`platform_ui_window_hover_detection_is`)
+  - Gate: `tools/diag-scripts/docking-arbitration-demo-wayland-degrade-no-os-tearoff.json`

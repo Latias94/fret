@@ -16636,6 +16636,11 @@ fn eval_predicate(
             overlap_h > eps
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
+        UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
+        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => snapshot
+            .caps
+            .as_ref()
+            .is_some_and(|c| c.ui_window_hover_detection == *quality),
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
