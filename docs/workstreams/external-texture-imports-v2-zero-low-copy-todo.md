@@ -158,3 +158,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - MF CPU-upload gate (stage M2A; real source):
     - Script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
     - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
+  - DX12 shared-allocation (stage M2B; synthetic native writer):
+    - Script: `tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-perf-steady.json`
+    - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-dx12-shared-allocation-clear.windows-local.v1.json`
+    - Seed policy: `docs/workstreams/perf-baselines/policies/external-texture-imports-dx12-shared-allocation-clear.v1.json`
