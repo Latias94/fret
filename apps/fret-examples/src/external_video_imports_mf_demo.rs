@@ -163,10 +163,27 @@ mod wmf {
                         .ConvertToContiguousBuffer()
                         .context("ConvertToContiguousBuffer")?
                 };
-                let bytes = lock_and_copy(&buffer)?;
+                let mut bytes = lock_and_copy(&buffer)?;
+
+                // Media Foundation's ARGB32 output is "opaque video" in most cases, but some
+                // decoders may leave alpha at 0. Normalize to opaque so the demo is visible.
+                for px in bytes.chunks_exact_mut(4) {
+                    px[3] = 0xff;
+                }
+
+                let (w, h) = self.size;
+                let row_bytes = w.saturating_mul(4);
+                let effective_bytes_per_row = if h > 0
+                    && bytes.len() % (h as usize) == 0
+                    && (bytes.len() / (h as usize)) >= (row_bytes as usize)
+                {
+                    (bytes.len() / (h as usize)) as u32
+                } else {
+                    self.bytes_per_row.max(row_bytes)
+                };
                 return Ok(Some(VideoFrame {
                     size: self.size,
-                    bytes_per_row: self.bytes_per_row,
+                    bytes_per_row: effective_bytes_per_row,
                     bgra8: bytes,
                 }));
             }
