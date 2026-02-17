@@ -12,6 +12,12 @@ pub mod dx12 {
     use windows::Win32::Graphics::Direct3D12::{ID3D12CommandQueue, ID3D12Resource};
 
     #[derive(Debug)]
+    pub struct Dx12SharedAllocationExport {
+        pub queue: ID3D12CommandQueue,
+        pub resource: ID3D12Resource,
+    }
+
+    #[derive(Debug)]
     pub struct Dx12SharedAllocationWriteGuard {
         device: wgpu::Device,
         queue: wgpu::Queue,
@@ -23,6 +29,27 @@ pub mod dx12 {
     }
 
     impl Dx12SharedAllocationWriteGuard {
+        /// Export raw DX12 handles for a renderer-owned `wgpu::Texture` (DX12 backend only).
+        ///
+        /// This does **not** perform any wgpu transitions; use [`begin`] for the write contract.
+        pub fn export_raw(
+            ctx: &fret_render::WgpuContext,
+            texture: &wgpu::Texture,
+        ) -> Result<Dx12SharedAllocationExport, SharedAllocationExportError> {
+            let (queue_guard, tex_guard) = match (
+                unsafe { ctx.queue.as_hal::<wgpu::hal::dx12::Api>() },
+                unsafe { texture.as_hal::<wgpu::hal::dx12::Api>() },
+            ) {
+                (Some(queue_guard), Some(tex_guard)) => (queue_guard, tex_guard),
+                _ => return Err(SharedAllocationExportError::UnsupportedBackend),
+            };
+
+            Ok(Dx12SharedAllocationExport {
+                queue: queue_guard.as_raw().clone(),
+                resource: unsafe { tex_guard.raw_resource() }.clone(),
+            })
+        }
+
         /// Begin a native write into a renderer-owned `wgpu::Texture` on the DX12 backend.
         ///
         /// Contract:
