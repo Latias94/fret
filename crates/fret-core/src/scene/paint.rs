@@ -170,7 +170,8 @@ impl Paint {
         fn degrade_tile_mode(tile_mode: TileMode) -> TileMode {
             match tile_mode {
                 TileMode::Clamp => TileMode::Clamp,
-                TileMode::Repeat | TileMode::Mirror => TileMode::Clamp,
+                TileMode::Repeat => TileMode::Repeat,
+                TileMode::Mirror => TileMode::Mirror,
             }
         }
 

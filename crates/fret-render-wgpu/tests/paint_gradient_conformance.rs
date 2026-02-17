@@ -216,6 +216,138 @@ fn gpu_linear_gradient_smoke_conformance() {
 }
 
 #[test]
+fn gpu_linear_gradient_repeat_tile_conformance() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (64u32, 64u32);
+    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0)));
+    let (stops, stop_count) = stops_3(
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
+
+    // Use a short gradient span so `t` crosses > 1.0 across the quad.
+    // Repeat tiling should bring the `t=0.5` midpoint color back at `t=1.5`.
+    let gradient = LinearGradient {
+        start: Point::new(Px(0.0), Px(0.0)),
+        end: Point::new(Px(16.0), Px(0.0)),
+        tile_mode: TileMode::Repeat,
+        color_space: ColorSpace::Srgb,
+        stop_count,
+        stops,
+    };
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect,
+        background: Paint::LinearGradient(gradient),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let a = pixel_rgba(&pixels, size.0, 8, 32); // t ~= 0.5
+    let b = pixel_rgba(&pixels, size.0, 24, 32); // t ~= 1.5 (repeat -> 0.5)
+
+    assert!(
+        a[3] > 240 && b[3] > 240,
+        "expected opaque alpha: a={a:?} b={b:?}"
+    );
+    assert!(
+        a[0] > 160 && a[1] < 80 && a[2] < 80,
+        "expected red-ish midpoint under repeat tiling: a={a:?}"
+    );
+    assert!(
+        b[0] > 160 && b[1] < 80 && b[2] < 80,
+        "expected repeated red-ish midpoint at t=1.5: b={b:?}"
+    );
+}
+
+#[test]
+fn gpu_linear_gradient_mirror_tile_conformance() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (64u32, 64u32);
+    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0)));
+    let (stops, stop_count) = stops_2(
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+
+    let gradient = LinearGradient {
+        start: Point::new(Px(0.0), Px(0.0)),
+        end: Point::new(Px(16.0), Px(0.0)),
+        tile_mode: TileMode::Mirror,
+        color_space: ColorSpace::Srgb,
+        stop_count,
+        stops,
+    };
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect,
+        background: Paint::LinearGradient(gradient),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let dark = pixel_rgba(&pixels, size.0, 4, 32); // t ~= 0.25
+    let bright = pixel_rgba(&pixels, size.0, 20, 32); // t ~= 1.25 (mirror -> 0.75)
+
+    assert!(
+        dark[3] > 240 && bright[3] > 240,
+        "expected opaque alpha: dark={dark:?} bright={bright:?}"
+    );
+    assert!(
+        bright[0] > dark[0].saturating_add(40),
+        "expected mirror tiling to increase brightness at t=1.25 vs t=0.25: dark={dark:?} bright={bright:?}"
+    );
+}
+
+#[test]
 fn gpu_radial_gradient_smoke_conformance() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,

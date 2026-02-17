@@ -17,6 +17,19 @@ fn sdf_coverage_linear(sdf: f32) -> f32 {
   return saturate(0.5 - sdf / aa);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
   if (center_to_point.x < 0.0) {
     if (center_to_point.y < 0.0) { return radii.x; }
@@ -438,7 +451,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -447,7 +460,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -696,7 +709,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 2u) {
@@ -704,7 +717,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 4u) {
@@ -716,7 +729,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 3u) {
@@ -736,7 +749,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 2u) {
@@ -744,7 +757,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 4u) {
@@ -756,7 +769,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 3u) {
@@ -959,6 +972,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -1036,7 +1062,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -1046,7 +1072,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3227,6 +3253,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3279,7 +3318,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3288,7 +3327,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3449,6 +3488,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3501,7 +3553,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3510,7 +3562,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3770,7 +3822,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -3778,7 +3830,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -3790,7 +3842,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -3872,6 +3924,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3924,7 +3989,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3933,7 +3998,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4183,6 +4248,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
@@ -4229,7 +4307,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -4237,7 +4315,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -4249,7 +4327,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -4307,7 +4385,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4316,7 +4394,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4601,6 +4679,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
@@ -4647,7 +4738,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -4655,7 +4746,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -4667,7 +4758,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -4725,7 +4816,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4734,7 +4825,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4988,6 +5079,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
@@ -5034,7 +5138,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -5042,7 +5146,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -5054,7 +5158,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -5112,7 +5216,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5121,7 +5225,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5378,6 +5482,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -5430,7 +5547,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5439,7 +5556,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 

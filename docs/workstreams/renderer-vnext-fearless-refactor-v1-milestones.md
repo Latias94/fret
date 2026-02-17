@@ -230,6 +230,20 @@ Progress record (Material fallbacks v1):
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test materials_conformance`
 
+Progress record (Gradient tile modes: Repeat/Mirror):
+
+- Date: 2026-02-17
+- Status: Landed (wgpu default renderer; portable WGSL tiling function)
+- Evidence anchors:
+  - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `tile_mode`)
+  - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `tile_mode`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`gradient_tile_mode_apply`)
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (repeat/mirror smoke)
+  - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs` (repeat/mirror smoke)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
 ### M4b — Optional contract expansion (only if required)
 
 - Any contract changes (e.g. `Path` accepting `Paint`) are ADR-backed and conformance-gated.

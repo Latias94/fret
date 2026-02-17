@@ -264,8 +264,18 @@ milestones) when implementation begins.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (uses shared helper; material still degrades)
-- [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
-  - Current: sanitize degrades repeat/mirror to clamp for determinism.
+- [x] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` for gradients.
+  - Landed (v1): `TileMode::{Repeat,Mirror}` is preserved in `Paint` + `Mask` sanitization and implemented in WGSL
+    gradient evaluation (linear/radial/sweep) via a deterministic tiling function.
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `tile_mode`)
+    - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `tile_mode`)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`gradient_tile_mode_apply`, gradient eval uses it)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (repeat/mirror smoke)
+    - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs` (repeat/mirror smoke)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 - [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
   - Current: sanitize degrades Oklab to sRGB for determinism.
 
