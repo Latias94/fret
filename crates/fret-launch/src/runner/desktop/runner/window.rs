@@ -220,14 +220,14 @@ pub(super) fn set_dock_drag_transparent_payload(
     enabled: bool,
     alpha: f32,
 ) -> bool {
-    use cocoa::base::{id, nil};
+    use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
 
-    let ns_window: id = match window.window_handle() {
+    let ns_window: *mut Object = match window.window_handle() {
         Ok(handle) => match handle.as_raw() {
             winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                let ns_view: id = h.ns_view.as_ptr() as id;
+                let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                 if ns_view.is_null() {
                     std::ptr::null_mut()
                 } else {
@@ -243,6 +243,7 @@ pub(super) fn set_dock_drag_transparent_payload(
     }
 
     unsafe {
+        let nil: *mut Object = std::ptr::null_mut();
         let alpha: f64 = if enabled {
             (alpha.clamp(0.0, 1.0)) as f64
         } else {
@@ -381,14 +382,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     #[cfg(target_os = "macos")]
     fn ns_window_number_for_window(window: &dyn Window) -> Option<i32> {
-        use cocoa::base::id;
+        use objc::runtime::Object;
         use objc::{msg_send, sel, sel_impl};
         use winit::raw_window_handle::HasWindowHandle as _;
 
-        let ns_window: id = match window.window_handle() {
+        let ns_window: *mut Object = match window.window_handle() {
             Ok(handle) => match handle.as_raw() {
                 winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
-                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
                     if ns_view.is_null() {
                         std::ptr::null_mut()
                     } else {
@@ -409,19 +410,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     #[cfg(target_os = "macos")]
     fn ordered_ns_window_numbers_front_to_back() -> Vec<i32> {
-        use cocoa::base::id;
         use objc::runtime::Class;
+        use objc::runtime::Object;
         use objc::{msg_send, sel, sel_impl};
 
         unsafe {
             let Some(class) = Class::get("NSApplication") else {
                 return Vec::new();
             };
-            let app: id = msg_send![class, sharedApplication];
+            let app: *mut Object = msg_send![class, sharedApplication];
             if app.is_null() {
                 return Vec::new();
             }
-            let ordered: id = msg_send![app, orderedWindows];
+            let ordered: *mut Object = msg_send![app, orderedWindows];
             if ordered.is_null() {
                 return Vec::new();
             }
@@ -429,7 +430,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let count: usize = msg_send![ordered, count];
             let mut out: Vec<i32> = Vec::with_capacity(count);
             for idx in 0..count {
-                let w: id = msg_send![ordered, objectAtIndex: idx];
+                let w: *mut Object = msg_send![ordered, objectAtIndex: idx];
                 if w.is_null() {
                     continue;
                 }
