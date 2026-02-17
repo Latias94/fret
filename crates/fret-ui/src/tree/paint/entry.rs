@@ -145,7 +145,7 @@ impl<H: UiHost> UiTree<H> {
                         .and_then(|svc| svc.snapshot(window))
                         .is_none_or(|prev| prev != &input_ctx);
                     if needs_update {
-                        app.with_global_mut(
+                        app.with_global_mut_untracked(
                             fret_runtime::WindowInputContextService::default,
                             |svc, _app| {
                                 svc.set_snapshot(window, input_ctx);
