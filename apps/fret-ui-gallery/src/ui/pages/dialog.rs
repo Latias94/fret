@@ -438,32 +438,14 @@ pub(super) fn preview_dialog(
         content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
-                ),
-            ]
-        },
+        [
+            "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
+            "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
+            "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
+            "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

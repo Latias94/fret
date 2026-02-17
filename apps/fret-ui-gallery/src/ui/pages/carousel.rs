@@ -568,32 +568,14 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         },
     );
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Spacing parity with web examples depends on pairing negative track margin with item start padding.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Vertical orientation should always set viewport height explicitly to prevent clipping ambiguity.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "API/plugins gaps are tracked here intentionally so future Embla parity work remains discoverable.",
-                ),
-            ]
-        },
+        [
+            "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
+            "Spacing parity with web examples depends on pairing negative track margin with item start padding.",
+            "Vertical orientation should always set viewport height explicitly to prevent clipping ambiguity.",
+            "API/plugins gaps are tracked here intentionally so future Embla parity work remains discoverable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

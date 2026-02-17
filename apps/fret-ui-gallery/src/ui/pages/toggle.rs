@@ -131,36 +131,15 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     )
     .test_id("ui-gallery-toggle-rtl");
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/toggle.rs` and `ecosystem/fret-ui-shadcn/src/toggle_group.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use Outline when toggle sits in dense toolbars and needs stronger boundaries.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer icon + short text labels so state remains understandable in compact layouts.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep `a11y_label` explicit for icon-heavy toggles to improve accessibility tree quality.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For quick keyboard validation, tab through toggles and verify pressed visual parity.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/toggle.rs` and `ecosystem/fret-ui-shadcn/src/toggle_group.rs`.",
+            "Use Outline when toggle sits in dense toolbars and needs stronger boundaries.",
+            "Prefer icon + short text labels so state remains understandable in compact layouts.",
+            "Keep `a11y_label` explicit for icon-heavy toggles to improve accessibility tree quality.",
+            "For quick keyboard validation, tab through toggles and verify pressed visual parity.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

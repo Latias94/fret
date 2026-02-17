@@ -491,32 +491,14 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         )
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
-                ),
-            ]
-        },
+        [
+            "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
+            "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
+            "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
+            "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

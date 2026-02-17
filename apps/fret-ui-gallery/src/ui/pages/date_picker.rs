@@ -324,32 +324,14 @@ pub(super) fn preview_date_picker(
         .test_id("ui-gallery-date-picker-rtl")
     };
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Date picker parity should follow docs sequence even when some recipe surfaces are not yet available in the API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep unsupported examples visible as explicit gap cards to avoid hidden regressions in future alignment passes.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For date-of-birth flows, dropdown month/year caption improves large-jump navigation compared with arrow-only controls.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Add deterministic test IDs on every scenario so diag scripts can capture state transitions and layout snapshots.",
-                ),
-            ]
-        },
+        [
+            "Date picker parity should follow docs sequence even when some recipe surfaces are not yet available in the API.",
+            "Keep unsupported examples visible as explicit gap cards to avoid hidden regressions in future alignment passes.",
+            "For date-of-birth flows, dropdown month/year caption improves large-jump navigation compared with arrow-only controls.",
+            "Add deterministic test IDs on every scenario so diag scripts can capture state transitions and layout snapshots.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

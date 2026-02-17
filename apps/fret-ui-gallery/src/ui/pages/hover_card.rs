@@ -266,28 +266,13 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Sides and positioning are separated to make placement parity checks deterministic.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "RTL sample is included because side resolution can differ in right-to-left layouts.",
-                ),
-            ]
-        },
+        [
+            "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
+            "Sides and positioning are separated to make placement parity checks deterministic.",
+            "RTL sample is included because side resolution can differ in right-to-left layouts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

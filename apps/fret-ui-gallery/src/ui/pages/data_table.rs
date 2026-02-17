@@ -17,32 +17,14 @@ pub(super) fn preview_data_table(
     )
     .test_id("ui-gallery-data-table-guide-demo");
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Data Table in shadcn is a guide recipe, not a single fixed widget; treat this page as a living parity surface.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "When extending this page, prefer deterministic state rows and stable test IDs so diag scripts can gate regressions.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Future refactor can split column/header/view-options into reusable subcomponents mirroring upstream guide chapters.",
-                ),
-            ]
-        },
+        [
+            "Data Table in shadcn is a guide recipe, not a single fixed widget; treat this page as a living parity surface.",
+            "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
+            "When extending this page, prefer deterministic state rows and stable test IDs so diag scripts can gate regressions.",
+            "Future refactor can split column/header/view-options into reusable subcomponents mirroring upstream guide chapters.",
+        ],
     );
 
     let code_preview = stack::vstack(

@@ -516,36 +516,15 @@ pub(super) fn preview_checkbox(
     .test_id("ui-gallery-checkbox-rtl-field");
     let rtl_section = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/checkbox.rs` (Checkbox).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use Field composition (FieldLabel/FieldDescription) to keep label, helper text, and toggle target aligned.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For indeterminate behavior, prefer `Checkbox::new_optional(Model<Option<bool>>)`, where `None` maps to mixed state.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Table selection patterns should keep row-level and header-level states explicit; avoid hidden coupling in demos.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "When validating parity, test both keyboard focus ring and RTL label alignment in addition to pointer clicks.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/checkbox.rs` (Checkbox).",
+            "Use Field composition (FieldLabel/FieldDescription) to keep label, helper text, and toggle target aligned.",
+            "For indeterminate behavior, prefer `Checkbox::new_optional(Model<Option<bool>>)`, where `None` maps to mixed state.",
+            "Table selection patterns should keep row-level and header-level states explicit; avoid hidden coupling in demos.",
+            "When validating parity, test both keyboard focus ring and RTL label alignment in addition to pointer clicks.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

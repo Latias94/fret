@@ -86,36 +86,15 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     );
     let rtl = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Pick ratio by content type: 16:9 for landscape previews, 1:1 for avatars/thumbnails, 9:16 for reels or short video cards.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep max width explicit on narrow ratios to avoid over-tall layouts in dense editor sidebars.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL and constrained width together so captions and controls remain stable during localization.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
+            "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
+            "Pick ratio by content type: 16:9 for landscape previews, 1:1 for avatars/thumbnails, 9:16 for reels or short video cards.",
+            "Keep max width explicit on narrow ratios to avoid over-tall layouts in dense editor sidebars.",
+            "Validate RTL and constrained width together so captions and controls remain stable during localization.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

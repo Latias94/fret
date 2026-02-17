@@ -261,28 +261,13 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
-                ),
-            ]
-        },
+        [
+            "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
+            "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
+            "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

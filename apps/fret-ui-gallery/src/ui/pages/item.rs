@@ -414,32 +414,14 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current API variants: default/outline/muted; sizes: default/sm.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Docs `asChild` link and avatar-specific media variant are approximated with `on_click` and composed `Avatar`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer stable `test_id`s on list rows and actions so diag scripts survive layout refactors.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
+            "Current API variants: default/outline/muted; sizes: default/sm.",
+            "Docs `asChild` link and avatar-specific media variant are approximated with `on_click` and composed `Avatar`.",
+            "Prefer stable `test_id`s on list rows and actions so diag scripts survive layout refactors.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

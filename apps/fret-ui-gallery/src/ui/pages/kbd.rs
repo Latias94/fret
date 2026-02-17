@@ -132,28 +132,13 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Kbd uses tokenized muted surfaces and is intended for shortcut display rather than free text chips.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "`Tooltip` and `Input Group` examples are composition patterns from shadcn docs.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each section has stable test_id for future diag scripts.",
-                ),
-            ]
-        },
+        [
+            "Kbd uses tokenized muted surfaces and is intended for shortcut display rather than free text chips.",
+            "`Tooltip` and `Input Group` examples are composition patterns from shadcn docs.",
+            "Each section has stable test_id for future diag scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

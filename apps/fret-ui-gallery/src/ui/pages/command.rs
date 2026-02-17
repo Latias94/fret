@@ -256,32 +256,14 @@ pub(super) fn preview_command_palette(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
-                ),
-            ]
-        },
+        [
+            "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
+            "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
+            "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
+            "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
+        ],
     );
 
     let state_content = stack::vstack(

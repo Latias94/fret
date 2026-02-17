@@ -145,32 +145,14 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             )
             .test_id("ui-gallery-tooltip-rtl");
 
-            let notes = stack::vstack(
+            let notes = doc_layout::notes(
                 cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                |cx| {
-                    vec![
-                        shadcn::typography::muted(
-                            cx,
-                            "Wrap related tooltips in one TooltipProvider to get consistent delay-group behavior.",
-                        ),
-                        shadcn::typography::muted(
-                            cx,
-                            "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
-                        ),
-                        shadcn::typography::muted(
-                            cx,
-                            "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
-                        ),
-                        shadcn::typography::muted(
-                            cx,
-                            "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
-                        ),
-                    ]
-                },
+                [
+                    "Wrap related tooltips in one TooltipProvider to get consistent delay-group behavior.",
+                    "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
+                    "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
+                    "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
+                ],
             );
 
             let page = doc_layout::render_doc_page(

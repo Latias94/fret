@@ -153,36 +153,15 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     .test_id("ui-gallery-typography-rtl");
     let rtl = rtl_story;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Typography in shadcn is utility-driven; keep heading hierarchy semantic and consistent.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `lead` for intros, `muted` for hints, and avoid overusing large text in dense panels.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For long-form content, combine typography helpers with table/list blocks for readability.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL and narrow viewport wrapping before shipping document-like surfaces.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
+            "Typography in shadcn is utility-driven; keep heading hierarchy semantic and consistent.",
+            "Use `lead` for intros, `muted` for hints, and avoid overusing large text in dense panels.",
+            "For long-form content, combine typography helpers with table/list blocks for readability.",
+            "Validate RTL and narrow viewport wrapping before shipping document-like surfaces.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

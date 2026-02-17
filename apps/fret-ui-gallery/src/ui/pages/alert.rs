@@ -151,37 +151,15 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     );
     let rtl = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            ui::children![
-                cx;
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current gallery uses an inline action row to approximate shadcn `AlertAction` behavior.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
+            "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
+            "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
+            "Current gallery uses an inline action row to approximate shadcn `AlertAction` behavior.",
+            "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

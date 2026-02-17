@@ -133,32 +133,14 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current NativeSelect API is label-based; explicit option/optgroup nodes are not exposed yet.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Groups example is a practical approximation until optgroup-level API is added.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use NativeSelect for native browser behavior/mobile ergonomics; use Select for richer overlays and custom interactions.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
+            "Current NativeSelect API is label-based; explicit option/optgroup nodes are not exposed yet.",
+            "Groups example is a practical approximation until optgroup-level API is added.",
+            "Use NativeSelect for native browser behavior/mobile ergonomics; use Select for richer overlays and custom interactions.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

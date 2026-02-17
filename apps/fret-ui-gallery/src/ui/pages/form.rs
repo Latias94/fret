@@ -218,28 +218,13 @@ pub(super) fn preview_forms(
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (Form alias), `ecosystem/fret-ui-shadcn/src/field.rs` (FieldSet), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "This page remains a gallery integration hub (composition recipe) rather than a single primitive component page.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep stable test IDs for each recipe so future diag automation can target composition surfaces.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (Form alias), `ecosystem/fret-ui-shadcn/src/field.rs` (FieldSet), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
+            "This page remains a gallery integration hub (composition recipe) rather than a single primitive component page.",
+            "Keep stable test IDs for each recipe so future diag automation can target composition surfaces.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

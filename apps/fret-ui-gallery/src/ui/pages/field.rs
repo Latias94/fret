@@ -580,32 +580,14 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Field page follows upstream docs section order for deterministic parity checks.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "RTL and Responsive samples are included to exercise orientation and direction contracts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
+            "Field page follows upstream docs section order for deterministic parity checks.",
+            "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
+            "RTL and Responsive samples are included to exercise orientation and direction contracts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

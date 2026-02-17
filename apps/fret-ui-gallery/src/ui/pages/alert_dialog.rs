@@ -244,28 +244,13 @@ pub(super) fn preview_alert_dialog(
         },
     );
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                doc_layout::muted_full_width(
-                    cx,
-                    "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
-                ),
-                doc_layout::muted_full_width(
-                    cx,
-                    "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
-                ),
-                doc_layout::muted_full_width(
-                    cx,
-                    "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
-                ),
-            ]
-        },
+        [
+            "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
+            "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
+            "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

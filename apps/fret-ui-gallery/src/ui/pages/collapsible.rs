@@ -549,36 +549,15 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     );
     let rtl = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
+            "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
+            "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
+            "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
+            "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

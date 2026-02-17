@@ -138,36 +138,15 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         },
     )
     .test_id("ui-gallery-toggle-group-rtl");
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/toggle_group.rs` and `ecosystem/fret-ui-shadcn/src/toggle.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use Single mode for mutually-exclusive options (alignment, list/grid/cards).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use Multiple mode for formatting toggles where users may combine states.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "`spacing` is useful when each item needs stronger visual separation.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For icon-only groups, keep explicit `a11y_label` for assistive technologies.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/toggle_group.rs` and `ecosystem/fret-ui-shadcn/src/toggle.rs`.",
+            "Use Single mode for mutually-exclusive options (alignment, list/grid/cards).",
+            "Use Multiple mode for formatting toggles where users may combine states.",
+            "`spacing` is useful when each item needs stronger visual separation.",
+            "For icon-only groups, keep explicit `a11y_label` for assistive technologies.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

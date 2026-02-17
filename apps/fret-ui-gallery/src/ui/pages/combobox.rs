@@ -34,32 +34,14 @@ pub(super) fn preview_combobox(
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Current Fret `Combobox` focuses on single-select + query filtering; several Base UI recipes are tracked as explicit gaps here.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep unsupported sections visible (multiple/clear/popup) to make parity progress auditable instead of implicit.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
-                ),
-            ]
-        },
+        [
+            "Current Fret `Combobox` focuses on single-select + query filtering; several Base UI recipes are tracked as explicit gaps here.",
+            "Keep unsupported sections visible (multiple/clear/popup) to make parity progress auditable instead of implicit.",
+            "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
+            "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

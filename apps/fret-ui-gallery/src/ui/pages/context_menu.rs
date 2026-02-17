@@ -532,32 +532,14 @@ pub(super) fn preview_context_menu(
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Keep context menu entries task-focused; destructive entries should be visually separated by a divider.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer checkboxes/radio groups for persistent menu state so users can infer current mode before selecting.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use icon + shortcut combinations sparingly: icons improve scanning, shortcuts improve expert throughput.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep explicit RTL coverage in gallery so submenu direction and destructive styling stay parity-auditable.",
-                ),
-            ]
-        },
+        [
+            "Keep context menu entries task-focused; destructive entries should be visually separated by a divider.",
+            "Prefer checkboxes/radio groups for persistent menu state so users can infer current mode before selecting.",
+            "Use icon + shortcut combinations sparingly: icons improve scanning, shortcuts improve expert throughput.",
+            "Keep explicit RTL coverage in gallery so submenu direction and destructive styling stay parity-auditable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

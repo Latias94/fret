@@ -392,32 +392,14 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "`Custom Input` is represented as a composition approximation in the current API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
+            "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
+            "`Custom Input` is represented as a composition approximation in the current API.",
+            "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

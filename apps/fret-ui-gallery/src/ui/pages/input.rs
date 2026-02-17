@@ -605,32 +605,14 @@ pub(super) fn preview_input(
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Native file input type is currently approximated using input + browse button composition.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
+            "Native file input type is currently approximated using input + browse button composition.",
+            "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
+            "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

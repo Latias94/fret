@@ -118,28 +118,13 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         rtl_content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current Label API does not expose `htmlFor` binding; accessibility is handled by control a11y labels and Field composition.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
+            "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
+            "Current Label API does not expose `htmlFor` binding; accessibility is handled by control a11y labels and Field composition.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

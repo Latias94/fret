@@ -123,7 +123,7 @@ pub(in crate::ui) fn wrap_preview_page(
 
 pub(in crate::ui) fn muted_full_width<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    text: &'static str,
+    text: impl Into<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -149,13 +149,36 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
             layout.size.width = fret_ui::element::Length::Fill;
             layout
         },
-        text: Arc::from(text),
+        text: text.into(),
         style: Some(style),
         color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
     })
+}
+
+pub(in crate::ui) fn notes<I, T>(cx: &mut ElementContext<'_, App>, lines: I) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: Into<Arc<str>>,
+{
+    let lines = lines.into_iter().map(Into::into).collect::<Vec<Arc<str>>>();
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            lines
+                .iter()
+                .cloned()
+                .map(|line| muted_full_width(cx, line))
+                .collect::<Vec<_>>()
+        },
+    )
 }
 
 fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {

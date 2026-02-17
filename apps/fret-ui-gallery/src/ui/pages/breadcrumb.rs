@@ -298,32 +298,14 @@ pub(super) fn preview_breadcrumb(
     .test_id("ui-gallery-breadcrumb-rtl");
     let rtl = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current dropdown and router-link samples are visual approximations; full `asChild` composition can be added in a follow-up primitive demo.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL with long labels to ensure truncation and separator spacing remain stable.",
-                ),
-            ]
-        },
+        [
+            "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
+            "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
+            "Current dropdown and router-link samples are visual approximations; full `asChild` composition can be added in a follow-up primitive demo.",
+            "Validate RTL with long labels to ensure truncation and separator spacing remain stable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

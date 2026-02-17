@@ -601,28 +601,13 @@ pub(super) fn preview_dropdown_menu(
     );
     let rtl = rtl_content;
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Dropdown Menu page follows docs sequence to keep parity review deterministic.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Checkbox and radio examples are stateful so selection persists across open-close cycles.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Avatar example uses fallback avatar trigger for deterministic rendering in gallery runs.",
-                ),
-            ]
-        },
+        [
+            "Dropdown Menu page follows docs sequence to keep parity review deterministic.",
+            "Checkbox and radio examples are stateful so selection persists across open-close cycles.",
+            "Avatar example uses fallback avatar trigger for deterministic rendering in gallery runs.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(

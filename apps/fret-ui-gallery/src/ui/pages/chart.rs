@@ -216,32 +216,14 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "This page validates tooltip/legend composition parity, not full chart drawing parity.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Accessibility and full Recharts API integration are intentionally tracked as follow-up work.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "When adding chart runtime later, keep this page order unchanged for quick docs side-by-side checks.",
-                ),
-            ]
-        },
+        [
+            "This page validates tooltip/legend composition parity, not full chart drawing parity.",
+            "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
+            "Accessibility and full Recharts API integration are intentionally tracked as follow-up work.",
+            "When adding chart runtime later, keep this page order unchanged for quick docs side-by-side checks.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
