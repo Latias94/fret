@@ -62,11 +62,13 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `apps/fret-examples/src/external_texture_imports_demo.rs` (KeyN adapter path requests `ExternalZeroCopy`)
       - Perf script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`
+    - First real native frame source (Windows/MF, stage M2A = CPU upload):
+      - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`wmf::MfVideoReader`, CPU upload loop, test_ids)
+      - `apps/fret-demo/src/bin/external_video_imports_mf_demo.rs` (demo entrypoint)
   - Remaining:
-    - Decide the first "real native external frame source" to implement (recommended on Windows: Media Foundation;
-      macOS AVFoundation next).
+    - Add a steady perf script + baseline for the MF CPU-upload path (M2A gate).
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
-      produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise).
+      produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise) (M2B+).
 
 - [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
       document prerequisites and the deterministic fallback behavior.

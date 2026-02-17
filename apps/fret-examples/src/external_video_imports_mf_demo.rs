@@ -15,6 +15,8 @@ use fret_ui::{ElementContext, Invalidation, Theme};
 #[cfg(target_os = "windows")]
 mod wmf {
     use anyhow::Context as _;
+    use std::ffi::OsStr;
+    use std::path::{Path, PathBuf};
     use windows::Win32::Media::MediaFoundation::{
         IMFMediaBuffer, IMFSample, IMFSourceReader, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
@@ -23,6 +25,8 @@ mod wmf {
     };
     use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
     use windows::core::HSTRING;
+
+    const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi"];
 
     pub struct VideoFrame {
         pub size: (u32, u32),
@@ -39,7 +43,8 @@ mod wmf {
 
     impl MfVideoReader {
         pub fn new(path: impl Into<String>) -> anyhow::Result<Self> {
-            let path = path.into();
+            let raw_path = path.into();
+            let path = resolve_source_reader_url(&raw_path)?;
 
             unsafe {
                 // Best-effort: if COM is already initialized in another mode, keep going.
@@ -213,6 +218,103 @@ mod wmf {
             buffer.Unlock().ok().context("IMFMediaBuffer::Unlock")?;
         }
         Ok(bytes)
+    }
+
+    fn resolve_source_reader_url(raw: &str) -> anyhow::Result<String> {
+        let raw = raw.trim();
+        anyhow::ensure!(!raw.is_empty(), "empty Media Foundation source URL/path");
+
+        // Allow callers to pass a real URL (including `file://...`) without trying to normalize it.
+        if raw.contains("://") {
+            tracing::info!(raw, "using Media Foundation source URL");
+            return Ok(raw.to_string());
+        }
+
+        let candidate = PathBuf::from(raw);
+        let metadata = std::fs::metadata(&candidate)
+            .with_context(|| format!("source path does not exist: {raw}"))?;
+
+        let resolved = if metadata.is_dir() {
+            let picked = pick_first_video_file_from_dir(&candidate)?;
+            tracing::info!(
+                raw_dir = %candidate.display(),
+                picked = %picked.display(),
+                "FRET_MF_VIDEO_PATH points to a directory; picked a video file"
+            );
+            picked
+        } else {
+            candidate
+        };
+
+        let resolved = std::fs::canonicalize(&resolved).with_context(|| {
+            format!("failed to canonicalize source path: {}", resolved.display())
+        })?;
+
+        Ok(resolved.to_string_lossy().into_owned())
+    }
+
+    fn pick_first_video_file_from_dir(dir: &Path) -> anyhow::Result<PathBuf> {
+        let mut candidates = Vec::<PathBuf>::new();
+        for entry in std::fs::read_dir(dir)
+            .with_context(|| format!("failed to read directory: {}", dir.display()))?
+        {
+            let entry = entry.context("read_dir entry")?;
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            let ext = path
+                .extension()
+                .and_then(OsStr::to_str)
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if VIDEO_FILE_EXTS.contains(&ext.as_str()) {
+                candidates.push(path);
+            }
+        }
+
+        candidates.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+
+        candidates.into_iter().next().with_context(|| {
+            format!(
+                "no supported video files found in directory: {} (expected one of: {})",
+                dir.display(),
+                VIDEO_FILE_EXTS.join(", ")
+            )
+        })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn resolve_source_reader_url_picks_first_video_file_from_dir() {
+            let root = std::env::temp_dir().join(format!(
+                "fret_mf_video_path_test_{}_{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+
+            std::fs::write(root.join("z.txt"), b"not video").unwrap();
+            std::fs::write(root.join("b.mp4"), b"dummy").unwrap();
+            std::fs::write(root.join("a.mp4"), b"dummy").unwrap();
+
+            let resolved = resolve_source_reader_url(root.to_str().unwrap()).unwrap();
+            let picked = PathBuf::from(resolved)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+            assert_eq!(picked.to_ascii_lowercase(), "a.mp4");
+
+            let _ = std::fs::remove_dir_all(&root);
+        }
     }
 }
 
