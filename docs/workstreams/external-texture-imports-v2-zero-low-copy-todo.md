@@ -145,7 +145,6 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Evidence anchors:
     - `crates/fret-launch/src/runner/native_external_import.rs`
     - `crates/fret-launch/src/runner/imported_viewport_target.rs`
-      - `ImportedViewportRenderTarget::push_native_external_import_update_with_requested_ingest_strategy_or_fallback(...)`
       - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
       - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
   - Remaining:
