@@ -250,22 +250,28 @@ pub(super) fn preview_forms(
         vec![
             DocSection::new("Demo", demo)
                 .description("FieldSet + FieldGroup recipe with multiple controls.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Input", input)
                 .description("A model-bound input control.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Textarea", textarea)
                 .description("A model-bound textarea control with fixed height.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Checkbox + Switch", controls)
                 .description("Basic checkbox + switch controls with labels.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Fieldset", fieldset)
                 .description("FieldSet recipe with grouped fields and action row.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Form composition under an RTL direction provider.")
-                .max_w(Px(840.0)),
+                .max_w(Px(840.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

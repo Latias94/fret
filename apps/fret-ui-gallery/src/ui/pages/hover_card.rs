@@ -306,7 +306,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     .into_element(cx);"#,
                 ),
             DocSection::new("Trigger Delays", trigger_delays)
-                .description("Compare instant vs delayed open/close behavior."),
+                .description("Compare instant vs delayed open/close behavior.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Positioning", positioning)
                 .description("Placement is controlled by `side` and `align`.")
                 .code(
@@ -316,10 +317,14 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     .align(shadcn::HoverCardAlign::Start);"#,
                 ),
             DocSection::new("Basic", basic)
-                .description("A minimal hover card with shorter delays."),
-            DocSection::new("Sides", sides).description("Visual sweep of side placements."),
+                .description("A minimal hover card with shorter delays.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Sides", sides)
+                .description("Visual sweep of side placements.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Hover card should respect right-to-left direction context."),
+                .description("Hover card should respect right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

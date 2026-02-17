@@ -174,9 +174,11 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 .into_element(cx);"#,
                 ),
             DocSection::new("Button", button)
-                .description("kbd tokens can be composed into button labels for discoverability."),
+                .description("kbd tokens can be composed into button labels for discoverability.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Tooltip", tooltip)
-                .description("Tooltips often include shortcut hints for expert users."),
+                .description("Tooltips often include shortcut hints for expert users.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Input Group", input_group)
                 .description("Trailing kbd hints can be rendered inside an input group.")
                 .code(
@@ -186,7 +188,8 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     .trailing_has_kbd(true);"#,
                 ),
             DocSection::new("RTL", rtl)
-                .description("kbd token order should respect right-to-left direction context."),
+                .description("kbd token order should respect right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

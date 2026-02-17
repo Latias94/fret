@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
     cx: &mut ElementContext<'_, App>,
@@ -532,5 +533,8 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
             .test_id("ui-gallery-text-bidi-rtl-conformance-root"),
     );
 
-    vec![header, panel]
+    let page =
+        doc_layout::wrap_preview_page(cx, None, "Bidi / RTL conformance", vec![header, panel]);
+
+    vec![page]
 }

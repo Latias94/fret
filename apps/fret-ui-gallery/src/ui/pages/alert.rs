@@ -206,19 +206,24 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("Basic", basic)
                 .description("Default variant for neutral info.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Destructive", destructive)
                 .description("Destructive variant for critical errors.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Action", action)
                 .description("Inline action row composed inside the alert.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

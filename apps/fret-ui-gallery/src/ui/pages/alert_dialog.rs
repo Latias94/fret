@@ -307,7 +307,8 @@ pub(super) fn preview_alert_dialog(
                 .max_w(Px(760.0)),
             DocSection::new("Basic", basic_content)
                 .description("A minimal alert dialog with default buttons.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Small", small_content)
                 .description("Compact dialog size for short copy.")
                 .test_id_prefix("ui-gallery-alert-dialog-small")
@@ -336,7 +337,8 @@ let header = shadcn::AlertDialogHeader::new([title, description])
                 .max_w(Px(760.0)),
             DocSection::new("Small with Media", small_with_media_content)
                 .description("Small size + media variant.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Destructive", destructive_content)
                 .description("Destructive styling for irreversible actions.")
                 .test_id_prefix("ui-gallery-alert-dialog-destructive")
@@ -349,7 +351,8 @@ let header = shadcn::AlertDialogHeader::new([title, description])
                 .max_w(Px(760.0)),
             DocSection::new("RTL", rtl_dialog)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Guidelines and best practices for alert dialogs.")
                 .max_w(Px(760.0)),

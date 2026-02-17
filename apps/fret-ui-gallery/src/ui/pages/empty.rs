@@ -298,13 +298,17 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     r#"let empty = shadcn::Empty::new([header, content]).into_element(cx);"#,
                 ),
             DocSection::new("Outline", outline)
-                .description("Outlined empty state for low-emphasis surfaces."),
+                .description("Outlined empty state for low-emphasis surfaces.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Background", background)
-                .description("Muted background recipe for empty states embedded in cards."),
+                .description("Muted background recipe for empty states embedded in cards.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Avatar", avatar)
-                .description("Empty state media can be an avatar instead of an icon."),
+                .description("Empty state media can be an avatar instead of an icon.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Avatar Group", avatar_group)
-                .description("Media can also be a composed row of avatars."),
+                .description("Media can also be a composed row of avatars.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("InputGroup", input_group)
                 .description("Empty states can include search inputs and trailing affordances.")
                 .code(
@@ -314,7 +318,8 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .trailing([shadcn::InputGroupText::new("/").into_element(cx)]);"#,
                 ),
             DocSection::new("RTL", rtl)
-                .description("Empty layout should follow right-to-left direction context."),
+                .description("Empty layout should follow right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

@@ -178,19 +178,24 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 ),
             DocSection::new("Groups", groups)
                 .description("Optgroup-like grouping is approximated with multiple selects.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled)
                 .description("Disabled native select.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state via `aria_invalid(true)`.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Native Select vs Select", native_vs_select)
                 .description("Compare native and styled select side-by-side.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Native select under an RTL direction provider.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

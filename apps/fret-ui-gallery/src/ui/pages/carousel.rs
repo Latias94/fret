@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -45,48 +47,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         line_height_px: Px,
         aspect_square: bool,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
@@ -268,7 +228,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             out
         },
     );
-    let demo = section_card(cx, "Demo", demo_body);
 
     let animata_expandable = {
         let theme = Theme::global(&*cx.app).clone();
@@ -415,8 +374,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             },
         )
         .test_id("ui-gallery-carousel-expandable");
-
-        section_card(cx, "Animata: Expandable", content)
+        content
     };
 
     let sizes_content = stack::vstack(
@@ -448,7 +406,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let sizes = section_card(cx, "Sizes", sizes_content);
 
     let spacing_content = stack::vstack(
         cx,
@@ -479,7 +436,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let spacing = section_card(cx, "Spacing", spacing_content);
 
     let orientation_content = stack::vstack(
         cx,
@@ -510,7 +466,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let orientation = section_card(cx, "Orientation", orientation_content);
 
     let options_content = stack::vstack(
         cx,
@@ -531,7 +486,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let options = section_card(cx, "Options", options_content);
 
     let api_content = stack::vstack(
         cx,
@@ -552,7 +506,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let api = section_card(cx, "API", api_content);
 
     let events_content = stack::vstack(
         cx,
@@ -573,7 +526,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let events = section_card(cx, "Events", events_content);
 
     let plugins_content = stack::vstack(
         cx,
@@ -594,84 +546,27 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let plugins = section_card(cx, "Plugins", plugins_content);
 
-    let preview_hint = shadcn::typography::muted(
+    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
-        "Preview follows shadcn Carousel docs flow: Demo -> Sizes -> Spacing -> Orientation -> Options -> API -> Events -> Plugins.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                animata_expandable,
-                sizes,
-                spacing,
-                orientation,
-                options,
-                api,
-                events,
-                plugins,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-carousel-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
         |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"let carousel = shadcn::Carousel::new(items)
-    .item_basis_main_px(Px(260.0))
-    .refine_layout(LayoutRefinement::default().max_w(Px(360.0)))
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Spacing + Orientation",
-                    r#"shadcn::Carousel::new(items)
-    .track_start_neg_margin(Space::N4)
-    .item_padding_start(Space::N4)
-    .orientation(shadcn::CarouselOrientation::Vertical)
-    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(300.0)))"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Carousel::new(items)
-        .orientation(shadcn::CarouselOrientation::Horizontal)
-        .into_element(cx)
-})"#,
-                ),
-            ]
+            carousel(
+                cx,
+                "ui-gallery-carousel-rtl",
+                shadcn::CarouselOrientation::Horizontal,
+                Px(129.328),
+                Space::N1,
+                Px(384.0),
+                None,
+                SlideVisual {
+                    text_px: Px(24.0),
+                    line_height_px: Px(32.0),
+                    aspect_square: true,
+                },
+            )
         },
     );
-    let code_panel = shell(cx, code_stack);
 
     let notes_stack = stack::vstack(
         cx,
@@ -681,7 +576,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
@@ -701,13 +595,69 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-carousel",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Carousel docs flow: Demo -> Sizes -> Spacing -> Orientation -> Options -> API -> Events -> Plugins.",
+        ),
+        vec![
+            DocSection::new("Demo", demo_body)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-demo")
+                .code(
+                    "rust",
+                    r#"let carousel = shadcn::Carousel::new(items)
+    .item_basis_main_px(Px(260.0))
+    .refine_layout(LayoutRefinement::default().max_w(Px(360.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Animata: Expandable", animata_expandable)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Sizes", sizes_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Spacing", spacing_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-spacing")
+                .code(
+                    "rust",
+                    r#"shadcn::Carousel::new(items)
+    .track_start_neg_margin(Space::N4)
+    .item_padding_start(Space::N4)
+    .orientation(shadcn::CarouselOrientation::Vertical)
+    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(300.0)))"#,
+                ),
+            DocSection::new("Orientation", orientation_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Options", options_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("API", api_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Events", events_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Plugins", plugins_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("RTL", rtl_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-rtl")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Carousel::new(items)
+        .orientation(shadcn::CarouselOrientation::Horizontal)
+        .into_element(cx)
+})"#,
+                ),
+            DocSection::new("Notes", notes_stack).max_w(Px(760.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-carousel-component")]
 }

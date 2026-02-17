@@ -1,52 +1,12 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct KanbanModels {
         items: Option<Model<Vec<shadcn::extras::KanbanItem>>>,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let announcement = {
         shadcn::extras::Announcement::new([
@@ -208,15 +168,41 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .test_id("ui-gallery-shadcn-extras-avatar-stack")
     };
 
-    vec![
-        section_card(cx, "Announcement", announcement),
-        section_card(cx, "Banner (dismissible)", banner),
-        section_card(cx, "Tags", tags),
-        section_card(cx, "Marquee (pause on hover)", marquee),
-        section_card(cx, "Kanban (drag & drop)", kanban),
-        section_card(cx, "Ticker", ticker_row),
-        section_card(cx, "Relative time", relative_time),
-        section_card(cx, "Rating", rating),
-        section_card(cx, "Avatar stack", avatar_stack),
-    ]
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "A small grab-bag of shadcn-style extras; each section is intentionally self-contained.",
+        ),
+        vec![
+            DocSection::new("Announcement", announcement)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Banner (dismissible)", banner)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Tags", tags)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Marquee (pause on hover)", marquee)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Kanban (drag & drop)", kanban)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Ticker", ticker_row)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Relative time", relative_time)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Rating", rating)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Avatar stack", avatar_stack)
+                .max_w(Px(860.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-shadcn-extras-component")]
 }

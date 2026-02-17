@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn preview_text_mixed_script_fallback(
     cx: &mut ElementContext<'_, App>,
@@ -132,5 +133,8 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
                 .test_id("ui-gallery-text-mixed-script-fallback-root"),
         );
 
-    vec![header, panel]
+    let page =
+        doc_layout::wrap_preview_page(cx, None, "Mixed-script fallback", vec![header, panel]);
+
+    vec![page]
 }

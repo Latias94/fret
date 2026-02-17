@@ -191,49 +191,64 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         vec![
             DocSection::new("Demo", demo)
                 .description("A long-form story sample combining headings, paragraphs, and lists.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("h1", h1)
                 .description("Top-level heading.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("h2", h2)
                 .description("Section heading.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("h3", h3)
                 .description("Sub-section heading.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("h4", h4)
                 .description("Low-level heading for grouped content.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("p", p)
                 .description("Body paragraph text.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("blockquote", blockquote)
                 .description("Quoted callout text.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("table", table)
                 .description("Tabular content using shadcn Table parts.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("list", list)
                 .description("Bulleted/ordered list content.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Inline Code", inline_code)
                 .description("Inline code styling for commands and identifiers.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Lead", lead)
                 .description("Intro lead paragraph for sections.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Large", large)
                 .description("Emphasis text for short callouts.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Small", small)
                 .description("Helper text and metadata.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Muted", muted)
                 .description("De-emphasized hint/explanation text.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

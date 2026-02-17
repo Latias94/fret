@@ -466,34 +466,44 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 ),
             DocSection::new("Variant", variant)
                 .description("Default / Outline / Muted variants.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Size", size)
                 .description("Row density presets (default + small).")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Icon", icon)
                 .description("Icon media variant for app navigation rows.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Avatar", avatar)
                 .description("Compose Avatar inside ItemMedia for people lists.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Image", image)
                 .description("Media slot can be styled as an image placeholder.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Group", group)
                 .description("Group rows with separators and consistent spacing.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Header", header)
                 .description("Header row pairs a title with a trailing action.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Link", link)
                 .description("Clickable list row (approximates docs link usage).")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Dropdown", dropdown)
                 .description("Trailing ghost action button (menu placeholder).")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Validate text alignment and action placement under RTL.")
-                .max_w(Px(920.0)),
+                .max_w(Px(920.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and implementation notes.")
                 .max_w(Px(820.0)),

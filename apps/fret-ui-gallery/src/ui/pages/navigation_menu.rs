@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default, Clone)]
     struct NavigationMenuModels {
@@ -8,27 +10,6 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     }
 
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
 
     let state = cx.with_state(NavigationMenuModels::default, |st| st.clone());
     let demo_value = match state.demo_value {
@@ -301,12 +282,11 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
             ]))
             .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
             .into_element(cx);
-        let body = centered(cx, menu);
-        section(cx, "Demo", body)
+        menu
     };
 
     let rtl = {
-        let menu = fret_ui_kit::primitives::direction::with_direction_provider(
+        fret_ui_kit::primitives::direction::with_direction_provider(
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
@@ -487,14 +467,21 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                     .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
                     .into_element(cx)
             },
-        );
-        let body = centered(cx, menu);
-        section(cx, "RTL", body)
+        )
     };
 
-    vec![stack::vstack(
+    let body = doc_layout::render_doc_page(
         cx,
-        stack::VStackProps::default().gap(Space::N6).items_start(),
-        |_cx| vec![demo, rtl],
-    )]
+        Some("Preview follows shadcn Navigation Menu docs order: Demo, RTL."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(820.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-navigation-menu-component")]
 }

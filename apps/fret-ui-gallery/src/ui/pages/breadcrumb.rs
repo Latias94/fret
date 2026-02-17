@@ -346,7 +346,8 @@ pub(super) fn preview_breadcrumb(
                 ),
             DocSection::new("Basic", basic)
                 .title_test_id("ui-gallery-breadcrumb-section-title-basic")
-                .description("A minimal breadcrumb list with three items."),
+                .description("A minimal breadcrumb list with three items.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Custom Separator", custom_separator)
                 .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
                 .description("Use a custom separator icon for parity with docs.")
@@ -361,16 +362,20 @@ pub(super) fn preview_breadcrumb(
                 ),
             DocSection::new("Dropdown", dropdown)
                 .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
-                .description("Collapsed middle segment can expand via a dropdown menu."),
+                .description("Collapsed middle segment can expand via a dropdown menu.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Collapsed", collapsed)
                 .title_test_id("ui-gallery-breadcrumb-section-title-collapsed")
-                .description("Use `BreadcrumbItem::ellipsis` to keep paths readable in narrow layouts."),
+                .description("Use `BreadcrumbItem::ellipsis` to keep paths readable in narrow layouts.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Link Component", link_component)
                 .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
-                .description("Example of a truncated router-link style item."),
+                .description("Example of a truncated router-link style item.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
-                .description("Breadcrumb layout should follow right-to-left direction context."),
+                .description("Breadcrumb layout should follow right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-breadcrumb-section-title-notes")
                 .description("Implementation notes and regression guidelines."),

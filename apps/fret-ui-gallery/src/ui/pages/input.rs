@@ -640,7 +640,8 @@ pub(super) fn preview_input(
         ),
         vec![
             DocSection::new("Basic", basic)
-                .description("Single input field (used by IME routing regression scripts)."),
+                .description("Single input field (used by IME routing regression scripts).")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Field", field)
                 .description("Field composition with label, description, and error slots.")
                 .code(
@@ -653,22 +654,30 @@ pub(super) fn preview_input(
 .into_element(cx);"#,
                 ),
             DocSection::new("Field Group", field_group)
-                .description("FieldGroup stacks related fields and action rows."),
+                .description("FieldGroup stacks related fields and action rows.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled).description(
                 "Disabled inputs should block focus/interaction and use muted styling.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Invalid", invalid)
-                .description("Invalid state uses `aria_invalid` + field-level error copy."),
+                .description("Invalid state uses `aria_invalid` + field-level error copy.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("File", file).description(
                 "File input is approximated via text + browse button composition in current API.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Inline", inline)
-                .description("Horizontal Field orientation is useful for compact toolbars."),
+                .description("Horizontal Field orientation is useful for compact toolbars.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Grid", grid)
-                .description("Two-column input layout with shared row alignment."),
+                .description("Two-column input layout with shared row alignment.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Required", required)
-                .description("Required affordance is represented by label copy in this gallery."),
-            DocSection::new("Badge", badge).description("Use Badge inside a label row."),
+                .description("Required affordance is represented by label copy in this gallery.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Badge", badge).description("Use Badge inside a label row.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Input Group", input_group)
                 .description("Inline addons and trailing buttons via InputGroup composition.")
                 .code(
@@ -679,11 +688,14 @@ pub(super) fn preview_input(
     .into_element(cx);"#,
                 ),
             DocSection::new("Button Group", button_group)
-                .description("ButtonGroup composes an input and a button with shared chrome."),
+                .description("ButtonGroup composes an input and a button with shared chrome.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Form", form)
-                .description("Multi-field form layout using FieldGroup + responsive rows."),
+                .description("Multi-field form layout using FieldGroup + responsive rows.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Input + Field composition under an RTL direction provider."),
+                .description("Input + Field composition under an RTL direction provider.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

@@ -97,37 +97,49 @@ pub(super) fn preview_combobox(
     .into_element(cx);"#,
                 ),
             DocSection::new("Multiple Selection", multiple_selection)
-                .description("Parity gap marker: upstream supports chips + multiple values."),
+                .description("Parity gap marker: upstream supports chips + multiple values.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Basic", basic)
-                .description("Small list of items with stable test IDs for diag scripts."),
+                .description("Small list of items with stable test IDs for diag scripts.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Long List", long_list)
                 .description(
                     "Supports long-list scroll regression gates (and future virtualization invariants).",
-                ),
+                )
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Multiple", multiple)
-                .description("Parity gap marker: `multiple` + chips behavior is not exposed yet."),
+                .description("Parity gap marker: `multiple` + chips behavior is not exposed yet.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Clear Button", clear_button)
-                .description("Parity gap marker: upstream `showClear` is not exposed yet."),
+                .description("Parity gap marker: upstream `showClear` is not exposed yet.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Groups", groups)
                 .description(
                     "Grouped rows are approximated with prefix labels until group/separator APIs exist.",
-                ),
+                )
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Custom Items (Rich)", custom_items_example).description(
                 "Parity gap marker: render-rich item surfaces are currently approximated at label level.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Invalid", invalid).description(
                 "Invalid visual is currently approximated via destructive border style on trigger.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled)
-                .description("Disabled state should block open/selection and use muted styling."),
+                .description("Disabled state should block open/selection and use muted styling.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Auto Highlight", auto_highlight).description(
                 "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not surfaced yet.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Popup", popup).description(
                 "Parity gap marker: trigger-as-button popup recipe is not exposed yet.",
-            ),
+            )
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Input Group", input_group)
-                .description("Inline keybinding + input grouping example."),
+                .description("Inline keybinding + input grouping example.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(

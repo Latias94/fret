@@ -574,12 +574,17 @@ pub(super) fn preview_context_menu(
 let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entries);"#,
                 ),
             DocSection::new("Submenu", submenu)
-                .description("Nested submenu entries for grouped actions."),
+                .description("Nested submenu entries for grouped actions.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Shortcuts", shortcuts)
-                .description("Trailing shortcuts for command discovery."),
+                .description("Trailing shortcuts for command discovery.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Groups", groups)
-                .description("Explicit groups and labels for structured menus."),
-            DocSection::new("Icons", icons).description("Leading icons for visual scanning."),
+                .description("Explicit groups and labels for structured menus.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Icons", icons)
+                .description("Leading icons for visual scanning.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Checkbox items are bound to boolean models.")
                 .code(
@@ -599,9 +604,11 @@ let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entrie
 );"#,
                 ),
             DocSection::new("Destructive", destructive)
-                .description("Destructive items use a dedicated visual variant."),
+                .description("Destructive items use a dedicated visual variant.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Menu layout should follow right-to-left direction context."),
+                .description("Menu layout should follow right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

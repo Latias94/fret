@@ -186,19 +186,24 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ),
             DocSection::new("Outline", outline)
                 .description("Outline variant for dense toolbars.")
-                .max_w(Px(480.0)),
+                .max_w(Px(480.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("With Text", with_text)
                 .description("Default variant with icon + text.")
-                .max_w(Px(480.0)),
+                .max_w(Px(480.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Size", size)
                 .description("Size presets: Sm / Default / Lg.")
-                .max_w(Px(480.0)),
+                .max_w(Px(480.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled)
                 .description("Disabled toggles remain readable and non-interactive.")
-                .max_w(Px(480.0)),
+                .max_w(Px(480.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Toggle content order and alignment under RTL.")
-                .max_w(Px(480.0)),
+                .max_w(Px(480.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and accessibility notes.")
                 .max_w(Px(820.0)),

@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -973,12 +975,38 @@ pub(super) fn preview_motion_presets(
         .test_id("ui-gallery-motion-presets-stack-shift-list-demo")
     };
 
-    vec![
-        preset_select,
-        token_snapshot,
-        overlay_demo,
-        fluid_tabs_demo,
-        stagger_demo,
-        stack_shift_list_demo,
-    ]
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Preview is a contract surface for semantic motion tokens; the goal is stable feel across refresh rates and platforms.",
+        ),
+        vec![
+            DocSection::new("Preset selector", preset_select)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Token snapshot", token_snapshot)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Overlay demo", overlay_demo)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Fluid tabs demo", fluid_tabs_demo)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Stagger / sequence demo", stagger_demo)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Stack shift list demo", stack_shift_list_demo)
+                .no_shell()
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-motion-presets-component")]
 }

@@ -579,9 +579,11 @@ shadcn::DrawerContent::new([
             DocSection::new("Responsive Dialog", responsive_dialog).descriptions([
                 "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
                 "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
-            ]),
+            ])
+            .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Drawer layout should follow right-to-left direction context."),
+                .description("Drawer layout should follow right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

@@ -164,7 +164,8 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 .into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
-                .description("Label and input alignment under an RTL direction provider."),
+                .description("Label and input alignment under an RTL direction provider.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

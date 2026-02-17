@@ -655,14 +655,20 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
 });"#,
                 ),
             DocSection::new("Submenu", submenu)
-                .description("Nested submenu entries for grouped actions."),
+                .description("Nested submenu entries for grouped actions.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Shortcuts", shortcuts)
-                .description("Trailing shortcuts for command discovery."),
-            DocSection::new("Icons", icons).description("Leading icons for visual scanning."),
+                .description("Trailing shortcuts for command discovery.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Icons", icons)
+                .description("Leading icons for visual scanning.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Checkboxes", checkboxes)
-                .description("Checkbox items are bound to boolean models."),
+                .description("Checkbox items are bound to boolean models.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Checkboxes Icons", checkboxes_icons)
-                .description("Checkbox items can also render leading icons."),
+                .description("Checkbox items can also render leading icons.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Radio Group", radio_group)
                 .description("Radio groups are bound to a single selected value.")
                 .code(
@@ -674,15 +680,20 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
 );"#,
                 ),
             DocSection::new("Radio Icons", radio_icons)
-                .description("Radio items can render leading icons."),
+                .description("Radio items can render leading icons.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Destructive", destructive)
-                .description("Destructive items use a dedicated visual variant."),
+                .description("Destructive items use a dedicated visual variant.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Avatar", avatar)
-                .description("Menu triggers can be non-button elements (e.g. avatar)."),
+                .description("Menu triggers can be non-button elements (e.g. avatar).")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Complex", complex)
-                .description("Composed menu with arrows, submenus, and destructive actions."),
+                .description("Composed menu with arrows, submenus, and destructive actions.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Menu layout should follow right-to-left direction context."),
+                .description("Menu layout should follow right-to-left direction context.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

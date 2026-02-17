@@ -396,13 +396,16 @@ pub(super) fn preview_date_picker(
                 .max_w(Px(780.0)),
             DocSection::new(input_title, input)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new(time_title, time_picker)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new(nl_title, natural_language)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(

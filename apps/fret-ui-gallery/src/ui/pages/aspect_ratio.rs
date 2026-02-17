@@ -132,11 +132,14 @@ shadcn::AspectRatio::new(16.0 / 9.0, content)
     .into_element(cx);"#,
                 ),
             DocSection::new("Square", square)
-                .description("1:1 square media for avatars/thumbnails."),
+                .description("1:1 square media for avatars/thumbnails.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Portrait", portrait)
-                .description("9:16 portrait media for reels/short video cards."),
+                .description("9:16 portrait media for reels/short video cards.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("AspectRatio should remain direction-agnostic."),
+                .description("AspectRatio should remain direction-agnostic.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
         ],
     );

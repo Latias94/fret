@@ -626,19 +626,28 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 .into_element(cx);"#,
                 ),
             DocSection::new("Textarea", textarea)
-                .description("Textarea field with explicit height and helper copy."),
-            DocSection::new("Select", select).description("Select composed inside a Field shell."),
-            DocSection::new("Slider", slider).description(
-                "Non-text controls should still use FieldTitle/Description for context.",
-            ),
+                .description("Textarea field with explicit height and helper copy.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Select", select)
+                .description("Select composed inside a Field shell.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Slider", slider)
+                .description(
+                    "Non-text controls should still use FieldTitle/Description for context.",
+                )
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Fieldset", fieldset)
-                .description("FieldSet groups multiple fields with a legend + description."),
+                .description("FieldSet groups multiple fields with a legend + description.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Checkbox", checkbox)
-                .description("Horizontal Field orientation keeps checkbox + label aligned."),
+                .description("Horizontal Field orientation keeps checkbox + label aligned.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Radio", radio)
-                .description("RadioGroup nested under Field for label copy."),
+                .description("RadioGroup nested under Field for label copy.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Switch", switch)
-                .description("Switch composed with title + description."),
+                .description("Switch composed with title + description.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Choice Card", choice_card)
                 .description("Choice-card radios combine FieldContent with rich labels.")
                 .code(
@@ -655,9 +664,11 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .into_element(cx);"#,
                 ),
             DocSection::new("Field Group", field_group)
-                .description("FieldGroup provides separators and checkbox-group composition."),
+                .description("FieldGroup provides separators and checkbox-group composition.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("All Field compositions should render correctly under RTL direction."),
+                .description("All Field compositions should render correctly under RTL direction.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Responsive Layout", responsive)
                 .description(
                     "Responsive orientation collapses label/content layouts for narrow containers.",

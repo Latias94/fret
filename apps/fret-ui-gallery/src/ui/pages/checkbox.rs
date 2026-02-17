@@ -570,14 +570,20 @@ pub(super) fn preview_checkbox(
 let optional = shadcn::Checkbox::new_optional(optional_model); // None => indeterminate"#,
                 ),
             DocSection::new("Invalid State", invalid_state)
-                .description("Invalid styling is currently approximated via destructive border."),
-            DocSection::new("Basic", basic).description("Field + checkbox + label composition."),
+                .description("Invalid styling is currently approximated via destructive border.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Basic", basic)
+                .description("Field + checkbox + label composition.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Description", description_section)
-                .description("FieldContent keeps label and helper text aligned with the control."),
+                .description("FieldContent keeps label and helper text aligned with the control.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled_section)
-                .description("Disabled checkbox should block interaction and use muted styling."),
+                .description("Disabled checkbox should block interaction and use muted styling.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Group", group)
-                .description("Checkbox group pattern with per-item descriptions."),
+                .description("Checkbox group pattern with per-item descriptions.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Table", table)
                 .description("Table selection pattern with header and row checkboxes.")
                 .code(

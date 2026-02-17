@@ -588,7 +588,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Uncontrolled disclosure with a compact trigger and a details list."),
+                .description("Uncontrolled disclosure with a compact trigger and a details list.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
                 .code(
@@ -615,11 +616,14 @@ shadcn::Collapsible::new(open.clone()).into_element_with_open_model(cx, |cx, ope
 );"#,
                 ),
             DocSection::new("Settings Panel", settings)
-                .description("Collapsible used to hide optional/advanced form fields."),
+                .description("Collapsible used to hide optional/advanced form fields.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("File Tree", file_tree)
-                .description("Nested collapsibles with independent open state per node."),
+                .description("Nested collapsibles with independent open state per node.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("Direction provider should keep trigger/content alignment stable."),
+                .description("Direction provider should keep trigger/content alignment stable.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let (chart_1, chart_2, chart_3) = cx.with_theme(|theme| {
         (
@@ -8,48 +10,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             theme.color_token("chart-3"),
         )
     });
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let tooltip = |cx: &mut ElementContext<'_, App>,
                    label: &'static str,
@@ -120,7 +80,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let demo = section_card(cx, "Demo", demo_content);
 
     let component_content = stack::vstack(
         cx,
@@ -141,7 +100,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component = section_card(cx, "Component", component_content);
 
     let tooltip_content = stack::vstack(
         cx,
@@ -178,7 +136,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let tooltip_section = section_card(cx, "Tooltip", tooltip_content);
 
     let legend_content = stack::vstack(
         cx,
@@ -205,7 +162,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let legend_section = section_card(cx, "Legend", legend_content);
 
     let accessibility_content = stack::vstack(
         cx,
@@ -226,7 +182,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let accessibility = section_card(cx, "Accessibility", accessibility_content);
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -260,96 +215,15 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             )
         },
     );
-    let rtl = section_card(cx, "RTL", rtl_content);
-
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Chart docs flow: Demo -> Component -> Tooltip -> Legend -> Accessibility -> RTL.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                component,
-                tooltip_section,
-                legend_section,
-                accessibility,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-chart-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Tooltip",
-                    r#"let tooltip = shadcn::ChartTooltipContent::new()
-    .label("January")
-    .items([
-        shadcn::ChartTooltipItem::new("Desktop", "186"),
-        shadcn::ChartTooltipItem::new("Mobile", "80"),
-    ])
-    .indicator(shadcn::ChartTooltipIndicator::Line)
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Legend",
-                    r#"let legend = shadcn::ChartLegendContent::new()
-    .items([
-        shadcn::ChartLegendItem::new("Desktop"),
-        shadcn::ChartLegendItem::new("Mobile"),
-    ])
-    .vertical_align(shadcn::ChartLegendVerticalAlign::Bottom)
-    .wrap(true)
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::ChartTooltipContent::new().label("?????").into_element(cx)
-})"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
 
     let notes_stack = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
                     "This page validates tooltip/legend composition parity, not full chart drawing parity.",
@@ -369,13 +243,62 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-chart",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Chart docs flow: Demo -> Component -> Tooltip -> Legend -> Accessibility -> RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Component", component_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Tooltip", tooltip_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-tooltip")
+                .code(
+                    "rust",
+                    r#"let tooltip = shadcn::ChartTooltipContent::new()
+    .label("January")
+    .items([
+        shadcn::ChartTooltipItem::new("Desktop", "186"),
+        shadcn::ChartTooltipItem::new("Mobile", "80"),
+    ])
+    .indicator(shadcn::ChartTooltipIndicator::Line)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Legend", legend_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-legend")
+                .code(
+                    "rust",
+                    r#"let legend = shadcn::ChartLegendContent::new()
+    .items([
+        shadcn::ChartLegendItem::new("Desktop"),
+        shadcn::ChartLegendItem::new("Mobile"),
+    ])
+    .vertical_align(shadcn::ChartLegendVerticalAlign::Bottom)
+    .wrap(true)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Accessibility", accessibility_content)
+                .max_w(Px(760.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("RTL", rtl_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-rtl")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::ChartTooltipContent::new().label("?????").into_element(cx)
+})"#,
+                ),
+            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-chart-component")]
 }

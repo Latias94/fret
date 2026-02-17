@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use shadcn::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu,
@@ -18,27 +20,6 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     }
 
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
 
     let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
         shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
@@ -138,11 +119,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 MenubarEntry::Item(MenubarItem::new("Print").close_on_select(false)),
             ])),
         ]);
-        let menubar = Menubar::new([file])
+        Menubar::new([file])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Demo", body)
+            .into_element(cx)
     };
 
     let checkbox = {
@@ -179,11 +158,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 "Superscript",
             )),
         ]);
-        let menubar = Menubar::new([view, format])
+        Menubar::new([view, format])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Checkbox", body)
+            .into_element(cx)
     };
 
     let radio = {
@@ -204,11 +181,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .item(MenubarRadioItemSpec::new("dark", "Dark"))
                 .item(MenubarRadioItemSpec::new("system", "System")),
         )]);
-        let menubar = Menubar::new([profiles, themes])
+        Menubar::new([profiles, themes])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Radio", body)
+            .into_element(cx)
     };
 
     let submenu = {
@@ -241,11 +216,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             MenubarEntry::Item(MenubarItem::new("Copy")),
             MenubarEntry::Item(MenubarItem::new("Paste")),
         ]);
-        let menubar = Menubar::new([file, edit])
+        Menubar::new([file, edit])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Submenu", body)
+            .into_element(cx)
     };
 
     let with_icons = {
@@ -273,15 +246,13 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     .variant(shadcn::menubar::MenubarItemVariant::Destructive),
             ),
         ]))]);
-        let menubar = Menubar::new([file, more])
+        Menubar::new([file, more])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "With Icons", body)
+            .into_element(cx)
     };
 
     let rtl = {
-        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+        fret_ui_kit::primitives::direction::with_direction_provider(
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
@@ -304,14 +275,35 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     .refine_layout(width.clone())
                     .into_element(cx)
             },
-        );
-        let body = centered(cx, body);
-        section(cx, "RTL", body)
+        )
     };
 
-    vec![stack::vstack(
+    let body = doc_layout::render_doc_page(
         cx,
-        stack::VStackProps::default().gap(Space::N6).items_start(),
-        |_cx| vec![demo, checkbox, radio, submenu, with_icons, rtl],
-    )]
+        Some(
+            "Preview follows shadcn Menubar docs order: Demo, Checkbox, Radio, Submenu, With Icons, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Checkbox", checkbox)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Radio", radio)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Submenu", submenu)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("With Icons", with_icons)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(520.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-menubar-component")]
 }

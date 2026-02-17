@@ -437,14 +437,20 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .into_element(cx);"#,
                 ),
             DocSection::new("Align / inline-start", align_inline_start)
-                .description("Inline-start addon (leading slot)."),
+                .description("Inline-start addon (leading slot).")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Align / inline-end", align_inline_end)
-                .description("Inline-end addon (trailing slot)."),
+                .description("Inline-end addon (trailing slot).")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Align / block-start", align_block_start)
-                .description("Block-start helper text with a divider."),
+                .description("Block-start helper text with a divider.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Align / block-end", align_block_end)
-                .description("Textarea-style block-end footer with buttons."),
-            DocSection::new("Icon", icon).description("Icon-like leading adornment."),
+                .description("Textarea-style block-end footer with buttons.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Icon", icon)
+                .description("Icon-like leading adornment.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Text", text)
                 .description("Leading/trailing text addons should not overlap the control.")
                 .code(
@@ -455,19 +461,26 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .into_element(cx);"#,
                 ),
             DocSection::new("Button", button)
-                .description("Trailing button; set `trailing_has_button(true)` for layout."),
+                .description("Trailing button; set `trailing_has_button(true)` for layout.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Kbd", kbd)
-                .description("Kbd-like addons (layout hints for monospace pills)."),
+                .description("Kbd-like addons (layout hints for monospace pills).")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Dropdown", dropdown)
-                .description("Leading button + caret composition approximation."),
+                .description("Leading button + caret composition approximation.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Spinner", spinner)
-                .description("Leading spinner while fetching results."),
+                .description("Leading spinner while fetching results.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Textarea", textarea)
-                .description("Textarea mode with a footer row and min height."),
+                .description("Textarea mode with a footer row and min height.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Custom Input", custom_input)
-                .description("Custom/extended input chrome via slots."),
+                .description("Custom/extended input chrome via slots.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
-                .description("InputGroup layout under an RTL direction provider."),
+                .description("InputGroup layout under an RTL direction provider.")
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes).description("API reference pointers and invariants."),
         ],
     );

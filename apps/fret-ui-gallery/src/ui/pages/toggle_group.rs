@@ -191,22 +191,28 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ),
             DocSection::new("Outline", outline)
                 .description("Text items with outline chrome.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Size", size)
                 .description("Size presets for toolbar density.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Spacing", spacing)
                 .description("Explicit spacing between items to reduce mis-clicks.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Vertical", vertical)
                 .description("Vertical orientation for side panels / inspectors.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Disabled", disabled)
                 .description("Disabled groups keep layout but block interaction.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("RTL", rtl)
                 .description("Item ordering and pressed visuals under RTL.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code("rust", doc_layout::TODO_RUST_CODE),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),
