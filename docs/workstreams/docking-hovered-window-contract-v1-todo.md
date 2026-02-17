@@ -89,20 +89,24 @@ Each TODO is labeled:
 
 ## P1 — macOS reliable hover selection (or explicit degradation)
 
-- [ ] DWHW-P1-macos-001 Decide the “Reliable” strategy for hovered window selection on macOS.
-  - Options:
-    - OS-backed point-to-window query (preferred, if viable under constraints).
-    - Explicitly downgrade to `best_effort` and treat overlap-hover as not guaranteed.
+- [x] DWHW-P1-macos-001 Decide the “Reliable” strategy for hovered window selection on macOS.
+  - Decision:
+    - Treat `NSApplication.orderedWindows` ordering (app-owned front-to-back) as the OS-backed
+      z-order signal and resolve hovered window by filtering Fret-owned windows at the cursor
+      point, honoring `prefer_not` to enable ImGui-style “peek behind”.
   - Deliverable:
-    - One paragraph in `docs/workstreams/docking-hovered-window-contract-v1.md` describing the
-      chosen approach and constraints (App Store/sandbox notes).
+    - Documented in `docs/workstreams/docking-hovered-window-contract-v1.md` (macOS section) with
+      constraints and evidence anchors.
 
-- [ ] DWHW-P1-macos-002 Gate the decision with a stable repro script + evidence bundle.
-  - Add or update:
+- [x] DWHW-P1-macos-002 Gate the decision with a stable repro script + evidence bundle.
+  - Gate:
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
+      - asserts `platform_ui_window_hover_detection_is(quality=reliable)`
+      - asserts `dock_drag_window_under_cursor_source_is(source=platform)`
   - Acceptance:
-    - On macOS: either passes reliably (if `Reliable`) or capability is downgraded and tear-off
-      degrades accordingly (no false claims of reliability).
+    - On macOS: passes reliably when `ui.window_hover_detection=reliable`.
+    - If the backend cannot support it, capability must be downgraded so the gate fails fast
+      before the overlap routing steps (no false claims of reliability).
 
 ## P1 — Linux X11 (best-effort → reliable if feasible)
 

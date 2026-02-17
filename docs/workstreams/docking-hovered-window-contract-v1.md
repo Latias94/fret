@@ -169,7 +169,25 @@ Notes:
 
 Goal: compute hovered window using platform APIs rather than heuristics.
 
-Approach options (choose one; validate against App Store / sandbox constraints):
+Chosen approach (v1):
+
+- Use `NSApplication.orderedWindows` (front-to-back ordering for app-owned windows) as the
+  platform-provided z-order signal.
+- Combine it with a runner-owned screen-space point-in-window check to select the first Fret-owned
+  window that contains the cursor position, skipping `prefer_not` when requested (peek-behind).
+
+This is intentionally “app-local”: it does not attempt to reason about windows owned by other
+applications, and it treats window frames as rectangular hit regions (no per-pixel transparency).
+For editor-grade multi-window docking within a single app, this is a pragmatic and portable
+definition of “Reliable”.
+
+Evidence anchors:
+
+- Provider: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor_macos`)
+- Gates: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`,
+  `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
+
+Alternative approaches (kept for future investigation; validate against App Store / sandbox constraints):
 
 1) Use Cocoa/Quartz APIs to find the topmost app-owned window at a screen point.
 2) Maintain a reliable per-window screen rect mapping and query the OS for z-order/frontmost
