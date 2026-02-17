@@ -218,14 +218,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let want_transparent_payload = (settings.transparent_payload_during_follow
             || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some())
             && self.dock_floating_windows.contains(&window);
-        if want_transparent_payload != transparent_payload_applied
-            && let Some(state) = self.windows.get(window)
-        {
-            let _ = super::window::set_dock_drag_transparent_payload(
-                state.window.as_ref(),
-                want_transparent_payload,
-                settings.transparent_payload_alpha,
-            );
+        if want_transparent_payload != transparent_payload_applied {
+            let opacity = if want_transparent_payload {
+                fret_runtime::WindowOpacity::from_f32(settings.transparent_payload_alpha)
+            } else {
+                fret_runtime::WindowOpacity(255)
+            };
+            let mouse = if want_transparent_payload {
+                fret_runtime::MousePolicy::Passthrough
+            } else {
+                fret_runtime::MousePolicy::Normal
+            };
+            self.app.push_effect(fret_app::Effect::Window(
+                fret_app::WindowRequest::SetStyle {
+                    window,
+                    style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(mouse),
+                        opacity: Some(opacity),
+                        ..Default::default()
+                    },
+                },
+            ));
             if let Some(follow) = self.dock_tearoff_follow.as_mut() {
                 follow.transparent_payload_applied = want_transparent_payload;
             }
@@ -295,11 +308,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .cloned()
             .unwrap_or_default();
 
-        if follow.transparent_payload_applied
-            && let Some(state) = self.windows.get(follow.window)
-        {
-            let _ =
-                super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false, 1.0);
+        if follow.transparent_payload_applied {
+            self.app.push_effect(fret_app::Effect::Window(
+                fret_app::WindowRequest::SetStyle {
+                    window: follow.window,
+                    style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(fret_runtime::MousePolicy::Normal),
+                        opacity: Some(fret_runtime::WindowOpacity(255)),
+                        ..Default::default()
+                    },
+                },
+            ));
         }
         if let Some(pointer_id) = self.dock_drag_pointer_id()
             && let Some(drag) = self.app.drag_mut(pointer_id)

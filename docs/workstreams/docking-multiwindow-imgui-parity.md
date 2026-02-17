@@ -128,7 +128,9 @@ Evidence anchors:
 - Arbitration rules: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Optional “transparent payload” (ImGui-style):
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
-  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`)
+  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
+    `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
+    `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
 
 ## Cross-platform gaps (common failure modes)

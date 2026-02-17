@@ -221,44 +221,6 @@ pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Wi
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_dock_drag_transparent_payload(
-    window: &dyn Window,
-    enabled: bool,
-    alpha: f32,
-) -> bool {
-    let opacity = if enabled { alpha } else { 1.0 };
-    let ok_alpha = set_window_opacity(window, opacity);
-    let ok_mouse = set_window_mouse_passthrough(window, enabled);
-    if !enabled {
-        // When disabling, nudge ordering to avoid rare cases where a previously ignoring-mouse
-        // window does not immediately resume receiving pointer events.
-        bring_window_to_front(window, None);
-    }
-    ok_alpha && ok_mouse
-}
-
-#[cfg(target_os = "windows")]
-pub(super) fn set_dock_drag_transparent_payload(
-    window: &dyn Window,
-    enabled: bool,
-    alpha: f32,
-) -> bool {
-    let opacity = if enabled { alpha } else { 1.0 };
-    let ok_alpha = set_window_opacity(window, opacity);
-    let ok_mouse = set_window_mouse_passthrough(window, enabled);
-    ok_alpha && ok_mouse
-}
-
-#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_dock_drag_transparent_payload(
-    _window: &dyn Window,
-    _enabled: bool,
-    _alpha: f32,
-) -> bool {
-    false
-}
-
-#[cfg(target_os = "macos")]
 pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};

@@ -435,6 +435,12 @@ pub enum MousePolicy {
 pub struct WindowOpacity(pub u8);
 
 impl WindowOpacity {
+    pub fn from_f32(opacity: f32) -> Self {
+        let a = opacity.clamp(0.0, 1.0);
+        let byte = (255.0 * a).round().clamp(0.0, 255.0) as u8;
+        Self(byte)
+    }
+
     pub fn as_f32(self) -> f32 {
         (self.0 as f32) / 255.0
     }

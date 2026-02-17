@@ -243,7 +243,9 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
     - Fret: enable via `DockingInteractionSettings::transparent_payload_during_follow` (default false), or force on via
       `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`. This makes the dock-floating follow window semi-transparent and best-effort
       “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
-      - Anchor: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`).
+      - Anchor: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
+        `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style),
+        `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
