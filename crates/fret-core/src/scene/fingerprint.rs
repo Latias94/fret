@@ -553,12 +553,19 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             origin,
             text,
             paint,
+            shadow,
         } => {
             let mut state = mix_u64(state, 5);
             state = mix_u64(state, u64::from(order.0));
             state = mix_point(state, origin);
             state = mix_u64(state, text.data().as_ffi());
-            mix_paint(state, paint)
+            let mut state = mix_paint(state, paint);
+            state = mix_u64(state, u64::from(shadow.is_some()));
+            if let Some(s) = shadow {
+                state = mix_point(state, s.offset);
+                state = mix_color(state, s.color);
+            }
+            state
         }
         SceneOp::Path {
             order,

@@ -80,6 +80,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             origin: Point::new(text_x, text_y),
             text: blob,
             paint: (query_color).into(),
+            shadow: None,
         });
 
         let list_y0 = inner_y + item_h + pad;
@@ -129,6 +130,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 origin: Point::new(text_x, text_y),
                 text: blob,
                 paint: (color).into(),
+                shadow: None,
             });
         }
     }

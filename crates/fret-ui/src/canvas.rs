@@ -929,6 +929,7 @@ impl CanvasCache {
                 origin,
                 text: blob,
                 paint: Paint::Solid(color),
+                shadow: None,
             });
             return TextDraw { blob, metrics };
         }
@@ -948,6 +949,7 @@ impl CanvasCache {
                 origin,
                 text: entry.blob,
                 paint: Paint::Solid(color),
+                shadow: None,
             });
             return TextDraw {
                 blob: entry.blob,
@@ -980,6 +982,7 @@ impl CanvasCache {
             origin,
             text: blob,
             paint: Paint::Solid(color),
+            shadow: None,
         });
         TextDraw { blob, metrics }
     }
@@ -1074,6 +1077,7 @@ impl CanvasCache {
             origin,
             text: blob,
             paint: Paint::Solid(color),
+            shadow: None,
         });
         TextDraw { blob, metrics }
     }

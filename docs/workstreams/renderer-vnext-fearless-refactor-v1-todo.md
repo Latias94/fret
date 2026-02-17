@@ -252,18 +252,26 @@ milestones) when implementation begins.
     - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
 - [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
-  - Status (2026-02-16): v1 landed for painted text fills (solid + gradients), staged by ADR 0279.
+  - Status (2026-02-17): v1 landed for painted text fills (solid + gradients) and a bounded text shadow surface.
     - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
     - Landed (v1): GPU readback conformance gate for text gradient paint.
+    - Landed (v1): `SceneOp::Text.shadow: Option<TextShadowV1>` (single layer, no blur) for portable text shadows.
     - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
     - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
       (text/path still deterministically degrade materials to a solid base color).
-    - Deferred (v2+): text outline/stroke and text shadow as first-class contract surfaces.
+    - Deferred (v2+): text outline/stroke and blurred/multi-layer text shadows as first-class contract surfaces.
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
-  - ADR: `docs/adr/0279-text-paint-surface-v1.md`
+  - ADRs:
+    - `docs/adr/0279-text-paint-surface-v1.md`
+    - `docs/adr/0283-text-shadow-surface-v1.md`
   - Evidence:
+    - `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text.shadow`, `TextShadowV1`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (uses shared helper; material still degrades)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`encode_text` renders shadow layer; material still degrades)
+    - `crates/fret-render-wgpu/tests/text_paint_conformance.rs` (`gpu_text_shadow_v1_renders_a_separate_layer`)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 - [x] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` for gradients.
   - Landed (v1): `TileMode::{Repeat,Mirror}` is preserved in `Paint` + `Mask` sanitization and implemented in WGSL
     gradient evaluation (linear/radial/sweep) via a deterministic tiling function.

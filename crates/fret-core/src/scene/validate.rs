@@ -130,6 +130,10 @@ impl SceneRecording {
             }
         }
 
+        fn text_shadow_is_finite(s: TextShadowV1) -> bool {
+            point_is_finite(s.offset) && color_is_finite(s.color)
+        }
+
         fn mask_is_finite(m: Mask) -> bool {
             match m {
                 Mask::LinearGradient(g) => {
@@ -494,8 +498,16 @@ impl SceneRecording {
                         });
                     }
                 }
-                SceneOp::Text { origin, paint, .. } => {
-                    if !point_is_finite(origin) || !paint_is_finite(paint) {
+                SceneOp::Text {
+                    origin,
+                    paint,
+                    shadow,
+                    ..
+                } => {
+                    if !point_is_finite(origin)
+                        || !paint_is_finite(paint)
+                        || shadow.is_some_and(|s| !text_shadow_is_finite(s))
+                    {
                         return Err(SceneValidationError {
                             index,
                             op,

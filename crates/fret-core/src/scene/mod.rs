@@ -58,6 +58,24 @@ impl Color {
     };
 }
 
+/// A bounded, portable text shadow surface (v1).
+///
+/// This is intentionally minimal (single layer, no blur) so it remains viable across wasm/mobile
+/// backends. Higher-level shadow recipes (multi-layer elevation, blur, color management) remain
+/// policy in ecosystem crates.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextShadowV1 {
+    /// Baseline-origin offset in logical pixels (pre-scale-factor).
+    pub offset: Point,
+    pub color: Color,
+}
+
+impl TextShadowV1 {
+    pub const fn new(offset: Point, color: Color) -> Self {
+        Self { offset, color }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectMode {
     /// Render children to an offscreen intermediate, then filter and composite the result.
@@ -511,6 +529,7 @@ pub enum SceneOp {
         origin: Point,
         text: TextBlobId,
         paint: Paint,
+        shadow: Option<TextShadowV1>,
     },
 
     Path {

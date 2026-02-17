@@ -1,7 +1,7 @@
 ---
 title: Text Paint Surface v1 — Milestones
 status: active
-date: 2026-02-16
+date: 2026-02-17
 scope: SceneOp::Text accepts Paint
 ---
 
@@ -58,3 +58,12 @@ Acceptance criteria:
 - At least one consumer uses non-solid `Paint` on text to validate ergonomics.
 
 Status: Landed (ui-gallery probe).
+
+### M4 — Text shadow (bounded) v1 (optional)
+
+Acceptance criteria:
+
+- `SceneOp::Text` supports an optional `TextShadowV1` (single layer, no blur).
+- A conformance gate verifies shadow ordering and basic rendering behavior.
+
+Status: Landed (single-layer shadow + conformance).

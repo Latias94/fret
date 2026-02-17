@@ -11,12 +11,41 @@ pub(in super::super) fn encode_text(
     origin: Point,
     blob_id: fret_core::TextBlobId,
     paint: fret_core::scene::Paint,
+    shadow: Option<fret_core::scene::TextShadowV1>,
 ) {
     state.flush_quad_batch();
 
     let Some(blob) = renderer.text_system.blob(blob_id) else {
         return;
     };
+
+    if let Some(shadow) = shadow
+        && shadow.color.a > 0.0
+        && (shadow.offset.x.0 != 0.0 || shadow.offset.y.0 != 0.0)
+    {
+        let shadow_origin = Point::new(origin.x + shadow.offset.x, origin.y + shadow.offset.y);
+        encode_text_blob(
+            renderer,
+            state,
+            shadow_origin,
+            blob,
+            fret_core::scene::Paint::Solid(shadow.color),
+            false,
+        );
+    }
+
+    encode_text_blob(renderer, state, origin, blob, paint, true);
+}
+
+fn encode_text_blob(
+    renderer: &Renderer,
+    state: &mut EncodeState<'_>,
+    origin: Point,
+    blob: &crate::text::TextBlob,
+    paint: fret_core::scene::Paint,
+    draw_decorations: bool,
+) {
+    state.flush_quad_batch();
 
     let group_opacity = state.current_opacity();
     if group_opacity <= 0.0 {
@@ -101,7 +130,7 @@ pub(in super::super) fn encode_text(
         base_color_hint
     };
 
-    if !blob.decorations.is_empty() {
+    if draw_decorations && !blob.decorations.is_empty() {
         for d in blob
             .decorations
             .as_ref()

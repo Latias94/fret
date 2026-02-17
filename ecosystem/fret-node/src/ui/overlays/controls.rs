@@ -483,6 +483,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
                 paint: (self.style.controls_text).into(),
+                shadow: None,
             });
         }
     }
