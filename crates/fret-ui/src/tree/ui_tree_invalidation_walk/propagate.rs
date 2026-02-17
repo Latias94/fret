@@ -200,8 +200,21 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        // Avoid rehash spikes: `changed` is usually small while each changed model/global can have
+        // thousands of observation edges.
+        let mut combined_capacity = 0usize;
+        for &model in changed {
+            if let Some(nodes) = self.observed_in_layout.by_model.get(&model) {
+                combined_capacity = combined_capacity.saturating_add(nodes.len());
+            }
+            if let Some(nodes) = self.observed_in_paint.by_model.get(&model) {
+                combined_capacity = combined_capacity.saturating_add(nodes.len());
+            }
+        }
+        combined_capacity = combined_capacity.min(self.nodes.len());
+
         let mut combined: HashMap<NodeId, ObservationMask> =
-            HashMap::with_capacity(changed.len().saturating_mul(8));
+            HashMap::with_capacity(combined_capacity.max(changed.len().saturating_mul(8)));
         let mut observation_edges_scanned = 0usize;
         let mut unobserved_models = 0usize;
         for &model in changed {
@@ -308,8 +321,21 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        // Avoid rehash spikes: `changed` is usually small while each changed global can have
+        // thousands of observation edges.
+        let mut combined_capacity = 0usize;
+        for &global in changed {
+            if let Some(nodes) = self.observed_globals_in_layout.by_global.get(&global) {
+                combined_capacity = combined_capacity.saturating_add(nodes.len());
+            }
+            if let Some(nodes) = self.observed_globals_in_paint.by_global.get(&global) {
+                combined_capacity = combined_capacity.saturating_add(nodes.len());
+            }
+        }
+        combined_capacity = combined_capacity.min(self.nodes.len());
+
         let mut combined: HashMap<NodeId, ObservationMask> =
-            HashMap::with_capacity(changed.len().saturating_mul(8));
+            HashMap::with_capacity(combined_capacity.max(changed.len().saturating_mul(8)));
         let mut observation_edges_scanned = 0usize;
         let mut unobserved_globals = 0usize;
         for &global in changed {

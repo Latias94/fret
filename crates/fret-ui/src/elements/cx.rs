@@ -3112,6 +3112,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     fret_core::Axis::Horizontal => (state.viewport_w, state.offset_x),
                 };
 
+                // For scroll-to-item jumps, rendering the full overscan window can produce a
+                // one-frame layout spike (we're attaching and solving many item roots at once).
+                // Prefer rendering the true visible window for the jump frame and let overscan
+                // catch up on subsequent frames.
+                let overscan_for_range = if scroll_handle.deferred_scroll_to_item().is_some() {
+                    0
+                } else {
+                    options.overscan
+                };
+
                 let prev_anchor = if viewport.0 > 0.0 && len > 0 {
                     state.metrics.visible_range(offset, viewport, 0).map(|r| {
                         let idx = r.start_index;
@@ -3273,7 +3283,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     state.deferred_scroll_offset_hint = Some(desired);
                     range = state
                         .metrics
-                        .visible_range(desired, viewport, options.overscan);
+                        .visible_range(desired, viewport, overscan_for_range);
                 }
 
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
@@ -3302,19 +3312,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,
-                                options.overscan,
+                                overscan_for_range,
                             );
                         }
                     } else if range.is_none() {
-                        range =
-                            state
-                                .metrics
-                                .visible_range(preview_offset, viewport, options.overscan);
+                        range = state.metrics.visible_range(
+                            preview_offset,
+                            viewport,
+                            overscan_for_range,
+                        );
                     }
                 } else if range.is_none() {
                     range = state
                         .metrics
-                        .visible_range(offset, viewport, options.overscan);
+                        .visible_range(offset, viewport, overscan_for_range);
                 }
 
                 state.render_window_range = range;

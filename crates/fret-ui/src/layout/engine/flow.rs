@@ -698,10 +698,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, measured);
-            engine.set_measure_min_content_width_as_max(
-                node,
-                min_content_width_as_max,
-            );
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::StyledText(props)) => {
             let mut style = style_for_item_in_parent(
@@ -762,10 +759,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, measured);
-            engine.set_measure_min_content_width_as_max(
-                node,
-                min_content_width_as_max,
-            );
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::SelectableText(props)) => {
             let mut style = style_for_item_in_parent(
@@ -826,10 +820,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, measured);
-            engine.set_measure_min_content_width_as_max(
-                node,
-                min_content_width_as_max,
-            );
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::Scroll(_)) => {
             let layout_style = layout_style_for_node(app, window, node);

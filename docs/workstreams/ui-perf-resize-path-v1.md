@@ -133,6 +133,99 @@ Tail note:
   - Example bundle: `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
   - `fretboard diag stats ... --sort time` shows `paint_text_prepare.reasons=width` dominating the worst frame.
 
+### Finding (2026-02-17): viewport-size branching can defeat ViewCache reuse during resize
+
+The resize probe scripts navigate to the UI-gallery “View Cache Torture” page with:
+
+- `FRET_UI_GALLERY_VIEW_CACHE=1`
+- `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+
+This wraps the gallery shell (including the content panel) in a declarative `ViewCache` root.
+
+We observed a perf regression where `ui-resize-probes` failed due to high `top_layout_engine_solve_time_us`.
+Attribution showed that the content-panel `ViewCache` root had `cache_key_mismatch` on nearly every resize step
+because it observed the `viewport_size` environment query with `Invalidation::Layout`.
+
+Concrete repro (macOS M4):
+
+- Gate command: `tools/perf/diag_resize_probes_gate.sh --attempts 1`
+- Failing run: `target/fret-diag-resize-probes-gate-1771310400`
+  - `top_layout_engine_solve_time_us` max:
+    - resize-stress ≈ `5885us` (threshold `3060us`)
+    - drag-jitter ≈ `3949us` (threshold `2816us`)
+
+Root cause:
+
+- `apps/fret-ui-gallery/src/ui/content.rs` computed a responsive header mode via:
+  - `cx.environment_viewport_bounds(Invalidation::Layout)`
+- Because the content view was inside a `ViewCache` root, this observation became part of the view-cache key and
+  the key churned on each resize step (viewport size revision changes), preventing reuse.
+
+Fix direction:
+
+- Prefer **layout-driven adaptation** (flex wrap / intrinsic layout) over `viewport_size` branching inside cached
+  subtrees when the goal is to keep cached shells reusable during interactive resize.
+
+This specific case was fixed by making the UI-gallery header wrap-friendly and removing the viewport-size query:
+
+- Passing run: `target/fret-diag-resize-probes-gate-1771312171`
+  - `top_layout_engine_solve_time_us` max:
+    - resize-stress ≈ `1155us`
+    - drag-jitter ≈ `1117us`
+- Revalidated after rebuilding `target/release/fret-ui-gallery`: `target/fret-diag-resize-probes-gate-1771315079`
+
+Tooling / guardrails:
+
+- Use `fretboard diag stats <bundle.json> --sort time --top 30` and inspect `top_cache_roots`:
+  - `reuse_reason=cache_key_mismatch` during resize is often a sign that a cache boundary depends on rapidly-changing
+    “external” deps (viewport environment, layout queries).
+- `fretboard diag triage <bundle.json> --json` includes perf hints. A new hint code:
+  - `view_cache.cache_key_mismatch` (warn): emitted when the worst frame contains view-cache roots that missed reuse
+    due to cache key mismatches.
+- Turn this into an enforceable suite contract by adding:
+  - `--check-perf-hints --check-perf-hints-deny view_cache.cache_key_mismatch`
+
+### Finding (2026-02-17): `ui-gallery-steady` overlay scripts still exceed `top_layout_engine_solve_time_us`
+
+After stabilizing the perf measurement surface (suite prewarm + per-script prelude, plus ensuring scripts do not
+leave state behind), the remaining `ui-gallery-steady` baseline failures on macOS M4 are concentrated in
+`top_layout_engine_solve_time_us` for a small set of scripts:
+
+- `tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json`
+- `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json`
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json`
+
+Local repro command (release):
+
+- `target/release/fretboard diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json --dir target/fret-diag-perf-local/20260217-suite12 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+
+Observed failures (suite12):
+
+- dropdown: `top_layout_engine_solve_time_us` max `199us` (threshold `116us`)
+- dialog: `top_layout_engine_solve_time_us` max `180us` (threshold `104us`)
+- vlist: `top_layout_engine_solve_time_us` max `1242us` (threshold `988us`)
+
+Evidence bundles:
+
+- dropdown: `target/fret-diag-perf-local/20260217-suite12/1771342690685-ui-gallery-dropdown-apple-steady/bundle.json`
+- dialog: `target/fret-diag-perf-local/20260217-suite12/1771342696495-ui-gallery-dialog-escape-steady/bundle.json`
+- vlist: `target/fret-diag-perf-local/20260217-suite12/1771342703470-ui-gallery-virtual-list-bottom-steady/bundle.json`
+
+Attribution notes:
+
+- `fretboard diag stats <bundle.json> --sort time --top 60` shows `top_layout_engine_solves` dominated by overlay
+  roots (e.g. `DismissibleLayer` / popover content). This is consistent with the “multi-root solves” model, but the
+  *sum* of solves for a single frame still exceeds the baseline threshold.
+- `top_walks` frequently includes `detail=scroll_deferred_probe` in overlay-heavy scripts, indicating the scroll
+  unbounded-probe deferral path is active during steady interaction scripts (not just resize probes).
+
+Next step (directional, not yet implemented):
+
+- Reduce the number of overlay roots that need to be solved in a single frame for “simple overlay interactions”
+  (dropdown open/select, dialog escape/restore), and/or make each overlay solve cheaper.
+- Use `FRET_LAYOUT_PROFILE=1` (and optionally `FRET_LAYOUT_NODE_PROFILE=1`, `FRET_MEASURE_NODE_PROFILE=1`) on a single
+  script repro to capture measure hotspots for the worst frame before attempting mechanism changes.
+
 ## GPUI/Zed resize notes (transferable vs not)
 
 GPUI is a strong reference for “Zed feel”, but it is not a complete template for Fret:

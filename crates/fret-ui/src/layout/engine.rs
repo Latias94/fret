@@ -927,6 +927,17 @@ impl TaffyLayoutEngine {
     }
 
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
+        // Fast path: `build_flow_subtree` calls `set_children` for every visited node, and most
+        // nodes keep their child lists stable across frames. Avoid per-frame dedupe work for large
+        // child lists (e.g. long stacks/lists).
+        if self
+            .children
+            .get(node)
+            .is_some_and(|prev| prev.as_slice() == children)
+        {
+            return;
+        }
+
         let original_len = children.len();
         let mut child_unique_scratch = std::mem::take(&mut self.child_unique_scratch);
         let mut child_dedupe_set_scratch = std::mem::take(&mut self.child_dedupe_set_scratch);
@@ -974,16 +985,6 @@ impl TaffyLayoutEngine {
                 unique_len = children.len(),
                 "layout engine set_children received duplicate children; deduping to avoid taffy panic"
             );
-        }
-
-        if self
-            .children
-            .get(node)
-            .is_some_and(|prev| prev.as_slice() == children)
-        {
-            self.child_unique_scratch = child_unique_scratch;
-            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
-            return;
         }
 
         let Some(parent) = self.request_layout_node(node).map(|id| id.0) else {

@@ -1130,10 +1130,14 @@ impl UiGalleryDriver {
             .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS", false));
         let view_cache_counter = app.models_mut().insert(0u64);
 
+        // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the inspector/debug HUD by
+        // default in that mode because it perturbs steady-state perf measurements.
+        let perf_mode =
+            std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
         let inspector_enabled = app.models_mut().insert(
             std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
-                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+                || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
         );
         let inspector_last_pointer = app.models_mut().insert(None::<fret_core::Point>);
 
@@ -1142,7 +1146,7 @@ impl UiGalleryDriver {
         ui.set_view_cache_enabled(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
-                || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+                || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
         );
 
         Self::sync_undo_availability(app, window, &undo_doc);

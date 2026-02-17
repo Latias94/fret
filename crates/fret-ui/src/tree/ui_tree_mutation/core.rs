@@ -67,10 +67,7 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
         let mark_cache_root_dirty = value
             && self.view_cache_active()
-            && self
-                .nodes
-                .get(node)
-                .is_some_and(|n| n.view_cache.enabled);
+            && self.nodes.get(node).is_some_and(|n| n.view_cache.enabled);
 
         let Some(n) = self.nodes.get_mut(node) else {
             return;

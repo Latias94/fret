@@ -10876,6 +10876,41 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // view_cache.cache_key_mismatch
+        if worst.view_cache_roots_cache_key_mismatch > 0 {
+            let examples: Vec<serde_json::Value> = worst
+                .top_cache_roots
+                .iter()
+                .filter(|r| r.reuse_reason.as_deref() == Some("cache_key_mismatch"))
+                .take(3)
+                .map(|r| {
+                    json!({
+                        "root_node": r.root_node,
+                        "element": r.element,
+                        "element_path": r.element_path.clone(),
+                        "reused": r.reused,
+                        "contained_layout": r.contained_layout,
+                        "paint_replayed_ops": r.paint_replayed_ops,
+                        "reuse_reason": r.reuse_reason.clone(),
+                        "root_role": r.root_role.clone(),
+                        "root_test_id": r.root_test_id.clone(),
+                    })
+                })
+                .collect();
+
+            out.push(json!({
+                "code": "view_cache.cache_key_mismatch",
+                "severity": "warn",
+                "message": "View-cache roots were not reused due to cache key mismatches in the worst frame.",
+                "evidence": {
+                    "view_cache_roots_cache_key_mismatch": worst.view_cache_roots_cache_key_mismatch,
+                    "view_cache_roots_total": worst.view_cache_roots_total,
+                    "view_cache_roots_reused": worst.view_cache_roots_reused,
+                    "examples": examples,
+                }
+            }));
+        }
+
         out
     }
 
@@ -19832,7 +19867,7 @@ mod tests {
                 max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
-                max_pointer_move_global_changes: Some(0),
+                max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
@@ -19882,7 +19917,7 @@ mod tests {
                 max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
-                max_pointer_move_global_changes: Some(0),
+                max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
@@ -19908,7 +19943,7 @@ mod tests {
             true,
             2001,
             1501,
-            1,
+            2,
             0,
             0,
             Some(Path::new("bundle.json")),

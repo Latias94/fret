@@ -162,8 +162,8 @@ impl<H: UiHost> UiTree<H> {
         }
         let mut bucket_px = text_wrap_width_bucket_px();
         if bucket_px <= 1 {
-            // Default interactive-resize behavior: for small width jitters, quantize wrap widths so
-            // we don't churn wrapped text layout every frame while the user is live-resizing.
+            // Default interactive-resize behavior: for small width jitters, quantize wrap widths
+            // so we don't churn wrapped text layout every frame while the user is live-resizing.
             //
             // This intentionally does not apply to "stress" resizes that jump hundreds of pixels,
             // where we want accurate layout and can accept the one-off cost.
@@ -171,13 +171,7 @@ impl<H: UiHost> UiTree<H> {
             // The env knob still takes precedence; this is only a default for the common
             // "drag jitter" class. Treat small-step as symmetric (back-and-forth resizes should
             // keep the same policy/caches enabled).
-            let small_step = self
-                .interactive_resize_last_bounds_delta
-                .is_some_and(|(dw, dh)| {
-                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
-                        && (dw.0 != 0.0 || dh.0 != 0.0)
-                });
-            if !small_step {
+            if !self.interactive_resize_is_small_step() {
                 return width;
             }
             bucket_px = text_wrap_width_small_step_bucket_px();
