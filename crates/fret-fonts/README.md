@@ -8,7 +8,7 @@ are not available.
 - Inter (roman + italic) — OFL 1.1 (`assets/Inter-OFL.txt`)
 - JetBrains Mono (roman + italic) — OFL 1.1 (`assets/JetBrainsMono-OFL.txt`)
 - Fira Mono (subset) — OFL 1.1 (`assets/FiraMono-LICENSE`)
-- Noto Color Emoji — Apache 2.0 (`assets/NotoEmoji-LICENSE.txt`) (optional; `emoji` feature)
+- Noto Color Emoji — OFL 1.1 (`assets/NotoEmoji-LICENSE.txt`) (optional; `emoji` feature)
 
 The canonical API is:
 

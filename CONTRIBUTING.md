@@ -44,6 +44,24 @@ If you don’t have nextest:
 cargo test --workspace
 ```
 
+Dependency license check:
+
+```bash
+cargo deny check licenses
+```
+
+Dependency sources check:
+
+```bash
+cargo deny check sources
+```
+
+Security advisories check:
+
+```bash
+cargo deny check advisories
+```
+
 Build:
 
 ```bash
@@ -93,4 +111,3 @@ fetch them.
 - Keep PRs focused and small when possible.
 - Include screenshots/GIFs when behavior changes in the UI gallery or demos.
 - Run `cargo fmt`, `cargo clippy ... -D warnings`, and tests before submitting.
-
