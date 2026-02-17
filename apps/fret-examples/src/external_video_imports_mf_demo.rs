@@ -18,10 +18,11 @@ mod wmf {
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
     use windows::Win32::Media::MediaFoundation::{
-        IMFMediaBuffer, IMFSample, IMFSourceReader, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        IMFAttributes, IMFMediaBuffer, IMFSample, IMFSourceReader,
+        MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
-        MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateMediaType, MFCreateSourceReaderFromURL,
-        MFMediaType_Video, MFShutdown, MFStartup, MFVideoFormat_ARGB32,
+        MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateMediaType,
+        MFCreateSourceReaderFromURL, MFMediaType_Video, MFShutdown, MFStartup, MFVideoFormat_RGB32,
     };
     use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
     use windows::core::HSTRING;
@@ -52,12 +53,24 @@ mod wmf {
                 MFStartup(MF_VERSION, 0).context("MFStartup")?;
             }
 
+            let mut attributes: Option<IMFAttributes> = None;
+            unsafe {
+                MFCreateAttributes(&mut attributes, 1).context("MFCreateAttributes")?;
+            }
+            let attributes = attributes.context("MFCreateAttributes returned None")?;
+            unsafe {
+                attributes
+                    .SetUINT32(&MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1)
+                    .context("SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING)")?;
+            }
+
             let hpath = HSTRING::from(path.as_str());
             let reader = unsafe {
-                MFCreateSourceReaderFromURL(&hpath, None).context("MFCreateSourceReaderFromURL")?
+                MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
+                    .context("MFCreateSourceReaderFromURL")?
             };
 
-            // Request a predictable software-decoded output format first: ARGB32 (little-endian BGRA).
+            // Request a predictable software-decoded output format first: RGB32 (little-endian BGRA).
             // This keeps stage M2A focused on contract/metadata/gates; a D3D12-only fast path is M2B.
             let media_type = unsafe { MFCreateMediaType().context("MFCreateMediaType")? };
             unsafe {
@@ -70,7 +83,7 @@ mod wmf {
                 media_type
                     .SetGUID(
                         &windows::Win32::Media::MediaFoundation::MF_MT_SUBTYPE,
-                        &MFVideoFormat_ARGB32,
+                        &MFVideoFormat_RGB32,
                     )
                     .context("SetGUID subtype")?;
                 reader
@@ -107,7 +120,7 @@ mod wmf {
             let w = (frame_size >> 32) as u32;
             let h = (frame_size & 0xffff_ffff) as u32;
 
-            // Default stride can be absent; for ARGB32 it's usually width*4.
+            // Default stride can be absent; for RGB32 it's usually width*4.
             let bytes_per_row = unsafe {
                 media_type
                     .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_DEFAULT_STRIDE)
@@ -170,7 +183,7 @@ mod wmf {
                 };
                 let mut bytes = lock_and_copy(&buffer)?;
 
-                // Media Foundation's ARGB32 output is "opaque video" in most cases, but some
+                // Media Foundation's RGB32 output is "opaque video" in most cases, but some
                 // decoders may leave alpha at 0. Normalize to opaque so the demo is visible.
                 for px in bytes.chunks_exact_mut(4) {
                     px[3] = 0xff;
@@ -250,7 +263,9 @@ mod wmf {
             format!("failed to canonicalize source path: {}", resolved.display())
         })?;
 
-        Ok(resolved.to_string_lossy().into_owned())
+        let url = path_to_file_url(&resolved);
+        tracing::info!(url, "using Media Foundation source file URL");
+        Ok(url)
     }
 
     fn pick_first_video_file_from_dir(dir: &Path) -> anyhow::Result<PathBuf> {
@@ -285,6 +300,39 @@ mod wmf {
         })
     }
 
+    fn path_to_file_url(path: &Path) -> String {
+        let mut p = path.to_string_lossy().to_string();
+        if let Some(stripped) = p.strip_prefix(r"\\?\") {
+            p = stripped.to_string();
+        }
+        let mut p = p.replace('\\', "/");
+
+        // Windows drive path: `C:\foo\bar` -> `file:///C:/foo/bar`.
+        if p.len() >= 2 && p.as_bytes()[1] == b':' {
+            p.insert(0, '/');
+            return format!("file://{}", percent_encode_url_path(&p));
+        }
+
+        // Best-effort fallback: treat it as an already-normalized absolute path.
+        // (UNC paths are not supported by this helper yet.)
+        format!("file://{}", percent_encode_url_path(&p))
+    }
+
+    fn percent_encode_url_path(path: &str) -> String {
+        let mut out = String::with_capacity(path.len());
+        for b in path.as_bytes() {
+            let c = *b as char;
+            let keep = c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~' | '/' | ':');
+            if keep {
+                out.push(c);
+            } else {
+                out.push('%');
+                out.push_str(&format!("{:02X}", b));
+            }
+        }
+        out
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -306,12 +354,7 @@ mod wmf {
             std::fs::write(root.join("a.mp4"), b"dummy").unwrap();
 
             let resolved = resolve_source_reader_url(root.to_str().unwrap()).unwrap();
-            let picked = PathBuf::from(resolved)
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
-            assert_eq!(picked.to_ascii_lowercase(), "a.mp4");
+            assert!(resolved.to_ascii_lowercase().ends_with("/a.mp4"));
 
             let _ = std::fs::remove_dir_all(&root);
         }
@@ -341,7 +384,7 @@ struct ExternalVideoImportsState {
 fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
     ExternalVideoImportsState {
         show: app.models_mut().insert(true),
-        // Use BGRA to align with Media Foundation's ARGB32 output (little-endian BGRA).
+        // Use BGRA to align with Media Foundation's RGB32 output (little-endian BGRA).
         target: ImportedViewportRenderTarget::new(
             wgpu::TextureFormat::Bgra8UnormSrgb,
             RenderTargetColorSpace::Srgb,
