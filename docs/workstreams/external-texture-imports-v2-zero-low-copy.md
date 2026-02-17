@@ -57,6 +57,8 @@ It builds on v1’s contract-path closure:
 - Deterministic fallback is centralized (to prevent demo/caller drift):
   - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
     (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
+  - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
+    (wrapper that removes `fallback_available` + closure boilerplate at call sites).
 - Next up (native uplift, practical):
   - Validate the first real native producer that writes into a shared allocation (per-platform, capability-gated),
     starting with Windows MF -> DX12 GPU copy, and lock its failure modes behind explicit capabilities.
