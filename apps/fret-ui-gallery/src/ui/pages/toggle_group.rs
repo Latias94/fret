@@ -192,27 +192,99 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("Outline", outline)
                 .description("Text items with outline chrome.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::multiple_uncontrolled(["left"])
+    .variant(shadcn::ToggleVariant::Outline)
+    .items([
+        shadcn::ToggleGroupItem::new("left", [cx.text("Left")]).a11y_label("Toggle Left"),
+        shadcn::ToggleGroupItem::new("center", [cx.text("Center")]).a11y_label("Toggle Center"),
+        shadcn::ToggleGroupItem::new("right", [cx.text("Right")]).a11y_label("Toggle Right"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Size", size)
                 .description("Size presets for toolbar density.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::single_uncontrolled(Some("left"))
+    .variant(shadcn::ToggleVariant::Outline)
+    .size(shadcn::ToggleSize::Sm)
+    .items([
+        shadcn::ToggleGroupItem::new("left", [cx.text("Left")]).a11y_label("Toggle Left"),
+        shadcn::ToggleGroupItem::new("center", [cx.text("Center")]).a11y_label("Toggle Center"),
+        shadcn::ToggleGroupItem::new("right", [cx.text("Right")]).a11y_label("Toggle Right"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Spacing", spacing)
                 .description("Explicit spacing between items to reduce mis-clicks.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::single_uncontrolled(Some("top"))
+    .variant(shadcn::ToggleVariant::Outline)
+    .size(shadcn::ToggleSize::Sm)
+    .spacing(Space::N2)
+    .items([
+        shadcn::ToggleGroupItem::new("top", [cx.text("Top")]).a11y_label("Toggle Top"),
+        shadcn::ToggleGroupItem::new("bottom", [cx.text("Bottom")]).a11y_label("Toggle Bottom"),
+        shadcn::ToggleGroupItem::new("left", [cx.text("Left")]).a11y_label("Toggle Left"),
+        shadcn::ToggleGroupItem::new("right", [cx.text("Right")]).a11y_label("Toggle Right"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Vertical", vertical)
                 .description("Vertical orientation for side panels / inspectors.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
+    .orientation(fret_ui_kit::primitives::toggle_group::ToggleGroupOrientation::Vertical)
+    .spacing(Space::N1)
+    .items([
+        shadcn::ToggleGroupItem::new("bold", [cx.text("Bold")]).a11y_label("Toggle Bold"),
+        shadcn::ToggleGroupItem::new("italic", [cx.text("Italic")]).a11y_label("Toggle Italic"),
+        shadcn::ToggleGroupItem::new("underline", [cx.text("Underline")]).a11y_label("Toggle Underline"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled)
                 .description("Disabled groups keep layout but block interaction.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::multiple_uncontrolled(["bold"])
+    .disabled(true)
+    .variant(shadcn::ToggleVariant::Outline)
+    .items([
+        shadcn::ToggleGroupItem::new("bold", [cx.text("Bold")]).a11y_label("Toggle Bold"),
+        shadcn::ToggleGroupItem::new("italic", [cx.text("Italic")]).a11y_label("Toggle Italic"),
+        shadcn::ToggleGroupItem::new("underline", [cx.text("Underline")]).a11y_label("Toggle Underline"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Item ordering and pressed visuals under RTL.")
                 .max_w(Px(560.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::ToggleGroup::single_uncontrolled(Some("list"))
+            .variant(shadcn::ToggleVariant::Outline)
+            .items([
+                shadcn::ToggleGroupItem::new("list", [cx.text("List")]).a11y_label("Toggle List"),
+                shadcn::ToggleGroupItem::new("grid", [cx.text("Grid")]).a11y_label("Toggle Grid"),
+                shadcn::ToggleGroupItem::new("cards", [cx.text("Cards")]).a11y_label("Toggle Cards"),
+            ])
+            .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

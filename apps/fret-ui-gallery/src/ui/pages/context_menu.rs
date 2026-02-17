@@ -575,16 +575,59 @@ let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entrie
                 ),
             DocSection::new("Submenu", submenu)
                 .description("Nested submenu entries for grouped actions.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("More tools").submenu(vec![
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Rename").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Duplicate").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+        shadcn::ContextMenuEntry::Separator,
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Archive").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+    ]),
+);"#,
+                ),
             DocSection::new("Shortcuts", shortcuts)
                 .description("Trailing shortcuts for command discovery.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Open File")
+        .trailing(shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx))
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("Groups", groups)
                 .description("Explicit groups and labels for structured menus.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"vec![
+    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Actions")),
+    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Open")),
+    shadcn::ContextMenuEntry::Separator,
+    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("View")),
+    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Toggle sidebar")),
+];"#,
+                ),
             DocSection::new("Icons", icons)
                 .description("Leading icons for visual scanning.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Settings")
+        .leading(icon(cx, "lucide.settings"))
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Checkbox items are bound to boolean models.")
                 .code(
@@ -605,10 +648,28 @@ let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entrie
                 ),
             DocSection::new("Destructive", destructive)
                 .description("Destructive items use a dedicated visual variant.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Delete project")
+        .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Menu layout should follow right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| {
+            vec![shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Open"))]
+        })
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

@@ -251,27 +251,122 @@ pub(super) fn preview_forms(
             DocSection::new("Demo", demo)
                 .description("FieldSet + FieldGroup recipe with multiple controls.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::FieldSet::new([
+    shadcn::FieldLegend::new("Contact").into_element(cx),
+    shadcn::FieldDescription::new("Model-bound controls keep values.").into_element(cx),
+    shadcn::FieldGroup::new([
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("Email").into_element(cx),
+            shadcn::Input::new(email).placeholder("name@example.com").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("Message").into_element(cx),
+            shadcn::Textarea::new(message).into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Input", input)
                 .description("A model-bound input control.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Input::new(model)
+    .a11y_label("Email")
+    .placeholder("name@example.com")
+    .into_element(cx);"#,
+                ),
             DocSection::new("Textarea", textarea)
                 .description("A model-bound textarea control with fixed height.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Textarea::new(model)
+    .a11y_label("Message")
+    .refine_layout(LayoutRefinement::default().h_px(Px(96.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Checkbox + Switch", controls)
                 .description("Basic checkbox + switch controls with labels.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N3).items_start(),
+    |cx| {
+        vec![
+            stack::hstack(cx, stack::HStackProps::default().gap(Space::N2).items_center(), |cx| {
+                vec![
+                    shadcn::Checkbox::new(accepted).a11y_label("Accept terms").into_element(cx),
+                    shadcn::Label::new("Accept terms").into_element(cx),
+                ]
+            }),
+            stack::hstack(cx, stack::HStackProps::default().gap(Space::N2).items_center(), |cx| {
+                vec![
+                    shadcn::Switch::new(enabled).a11y_label("Enable feature").into_element(cx),
+                    shadcn::Label::new("Enable feature").into_element(cx),
+                ]
+            }),
+        ]
+    },
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("Fieldset", fieldset)
                 .description("FieldSet recipe with grouped fields and action row.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::FieldSet::new([
+    shadcn::FieldLegend::new("Profile").into_element(cx),
+    shadcn::FieldGroup::new([
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("Display name").into_element(cx),
+            shadcn::Input::new(name).placeholder("Evil Rabbit").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Field::new([
+            shadcn::Button::new("Submit").into_element(cx),
+            shadcn::Button::new("Cancel")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Form composition under an RTL direction provider.")
                 .max_w(Px(840.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::FieldSet::new([
+            shadcn::FieldLegend::new("?????").into_element(cx),
+            shadcn::FieldGroup::new([shadcn::Field::new([
+                shadcn::FieldLabel::new("?????? ??????????").into_element(cx),
+                shadcn::Input::new(model).into_element(cx),
+            ])
+            .into_element(cx)])
+            .into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

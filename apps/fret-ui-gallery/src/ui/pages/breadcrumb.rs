@@ -347,7 +347,14 @@ pub(super) fn preview_breadcrumb(
             DocSection::new("Basic", basic)
                 .title_test_id("ui-gallery-breadcrumb-section-title-basic")
                 .description("A minimal breadcrumb list with three items.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home"),
+    shadcn::BreadcrumbItem::new("Components"),
+    shadcn::BreadcrumbItem::new("Breadcrumb"),
+]);"#,
+                ),
             DocSection::new("Custom Separator", custom_separator)
                 .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
                 .description("Use a custom separator icon for parity with docs.")
@@ -363,19 +370,80 @@ pub(super) fn preview_breadcrumb(
             DocSection::new("Dropdown", dropdown)
                 .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
                 .description("Collapsed middle segment can expand via a dropdown menu.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"// Primitives recipe: BreadcrumbItem hosts a DropdownMenu trigger.
+let open = cx.app.models_mut().insert(false);
+
+shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
+    let list = shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
+        let home = shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+            vec![shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home").into_element(cx)]
+        });
+
+        let components = shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+            let menu = shadcn::DropdownMenu::new(open.clone()).into_element(
+                cx,
+                |cx| shadcn::Button::new("Components").toggle_model(open.clone()).into_element(cx),
+                |_cx| vec![
+                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Documentation")),
+                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Themes")),
+                ],
+            );
+            vec![menu]
+        });
+
+        vec![home, components]
+    });
+    vec![list]
+});"#,
+                ),
             DocSection::new("Collapsed", collapsed)
                 .title_test_id("ui-gallery-breadcrumb-section-title-collapsed")
                 .description("Use `BreadcrumbItem::ellipsis` to keep paths readable in narrow layouts.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home"),
+    shadcn::BreadcrumbItem::ellipsis(),
+    shadcn::BreadcrumbItem::new("Documentation"),
+    shadcn::BreadcrumbItem::new("Components"),
+    shadcn::BreadcrumbItem::new("Breadcrumb"),
+]);"#,
+                ),
             DocSection::new("Link Component", link_component)
                 .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
                 .description("Example of a truncated router-link style item.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let trunc = LayoutRefinement::default().max_w(Px(112.0));
+
+shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home (router link)")
+        .truncate(true)
+        .refine_layout(trunc),
+    shadcn::BreadcrumbItem::new("Components"),
+    shadcn::BreadcrumbItem::new("Breadcrumb"),
+]);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
                 .description("Breadcrumb layout should follow right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Breadcrumb::new().items([
+            shadcn::BreadcrumbItem::new("Home"),
+            shadcn::BreadcrumbItem::new("Components"),
+            shadcn::BreadcrumbItem::new("Breadcrumb"),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-breadcrumb-section-title-notes")
                 .description("Implementation notes and regression guidelines."),

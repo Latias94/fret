@@ -614,10 +614,38 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 ),
             DocSection::new("Animata: Expandable", animata_expandable)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let selected = cx.app.models_mut().insert(1u64);
+
+// Drive a deterministic expand/collapse transition (no DOM-based FLIP).
+let t = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+    cx,
+    is_selected,
+    Duration::from_millis(220),
+    Duration::from_millis(220),
+    easing,
+    false,
+);
+
+let w = collapsed_w + (expanded_w - collapsed_w) * t.progress;
+let h = collapsed_h + (expanded_h - collapsed_h) * t.progress;
+
+shadcn::Card::new([/* content */])
+    .refine_layout(LayoutRefinement::default().w_px(Px(w)).h_px(Px(h)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Sizes", sizes_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Carousel::new(items)
+    .orientation(shadcn::CarouselOrientation::Horizontal)
+    .item_basis_main_px(Px(133.328))
+    .track_start_neg_margin(Space::N4)
+    .item_padding_start(Space::N4)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Spacing", spacing_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-spacing")
@@ -631,19 +659,52 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 ),
             DocSection::new("Orientation", orientation_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Carousel::new(items)
+    .orientation(shadcn::CarouselOrientation::Vertical)
+    .item_basis_main_px(Px(100.0))
+    .track_start_neg_margin(Space::N1)
+    .item_padding_start(Space::N1)
+    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Options", options_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream exposes Embla opts (align/loop/etc). Current Fret Carousel does not expose Embla-style options yet.",
+);"#,
+                ),
             DocSection::new("API", api_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream exposes setApi for Embla events/options. Follow-up can add a controlled index/event surface once contracts stabilize.",
+);"#,
+                ),
             DocSection::new("Events", events_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream listens to Embla events like select via the API handle. Fret Carousel currently keeps event surface internal.",
+);"#,
+                ),
             DocSection::new("Plugins", plugins_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::typography::muted(
+    cx,
+    "Upstream supports Embla plugins (e.g. autoplay). Fret Carousel does not expose plugin injection yet.",
+);"#,
+                ),
             DocSection::new("RTL", rtl_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-rtl")

@@ -984,27 +984,166 @@ pub(super) fn preview_motion_presets(
             DocSection::new("Preset selector", preset_select)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let motion_preset = cx.app.models_mut().insert(Some(Arc::<str>::from("theme")));
+let motion_preset_open = cx.app.models_mut().insert(false);
+
+shadcn::Select::new(motion_preset, motion_preset_open)
+    .placeholder("Motion preset")
+    .items([
+        shadcn::SelectItem::new("theme", "Theme (baseline)"),
+        shadcn::SelectItem::new("reduced", "Reduced motion (0)"),
+        shadcn::SelectItem::new("snappy", "Snappy"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Token snapshot", token_snapshot)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let rows = [
+    ("duration.motion.presence.enter", theme.duration_ms_token("duration.motion.presence.enter")),
+    ("duration.motion.stack.shift", theme.duration_ms_token("duration.motion.stack.shift")),
+    ("easing.motion.standard", fmt_bezier(theme.easing_token("easing.motion.standard"))),
+];
+
+stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N2).items_start(),
+    move |cx| {
+        rows.into_iter()
+            .map(|(key, value)| {
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .items_center(),
+                    move |cx| {
+                        vec![
+                            cx.text(key),
+                            shadcn::Badge::new(value.to_string())
+                                .variant(shadcn::BadgeVariant::Outline)
+                                .into_element(cx),
+                        ]
+                    },
+                )
+            })
+            .collect::<Vec<_>>()
+    },
+);"#,
+                ),
             DocSection::new("Overlay demo", overlay_demo)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+shadcn::Dialog::new(open.clone()).into_element(
+    cx,
+    |cx| {
+        shadcn::Button::new("Open dialog")
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open.clone())
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::DialogContent::new([
+            shadcn::DialogHeader::new([
+                shadcn::DialogTitle::new("Motion preset demo").into_element(cx),
+                shadcn::DialogDescription::new("Presence motion is token-driven.").into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::DialogFooter::new([shadcn::Button::new("Close")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open.clone())
+                .into_element(cx)])
+            .into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Fluid tabs demo", fluid_tabs_demo)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let tabs = shadcn::Tabs::uncontrolled(Some("accounts"))
+    .shared_indicator_motion(true)
+    .content_presence_motion(true)
+    .items([
+        shadcn::TabsItem::new("accounts", "Accounts", [cx.text("Accounts").into_element(cx)]),
+        shadcn::TabsItem::new("deposits", "Deposits", [cx.text("Deposits").into_element(cx)]),
+    ]);
+
+tabs.into_element(cx);"#,
+                ),
             DocSection::new("Stagger / sequence demo", stagger_demo)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let is_open = cx.app.models_mut().insert(false);
+
+let global = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+    cx,
+    *cx.watch_model(&is_open).paint().unwrap_or(&false),
+    Duration::from_millis(180),
+    Duration::from_millis(180),
+    theme.easing_token("easing.motion.standard"),
+    false,
+);
+
+let count = 6usize;
+let each_delay = Duration::from_millis(24);
+let duration = Duration::from_millis(180);
+
+let row = (0..count)
+    .map(|i| {
+        fret_ui_headless::motion::stagger::staggered_progress_for_duration(
+            global.linear,
+            i,
+            count,
+            each_delay,
+            duration,
+            fret_ui_headless::motion::stagger::StaggerFrom::First,
+        )
+    })
+    .collect::<Vec<_>>();"#,
+                ),
             DocSection::new("Stack shift list demo", stack_shift_list_demo)
                 .no_shell()
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"// Model-driven list insert/remove, then animate Y positions using semantic `stack.shift` tokens.
+let shift_duration = Duration::from_millis(theme.duration_ms_token("duration.motion.stack.shift") as u64);
+let shift_each_delay = Duration::from_millis(theme.duration_ms_token("duration.motion.stack.shift.stagger") as u64);
+let shift_easing = theme.easing_token("easing.motion.stack.shift");
+
+let shift = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
+    cx,
+    shift_active,
+    shift_duration,
+    shift_duration,
+    shift_easing,
+    true,
+);
+
+// Map one shared timeline into per-row progress (stagger) and interpolate each row's delta Y.
+let local_linear = fret_ui_headless::motion::stagger::staggered_progress_for_duration(
+    shift.linear,
+    row_idx,
+    row_count,
+    shift_each_delay,
+    shift_duration,
+    fret_ui_headless::motion::stagger::StaggerFrom::First,
+);"#,
+                ),
         ],
     );
 

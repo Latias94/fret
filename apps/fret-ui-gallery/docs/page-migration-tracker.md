@@ -28,14 +28,14 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `alert` | `ui/pages/alert.rs` | Yes | Complete |
 | `alert_dialog` | `ui/pages/alert_dialog.rs` | Yes | Stubbed |
 | `aspect_ratio` | `ui/pages/aspect_ratio.rs` | Yes | Complete |
-| `breadcrumb` | `ui/pages/breadcrumb.rs` | Yes | Stubbed |
-| `carousel` | `ui/pages/carousel.rs` | Yes | Stubbed |
+| `breadcrumb` | `ui/pages/breadcrumb.rs` | Yes | Complete |
+| `carousel` | `ui/pages/carousel.rs` | Yes | Complete |
 | `chart` | `ui/pages/chart.rs` | Yes | Stubbed |
 | `checkbox` | `ui/pages/checkbox.rs` | Yes | Stubbed |
 | `collapsible` | `ui/pages/collapsible.rs` | Yes | Stubbed |
 | `combobox` | `ui/pages/combobox.rs` | Yes | Complete |
 | `command` | `ui/pages/command.rs` | Yes | Stubbed |
-| `context_menu` | `ui/pages/context_menu.rs` | Yes | Stubbed |
+| `context_menu` | `ui/pages/context_menu.rs` | Yes | Complete |
 | `data_table` | `ui/pages/data_table.rs` | Yes | Stubbed |
 | `date_picker` | `ui/pages/date_picker.rs` | Yes | Stubbed |
 | `dialog` | `ui/pages/dialog.rs` | Yes | Complete |
@@ -43,7 +43,7 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `dropdown_menu` | `ui/pages/dropdown_menu.rs` | Yes | Complete |
 | `empty` | `ui/pages/empty.rs` | Yes | Stubbed |
 | `field` | `ui/pages/field.rs` | Yes | Complete |
-| `form` | `ui/pages/form.rs` | Yes | Stubbed |
+| `form` | `ui/pages/form.rs` | Yes | Complete |
 | `hover_card` | `ui/pages/hover_card.rs` | Yes | Stubbed |
 | `input` | `ui/pages/input.rs` | Yes | Complete |
 | `input_group` | `ui/pages/input_group.rs` | Yes | Complete |
@@ -52,12 +52,12 @@ this is intentionally searchable so we can drive the remaining cleanup.
 | `kbd` | `ui/pages/kbd.rs` | Yes | Stubbed |
 | `label` | `ui/pages/label.rs` | Yes | Complete |
 | `menubar` | `ui/pages/menubar.rs` | Yes | Complete |
-| `motion_presets` | `ui/pages/motion_presets.rs` | Yes | Stubbed |
+| `motion_presets` | `ui/pages/motion_presets.rs` | Yes | Complete |
 | `native_select` | `ui/pages/native_select.rs` | Yes | Stubbed |
 | `navigation_menu` | `ui/pages/navigation_menu.rs` | Yes | Complete |
 | `shadcn_extras` | `ui/pages/shadcn_extras.rs` | Yes | Complete |
 | `toggle` | `ui/pages/toggle.rs` | Yes | Stubbed |
-| `toggle_group` | `ui/pages/toggle_group.rs` | Yes | Stubbed |
+| `toggle_group` | `ui/pages/toggle_group.rs` | Yes | Complete |
 | `tooltip` | `ui/pages/tooltip.rs` | Yes | Stubbed |
 | `typography` | `ui/pages/typography.rs` | Yes | Complete |
 
