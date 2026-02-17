@@ -1118,6 +1118,23 @@ pub enum UiPredicateV1 {
     KnownWindowCountGe {
         n: u32,
     },
+    /// True when the diagnostics runtime has observed exactly `n` windows.
+    ///
+    /// This is useful for degradation gates where creating additional windows must be prevented
+    /// (e.g. Wayland-safe docking tear-off degradation).
+    KnownWindowCountIs {
+        n: u32,
+    },
+    /// True when the latest diagnostics snapshot includes platform capability information and it
+    /// reports `ui.window_hover_detection == quality`.
+    ///
+    /// Supported qualities:
+    /// - `none`
+    /// - `best_effort`
+    /// - `reliable`
+    PlatformUiWindowHoverDetectionIs {
+        quality: String,
+    },
     /// True when the latest docking diagnostics report an active dock drag whose `current_window`
     /// matches `window`.
     DockDragCurrentWindowIs {
@@ -1126,6 +1143,31 @@ pub enum UiPredicateV1 {
     /// True when the latest docking diagnostics report an active dock drag session.
     DockDragActiveIs {
         active: bool,
+    },
+    /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
+    /// "transparent payload" applied to the moving window (e.g. click-through/NoInputs while the
+    /// dock-floating window follows the cursor).
+    DockDragTransparentPayloadAppliedIs {
+        applied: bool,
+    },
+    /// True when the latest docking diagnostics report a dock drag session whose hovered-window
+    /// selection source matches `source`.
+    ///
+    /// This is primarily intended to gate multi-window docking hand-feel regressions: on
+    /// platforms that claim `ui.window_hover_detection=reliable`, we want to ensure the runner is
+    /// using an OS-backed "window under cursor" provider rather than a heuristic fallback.
+    ///
+    /// Supported sources:
+    /// - `platform`: any OS-backed platform hover provider
+    /// - `platform_win32`
+    /// - `platform_macos`
+    /// - `latched`
+    /// - `heuristic`: any heuristic fallback
+    /// - `heuristic_z_order`
+    /// - `heuristic_rects`
+    /// - `unknown`
+    DockDragWindowUnderCursorSourceIs {
+        source: String,
     },
     /// True when the latest docking diagnostics report an active in-window floating drag session.
     ///

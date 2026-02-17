@@ -583,54 +583,28 @@ pub(super) fn preview_input(
         content
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("????? API").into_element(cx),
-                    shadcn::Input::new(rtl_value)
-                        .a11y_label("????? API")
-                        .placeholder("sk-...")
-                        .into_element(cx),
-                    shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.")
-                        .into_element(cx),
-                ])
-                .refine_layout(max_w_xs.clone())
-                .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-input-rtl");
-        rtl_content
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("????? API").into_element(cx),
+            shadcn::Input::new(rtl_value)
+                .a11y_label("????? API")
+                .placeholder("sk-...")
+                .into_element(cx),
+            shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.").into_element(cx),
+        ])
+        .refine_layout(max_w_xs.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-input-rtl");
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Native file input type is currently approximated using input + browse button composition.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
+            "Native file input type is currently approximated using input + browse button composition.",
+            "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
+            "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -640,7 +614,14 @@ pub(super) fn preview_input(
         ),
         vec![
             DocSection::new("Basic", basic)
-                .description("Single input field (used by IME routing regression scripts)."),
+                .description("Single input field (used by IME routing regression scripts).")
+                .code(
+                    "rust",
+                    r#"shadcn::Input::new(model)
+    .a11y_label("Enter text")
+    .placeholder("Enter text")
+    .into_element(cx);"#,
+                ),
             DocSection::new("Field", field)
                 .description("Field composition with label, description, and error slots.")
                 .code(
@@ -653,22 +634,161 @@ pub(super) fn preview_input(
 .into_element(cx);"#,
                 ),
             DocSection::new("Field Group", field_group)
-                .description("FieldGroup stacks related fields and action rows."),
+                .description("FieldGroup stacks related fields and action rows.")
+                .code(
+                    "rust",
+                    r#"shadcn::FieldGroup::new([
+    shadcn::Field::new([
+        shadcn::FieldLabel::new("Name").into_element(cx),
+        shadcn::Input::new(name).placeholder("Jordan Lee").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Field::new([
+        shadcn::FieldLabel::new("Email").into_element(cx),
+        shadcn::Input::new(email).placeholder("name@example.com").into_element(cx),
+        shadcn::FieldDescription::new("We'll send updates to this address.").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Field::new([
+        shadcn::Button::new("Reset")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into_element(cx),
+        shadcn::Button::new("Submit").into_element(cx),
+    ])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled).description(
                 "Disabled inputs should block focus/interaction and use muted styling.",
+            )
+            .code(
+                "rust",
+                r#"shadcn::Input::new(model)
+    .a11y_label("Disabled email")
+    .disabled(true)
+    .into_element(cx);"#,
             ),
             DocSection::new("Invalid", invalid)
-                .description("Invalid state uses `aria_invalid` + field-level error copy."),
+                .description("Invalid state uses `aria_invalid` + field-level error copy.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Invalid Input").into_element(cx),
+    shadcn::Input::new(model)
+        .a11y_label("Invalid input")
+        .aria_invalid(true)
+        .into_element(cx),
+    shadcn::FieldError::new("Please provide a valid email format.").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("File", file).description(
                 "File input is approximated via text + browse button composition in current API.",
+            )
+            .code(
+                "rust",
+                r#"shadcn::ButtonGroup::new([
+    shadcn::Input::new(model)
+        .a11y_label("Picture path")
+        .placeholder("Choose a file")
+        .into_element(cx)
+        .into(),
+    shadcn::Button::new("Browse")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx)
+        .into(),
+])
+.into_element(cx);"#,
             ),
             DocSection::new("Inline", inline)
-                .description("Horizontal Field orientation is useful for compact toolbars."),
+                .description("Horizontal Field orientation is useful for compact toolbars.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::Input::new(model)
+        .a11y_label("Search")
+        .placeholder("Search...")
+        .into_element(cx),
+    shadcn::Button::new("Search").into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.into_element(cx);"#,
+                ),
             DocSection::new("Grid", grid)
-                .description("Two-column input layout with shared row alignment."),
+                .description("Two-column input layout with shared row alignment.")
+                .code(
+                    "rust",
+                    r#"stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N4).items_start(),
+    |cx| {
+        vec![
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("First Name").into_element(cx),
+                shadcn::Input::new(first).placeholder("Jordan").into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Last Name").into_element(cx),
+                shadcn::Input::new(last).placeholder("Lee").into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ]
+    },
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("Required", required)
-                .description("Required affordance is represented by label copy in this gallery."),
-            DocSection::new("Badge", badge).description("Use Badge inside a label row."),
+                .description("Required affordance is represented by label copy in this gallery.")
+                .code(
+                    "rust",
+                    r#"let label = stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N1).items_center(),
+    |cx| {
+        vec![
+            shadcn::FieldLabel::new("Required Field").into_element(cx),
+            shadcn::typography::muted(cx, "*")
+                .attach_semantics(SemanticsDecoration::default().label("required-star")),
+        ]
+    },
+);
+
+shadcn::Field::new([
+    label,
+    shadcn::Input::new(model).placeholder("This field is required").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Badge", badge).description("Use Badge inside a label row.")
+                .code(
+                    "rust",
+                    r#"let label = stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N2).items_center(),
+    |cx| {
+        vec![
+            shadcn::FieldLabel::new("Webhook URL").into_element(cx),
+            shadcn::Badge::new("Recommended")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+        ]
+    },
+);
+
+shadcn::Field::new([
+    label,
+    shadcn::Input::new(model)
+        .a11y_label("Webhook URL")
+        .placeholder("https://example.com/webhook")
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Input Group", input_group)
                 .description("Inline addons and trailing buttons via InputGroup composition.")
                 .code(
@@ -679,11 +799,63 @@ pub(super) fn preview_input(
     .into_element(cx);"#,
                 ),
             DocSection::new("Button Group", button_group)
-                .description("ButtonGroup composes an input and a button with shared chrome."),
+                .description("ButtonGroup composes an input and a button with shared chrome.")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::Input::new(model)
+        .a11y_label("Search text")
+        .placeholder("Type to search...")
+        .into_element(cx)
+        .into(),
+    shadcn::Button::new("Search")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx)
+        .into(),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Form", form)
-                .description("Multi-field form layout using FieldGroup + responsive rows."),
+                .description("Multi-field form layout using FieldGroup + responsive rows.")
+                .code(
+                    "rust",
+                    r#"let country = shadcn::Select::new(country, country_open)
+    .placeholder("Country")
+    .items([
+        shadcn::SelectItem::new("us", "United States"),
+        shadcn::SelectItem::new("uk", "United Kingdom"),
+    ])
+    .into_element(cx);
+
+shadcn::FieldGroup::new([
+    shadcn::Field::new([
+        shadcn::FieldLabel::new("Name").into_element(cx),
+        shadcn::Input::new(name).placeholder("Evil Rabbit").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Field::new([shadcn::FieldLabel::new("Country").into_element(cx), country]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("Input + Field composition under an RTL direction provider."),
+                .description("Input + Field composition under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("????? API").into_element(cx),
+            shadcn::Input::new(model)
+                .a11y_label("????? API")
+                .placeholder("sk-...")
+                .into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

@@ -1,8 +1,9 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_view_cache(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
+    _theme: &Theme,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
@@ -268,17 +269,6 @@ pub(in crate::ui) fn preview_view_cache(
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx),
                 subtree,
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::from(
-                        "Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.",
-                    ),
-                    style: None,
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                }),
             ]
         },
     )
@@ -288,5 +278,14 @@ pub(in crate::ui) fn preview_view_cache(
             .test_id("ui-gallery-view-cache-root"),
     );
 
-    vec![root]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Compare cached vs uncached subtree execution and state retention."),
+        vec![DocSection::new("Harness", root)
+            .no_shell()
+            .max_w(Px(980.0))
+            .description("Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.")],
+    );
+
+    vec![page]
 }

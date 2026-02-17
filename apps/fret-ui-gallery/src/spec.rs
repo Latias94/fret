@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
-use crate::docs;
 use fret::mvu_router::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
@@ -21,8 +20,6 @@ pub(crate) const BISECT_SIMPLE_SIDEBAR: u32 = 1 << 4;
 pub(crate) const BISECT_SIMPLE_CONTENT: u32 = 1 << 5;
 pub(crate) const BISECT_DISABLE_SIDEBAR_SCROLL: u32 = 1 << 6;
 pub(crate) const BISECT_DISABLE_CONTENT_SCROLL: u32 = 1 << 7;
-pub(crate) const BISECT_DISABLE_MARKDOWN: u32 = 1 << 8;
-pub(crate) const BISECT_DISABLE_TABS: u32 = 1 << 9;
 
 pub(crate) fn ui_gallery_bisect_flags() -> u32 {
     static FLAGS: OnceLock<u32> = OnceLock::new();
@@ -563,8 +560,6 @@ pub(crate) const CMD_GALLERY_PAGE_BACK: &str = "ui_gallery.page.back";
 pub(crate) const CMD_GALLERY_PAGE_FORWARD: &str = "ui_gallery.page.forward";
 
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
-pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
-pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
 
 pub(crate) const CMD_SHELL_SHARE_SHEET_SMOKE: &str = "ui_gallery.shell.share_sheet_smoke";
 
@@ -579,8 +574,6 @@ pub(crate) struct PageSpec {
     pub(crate) origin: &'static str,
     pub(crate) command: &'static str,
     pub(crate) tags: &'static [&'static str],
-    pub(crate) docs_md: &'static str,
-    pub(crate) usage_md: &'static str,
 }
 
 impl PageSpec {
@@ -592,8 +585,6 @@ impl PageSpec {
         origin: &'static str,
         command: &'static str,
         tags: &'static [&'static str],
-        docs_md: &'static str,
-        usage_md: &'static str,
     ) -> Self {
         Self {
             id,
@@ -602,8 +593,6 @@ impl PageSpec {
             origin,
             command,
             tags,
-            docs_md,
-            usage_md,
         }
     }
 }
@@ -625,8 +614,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Core contracts",
                 CMD_NAV_INTRO,
                 &["overview", "contracts"],
-                docs::DOC_INTRO,
-                docs::USAGE_INTRO,
             ),
             PageSpec::new(
                 PAGE_LAYOUT,
@@ -635,8 +622,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Layout system",
                 CMD_NAV_LAYOUT,
                 &["layout", "flex", "stack"],
-                docs::DOC_LAYOUT,
-                docs::USAGE_LAYOUT,
             ),
             PageSpec::new(
                 PAGE_MOTION_PRESETS,
@@ -645,8 +630,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Theme tokens (motion)",
                 CMD_NAV_MOTION_PRESETS,
                 &["motion", "tokens", "theme", "animation"],
-                docs::DOC_MOTION_PRESETS,
-                docs::USAGE_MOTION_PRESETS,
             ),
             PageSpec::new(
                 PAGE_VIEW_CACHE,
@@ -655,8 +638,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui (runtime experiments)",
                 CMD_NAV_VIEW_CACHE,
                 &["cache", "performance", "gpui-parity"],
-                docs::DOC_VIEW_CACHE,
-                docs::USAGE_VIEW_CACHE,
             ),
             PageSpec::new(
                 PAGE_HIT_TEST_TORTURE,
@@ -665,8 +646,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui (hit testing)",
                 CMD_NAV_HIT_TEST_TORTURE,
                 &["hit_test", "pointer", "dispatch", "performance", "harness"],
-                docs::DOC_HIT_TEST_TORTURE,
-                docs::USAGE_HIT_TEST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
@@ -681,8 +660,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "performance",
                     "harness",
                 ],
-                docs::DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
-                docs::USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,
@@ -691,8 +668,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui (virtualization contract)",
                 CMD_NAV_VIRTUAL_LIST_TORTURE,
                 &["virtual_list", "performance", "gpui-parity", "harness"],
-                docs::DOC_VIRTUAL_LIST_TORTURE,
-                docs::USAGE_VIRTUAL_LIST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_UI_KIT_LIST_TORTURE,
@@ -707,8 +682,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_UI_KIT_LIST_TORTURE,
-                docs::USAGE_UI_KIT_LIST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CODE_VIEW_TORTURE,
@@ -724,8 +697,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_CODE_VIEW_TORTURE,
-                docs::USAGE_CODE_VIEW_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CODE_EDITOR_MVP,
@@ -734,8 +705,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-code-editor (ecosystem surface)",
                 CMD_NAV_CODE_EDITOR_MVP,
                 &["code", "editor", "ime", "text-input", "windowed-rows"],
-                docs::DOC_CODE_EDITOR_MVP,
-                docs::USAGE_CODE_EDITOR_MVP,
             ),
             PageSpec::new(
                 PAGE_CODE_EDITOR_TORTURE,
@@ -751,8 +720,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_CODE_EDITOR_TORTURE,
-                docs::USAGE_CODE_EDITOR_TORTURE,
             ),
             PageSpec::new(
                 PAGE_MARKDOWN_EDITOR_SOURCE,
@@ -761,8 +728,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "code-editor ecosystem milestone",
                 CMD_NAV_MARKDOWN_EDITOR_SOURCE,
                 &["markdown", "editor", "source-mode", "preview"],
-                docs::DOC_MARKDOWN_EDITOR_SOURCE,
-                docs::USAGE_MARKDOWN_EDITOR_SOURCE,
             ),
             PageSpec::new(
                 PAGE_TEXT_SELECTION_PERF,
@@ -771,8 +736,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Text integration workstream",
                 CMD_NAV_TEXT_SELECTION_PERF,
                 &["text", "selection", "performance", "diagnostics", "tli1"],
-                docs::DOC_TEXT_SELECTION_PERF,
-                docs::USAGE_TEXT_SELECTION_PERF,
             ),
             PageSpec::new(
                 PAGE_TEXT_BIDI_RTL_CONFORMANCE,
@@ -781,8 +744,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Text integration workstream",
                 CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE,
                 &["text", "bidi", "rtl", "geometry", "diagnostics", "tli1"],
-                docs::DOC_TEXT_BIDI_RTL_CONFORMANCE,
-                docs::USAGE_TEXT_BIDI_RTL_CONFORMANCE,
             ),
             PageSpec::new(
                 PAGE_TEXT_MIXED_SCRIPT_FALLBACK,
@@ -799,8 +760,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "diagnostics",
                     "no-tofu",
                 ],
-                docs::DOC_TEXT_MIXED_SCRIPT_FALLBACK,
-                docs::USAGE_TEXT_MIXED_SCRIPT_FALLBACK,
             ),
             PageSpec::new(
                 PAGE_TEXT_MEASURE_OVERLAY,
@@ -809,8 +768,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Text integration workstream",
                 CMD_NAV_TEXT_MEASURE_OVERLAY,
                 &["text", "layout", "measure", "diagnostics", "tli1"],
-                docs::DOC_TEXT_MEASURE_OVERLAY,
-                docs::USAGE_TEXT_MEASURE_OVERLAY,
             ),
             PageSpec::new(
                 PAGE_TEXT_FEATURE_TOGGLES,
@@ -821,8 +778,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "text", "shaping", "opentype", "features", "liga", "calt", "tsv1",
                 ],
-                docs::DOC_TEXT_FEATURE_TOGGLES,
-                docs::USAGE_TEXT_FEATURE_TOGGLES,
             ),
             PageSpec::new(
                 PAGE_WEB_IME_HARNESS,
@@ -831,8 +786,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-platform-web (textarea bridge, v1)",
                 CMD_NAV_WEB_IME_HARNESS,
                 &["web", "ime", "text-input", "wasm", "harness"],
-                docs::DOC_WEB_IME_HARNESS,
-                docs::USAGE_WEB_IME_HARNESS,
             ),
             PageSpec::new(
                 PAGE_CHART_TORTURE,
@@ -848,8 +801,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_CHART_TORTURE,
-                docs::USAGE_CHART_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CANVAS_CULL_TORTURE,
@@ -866,8 +817,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_CANVAS_CULL_TORTURE,
-                docs::USAGE_CANVAS_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_NODE_GRAPH_CULL_TORTURE,
@@ -884,8 +833,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_NODE_GRAPH_CULL_TORTURE,
-                docs::USAGE_NODE_GRAPH_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CHROME_TORTURE,
@@ -902,8 +849,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_CHROME_TORTURE,
-                docs::USAGE_CHROME_TORTURE,
             ),
             PageSpec::new(
                 PAGE_WINDOWED_ROWS_SURFACE_TORTURE,
@@ -912,8 +857,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-kit (scroll + canvas pattern)",
                 CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE,
                 &["scroll", "performance", "gpui-parity", "canvas", "harness"],
-                docs::DOC_WINDOWED_ROWS_SURFACE_TORTURE,
-                docs::USAGE_WINDOWED_ROWS_SURFACE_TORTURE,
             ),
             PageSpec::new(
                 PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
@@ -929,8 +872,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "pointer",
                     "harness",
                 ],
-                docs::DOC_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
-                docs::USAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
             ),
             PageSpec::new(
                 PAGE_DATA_TABLE_TORTURE,
@@ -945,8 +886,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_DATA_TABLE_TORTURE,
-                docs::USAGE_DATA_TABLE_TORTURE,
             ),
             PageSpec::new(
                 PAGE_TREE_TORTURE,
@@ -961,8 +900,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_TREE_TORTURE,
-                docs::USAGE_TREE_TORTURE,
             ),
             PageSpec::new(
                 PAGE_TABLE_RETAINED_TORTURE,
@@ -978,8 +915,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_TABLE_RETAINED_TORTURE,
-                docs::USAGE_TABLE_RETAINED_TORTURE,
             ),
             PageSpec::new(
                 PAGE_AI_TRANSCRIPT_TORTURE,
@@ -997,8 +932,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_AI_TRANSCRIPT_TORTURE,
-                docs::USAGE_AI_TRANSCRIPT_TORTURE,
             ),
             PageSpec::new(
                 PAGE_AI_CHAT_DEMO,
@@ -1015,8 +948,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "interaction",
                     "demo",
                 ],
-                docs::DOC_AI_CHAT_DEMO,
-                docs::USAGE_AI_CHAT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CONVERSATION_DEMO,
@@ -1032,8 +963,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "virtualized",
                     "demo",
                 ],
-                docs::DOC_AI_CONVERSATION_DEMO,
-                docs::USAGE_AI_CONVERSATION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_MESSAGE_DEMO,
@@ -1042,8 +971,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (message building blocks)",
                 CMD_NAV_AI_MESSAGE_DEMO,
                 &["ai", "message", "bubble", "actions", "demo"],
-                docs::DOC_AI_MESSAGE_DEMO,
-                docs::USAGE_AI_MESSAGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CONTEXT_DEMO,
@@ -1052,8 +979,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (context hovercard)",
                 CMD_NAV_AI_CONTEXT_DEMO,
                 &["ai", "context", "tokens", "progress", "hovercard", "demo"],
-                docs::DOC_AI_CONTEXT_DEMO,
-                docs::USAGE_AI_CONTEXT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TERMINAL_DEMO,
@@ -1064,8 +989,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "ai", "terminal", "output", "copy", "clear", "scroll", "demo",
                 ],
-                docs::DOC_AI_TERMINAL_DEMO,
-                docs::USAGE_AI_TERMINAL_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PACKAGE_INFO_DEMO,
@@ -1074,8 +997,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (package info)",
                 CMD_NAV_AI_PACKAGE_INFO_DEMO,
                 &["ai", "package", "versions", "dependencies", "badge", "demo"],
-                docs::DOC_AI_PACKAGE_INFO_DEMO,
-                docs::USAGE_AI_PACKAGE_INFO_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_OPEN_IN_CHAT_DEMO,
@@ -1084,8 +1005,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (open in chat menu)",
                 CMD_NAV_AI_OPEN_IN_CHAT_DEMO,
                 &["ai", "open", "chat", "menu", "providers", "url", "demo"],
-                docs::DOC_AI_OPEN_IN_CHAT_DEMO,
-                docs::USAGE_AI_OPEN_IN_CHAT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TASK_DEMO,
@@ -1094,8 +1013,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (task collapsible)",
                 CMD_NAV_AI_TASK_DEMO,
                 &["ai", "task", "collapsible", "search", "demo"],
-                docs::DOC_AI_TASK_DEMO,
-                docs::USAGE_AI_TASK_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_AUDIO_PLAYER_DEMO,
@@ -1104,8 +1021,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (audio player chrome)",
                 CMD_NAV_AI_AUDIO_PLAYER_DEMO,
                 &["ai", "audio", "player", "seek", "mute", "volume", "demo"],
-                docs::DOC_AI_AUDIO_PLAYER_DEMO,
-                docs::USAGE_AI_AUDIO_PLAYER_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TRANSCRIPTION_DEMO,
@@ -1114,8 +1029,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (transcription)",
                 CMD_NAV_AI_TRANSCRIPTION_DEMO,
                 &["ai", "transcription", "segments", "seek", "voice", "demo"],
-                docs::DOC_AI_TRANSCRIPTION_DEMO,
-                docs::USAGE_AI_TRANSCRIPTION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SPEECH_INPUT_DEMO,
@@ -1124,8 +1037,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (speech input)",
                 CMD_NAV_AI_SPEECH_INPUT_DEMO,
                 &["ai", "speech", "voice", "input", "record", "demo"],
-                docs::DOC_AI_SPEECH_INPUT_DEMO,
-                docs::USAGE_AI_SPEECH_INPUT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_MIC_SELECTOR_DEMO,
@@ -1142,8 +1053,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "search",
                     "demo",
                 ],
-                docs::DOC_AI_MIC_SELECTOR_DEMO,
-                docs::USAGE_AI_MIC_SELECTOR_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_VOICE_SELECTOR_DEMO,
@@ -1152,8 +1061,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (voice input chrome)",
                 CMD_NAV_AI_VOICE_SELECTOR_DEMO,
                 &["ai", "voice", "selector", "dialog", "search", "demo"],
-                docs::DOC_AI_VOICE_SELECTOR_DEMO,
-                docs::USAGE_AI_VOICE_SELECTOR_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_AGENT_DEMO,
@@ -1162,8 +1069,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (agent chrome)",
                 CMD_NAV_AI_AGENT_DEMO,
                 &["ai", "agent", "tools", "schema", "accordion", "demo"],
-                docs::DOC_AI_AGENT_DEMO,
-                docs::USAGE_AI_AGENT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SANDBOX_DEMO,
@@ -1172,8 +1077,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (sandbox chrome)",
                 CMD_NAV_AI_SANDBOX_DEMO,
                 &["ai", "sandbox", "collapsible", "tabs", "demo"],
-                docs::DOC_AI_SANDBOX_DEMO,
-                docs::USAGE_AI_SANDBOX_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PERSONA_DEMO,
@@ -1182,8 +1085,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (persona placeholder)",
                 CMD_NAV_AI_PERSONA_DEMO,
                 &["ai", "persona", "visual", "placeholder", "demo"],
-                docs::DOC_AI_PERSONA_DEMO,
-                docs::USAGE_AI_PERSONA_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CHROME_DEMO,
@@ -1192,8 +1093,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_CHROME_DEMO,
                 &["ai", "workflow", "panel", "toolbar", "chrome", "demo"],
-                docs::DOC_AI_WORKFLOW_CHROME_DEMO,
-                docs::USAGE_AI_WORKFLOW_CHROME_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CANVAS_DEMO,
@@ -1202,8 +1101,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_CANVAS_DEMO,
                 &["ai", "workflow", "canvas", "pan", "zoom", "demo"],
-                docs::DOC_AI_WORKFLOW_CANVAS_DEMO,
-                docs::USAGE_AI_WORKFLOW_CANVAS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_NODE_DEMO,
@@ -1212,8 +1109,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_NODE_DEMO,
                 &["ai", "workflow", "node", "handles", "demo"],
-                docs::DOC_AI_WORKFLOW_NODE_DEMO,
-                docs::USAGE_AI_WORKFLOW_NODE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_EDGE_DEMO,
@@ -1222,8 +1117,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_EDGE_DEMO,
                 &["ai", "workflow", "edge", "dash", "demo"],
-                docs::DOC_AI_WORKFLOW_EDGE_DEMO,
-                docs::USAGE_AI_WORKFLOW_EDGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CONNECTION_DEMO,
@@ -1232,8 +1125,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_CONNECTION_DEMO,
                 &["ai", "workflow", "connection", "demo"],
-                docs::DOC_AI_WORKFLOW_CONNECTION_DEMO,
-                docs::USAGE_AI_WORKFLOW_CONNECTION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CONTROLS_DEMO,
@@ -1242,8 +1133,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_CONTROLS_DEMO,
                 &["ai", "workflow", "controls", "buttons", "demo"],
-                docs::DOC_AI_WORKFLOW_CONTROLS_DEMO,
-                docs::USAGE_AI_WORKFLOW_CONTROLS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_PANEL_DEMO,
@@ -1252,8 +1141,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_PANEL_DEMO,
                 &["ai", "workflow", "panel", "demo"],
-                docs::DOC_AI_WORKFLOW_PANEL_DEMO,
-                docs::USAGE_AI_WORKFLOW_PANEL_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_TOOLBAR_DEMO,
@@ -1262,8 +1149,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (workflow chrome)",
                 CMD_NAV_AI_WORKFLOW_TOOLBAR_DEMO,
                 &["ai", "workflow", "toolbar", "demo"],
-                docs::DOC_AI_WORKFLOW_TOOLBAR_DEMO,
-                docs::USAGE_AI_WORKFLOW_TOOLBAR_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
@@ -1274,8 +1159,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "ai", "workflow", "node", "graph", "canvas", "controls", "engine", "demo",
                 ],
-                docs::DOC_AI_WORKFLOW_NODE_GRAPH_DEMO,
-                docs::USAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
@@ -1286,8 +1169,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "ai", "workflow", "canvas", "pan", "zoom", "world", "nodes", "spike", "demo",
                 ],
-                docs::DOC_AI_CANVAS_WORLD_LAYER_SPIKE,
-                docs::USAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
@@ -1296,8 +1177,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (prompt input parts)",
                 CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO,
                 &["ai", "prompt", "input", "provider", "parts", "demo"],
-                docs::DOC_AI_PROMPT_INPUT_PROVIDER_DEMO,
-                docs::USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
@@ -1308,8 +1187,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &[
                     "ai", "prompt", "input", "menu", "dropdown", "actions", "demo",
                 ],
-                docs::DOC_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
-                docs::USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
@@ -1326,8 +1203,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "chips",
                     "demo",
                 ],
-                docs::DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
-                docs::USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_INLINE_CITATION_DEMO,
@@ -1336,8 +1211,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (sources)",
                 CMD_NAV_AI_INLINE_CITATION_DEMO,
                 &["ai", "inline", "citation", "hovercard", "demo"],
-                docs::DOC_AI_INLINE_CITATION_DEMO,
-                docs::USAGE_AI_INLINE_CITATION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SOURCES_DEMO,
@@ -1346,8 +1219,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (sources)",
                 CMD_NAV_AI_SOURCES_DEMO,
                 &["ai", "sources", "collapsible", "demo"],
-                docs::DOC_AI_SOURCES_DEMO,
-                docs::USAGE_AI_SOURCES_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ARTIFACT_DEMO,
@@ -1356,8 +1227,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (artifact container)",
                 CMD_NAV_AI_ARTIFACT_DEMO,
                 &["ai", "artifact", "header", "actions", "tooltip", "demo"],
-                docs::DOC_AI_ARTIFACT_DEMO,
-                docs::USAGE_AI_ARTIFACT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SHIMMER_DEMO,
@@ -1366,8 +1235,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (chatbot utility)",
                 CMD_NAV_AI_SHIMMER_DEMO,
                 &["ai", "shimmer", "loading", "text", "animation", "demo"],
-                docs::DOC_AI_SHIMMER_DEMO,
-                docs::USAGE_AI_SHIMMER_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_REASONING_DEMO,
@@ -1383,8 +1250,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "timer",
                     "demo",
                 ],
-                docs::DOC_AI_REASONING_DEMO,
-                docs::USAGE_AI_REASONING_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_QUEUE_DEMO,
@@ -1401,8 +1266,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "attachments",
                     "demo",
                 ],
-                docs::DOC_AI_QUEUE_DEMO,
-                docs::USAGE_AI_QUEUE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ATTACHMENTS_DEMO,
@@ -1411,8 +1274,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (attachments surface)",
                 CMD_NAV_AI_ATTACHMENTS_DEMO,
                 &["ai", "attachments", "remove", "hover", "demo"],
-                docs::DOC_AI_ATTACHMENTS_DEMO,
-                docs::USAGE_AI_ATTACHMENTS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SUGGESTIONS_DEMO,
@@ -1421,8 +1282,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (chatbot utility)",
                 CMD_NAV_AI_SUGGESTIONS_DEMO,
                 &["ai", "suggestion", "suggestions", "scroll", "chips", "demo"],
-                docs::DOC_AI_SUGGESTIONS_DEMO,
-                docs::USAGE_AI_SUGGESTIONS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_MESSAGE_BRANCH_DEMO,
@@ -1431,8 +1290,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (message surface)",
                 CMD_NAV_AI_MESSAGE_BRANCH_DEMO,
                 &["ai", "message", "branch", "selector", "demo"],
-                docs::DOC_AI_MESSAGE_BRANCH_DEMO,
-                docs::USAGE_AI_MESSAGE_BRANCH_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_FILE_TREE_DEMO,
@@ -1441,8 +1298,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (file tree surface)",
                 CMD_NAV_AI_FILE_TREE_DEMO,
                 &["ai", "file", "tree", "outline", "demo"],
-                docs::DOC_AI_FILE_TREE_DEMO,
-                docs::USAGE_AI_FILE_TREE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CODE_BLOCK_DEMO,
@@ -1451,8 +1306,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_CODE_BLOCK_DEMO,
                 &["ai", "code", "block", "snippet", "copy", "demo"],
-                docs::DOC_AI_CODE_BLOCK_DEMO,
-                docs::USAGE_AI_CODE_BLOCK_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SNIPPET_DEMO,
@@ -1461,8 +1314,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_SNIPPET_DEMO,
                 &["ai", "snippet", "copy", "code", "demo"],
-                docs::DOC_AI_SNIPPET_DEMO,
-                docs::USAGE_AI_SNIPPET_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_COMMIT_DEMO,
@@ -1471,8 +1322,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_COMMIT_DEMO,
                 &["ai", "commit", "git", "copy", "diff", "demo"],
-                docs::DOC_AI_COMMIT_DEMO,
-                docs::USAGE_AI_COMMIT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_COMMIT_LARGE_DEMO,
@@ -1481,8 +1330,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_COMMIT_LARGE_DEMO,
                 &["ai", "commit", "large", "scroll", "files", "demo"],
-                docs::DOC_AI_COMMIT_LARGE_DEMO,
-                docs::USAGE_AI_COMMIT_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_STACK_TRACE_DEMO,
@@ -1491,8 +1338,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_STACK_TRACE_DEMO,
                 &["ai", "stack", "trace", "error", "copy", "demo"],
-                docs::DOC_AI_STACK_TRACE_DEMO,
-                docs::USAGE_AI_STACK_TRACE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_STACK_TRACE_LARGE_DEMO,
@@ -1501,8 +1346,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_STACK_TRACE_LARGE_DEMO,
                 &["ai", "stack", "trace", "large", "scroll", "demo"],
-                docs::DOC_AI_STACK_TRACE_LARGE_DEMO,
-                docs::USAGE_AI_STACK_TRACE_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TEST_RESULTS_DEMO,
@@ -1511,8 +1354,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_TEST_RESULTS_DEMO,
                 &["ai", "test", "results", "suite", "demo"],
-                docs::DOC_AI_TEST_RESULTS_DEMO,
-                docs::USAGE_AI_TEST_RESULTS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TEST_RESULTS_LARGE_DEMO,
@@ -1521,8 +1362,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (code artifacts)",
                 CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO,
                 &["ai", "test", "results", "large", "scroll", "demo"],
-                docs::DOC_AI_TEST_RESULTS_LARGE_DEMO,
-                docs::USAGE_AI_TEST_RESULTS_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CHECKPOINT_DEMO,
@@ -1531,8 +1370,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (tooling chrome)",
                 CMD_NAV_AI_CHECKPOINT_DEMO,
                 &["ai", "checkpoint", "tooltip", "demo"],
-                docs::DOC_AI_CHECKPOINT_DEMO,
-                docs::USAGE_AI_CHECKPOINT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CONFIRMATION_DEMO,
@@ -1541,8 +1378,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (tooling chrome)",
                 CMD_NAV_AI_CONFIRMATION_DEMO,
                 &["ai", "confirmation", "approval", "demo"],
-                docs::DOC_AI_CONFIRMATION_DEMO,
-                docs::USAGE_AI_CONFIRMATION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ENVIRONMENT_VARIABLES_DEMO,
@@ -1559,8 +1394,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "copy",
                     "demo",
                 ],
-                docs::DOC_AI_ENVIRONMENT_VARIABLES_DEMO,
-                docs::USAGE_AI_ENVIRONMENT_VARIABLES_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PLAN_DEMO,
@@ -1569,8 +1402,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (tooling chrome)",
                 CMD_NAV_AI_PLAN_DEMO,
                 &["ai", "plan", "collapsible", "streaming", "shimmer", "demo"],
-                docs::DOC_AI_PLAN_DEMO,
-                docs::USAGE_AI_PLAN_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TOOL_DEMO,
@@ -1586,8 +1417,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "code-block",
                     "demo",
                 ],
-                docs::DOC_AI_TOOL_DEMO,
-                docs::USAGE_AI_TOOL_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_WEB_PREVIEW_DEMO,
@@ -1596,8 +1425,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (web preview chrome)",
                 CMD_NAV_AI_WEB_PREVIEW_DEMO,
                 &["ai", "web", "preview", "url", "console", "demo"],
-                docs::DOC_AI_WEB_PREVIEW_DEMO,
-                docs::USAGE_AI_WEB_PREVIEW_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_MODEL_SELECTOR_DEMO,
@@ -1606,8 +1433,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (chatbot)",
                 CMD_NAV_AI_MODEL_SELECTOR_DEMO,
                 &["ai", "model", "selector", "command", "dialog", "demo"],
-                docs::DOC_AI_MODEL_SELECTOR_DEMO,
-                docs::USAGE_AI_MODEL_SELECTOR_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_CHAIN_OF_THOUGHT_DEMO,
@@ -1616,8 +1441,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (chatbot)",
                 CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO,
                 &["ai", "chain", "thought", "steps", "collapsible", "demo"],
-                docs::DOC_AI_CHAIN_OF_THOUGHT_DEMO,
-                docs::USAGE_AI_CHAIN_OF_THOUGHT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SCHEMA_DISPLAY_DEMO,
@@ -1626,8 +1449,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (schema display)",
                 CMD_NAV_AI_SCHEMA_DISPLAY_DEMO,
                 &["ai", "schema", "openapi", "json", "demo"],
-                docs::DOC_AI_SCHEMA_DISPLAY_DEMO,
-                docs::USAGE_AI_SCHEMA_DISPLAY_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_IMAGE_DEMO,
@@ -1636,8 +1457,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (utilities)",
                 CMD_NAV_AI_IMAGE_DEMO,
                 &["ai", "image", "media", "demo"],
-                docs::DOC_AI_IMAGE_DEMO,
-                docs::USAGE_AI_IMAGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,
@@ -1654,8 +1473,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_INSPECTOR_TORTURE,
-                docs::USAGE_INSPECTOR_TORTURE,
             ),
             PageSpec::new(
                 PAGE_FILE_TREE_TORTURE,
@@ -1672,8 +1489,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "gpui-parity",
                     "harness",
                 ],
-                docs::DOC_FILE_TREE_TORTURE,
-                docs::USAGE_FILE_TREE_TORTURE,
             ),
         ],
     },
@@ -1687,8 +1502,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_ACCORDION,
                 &["accordion", "collapsible"],
-                docs::DOC_ACCORDION,
-                docs::USAGE_ACCORDION,
             ),
             PageSpec::new(
                 PAGE_ALERT,
@@ -1697,8 +1510,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_ALERT,
                 &["alert", "feedback"],
-                docs::DOC_ALERT,
-                docs::USAGE_ALERT,
             ),
             PageSpec::new(
                 PAGE_ALERT_DIALOG,
@@ -1707,8 +1518,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_ALERT_DIALOG,
                 &["alert_dialog", "dialog", "overlay"],
-                docs::DOC_ALERT_DIALOG,
-                docs::USAGE_ALERT_DIALOG,
             ),
             PageSpec::new(
                 PAGE_ASPECT_RATIO,
@@ -1717,8 +1526,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_ASPECT_RATIO,
                 &["aspect_ratio", "layout"],
-                docs::DOC_ASPECT_RATIO,
-                docs::USAGE_ASPECT_RATIO,
             ),
             PageSpec::new(
                 PAGE_AVATAR,
@@ -1727,8 +1534,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_AVATAR,
                 &["avatar", "image", "fallback"],
-                docs::DOC_AVATAR,
-                docs::USAGE_AVATAR,
             ),
             PageSpec::new(
                 PAGE_IMAGE_OBJECT_FIT,
@@ -1745,8 +1550,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "thumbnail",
                     "streaming",
                 ],
-                docs::DOC_IMAGE_OBJECT_FIT,
-                docs::USAGE_IMAGE_OBJECT_FIT,
             ),
             PageSpec::new(
                 PAGE_BADGE,
@@ -1755,8 +1558,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_BADGE,
                 &["badge", "status", "tag"],
-                docs::DOC_BADGE,
-                docs::USAGE_BADGE,
             ),
             PageSpec::new(
                 PAGE_BREADCRUMB,
@@ -1765,8 +1566,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_BREADCRUMB,
                 &["breadcrumb", "navigation"],
-                docs::DOC_BREADCRUMB,
-                docs::USAGE_BREADCRUMB,
             ),
             PageSpec::new(
                 PAGE_BUTTON,
@@ -1775,8 +1574,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_BUTTON,
                 &["button", "variant"],
-                docs::DOC_BUTTON,
-                docs::USAGE_BUTTON,
             ),
             PageSpec::new(
                 PAGE_BUTTON_GROUP,
@@ -1785,8 +1582,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_BUTTON_GROUP,
                 &["button", "group"],
-                docs::DOC_BUTTON_GROUP,
-                docs::USAGE_BUTTON_GROUP,
             ),
             PageSpec::new(
                 PAGE_CALENDAR,
@@ -1795,8 +1590,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CALENDAR,
                 &["calendar", "date"],
-                docs::DOC_CALENDAR,
-                docs::USAGE_CALENDAR,
             ),
             PageSpec::new(
                 PAGE_CARD,
@@ -1805,8 +1598,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CARD,
                 &["card", "layout", "surface"],
-                docs::DOC_CARD,
-                docs::USAGE_CARD,
             ),
             PageSpec::new(
                 PAGE_CAROUSEL,
@@ -1815,8 +1606,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CAROUSEL,
                 &["carousel", "scroll"],
-                docs::DOC_CAROUSEL,
-                docs::USAGE_CAROUSEL,
             ),
             PageSpec::new(
                 PAGE_CHART,
@@ -1825,8 +1614,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CHART,
                 &["chart", "data_viz"],
-                docs::DOC_CHART,
-                docs::USAGE_CHART,
             ),
             PageSpec::new(
                 PAGE_CHECKBOX,
@@ -1835,8 +1622,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CHECKBOX,
                 &["checkbox", "input"],
-                docs::DOC_CHECKBOX,
-                docs::USAGE_CHECKBOX,
             ),
             PageSpec::new(
                 PAGE_COLLAPSIBLE,
@@ -1845,8 +1630,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_COLLAPSIBLE,
                 &["collapsible", "disclosure"],
-                docs::DOC_COLLAPSIBLE,
-                docs::USAGE_COLLAPSIBLE,
             ),
             PageSpec::new(
                 PAGE_COMBOBOX,
@@ -1855,8 +1638,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_COMBOBOX,
                 &["combobox", "cmdk", "search"],
-                docs::DOC_COMBOBOX,
-                docs::USAGE_COMBOBOX,
             ),
             PageSpec::new(
                 PAGE_COMMAND,
@@ -1865,8 +1646,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_COMMAND,
                 &["cmdk", "command"],
-                docs::DOC_COMMAND,
-                docs::USAGE_COMMAND,
             ),
             PageSpec::new(
                 PAGE_CONTEXT_MENU,
@@ -1875,8 +1654,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_CONTEXT_MENU,
                 &["context_menu", "menu"],
-                docs::DOC_CONTEXT_MENU,
-                docs::USAGE_CONTEXT_MENU,
             ),
             PageSpec::new(
                 PAGE_DATA_TABLE,
@@ -1885,8 +1662,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn + fret-ui-headless",
                 CMD_NAV_DATA_TABLE,
                 &["table", "virtualized", "tanstack"],
-                docs::DOC_DATA_TABLE,
-                docs::USAGE_DATA_TABLE,
             ),
             PageSpec::new(
                 PAGE_DATE_PICKER,
@@ -1895,8 +1670,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DATE_PICKER,
                 &["date", "calendar", "popover"],
-                docs::DOC_DATE_PICKER,
-                docs::USAGE_DATE_PICKER,
             ),
             PageSpec::new(
                 PAGE_DIALOG,
@@ -1905,8 +1678,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DIALOG,
                 &["dialog", "overlay"],
-                docs::DOC_DIALOG,
-                docs::USAGE_DIALOG,
             ),
             PageSpec::new(
                 PAGE_DRAWER,
@@ -1915,8 +1686,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DRAWER,
                 &["drawer", "overlay"],
-                docs::DOC_DRAWER,
-                docs::USAGE_DRAWER,
             ),
             PageSpec::new(
                 PAGE_DROPDOWN_MENU,
@@ -1925,8 +1694,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DROPDOWN_MENU,
                 &["dropdown_menu", "menu"],
-                docs::DOC_DROPDOWN_MENU,
-                docs::USAGE_DROPDOWN_MENU,
             ),
             PageSpec::new(
                 PAGE_EMPTY,
@@ -1935,8 +1702,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_EMPTY,
                 &["empty", "state"],
-                docs::DOC_EMPTY,
-                docs::USAGE_EMPTY,
             ),
             PageSpec::new(
                 PAGE_FIELD,
@@ -1945,8 +1710,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_FIELD,
                 &["field", "form", "label", "error"],
-                docs::DOC_FIELD,
-                docs::USAGE_FIELD,
             ),
             PageSpec::new(
                 PAGE_FORM,
@@ -1955,8 +1718,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_FORM,
                 &["form", "field"],
-                docs::DOC_FORM,
-                docs::USAGE_FORM,
             ),
             PageSpec::new(
                 PAGE_HOVER_CARD,
@@ -1965,8 +1726,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_HOVER_CARD,
                 &["hover_card", "overlay"],
-                docs::DOC_HOVER_CARD,
-                docs::USAGE_HOVER_CARD,
             ),
             PageSpec::new(
                 PAGE_INPUT,
@@ -1975,8 +1734,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_INPUT,
                 &["input", "text"],
-                docs::DOC_INPUT,
-                docs::USAGE_INPUT,
             ),
             PageSpec::new(
                 PAGE_INPUT_GROUP,
@@ -1985,8 +1742,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_INPUT_GROUP,
                 &["input", "group"],
-                docs::DOC_INPUT_GROUP,
-                docs::USAGE_INPUT_GROUP,
             ),
             PageSpec::new(
                 PAGE_INPUT_OTP,
@@ -1995,8 +1750,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_INPUT_OTP,
                 &["input", "otp"],
-                docs::DOC_INPUT_OTP,
-                docs::USAGE_INPUT_OTP,
             ),
             PageSpec::new(
                 PAGE_ITEM,
@@ -2005,8 +1758,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_ITEM,
                 &["item", "layout"],
-                docs::DOC_ITEM,
-                docs::USAGE_ITEM,
             ),
             PageSpec::new(
                 PAGE_KBD,
@@ -2015,8 +1766,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_KBD,
                 &["kbd", "text"],
-                docs::DOC_KBD,
-                docs::USAGE_KBD,
             ),
             PageSpec::new(
                 PAGE_LABEL,
@@ -2025,8 +1774,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_LABEL,
                 &["label", "form"],
-                docs::DOC_LABEL,
-                docs::USAGE_LABEL,
             ),
             PageSpec::new(
                 PAGE_MENUBAR,
@@ -2035,8 +1782,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_MENUBAR,
                 &["menubar", "menu"],
-                docs::DOC_MENUBAR,
-                docs::USAGE_MENUBAR,
             ),
             PageSpec::new(
                 PAGE_NATIVE_SELECT,
@@ -2045,8 +1790,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_NATIVE_SELECT,
                 &["native_select", "select"],
-                docs::DOC_NATIVE_SELECT,
-                docs::USAGE_NATIVE_SELECT,
             ),
             PageSpec::new(
                 PAGE_NAVIGATION_MENU,
@@ -2055,8 +1798,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_NAVIGATION_MENU,
                 &["navigation_menu", "menu"],
-                docs::DOC_NAVIGATION_MENU,
-                docs::USAGE_NAVIGATION_MENU,
             ),
             PageSpec::new(
                 PAGE_PAGINATION,
@@ -2065,8 +1806,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_PAGINATION,
                 &["pagination"],
-                docs::DOC_PAGINATION,
-                docs::USAGE_PAGINATION,
             ),
             PageSpec::new(
                 PAGE_POPOVER,
@@ -2075,8 +1814,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_POPOVER,
                 &["popover", "overlay"],
-                docs::DOC_POPOVER,
-                docs::USAGE_POPOVER,
             ),
             PageSpec::new(
                 PAGE_PROGRESS,
@@ -2085,8 +1822,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_PROGRESS,
                 &["progress"],
-                docs::DOC_PROGRESS,
-                docs::USAGE_PROGRESS,
             ),
             PageSpec::new(
                 PAGE_RADIO_GROUP,
@@ -2095,8 +1830,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_RADIO_GROUP,
                 &["radio", "group"],
-                docs::DOC_RADIO_GROUP,
-                docs::USAGE_RADIO_GROUP,
             ),
             PageSpec::new(
                 PAGE_RESIZABLE,
@@ -2105,8 +1838,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_RESIZABLE,
                 &["split", "panel", "resize"],
-                docs::DOC_RESIZABLE,
-                docs::USAGE_RESIZABLE,
             ),
             PageSpec::new(
                 PAGE_SCROLL_AREA,
@@ -2115,8 +1846,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SCROLL_AREA,
                 &["scroll", "scrollbar", "virtual"],
-                docs::DOC_SCROLL_AREA,
-                docs::USAGE_SCROLL_AREA,
             ),
             PageSpec::new(
                 PAGE_SELECT,
@@ -2125,8 +1854,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SELECT,
                 &["select", "popover", "listbox"],
-                docs::DOC_SELECT,
-                docs::USAGE_SELECT,
             ),
             PageSpec::new(
                 PAGE_SEPARATOR,
@@ -2135,8 +1862,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SEPARATOR,
                 &["separator"],
-                docs::DOC_SEPARATOR,
-                docs::USAGE_SEPARATOR,
             ),
             PageSpec::new(
                 PAGE_SHEET,
@@ -2145,8 +1870,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SHEET,
                 &["sheet", "overlay"],
-                docs::DOC_SHEET,
-                docs::USAGE_SHEET,
             ),
             PageSpec::new(
                 PAGE_SIDEBAR,
@@ -2155,8 +1878,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SIDEBAR,
                 &["sidebar", "navigation"],
-                docs::DOC_SIDEBAR,
-                docs::USAGE_SIDEBAR,
             ),
             PageSpec::new(
                 PAGE_SKELETON,
@@ -2165,8 +1886,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SKELETON,
                 &["skeleton", "loading", "animation"],
-                docs::DOC_SKELETON,
-                docs::USAGE_SKELETON,
             ),
             PageSpec::new(
                 PAGE_SLIDER,
@@ -2175,8 +1894,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SLIDER,
                 &["slider", "range", "input"],
-                docs::DOC_SLIDER,
-                docs::USAGE_SLIDER,
             ),
             PageSpec::new(
                 PAGE_SONNER,
@@ -2185,8 +1902,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SONNER,
                 &["sonner", "toast"],
-                docs::DOC_SONNER,
-                docs::USAGE_SONNER,
             ),
             PageSpec::new(
                 PAGE_SPINNER,
@@ -2195,8 +1910,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SPINNER,
                 &["spinner", "loading"],
-                docs::DOC_SPINNER,
-                docs::USAGE_SPINNER,
             ),
             PageSpec::new(
                 PAGE_SWITCH,
@@ -2205,8 +1918,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_SWITCH,
                 &["switch", "input"],
-                docs::DOC_SWITCH,
-                docs::USAGE_SWITCH,
             ),
             PageSpec::new(
                 PAGE_TABLE,
@@ -2215,8 +1926,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TABLE,
                 &["table", "grid"],
-                docs::DOC_TABLE,
-                docs::USAGE_TABLE,
             ),
             PageSpec::new(
                 PAGE_TABS,
@@ -2225,8 +1934,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TABS,
                 &["tabs", "roving", "focus"],
-                docs::DOC_TABS,
-                docs::USAGE_TABS,
             ),
             PageSpec::new(
                 PAGE_TEXTAREA,
@@ -2235,8 +1942,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TEXTAREA,
                 &["textarea", "input"],
-                docs::DOC_TEXTAREA,
-                docs::USAGE_TEXTAREA,
             ),
             PageSpec::new(
                 PAGE_TOAST,
@@ -2245,8 +1950,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TOAST,
                 &["sonner", "toast"],
-                docs::DOC_TOAST,
-                docs::USAGE_TOAST,
             ),
             PageSpec::new(
                 PAGE_TOGGLE,
@@ -2255,8 +1958,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TOGGLE,
                 &["toggle"],
-                docs::DOC_TOGGLE,
-                docs::USAGE_TOGGLE,
             ),
             PageSpec::new(
                 PAGE_TOGGLE_GROUP,
@@ -2265,8 +1966,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TOGGLE_GROUP,
                 &["toggle_group"],
-                docs::DOC_TOGGLE_GROUP,
-                docs::USAGE_TOGGLE_GROUP,
             ),
             PageSpec::new(
                 PAGE_TOOLTIP,
@@ -2275,8 +1974,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TOOLTIP,
                 &["tooltip", "overlay", "hover"],
-                docs::DOC_TOOLTIP,
-                docs::USAGE_TOOLTIP,
             ),
             PageSpec::new(
                 PAGE_TYPOGRAPHY,
@@ -2285,8 +1982,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_TYPOGRAPHY,
                 &["typography", "text"],
-                docs::DOC_TYPOGRAPHY,
-                docs::USAGE_TYPOGRAPHY,
             ),
         ],
     },
@@ -2300,8 +1995,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn::extras",
                 CMD_NAV_SHADCN_EXTRAS,
                 &["extras", "blocks", "recipes", "kibo"],
-                docs::DOC_SHADCN_EXTRAS,
-                docs::USAGE_SHADCN_EXTRAS,
             ),
             PageSpec::new(
                 PAGE_DATA_GRID,
@@ -2310,8 +2003,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DATA_GRID,
                 &["grid", "viewport", "virtualized"],
-                docs::DOC_DATA_GRID,
-                docs::USAGE_DATA_GRID,
             ),
             PageSpec::new(
                 PAGE_FORMS,
@@ -2320,8 +2011,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_FORMS,
                 &["input", "textarea", "checkbox", "switch"],
-                docs::DOC_FORMS,
-                docs::USAGE_FORMS,
             ),
             PageSpec::new(
                 PAGE_ICONS,
@@ -2330,8 +2019,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-icons + fret-icons-lucide",
                 CMD_NAV_ICONS,
                 &["icon", "svg", "lucide"],
-                docs::DOC_ICONS,
-                docs::USAGE_ICONS,
             ),
             PageSpec::new(
                 PAGE_MENUS,
@@ -2340,8 +2027,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_MENUS,
                 &["dropdown", "context-menu"],
-                docs::DOC_MENUS,
-                docs::USAGE_MENUS,
             ),
             PageSpec::new(
                 PAGE_OVERLAY,
@@ -2350,8 +2035,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Radix-shaped primitives",
                 CMD_NAV_OVERLAY,
                 &["dialog", "popover"],
-                docs::DOC_OVERLAY,
-                docs::USAGE_OVERLAY,
             ),
         ],
     },
@@ -2365,8 +2048,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_LENS,
                 &["magic", "lens", "mask", "transform"],
-                docs::DOC_MAGIC_LENS,
-                docs::USAGE_MAGIC_LENS,
             ),
             PageSpec::new(
                 PAGE_MAGIC_MARQUEE,
@@ -2375,8 +2056,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_MARQUEE,
                 &["magic", "marquee", "animation", "reduced-motion"],
-                docs::DOC_MAGIC_MARQUEE,
-                docs::USAGE_MAGIC_MARQUEE,
             ),
             PageSpec::new(
                 PAGE_MAGIC_CARD,
@@ -2385,8 +2064,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_CARD,
                 &["magic", "card", "pointer-follow", "gradient"],
-                docs::DOC_MAGIC_CARD,
-                docs::USAGE_MAGIC_CARD,
             ),
             PageSpec::new(
                 PAGE_MAGIC_BORDER_BEAM,
@@ -2395,8 +2072,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_BORDER_BEAM,
                 &["magic", "border", "beam", "glow", "blend"],
-                docs::DOC_MAGIC_BORDER_BEAM,
-                docs::USAGE_MAGIC_BORDER_BEAM,
             ),
             PageSpec::new(
                 PAGE_MAGIC_DOCK,
@@ -2405,8 +2080,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_DOCK,
                 &["magic", "dock", "pointer", "magnify"],
-                docs::DOC_MAGIC_DOCK,
-                docs::USAGE_MAGIC_DOCK,
             ),
             PageSpec::new(
                 PAGE_MAGIC_PATTERNS,
@@ -2415,8 +2088,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_PATTERNS,
                 &["magic", "patterns", "materials", "tier-b"],
-                docs::DOC_MAGIC_PATTERNS,
-                docs::USAGE_MAGIC_PATTERNS,
             ),
             PageSpec::new(
                 PAGE_MAGIC_SPARKLES_TEXT,
@@ -2425,8 +2096,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_SPARKLES_TEXT,
                 &["magic", "sparkles", "text", "materials", "tier-b"],
-                docs::DOC_MAGIC_SPARKLES_TEXT,
-                docs::USAGE_MAGIC_SPARKLES_TEXT,
             ),
             PageSpec::new(
                 PAGE_MAGIC_BLOOM,
@@ -2435,8 +2104,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-kit",
                 CMD_NAV_MAGIC_BLOOM,
                 &["bloom", "threshold", "blur", "blend"],
-                docs::DOC_MAGIC_BLOOM,
-                docs::USAGE_MAGIC_BLOOM,
             ),
         ],
     },
@@ -2450,8 +2117,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_GALLERY,
                 &["material3", "gallery", "regression", "outcomes"],
-                docs::DOC_MATERIAL3_GALLERY,
-                docs::USAGE_MATERIAL3_GALLERY,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TOP_APP_BAR,
@@ -2460,8 +2125,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_TOP_APP_BAR,
                 &["material3", "top-app-bar", "toolbar", "app-bar"],
-                docs::DOC_MATERIAL3_TOP_APP_BAR,
-                docs::USAGE_MATERIAL3_TOP_APP_BAR,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_BOTTOM_SHEET,
@@ -2470,8 +2133,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_BOTTOM_SHEET,
                 &["material3", "bottom-sheet", "sheet", "overlay"],
-                docs::DOC_MATERIAL3_BOTTOM_SHEET,
-                docs::USAGE_MATERIAL3_BOTTOM_SHEET,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_DATE_PICKER,
@@ -2480,8 +2141,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_DATE_PICKER,
                 &["material3", "date-picker", "calendar", "overlay"],
-                docs::DOC_MATERIAL3_DATE_PICKER,
-                docs::USAGE_MATERIAL3_DATE_PICKER,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TIME_PICKER,
@@ -2490,8 +2149,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_TIME_PICKER,
                 &["material3", "time-picker", "clock", "overlay"],
-                docs::DOC_MATERIAL3_TIME_PICKER,
-                docs::USAGE_MATERIAL3_TIME_PICKER,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_AUTOCOMPLETE,
@@ -2507,8 +2164,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "overlay",
                     "a11y",
                 ],
-                docs::DOC_MATERIAL3_AUTOCOMPLETE,
-                docs::USAGE_MATERIAL3_AUTOCOMPLETE,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_STATE_MATRIX,
@@ -2517,8 +2172,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_STATE_MATRIX,
                 &["material3", "states", "regression", "matrix"],
-                docs::DOC_MATERIAL3_STATE_MATRIX,
-                docs::USAGE_MATERIAL3_STATE_MATRIX,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TOUCH_TARGETS,
@@ -2532,8 +2185,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "interactive-size",
                     "regression",
                 ],
-                docs::DOC_MATERIAL3_TOUCH_TARGETS,
-                docs::USAGE_MATERIAL3_TOUCH_TARGETS,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_BUTTON,
@@ -2542,8 +2193,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_BUTTON,
                 &["material3", "button", "state-layer", "ripple", "motion"],
-                docs::DOC_MATERIAL3_BUTTON,
-                docs::USAGE_MATERIAL3_BUTTON,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_ICON_BUTTON,
@@ -2558,8 +2207,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "ripple",
                     "motion",
                 ],
-                docs::DOC_MATERIAL3_ICON_BUTTON,
-                docs::USAGE_MATERIAL3_ICON_BUTTON,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_CHECKBOX,
@@ -2568,8 +2215,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_CHECKBOX,
                 &["material3", "checkbox", "state-layer", "ripple", "forms"],
-                docs::DOC_MATERIAL3_CHECKBOX,
-                docs::USAGE_MATERIAL3_CHECKBOX,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_SWITCH,
@@ -2578,8 +2223,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_SWITCH,
                 &["material3", "switch", "state-layer", "ripple", "forms"],
-                docs::DOC_MATERIAL3_SWITCH,
-                docs::USAGE_MATERIAL3_SWITCH,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_RADIO,
@@ -2588,8 +2231,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_RADIO,
                 &["material3", "radio", "state-layer", "ripple", "forms"],
-                docs::DOC_MATERIAL3_RADIO,
-                docs::USAGE_MATERIAL3_RADIO,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_BADGE,
@@ -2598,8 +2239,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_BADGE,
                 &["material3", "badge", "status", "navigation"],
-                docs::DOC_MATERIAL3_BADGE,
-                docs::USAGE_MATERIAL3_BADGE,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_SEGMENTED_BUTTON,
@@ -2608,8 +2247,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_SEGMENTED_BUTTON,
                 &["material3", "segmented-button", "roving-focus", "selection"],
-                docs::DOC_MATERIAL3_SEGMENTED_BUTTON,
-                docs::USAGE_MATERIAL3_SEGMENTED_BUTTON,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_SELECT,
@@ -2618,8 +2255,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_SELECT,
                 &["material3", "select", "listbox", "forms", "overlay"],
-                docs::DOC_MATERIAL3_SELECT,
-                docs::USAGE_MATERIAL3_SELECT,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TEXT_FIELD,
@@ -2628,8 +2263,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_TEXT_FIELD,
                 &["material3", "text-field", "forms"],
-                docs::DOC_MATERIAL3_TEXT_FIELD,
-                docs::USAGE_MATERIAL3_TEXT_FIELD,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TABS,
@@ -2638,8 +2271,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_TABS,
                 &["material3", "tabs", "state-layer", "ripple", "roving-focus"],
-                docs::DOC_MATERIAL3_TABS,
-                docs::USAGE_MATERIAL3_TABS,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_NAVIGATION_BAR,
@@ -2655,8 +2286,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "roving-focus",
                     "motion",
                 ],
-                docs::DOC_MATERIAL3_NAVIGATION_BAR,
-                docs::USAGE_MATERIAL3_NAVIGATION_BAR,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_NAVIGATION_RAIL,
@@ -2672,8 +2301,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "roving-focus",
                     "motion",
                 ],
-                docs::DOC_MATERIAL3_NAVIGATION_RAIL,
-                docs::USAGE_MATERIAL3_NAVIGATION_RAIL,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_NAVIGATION_DRAWER,
@@ -2688,8 +2315,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "ripple",
                     "roving-focus",
                 ],
-                docs::DOC_MATERIAL3_NAVIGATION_DRAWER,
-                docs::USAGE_MATERIAL3_NAVIGATION_DRAWER,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
@@ -2706,8 +2331,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "focus-trap",
                     "motion",
                 ],
-                docs::DOC_MATERIAL3_MODAL_NAVIGATION_DRAWER,
-                docs::USAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_DIALOG,
@@ -2724,8 +2347,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "focus-trap",
                     "motion",
                 ],
-                docs::DOC_MATERIAL3_DIALOG,
-                docs::USAGE_MATERIAL3_DIALOG,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_MENU,
@@ -2742,8 +2363,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                     "roving-focus",
                     "typeahead",
                 ],
-                docs::DOC_MATERIAL3_MENU,
-                docs::USAGE_MATERIAL3_MENU,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_LIST,
@@ -2752,8 +2371,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_LIST,
                 &["material3", "list", "roving-focus", "selection"],
-                docs::DOC_MATERIAL3_LIST,
-                docs::USAGE_MATERIAL3_LIST,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_SNACKBAR,
@@ -2762,8 +2379,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_SNACKBAR,
                 &["material3", "snackbar", "toast-layer"],
-                docs::DOC_MATERIAL3_SNACKBAR,
-                docs::USAGE_MATERIAL3_SNACKBAR,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TOOLTIP,
@@ -2772,8 +2387,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_TOOLTIP,
                 &["material3", "tooltip", "overlay", "motion"],
-                docs::DOC_MATERIAL3_TOOLTIP,
-                docs::USAGE_MATERIAL3_TOOLTIP,
             ),
         ],
     },
@@ -2857,10 +2470,8 @@ pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
     with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
 }
 
-pub(crate) fn page_meta(
-    selected: &str,
-) -> (&'static str, &'static str, &'static str, &'static str) {
+pub(crate) fn page_meta(selected: &str) -> (&'static str, &'static str) {
     let fallback = page_spec(PAGE_INTRO).expect("intro page exists");
     let page = page_spec(selected).unwrap_or(fallback);
-    (page.title, page.origin, page.docs_md, page.usage_md)
+    (page.title, page.origin)
 }

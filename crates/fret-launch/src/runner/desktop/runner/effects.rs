@@ -14,7 +14,9 @@ use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore};
+use fret_runtime::{
+    PlatformCapabilities, PlatformCompletion, WindowClipboardDiagnosticsStore, WindowZLevel,
+};
 use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
@@ -1565,6 +1567,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             manual_follow: true,
                                             last_outer_pos: None,
                                             transparent_payload_applied: false,
+                                            always_on_top_applied: false,
                                         });
                                         // Do not call `drag_window()` here. ImGui drives multi-viewport
                                         // window movement by updating the platform window position in
@@ -1631,6 +1634,31 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 if self.windows.contains_key(window) {
                                     self.enqueue_window_front(window, sender_id, None, now);
                                 }
+                            }
+                        }
+                        WindowRequest::SetStyle { window, style } => {
+                            if let Some(state) = self.windows.get(window) {
+                                if let Some(level) = style.z_level {
+                                    state.window.set_window_level(match level {
+                                        WindowZLevel::Normal => WindowLevel::Normal,
+                                        WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
+                                    });
+                                }
+                                if let Some(mouse) = style.mouse {
+                                    let passthrough =
+                                        matches!(mouse, fret_runtime::MousePolicy::Passthrough);
+                                    let _ = super::window::set_window_mouse_passthrough(
+                                        state.window.as_ref(),
+                                        passthrough,
+                                    );
+                                }
+                                if let Some(opacity) = style.opacity {
+                                    let _ = super::window::set_window_opacity(
+                                        state.window.as_ref(),
+                                        opacity.as_f32(),
+                                    );
+                                }
+                                state.window.request_redraw();
                             }
                         }
                     },

@@ -1,7 +1,7 @@
-use fret_app::{App, Model};
 use fret::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
 };
+use fret_app::{App, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, Invalidation};
 use std::cell::RefCell;

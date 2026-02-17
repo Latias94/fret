@@ -140,7 +140,6 @@ struct UiGalleryWindowState {
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
     workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>>,
     nav_query: Model<String>,
-    content_tab: Model<Option<Arc<str>>>,
     theme_preset: Model<Option<Arc<str>>>,
     theme_preset_open: Model<bool>,
     applied_theme_preset: Option<Arc<str>>,
@@ -246,7 +245,6 @@ struct UiGalleryWindowState {
 impl UiGalleryWindowState {
     fn content_models(&self) -> ui::UiGalleryModels {
         ui::UiGalleryModels {
-            content_tab: self.content_tab.clone(),
             theme_preset: self.theme_preset.clone(),
             theme_preset_open: self.theme_preset_open.clone(),
             motion_preset: self.motion_preset.clone(),
@@ -738,16 +736,6 @@ impl UiGalleryDriver {
                     when: None,
                     toggle: None,
                 },
-                MenuItem::Command {
-                    command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
-                    when: None,
-                    toggle: None,
-                },
-                MenuItem::Command {
-                    command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
-                    when: None,
-                    toggle: None,
-                },
             ],
         });
 
@@ -960,7 +948,6 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(vec![Arc::<str>::from(PAGE_OVERLAY)]);
         let nav_query = app.models_mut().insert(String::new());
-        let content_tab = app.models_mut().insert(Some(Arc::<str>::from("preview")));
         let theme_preset = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("zinc/light")));
@@ -1162,7 +1149,6 @@ impl UiGalleryDriver {
             workspace_dirty_tabs,
             workspace_tab_close_by_command,
             nav_query,
-            content_tab,
             theme_preset,
             theme_preset_open,
             applied_theme_preset: None,
@@ -2109,8 +2095,10 @@ impl UiGalleryDriver {
             "duration.shadcn.motion.collapsible.toggle".to_string(),
             sidebar_toggle,
         );
-        cfg.durations_ms
-            .insert("duration.shadcn.motion.toast.enter".to_string(), toast_enter);
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.toast.enter".to_string(),
+            toast_enter,
+        );
         cfg.durations_ms
             .insert("duration.shadcn.motion.toast.exit".to_string(), toast_exit);
         cfg.durations_ms.insert(
@@ -2192,10 +2180,8 @@ impl UiGalleryDriver {
             .insert("easing.motion.standard".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.emphasized".to_string(), shadcn_ease);
-        cfg.easings.insert(
-            "easing.motion.collapsible.toggle".to_string(),
-            shadcn_ease,
-        );
+        cfg.easings
+            .insert("easing.motion.collapsible.toggle".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.layout.expand".to_string(), shadcn_ease);
         cfg.easings
@@ -2747,20 +2733,12 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match command.as_str() {
-            CMD_CLIPBOARD_COPY_LINK | CMD_CLIPBOARD_COPY_USAGE | CMD_CLIPBOARD_COPY_NOTES => {
+            CMD_CLIPBOARD_COPY_LINK => {
                 let selected = app
                     .models()
                     .get_cloned(&state.selected_page)
                     .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                let (_title, _origin, notes_md, usage_md) =
-                    crate::spec::page_meta(selected.as_ref());
-
-                let text = match command.as_str() {
-                    CMD_CLIPBOARD_COPY_LINK => format!("?page={}", selected.as_ref()),
-                    CMD_CLIPBOARD_COPY_USAGE => usage_md.to_string(),
-                    CMD_CLIPBOARD_COPY_NOTES => notes_md.to_string(),
-                    _ => String::new(),
-                };
+                let text = format!("?page={}", selected.as_ref());
 
                 app.push_effect(Effect::ClipboardSetText { text });
 
@@ -3205,8 +3183,7 @@ impl WinitAppDriver for UiGalleryDriver {
                             &mut host,
                             window,
                             "Share sheet",
-                            shadcn::ToastMessageOptions::new()
-                                .description("Shared successfully."),
+                            shadcn::ToastMessageOptions::new().description("Shared successfully."),
                         );
                     }
                     fret_core::ShareSheetOutcome::Canceled => {
@@ -3538,15 +3515,13 @@ impl WinitAppDriver for UiGalleryDriver {
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
                 let wants_quit = svc.poll_exit_trigger();
-                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 let drive = svc.drive_script_for_window(
-                    &*app,
+                    app,
                     window,
                     bounds,
                     scale_factor,
                     Some(&state.ui),
                     semantics_snapshot,
-                    element_runtime,
                 );
                 (drive, wants_quit)
             },

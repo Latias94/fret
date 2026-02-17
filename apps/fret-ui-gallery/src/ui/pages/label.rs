@@ -90,56 +90,33 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         content
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
+    let rtl = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
             cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(max_w.clone()),
             |cx| {
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(max_w.clone()),
-                    |cx| {
-                        vec![
-                            shadcn::Label::new("????? ??????").into_element(cx),
-                            shadcn::Input::new(rtl_name)
-                                .placeholder("???? ???")
-                                .a11y_label("????? ??????")
-                                .into_element(cx),
-                        ]
-                    },
-                )
+                vec![
+                    shadcn::Label::new("????? ??????").into_element(cx),
+                    shadcn::Input::new(rtl_name)
+                        .placeholder("???? ???")
+                        .a11y_label("????? ??????")
+                        .into_element(cx),
+                ]
             },
         )
-        .test_id("ui-gallery-label-rtl");
+    })
+    .test_id("ui-gallery-label-rtl");
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current Label API does not expose `htmlFor` binding; accessibility is handled by control a11y labels and Field composition.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
+            "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
+            "Current Label API does not expose `htmlFor` binding; accessibility is handled by control a11y labels and Field composition.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -164,7 +141,18 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 .into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
-                .description("Label and input alignment under an RTL direction provider."),
+                .description("Label and input alignment under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Label::new("????? ??????").into_element(cx);
+        shadcn::Input::new(model).a11y_label("????? ??????").into_element(cx);
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

@@ -168,21 +168,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     manual_follow: true,
                     last_outer_pos: None,
                     transparent_payload_applied: false,
+                    always_on_top_applied: false,
                 });
             }
         }
 
-        let (window, grab_offset, manual_follow, last_outer_pos, transparent_payload_applied) =
-            match self.dock_tearoff_follow {
-                Some(follow) => (
-                    follow.window,
-                    follow.grab_offset,
-                    follow.manual_follow,
-                    follow.last_outer_pos,
-                    follow.transparent_payload_applied,
-                ),
-                None => return false,
-            };
+        let (
+            window,
+            grab_offset,
+            manual_follow,
+            last_outer_pos,
+            transparent_payload_applied,
+            always_on_top_applied,
+        ) = match self.dock_tearoff_follow {
+            Some(follow) => (
+                follow.window,
+                follow.grab_offset,
+                follow.manual_follow,
+                follow.last_outer_pos,
+                follow.transparent_payload_applied,
+                follow.always_on_top_applied,
+            ),
+            None => return false,
+        };
 
         if !manual_follow {
             return false;
@@ -204,6 +212,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         }
 
+        // Keep the moving window visible while docking back into another window (ImGui-style).
+        //
+        // We use `WindowRequest::SetStyle` rather than calling platform window methods directly so
+        // style changes remain centralized and debuggable.
+        let want_always_on_top = caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None;
+        if want_always_on_top && !always_on_top_applied {
+            self.app.push_effect(fret_app::Effect::Window(
+                fret_app::WindowRequest::SetStyle {
+                    window,
+                    style: fret_runtime::WindowStyleRequest {
+                        z_level: Some(fret_runtime::WindowZLevel::AlwaysOnTop),
+                        ..Default::default()
+                    },
+                },
+            ));
+            if let Some(follow) = self.dock_tearoff_follow.as_mut() {
+                follow.always_on_top_applied = true;
+            }
+        }
+
         // Optional ImGui-style "transparent payload" behavior while following the cursor:
         // - make the dock-floating window semi-transparent
         // - ignore mouse events so the backend can "peek behind" to resolve the hovered window
@@ -218,16 +246,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let want_transparent_payload = (settings.transparent_payload_during_follow
             || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some())
             && self.dock_floating_windows.contains(&window);
-        if want_transparent_payload != transparent_payload_applied
-            && let Some(state) = self.windows.get(window)
-        {
-            let _ = super::window::set_dock_drag_transparent_payload(
-                state.window.as_ref(),
-                want_transparent_payload,
-                settings.transparent_payload_alpha,
-            );
+        if want_transparent_payload != transparent_payload_applied {
+            let opacity = if want_transparent_payload {
+                fret_runtime::WindowOpacity::from_f32(settings.transparent_payload_alpha)
+            } else {
+                fret_runtime::WindowOpacity(255)
+            };
+            let mouse = if want_transparent_payload {
+                fret_runtime::MousePolicy::Passthrough
+            } else {
+                fret_runtime::MousePolicy::Normal
+            };
+            self.app.push_effect(fret_app::Effect::Window(
+                fret_app::WindowRequest::SetStyle {
+                    window,
+                    style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(mouse),
+                        opacity: Some(opacity),
+                        ..Default::default()
+                    },
+                },
+            ));
             if let Some(follow) = self.dock_tearoff_follow.as_mut() {
                 follow.transparent_payload_applied = want_transparent_payload;
+            }
+            if let Some(pointer_id) = pointer_id
+                && let Some(drag) = self.app.drag_mut(pointer_id)
+            {
+                drag.transparent_payload_applied = want_transparent_payload;
             }
         }
 
@@ -255,10 +301,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         if let Some(state) = self.windows.get(window) {
-            // Keep the moving window visible while docking back into another window (ImGui-style).
-            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
-                state.window.set_window_level(WindowLevel::AlwaysOnTop);
-            }
             state.window.set_outer_position(pos);
         }
 
@@ -290,16 +332,37 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .cloned()
             .unwrap_or_default();
 
-        if follow.transparent_payload_applied
-            && let Some(state) = self.windows.get(follow.window)
+        if follow.transparent_payload_applied {
+            self.app.push_effect(fret_app::Effect::Window(
+                fret_app::WindowRequest::SetStyle {
+                    window: follow.window,
+                    style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(fret_runtime::MousePolicy::Normal),
+                        opacity: Some(fret_runtime::WindowOpacity(255)),
+                        ..Default::default()
+                    },
+                },
+            ));
+        }
+        if let Some(pointer_id) = self.dock_drag_pointer_id()
+            && let Some(drag) = self.app.drag_mut(pointer_id)
         {
-            let _ =
-                super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false, 1.0);
+            drag.transparent_payload_applied = false;
         }
 
         if let Some(state) = self.windows.get(follow.window) {
-            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
-                state.window.set_window_level(WindowLevel::Normal);
+            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None
+                && follow.always_on_top_applied
+            {
+                self.app.push_effect(fret_app::Effect::Window(
+                    fret_app::WindowRequest::SetStyle {
+                        window: follow.window,
+                        style: fret_runtime::WindowStyleRequest {
+                            z_level: Some(fret_runtime::WindowZLevel::Normal),
+                            ..Default::default()
+                        },
+                    },
+                ));
             }
             if caps.ui.window_set_outer_position
                 == fret_runtime::WindowSetOuterPositionQuality::Reliable

@@ -431,7 +431,7 @@ impl ElementHostWidget {
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                    crate::pixel_snap::snap_px_ceil(cx.bounds.size.width, cx.scale_factor);
                 let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
@@ -624,7 +624,7 @@ impl ElementHostWidget {
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                    crate::pixel_snap::snap_px_ceil(cx.bounds.size.width, cx.scale_factor);
                 let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
@@ -818,7 +818,7 @@ impl ElementHostWidget {
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                    crate::pixel_snap::snap_px_ceil(cx.bounds.size.width, cx.scale_factor);
                 let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),

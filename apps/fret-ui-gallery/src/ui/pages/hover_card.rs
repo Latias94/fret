@@ -2,8 +2,6 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use std::time::Duration;
-
     let profile_card = |cx: &mut ElementContext<'_, App>,
                         name: &'static str,
                         desc: &'static str,
@@ -40,8 +38,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "ui-gallery-hover-card-demo-content",
         );
         let hover = shadcn::HoverCard::new(trigger, content)
-            .open_delay(Duration::from_millis(100))
-            .close_delay(Duration::from_millis(200))
+            .open_delay_frames(10)
+            .close_delay_frames(100)
             .into_element(cx)
             .test_id("ui-gallery-hover-card-demo");
         hover
@@ -60,8 +58,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 "ui-gallery-hover-card-delay-instant-content",
             ),
         )
-        .open_delay(Duration::ZERO)
-        .close_delay(Duration::ZERO)
+        .open_delay_frames(0)
+        .close_delay_frames(0)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-delay-instant");
 
@@ -73,12 +71,12 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             profile_card(
                 cx,
                 "Delayed",
-                "openDelay=100ms closeDelay=200ms",
+                "openDelay=16 closeDelay=12",
                 "ui-gallery-hover-card-delay-delayed-content",
             ),
         )
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(200))
+        .open_delay_frames(16)
+        .close_delay_frames(12)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-delay-delayed");
 
@@ -106,8 +104,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         )
         .side(shadcn::HoverCardSide::Top)
         .align(shadcn::HoverCardAlign::Start)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(8)
+        .close_delay_frames(8)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-pos-top-start");
 
@@ -125,8 +123,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         )
         .side(shadcn::HoverCardSide::Right)
         .align(shadcn::HoverCardAlign::End)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(8)
+        .close_delay_frames(8)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-pos-right-end");
 
@@ -151,8 +149,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "ui-gallery-hover-card-basic-content",
         );
         let hover = shadcn::HoverCard::new(trigger, content)
-            .open_delay(Duration::from_millis(100))
-            .close_delay(Duration::from_millis(100))
+            .open_delay_frames(10)
+            .close_delay_frames(10)
             .into_element(cx)
             .test_id("ui-gallery-hover-card-basic");
         hover
@@ -172,8 +170,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Left)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(10)
+        .close_delay_frames(10)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-left");
 
@@ -190,8 +188,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Top)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(10)
+        .close_delay_frames(10)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-top");
 
@@ -208,8 +206,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Bottom)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(10)
+        .close_delay_frames(10)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-bottom");
 
@@ -226,8 +224,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Right)
-        .open_delay(Duration::from_millis(100))
-        .close_delay(Duration::from_millis(100))
+        .open_delay_frames(10)
+        .close_delay_frames(10)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-right");
 
@@ -240,56 +238,33 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         content
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::HoverCard::new(
-                    shadcn::Button::new("??? ??????")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-hover-card-rtl-trigger")
-                        .into_element(cx),
-                    profile_card(
-                        cx,
-                        "????? ??????",
-                        "??? ???? RTL ??????? ???????.",
-                        "ui-gallery-hover-card-rtl-content",
-                    ),
-                )
-                .open_delay(Duration::from_millis(100))
-                .close_delay(Duration::from_millis(100))
-                .side(shadcn::HoverCardSide::Left)
-                .into_element(cx)
-            },
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::HoverCard::new(
+            shadcn::Button::new("??? ??????")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-hover-card-rtl-trigger")
+                .into_element(cx),
+            profile_card(
+                cx,
+                "????? ??????",
+                "??? ???? RTL ??????? ???????.",
+                "ui-gallery-hover-card-rtl-content",
+            ),
         )
-        .test_id("ui-gallery-hover-card-rtl");
+        .open_delay_frames(10)
+        .close_delay_frames(10)
+        .side(shadcn::HoverCardSide::Left)
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-hover-card-rtl");
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Sides and positioning are separated to make placement parity checks deterministic.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "RTL sample is included because side resolution can differ in right-to-left layouts.",
-                ),
-            ]
-        },
+        [
+            "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
+            "Sides and positioning are separated to make placement parity checks deterministic.",
+            "RTL sample is included because side resolution can differ in right-to-left layouts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -303,12 +278,24 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .code(
                     "rust",
                     r#"let hover = shadcn::HoverCard::new(trigger, content)
-    .open_delay(Duration::from_millis(100))
-    .close_delay(Duration::from_millis(200))
+    .open_delay_frames(10)
+    .close_delay_frames(100)
     .into_element(cx);"#,
                 ),
             DocSection::new("Trigger Delays", trigger_delays)
-                .description("Compare instant vs delayed open/close behavior."),
+                .description("Compare instant vs delayed open/close behavior.")
+                .code(
+                    "rust",
+                    r#"let instant = shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(0)
+    .close_delay_frames(0)
+    .into_element(cx);
+
+let delayed = shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(16)
+    .close_delay_frames(12)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Positioning", positioning)
                 .description("Placement is controlled by `side` and `align`.")
                 .code(
@@ -318,10 +305,41 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     .align(shadcn::HoverCardAlign::Start);"#,
                 ),
             DocSection::new("Basic", basic)
-                .description("A minimal hover card with shorter delays."),
-            DocSection::new("Sides", sides).description("Visual sweep of side placements."),
+                .description("A minimal hover card with shorter delays.")
+                .code(
+                    "rust",
+                    r#"let trigger = shadcn::Button::new("Basic")
+    .variant(shadcn::ButtonVariant::Outline)
+    .into_element(cx);
+let content = shadcn::HoverCardContent::new(vec![/* card */]).into_element(cx);
+
+shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(10)
+    .close_delay_frames(10)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Sides", sides)
+                .description("Visual sweep of side placements.")
+                .code(
+                    "rust",
+                    r#"shadcn::HoverCard::new(trigger, content)
+    .side(shadcn::HoverCardSide::Left)
+    .into_element(cx);
+
+shadcn::HoverCard::new(trigger, content)
+    .side(shadcn::HoverCardSide::Top)
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("Hover card should respect right-to-left direction context."),
+                .description("Hover card should respect right-to-left direction context.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::HoverCard::new(trigger, content).side(shadcn::HoverCardSide::Left).into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

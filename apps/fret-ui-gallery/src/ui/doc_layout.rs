@@ -7,7 +7,8 @@ pub(in crate::ui) struct DocSection {
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
     pub max_w: Px,
-    pub test_id_prefix: Option<&'static str>,
+    pub test_id_prefix: Option<Arc<str>>,
+    pub shell: bool,
 }
 
 pub(in crate::ui) struct DocCodeBlock {
@@ -25,6 +26,7 @@ impl DocSection {
             code: None,
             max_w: Px(820.0),
             test_id_prefix: None,
+            shell: true,
         }
     }
 
@@ -56,8 +58,13 @@ impl DocSection {
         self
     }
 
-    pub(in crate::ui) fn test_id_prefix(mut self, test_id_prefix: &'static str) -> Self {
-        self.test_id_prefix = Some(test_id_prefix);
+    pub(in crate::ui) fn test_id_prefix(mut self, test_id_prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(test_id_prefix.into());
+        self
+    }
+
+    pub(in crate::ui) fn no_shell(mut self) -> Self {
+        self.shell = false;
         self
     }
 }
@@ -88,9 +95,35 @@ pub(in crate::ui) fn render_doc_page(
     )
 }
 
+pub(in crate::ui) fn wrap_preview_page(
+    cx: &mut ElementContext<'_, App>,
+    intro: Option<&'static str>,
+    section_title: &'static str,
+    elements: Vec<AnyElement>,
+) -> AnyElement {
+    let preview = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4)
+            .items_start(),
+        |_cx| elements,
+    );
+
+    render_doc_page(
+        cx,
+        intro,
+        vec![
+            DocSection::new(section_title, preview)
+                .no_shell()
+                .max_w(Px(980.0)),
+        ],
+    )
+}
+
 pub(in crate::ui) fn muted_full_width<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    text: &'static str,
+    text: impl Into<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -116,13 +149,69 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
             layout.size.width = fret_ui::element::Length::Fill;
             layout
         },
-        text: Arc::from(text),
+        text: text.into(),
         style: Some(style),
         color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
     })
+}
+
+pub(in crate::ui) fn notes<I, T>(cx: &mut ElementContext<'_, App>, lines: I) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: Into<Arc<str>>,
+{
+    let lines = lines.into_iter().map(Into::into).collect::<Vec<Arc<str>>>();
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            lines
+                .iter()
+                .cloned()
+                .map(|line| muted_full_width(cx, line))
+                .collect::<Vec<_>>()
+        },
+    )
+}
+
+pub(in crate::ui) fn rtl(
+    cx: &mut ElementContext<'_, App>,
+    f: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement,
+) -> AnyElement {
+    fret_ui_kit::primitives::direction::with_direction_provider(
+        cx,
+        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+        f,
+    )
+}
+
+pub(in crate::ui) fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+}
+
+pub(in crate::ui) fn gap_card(
+    cx: &mut ElementContext<'_, App>,
+    title: &'static str,
+    details: &'static str,
+    test_id: &'static str,
+) -> (&'static str, AnyElement) {
+    let alert_content = shadcn::Alert::new([
+        icon(cx, "lucide.info"),
+        shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
+        shadcn::AlertDescription::new(details).into_element(cx),
+    ])
+    .variant(shadcn::AlertVariant::Default)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
+    .into_element(cx)
+    .test_id(test_id);
+    (title, alert_content)
 }
 
 fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyElement {
@@ -134,13 +223,25 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         code,
         max_w,
         test_id_prefix,
+        shell,
     } = section;
 
-    let preview_shell = demo_shell(cx, max_w, preview);
+    let has_code = code.is_some();
+    let test_id_prefix = if has_code && test_id_prefix.is_none() {
+        Some(auto_tabs_test_id_prefix(title, title_test_id))
+    } else {
+        test_id_prefix
+    };
+
+    let preview_shell = if shell {
+        demo_shell(cx, max_w, preview)
+    } else {
+        layout_only_shell(cx, max_w, preview)
+    };
     let preview = centered(cx, preview_shell);
 
     let content = match code {
-        Some(code) => preview_code_tabs(cx, test_id_prefix, preview, max_w, code),
+        Some(code) => preview_code_tabs(cx, test_id_prefix.as_deref(), preview, max_w, code),
         None => preview,
     };
 
@@ -204,9 +305,61 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
     cx.container(props, move |_cx| [body])
 }
 
+fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
+    let props = cx.with_theme(|theme| {
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
+        )
+    });
+    cx.container(props, move |_cx| [body])
+}
+
+fn auto_tabs_test_id_prefix(title: &'static str, title_test_id: Option<&'static str>) -> Arc<str> {
+    if let Some(title_test_id) = title_test_id {
+        let base = title_test_id
+            .strip_suffix("-title")
+            .unwrap_or(title_test_id);
+        return Arc::from(base);
+    }
+
+    let slug = slugify_for_test_id(title);
+    Arc::<str>::from(format!("docsec-{slug}"))
+}
+
+fn slugify_for_test_id(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut prev_dash = false;
+
+    for ch in input.chars() {
+        let ch = ch.to_ascii_lowercase();
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+            prev_dash = false;
+            continue;
+        }
+
+        if !prev_dash && !out.is_empty() {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+
+    while out.ends_with('-') {
+        out.pop();
+    }
+
+    if out.is_empty() {
+        "section".to_string()
+    } else {
+        out
+    }
+}
+
 fn preview_code_tabs(
     cx: &mut ElementContext<'_, App>,
-    test_id_prefix: Option<&'static str>,
+    test_id_prefix: Option<&str>,
     preview: AnyElement,
     max_w: Px,
     code: DocCodeBlock,
@@ -215,8 +368,7 @@ fn preview_code_tabs(
     let code_el = centered(cx, code_shell);
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
-        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .shared_indicator_motion(true);
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
         let tabs_test_id = format!("{prefix}-tabs");

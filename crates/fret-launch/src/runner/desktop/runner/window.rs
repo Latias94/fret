@@ -68,6 +68,7 @@ pub(super) struct DockTearoffFollow {
     pub(super) manual_follow: bool,
     pub(super) last_outer_pos: Option<PhysicalPosition<i32>>,
     pub(super) transparent_payload_applied: bool,
+    pub(super) always_on_top_applied: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -84,6 +85,12 @@ pub(super) struct RectF64 {
     pub(super) min_y: f64,
     pub(super) max_x: f64,
     pub(super) max_y: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct WindowUnderCursorHit {
+    pub(super) window: Option<fret_core::AppWindowId>,
+    pub(super) source: fret_runtime::WindowUnderCursorSource,
 }
 
 #[cfg(target_os = "macos")]
@@ -215,11 +222,7 @@ pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Wi
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_dock_drag_transparent_payload(
-    window: &dyn Window,
-    enabled: bool,
-    alpha: f32,
-) -> bool {
+pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -243,32 +246,45 @@ pub(super) fn set_dock_drag_transparent_payload(
     }
 
     unsafe {
-        let nil: *mut Object = std::ptr::null_mut();
-        let alpha: f64 = if enabled {
-            (alpha.clamp(0.0, 1.0)) as f64
-        } else {
-            1.0
-        };
+        let alpha = (opacity.clamp(0.0, 1.0)) as f64;
         let _: () = msg_send![ns_window, setAlphaValue: alpha];
-        let ignore: bool = enabled;
-        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+    }
+    true
+}
 
-        // When disabling, nudge the window ordering to avoid rare cases where a previously
-        // ignoring-mouse window does not immediately resume receiving pointer events.
-        if !enabled {
-            let _: () = msg_send![ns_window, orderFront: nil];
-        }
+#[cfg(target_os = "macos")]
+pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+    use objc::runtime::Object;
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let ns_window: *mut Object = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
+                if ns_view.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    unsafe { msg_send![ns_view, window] }
+                }
+            }
+            _ => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    };
+    if ns_window.is_null() {
+        return false;
     }
 
+    unsafe {
+        let ignore: bool = enabled;
+        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+    }
     true
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_dock_drag_transparent_payload(
-    window: &dyn Window,
-    enabled: bool,
-    alpha: f32,
-) -> bool {
+pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -281,19 +297,35 @@ pub(super) fn set_dock_drag_transparent_payload(
     if hwnd == 0 {
         return false;
     }
+    super::win32::set_window_alpha(hwnd, opacity);
+    true
+}
 
-    let alpha = if enabled { alpha } else { 1.0 };
-    super::win32::set_window_alpha(hwnd, alpha);
+#[cfg(target_os = "windows")]
+pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
     super::win32::set_window_mouse_passthrough(hwnd, enabled);
     true
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_dock_drag_transparent_payload(
-    _window: &dyn Window,
-    _enabled: bool,
-    _alpha: f32,
-) -> bool {
+pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
     false
 }
 
@@ -821,22 +853,45 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         ))
     }
 
-    pub(super) fn window_under_cursor(
+    pub(super) fn window_under_cursor_platform(
         &self,
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
-    ) -> Option<fret_core::AppWindowId> {
+    ) -> WindowUnderCursorHit {
         #[cfg(target_os = "macos")]
         if let Some(window) = self.window_under_cursor_macos(screen_pos, prefer_not) {
-            return Some(window);
+            return WindowUnderCursorHit {
+                window: Some(window),
+                source: fret_runtime::WindowUnderCursorSource::PlatformMacos,
+            };
         }
 
         #[cfg(target_os = "windows")]
         if let Some(window) = self.window_under_cursor_win32(screen_pos, prefer_not) {
-            return Some(window);
+            return WindowUnderCursorHit {
+                window: Some(window),
+                source: fret_runtime::WindowUnderCursorSource::PlatformWin32,
+            };
+        }
+
+        WindowUnderCursorHit {
+            window: None,
+            source: fret_runtime::WindowUnderCursorSource::Unknown,
+        }
+    }
+
+    pub(super) fn window_under_cursor_best_effort(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> WindowUnderCursorHit {
+        let platform = self.window_under_cursor_platform(screen_pos, prefer_not);
+        if platform.window.is_some() {
+            return platform;
         }
 
         let mut fallback: Option<fret_core::AppWindowId> = None;
+        let mut fallback_source = fret_runtime::WindowUnderCursorSource::Unknown;
         for &w in self.windows_z_order.iter().rev() {
             let Some(state) = self.windows.get(w) else {
                 continue;
@@ -857,9 +912,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             {
                 if prefer_not.is_some_and(|p| p == w) {
                     fallback = Some(w);
+                    fallback_source = fret_runtime::WindowUnderCursorSource::HeuristicZOrder;
                     continue;
                 }
-                return Some(w);
+                return WindowUnderCursorHit {
+                    window: Some(w),
+                    source: fret_runtime::WindowUnderCursorSource::HeuristicZOrder,
+                };
             }
         }
         // Fallback if the z-order list has drifted.
@@ -886,12 +945,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             {
                 if prefer_not.is_some_and(|p| p == w) {
                     fallback = Some(w);
+                    fallback_source = fret_runtime::WindowUnderCursorSource::HeuristicRects;
                     continue;
                 }
-                return Some(w);
+                return WindowUnderCursorHit {
+                    window: Some(w),
+                    source: fret_runtime::WindowUnderCursorSource::HeuristicRects,
+                };
             }
         }
-        fallback
+        WindowUnderCursorHit {
+            window: fallback,
+            source: if fallback.is_some() {
+                fallback_source
+            } else {
+                fret_runtime::WindowUnderCursorSource::Unknown
+            },
+        }
     }
 
     pub(super) fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {

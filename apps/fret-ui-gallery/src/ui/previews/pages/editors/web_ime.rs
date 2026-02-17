@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn preview_web_ime_harness(
     cx: &mut ElementContext<'_, App>,
@@ -431,5 +432,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
     })
         .test_id("ui-gallery-web-ime-region");
 
-    vec![header, inputs, region]
+    let page = doc_layout::wrap_preview_page(cx, None, "Web IME", vec![header, inputs, region]);
+
+    vec![page]
 }

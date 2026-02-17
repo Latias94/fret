@@ -8,7 +8,7 @@ pub(crate) fn content_view(
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
-    let (title, origin, docs_md, usage_md) = page_meta(selected);
+    let (title, origin) = page_meta(selected);
     let page_test_id: Arc<str> =
         Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
 
@@ -16,17 +16,17 @@ pub(crate) fn content_view(
     // ViewCache root (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`). Querying viewport bounds with
     // `Invalidation::Layout` would churn the view-cache key during interactive resize and defeat
     // reuse.
-    let header = stack::hstack(
+    let header = stack::vstack(
         cx,
-        stack::HStackProps::default()
+        stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_center(),
+            .gap(Space::N2)
+            .items_start(),
         |cx| {
             let left = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().flex_1().min_w_0())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N1)
                     .items_start(),
                 |cx| {
@@ -83,8 +83,8 @@ pub(crate) fn content_view(
             ])
             .refine_layout(
                 LayoutRefinement::default()
+                    .w_px(Px(180.0))
                     .max_w(Px(220.0))
-                    .min_w_0()
                     .flex_shrink(1.0),
             )
             .into_element(cx);
@@ -109,8 +109,8 @@ pub(crate) fn content_view(
             ])
             .refine_layout(
                 LayoutRefinement::default()
+                    .w_px(Px(180.0))
                     .max_w(Px(220.0))
-                    .min_w_0()
                     .flex_shrink(1.0),
             )
             .into_element(cx);
@@ -125,197 +125,32 @@ pub(crate) fn content_view(
                             .size(shadcn::ButtonSize::Sm)
                             .on_click(CMD_CLIPBOARD_COPY_LINK)
                             .into_element(cx),
-                        shadcn::Button::new("Copy usage")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_USAGE)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy notes")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_NOTES)
-                            .into_element(cx),
                     ]
                 },
             );
 
-            let right = stack::hstack(
+            let presets = stack::hstack(
                 cx,
-                stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| [theme_select, motion_select, copy_actions],
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N3)
+                    .items_center(),
+                |_cx| [theme_select, motion_select],
+            );
+            let right = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2)
+                    .items_start(),
+                |_cx| [presets, copy_actions],
             );
 
-            [left, right]
+            vec![left, right]
         },
     );
 
-    let preview_panel = page_preview(
-        cx,
-        theme,
-        selected,
-        models.motion_preset.clone(),
-        models.motion_preset_open.clone(),
-        models.view_cache_enabled.clone(),
-        models.view_cache_cache_shell.clone(),
-        models.view_cache_inner_enabled.clone(),
-        models.view_cache_popover_open.clone(),
-        models.view_cache_continuous.clone(),
-        models.view_cache_counter.clone(),
-        models.popover_open.clone(),
-        models.dialog_open.clone(),
-        models.dialog_glass_open.clone(),
-        models.alert_dialog_open.clone(),
-        models.sheet_open.clone(),
-        models.portal_geometry_popover_open.clone(),
-        models.select_value.clone(),
-        models.select_open.clone(),
-        models.combobox_value.clone(),
-        models.combobox_open.clone(),
-        models.combobox_query.clone(),
-        models.date_picker_open.clone(),
-        models.date_picker_month.clone(),
-        models.date_picker_selected.clone(),
-        models.time_picker_open.clone(),
-        models.time_picker_selected.clone(),
-        models.resizable_h_fractions.clone(),
-        models.resizable_v_fractions.clone(),
-        models.data_table_state.clone(),
-        models.data_grid_selected_row.clone(),
-        models.tabs_value.clone(),
-        models.accordion_value.clone(),
-        models.avatar_demo_image.clone(),
-        models.image_fit_demo_wide_image.clone(),
-        models.image_fit_demo_tall_image.clone(),
-        models.image_fit_demo_streaming_image.clone(),
-        models.progress.clone(),
-        models.checkbox.clone(),
-        models.switch.clone(),
-        models.material3_checkbox.clone(),
-        models.material3_switch.clone(),
-        models.material3_radio_value.clone(),
-        models.material3_tabs_value.clone(),
-        models.material3_list_value.clone(),
-        models.material3_expressive.clone(),
-        models.material3_navigation_bar_value.clone(),
-        models.material3_navigation_rail_value.clone(),
-        models.material3_navigation_drawer_value.clone(),
-        models.material3_modal_navigation_drawer_open.clone(),
-        models.material3_dialog_open.clone(),
-        models.material3_text_field_value.clone(),
-        models.material3_text_field_disabled.clone(),
-        models.material3_text_field_error.clone(),
-        models.material3_autocomplete_value.clone(),
-        models.material3_autocomplete_disabled.clone(),
-        models.material3_autocomplete_error.clone(),
-        models.material3_autocomplete_dialog_open.clone(),
-        models.material3_menu_open.clone(),
-        models.text_input.clone(),
-        models.text_area.clone(),
-        models.dropdown_open.clone(),
-        models.context_menu_open.clone(),
-        models.context_menu_edge_open.clone(),
-        models.cmdk_open.clone(),
-        models.cmdk_query.clone(),
-        models.last_action.clone(),
-        models.sonner_position.clone(),
-        models.virtual_list_torture_jump.clone(),
-        models.virtual_list_torture_edit_row.clone(),
-        models.virtual_list_torture_edit_text.clone(),
-        models.virtual_list_torture_scroll.clone(),
-        models.code_editor_syntax_rust.clone(),
-        models.code_editor_boundary_identifier.clone(),
-        models.code_editor_soft_wrap.clone(),
-        models.code_editor_folds.clone(),
-        models.code_editor_inlays.clone(),
-    );
-
-    let render_markdown_or_text = |cx: &mut ElementContext<'_, App>, md: &'static str| {
-        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-            cx.text(md)
-        } else {
-            markdown::Markdown::new(Arc::from(md)).into_element(cx)
-        }
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>,
-                   title: &'static str,
-                   test_id: &'static str,
-                   body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| vec![shadcn::typography::h3(cx, title).test_id(test_id), body],
-        )
-    };
-
-    let is_shadcn_page = crate::spec::page_group_title(selected)
-        .is_some_and(|title| title == "Shadcn" || title == "Shadcn (Extras)");
-    let is_ai_page = selected.starts_with("ai_");
-    let use_tabs_layout = !(is_shadcn_page || is_ai_page) && (bisect & BISECT_DISABLE_TABS) == 0;
-
-    let body_content = if use_tabs_layout {
-        let active_tab: Arc<str> = cx
-            .watch_model(&models.content_tab)
-            .layout()
-            .cloned()
-            .flatten()
-            .unwrap_or_else(|| Arc::from("preview"));
-
-        let docs_panel = if active_tab.as_ref() != "docs" {
-            Vec::new()
-        } else {
-            vec![render_markdown_or_text(cx, docs_md)]
-        };
-        let usage_panel = if active_tab.as_ref() != "usage" {
-            Vec::new()
-        } else {
-            vec![render_markdown_or_text(cx, usage_md)]
-        };
-
-        shadcn::Tabs::new(models.content_tab.clone())
-            .refine_layout(LayoutRefinement::default().w_full())
-            .list_full_width(true)
-            .items([
-                shadcn::TabsItem::new("preview", "Preview", [preview_panel]),
-                shadcn::TabsItem::new("usage", "Usage", usage_panel),
-                shadcn::TabsItem::new("docs", "Notes", docs_panel),
-            ])
-            .into_element(cx)
-    } else {
-        let mut page_body_sections: Vec<AnyElement> = Vec::with_capacity(3);
-        page_body_sections.push(preview_panel);
-        if !usage_md.trim().is_empty() {
-            let usage_body =
-                render_markdown_or_text(cx, usage_md).test_id("ui-gallery-section-usage-body");
-            page_body_sections.push(section(
-                cx,
-                "Usage",
-                "ui-gallery-section-usage-title",
-                usage_body,
-            ));
-        }
-        if !docs_md.trim().is_empty() {
-            let notes_body =
-                render_markdown_or_text(cx, docs_md).test_id("ui-gallery-section-notes-body");
-            page_body_sections.push(section(
-                cx,
-                "Notes",
-                "ui-gallery-section-notes-title",
-                notes_body,
-            ));
-        }
-
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N6),
-            move |_cx| page_body_sections,
-        )
-    };
+    let preview_panel = page_preview(cx, theme, selected, models);
 
     let body = cx.keyed("ui_gallery.content_body", |cx| {
         stack::vstack(
@@ -323,7 +158,7 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| [header, body_content],
+            |_cx| [header, preview_panel],
         )
     });
 
@@ -380,81 +215,84 @@ fn page_preview(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     selected: &str,
-    motion_preset: Model<Option<Arc<str>>>,
-    motion_preset_open: Model<bool>,
-    view_cache_enabled: Model<bool>,
-    view_cache_cache_shell: Model<bool>,
-    view_cache_inner_enabled: Model<bool>,
-    view_cache_popover_open: Model<bool>,
-    view_cache_continuous: Model<bool>,
-    view_cache_counter: Model<u64>,
-    popover_open: Model<bool>,
-    dialog_open: Model<bool>,
-    dialog_glass_open: Model<bool>,
-    alert_dialog_open: Model<bool>,
-    sheet_open: Model<bool>,
-    portal_geometry_popover_open: Model<bool>,
-    select_value: Model<Option<Arc<str>>>,
-    select_open: Model<bool>,
-    combobox_value: Model<Option<Arc<str>>>,
-    combobox_open: Model<bool>,
-    combobox_query: Model<String>,
-    date_picker_open: Model<bool>,
-    date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
-    date_picker_selected: Model<Option<Date>>,
-    time_picker_open: Model<bool>,
-    time_picker_selected: Model<time::Time>,
-    resizable_h_fractions: Model<Vec<f32>>,
-    resizable_v_fractions: Model<Vec<f32>>,
-    data_table_state: Model<fret_ui_headless::table::TableState>,
-    data_grid_selected_row: Model<Option<u64>>,
-    tabs_value: Model<Option<Arc<str>>>,
-    accordion_value: Model<Option<Arc<str>>>,
-    avatar_demo_image: Model<Option<ImageId>>,
-    image_fit_demo_wide_image: Model<Option<ImageId>>,
-    image_fit_demo_tall_image: Model<Option<ImageId>>,
-    image_fit_demo_streaming_image: Model<Option<ImageId>>,
-    progress: Model<f32>,
-    checkbox: Model<bool>,
-    switch: Model<bool>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
-    material3_list_value: Model<Arc<str>>,
-    material3_expressive: Model<bool>,
-    material3_navigation_bar_value: Model<Arc<str>>,
-    material3_navigation_rail_value: Model<Arc<str>>,
-    material3_navigation_drawer_value: Model<Arc<str>>,
-    material3_modal_navigation_drawer_open: Model<bool>,
-    material3_dialog_open: Model<bool>,
-    material3_text_field_value: Model<String>,
-    material3_text_field_disabled: Model<bool>,
-    material3_text_field_error: Model<bool>,
-    material3_autocomplete_value: Model<String>,
-    material3_autocomplete_disabled: Model<bool>,
-    material3_autocomplete_error: Model<bool>,
-    material3_autocomplete_dialog_open: Model<bool>,
-    material3_menu_open: Model<bool>,
-    text_input: Model<String>,
-    text_area: Model<String>,
-    dropdown_open: Model<bool>,
-    context_menu_open: Model<bool>,
-    context_menu_edge_open: Model<bool>,
-    cmdk_open: Model<bool>,
-    cmdk_query: Model<String>,
-    last_action: Model<Arc<str>>,
-    sonner_position: Model<shadcn::ToastPosition>,
-    virtual_list_torture_jump: Model<String>,
-    virtual_list_torture_edit_row: Model<Option<u64>>,
-    virtual_list_torture_edit_text: Model<String>,
-    virtual_list_torture_scroll: VirtualListScrollHandle,
-    code_editor_syntax_rust: Model<bool>,
-    code_editor_boundary_identifier: Model<bool>,
-    code_editor_soft_wrap: Model<bool>,
-    code_editor_folds: Model<bool>,
-    code_editor_inlays: Model<bool>,
+    models: &UiGalleryModels,
 ) -> AnyElement {
+    let motion_preset = models.motion_preset.clone();
+    let motion_preset_open = models.motion_preset_open.clone();
+    let view_cache_enabled = models.view_cache_enabled.clone();
+    let view_cache_cache_shell = models.view_cache_cache_shell.clone();
+    let view_cache_inner_enabled = models.view_cache_inner_enabled.clone();
+    let view_cache_popover_open = models.view_cache_popover_open.clone();
+    let view_cache_continuous = models.view_cache_continuous.clone();
+    let view_cache_counter = models.view_cache_counter.clone();
+    let popover_open = models.popover_open.clone();
+    let dialog_open = models.dialog_open.clone();
+    let dialog_glass_open = models.dialog_glass_open.clone();
+    let alert_dialog_open = models.alert_dialog_open.clone();
+    let sheet_open = models.sheet_open.clone();
+    let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
+    let select_value = models.select_value.clone();
+    let select_open = models.select_open.clone();
+    let combobox_value = models.combobox_value.clone();
+    let combobox_open = models.combobox_open.clone();
+    let combobox_query = models.combobox_query.clone();
+    let date_picker_open = models.date_picker_open.clone();
+    let date_picker_month = models.date_picker_month.clone();
+    let date_picker_selected = models.date_picker_selected.clone();
+    let time_picker_open = models.time_picker_open.clone();
+    let time_picker_selected = models.time_picker_selected.clone();
+    let resizable_h_fractions = models.resizable_h_fractions.clone();
+    let resizable_v_fractions = models.resizable_v_fractions.clone();
+    let data_table_state = models.data_table_state.clone();
+    let data_grid_selected_row = models.data_grid_selected_row.clone();
+    let tabs_value = models.tabs_value.clone();
+    let accordion_value = models.accordion_value.clone();
+    let avatar_demo_image = models.avatar_demo_image.clone();
+    let image_fit_demo_wide_image = models.image_fit_demo_wide_image.clone();
+    let image_fit_demo_tall_image = models.image_fit_demo_tall_image.clone();
+    let image_fit_demo_streaming_image = models.image_fit_demo_streaming_image.clone();
+    let progress = models.progress.clone();
+    let checkbox = models.checkbox.clone();
+    let switch = models.switch.clone();
+    let material3_checkbox = models.material3_checkbox.clone();
+    let material3_switch = models.material3_switch.clone();
+    let material3_radio_value = models.material3_radio_value.clone();
+    let material3_tabs_value = models.material3_tabs_value.clone();
+    let material3_list_value = models.material3_list_value.clone();
+    let material3_expressive = models.material3_expressive.clone();
+    let material3_navigation_bar_value = models.material3_navigation_bar_value.clone();
+    let material3_navigation_rail_value = models.material3_navigation_rail_value.clone();
+    let material3_navigation_drawer_value = models.material3_navigation_drawer_value.clone();
+    let material3_modal_navigation_drawer_open =
+        models.material3_modal_navigation_drawer_open.clone();
+    let material3_dialog_open = models.material3_dialog_open.clone();
+    let material3_text_field_value = models.material3_text_field_value.clone();
+    let material3_text_field_disabled = models.material3_text_field_disabled.clone();
+    let material3_text_field_error = models.material3_text_field_error.clone();
+    let material3_autocomplete_value = models.material3_autocomplete_value.clone();
+    let material3_autocomplete_disabled = models.material3_autocomplete_disabled.clone();
+    let material3_autocomplete_error = models.material3_autocomplete_error.clone();
+    let material3_autocomplete_dialog_open = models.material3_autocomplete_dialog_open.clone();
+    let material3_menu_open = models.material3_menu_open.clone();
+    let text_input = models.text_input.clone();
+    let text_area = models.text_area.clone();
+    let dropdown_open = models.dropdown_open.clone();
+    let context_menu_open = models.context_menu_open.clone();
+    let context_menu_edge_open = models.context_menu_edge_open.clone();
+    let cmdk_open = models.cmdk_open.clone();
+    let cmdk_query = models.cmdk_query.clone();
+    let last_action = models.last_action.clone();
+    let sonner_position = models.sonner_position.clone();
+    let virtual_list_torture_jump = models.virtual_list_torture_jump.clone();
+    let virtual_list_torture_edit_row = models.virtual_list_torture_edit_row.clone();
+    let virtual_list_torture_edit_text = models.virtual_list_torture_edit_text.clone();
+    let virtual_list_torture_scroll = models.virtual_list_torture_scroll.clone();
+    let code_editor_syntax_rust = models.code_editor_syntax_rust.clone();
+    let code_editor_boundary_identifier = models.code_editor_boundary_identifier.clone();
+    let code_editor_soft_wrap = models.code_editor_soft_wrap.clone();
+    let code_editor_folds = models.code_editor_folds.clone();
+    let code_editor_inlays = models.code_editor_inlays.clone();
+
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
         PAGE_MOTION_PRESETS => {

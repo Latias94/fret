@@ -5673,6 +5673,60 @@ mod tests {
     }
 
     #[test]
+    fn max_content_width_round_trip_does_not_force_wrapping_under_fractional_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let scale_factor = 1.5_f32;
+        let base_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::default(),
+            size: Px(20.0),
+            weight: fret_core::FontWeight::SEMIBOLD,
+            ..Default::default()
+        };
+
+        let contents = ["Demo", "Description", "Choice Card"];
+        for content in contents {
+            let max_content = text.measure(content, &style, base_constraints);
+            assert!(
+                max_content.size.width.0 > 0.0 && max_content.size.height.0 > 0.0,
+                "expected non-empty metrics for {content:?}: {max_content:?}"
+            );
+
+            let tight_constraints = TextConstraints {
+                max_width: Some(max_content.size.width),
+                ..base_constraints
+            };
+            let measured_tight = text.measure(content, &style, tight_constraints);
+            let (_blob, prepared_tight) = text.prepare(content, &style, tight_constraints);
+
+            let eps = 0.01_f32;
+            assert!(
+                measured_tight.size.height.0 <= max_content.size.height.0 + eps,
+                "expected max-content width round-trip not to introduce wrapping in measure (scale={scale_factor}); content={content:?} max_content={max_content:?} measured_tight={measured_tight:?}"
+            );
+            assert!(
+                prepared_tight.size.height.0 <= max_content.size.height.0 + eps,
+                "expected max-content width round-trip not to introduce wrapping in prepare (scale={scale_factor}); content={content:?} max_content={max_content:?} prepared_tight={prepared_tight:?}"
+            );
+        }
+    }
+
+    #[test]
     fn grapheme_wrapped_measure_attributed_matches_prepare_under_fractional_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);

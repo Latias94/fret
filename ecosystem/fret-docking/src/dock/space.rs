@@ -2021,6 +2021,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     current_window: drag.current_window,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    transparent_payload_applied: drag.transparent_payload_applied,
+                    window_under_cursor_source: drag.window_under_cursor_source,
                 })
             });
             let floating_drag =
@@ -5813,6 +5815,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     current_window: drag.current_window,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    transparent_payload_applied: drag.transparent_payload_applied,
+                    window_under_cursor_source: drag.window_under_cursor_source,
                 })
             });
             let floating_drag =
@@ -6050,6 +6054,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     current_window: drag.current_window,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
+                    transparent_payload_applied: drag.transparent_payload_applied,
+                    window_under_cursor_source: drag.window_under_cursor_source,
                 })
             });
             let floating_drag =

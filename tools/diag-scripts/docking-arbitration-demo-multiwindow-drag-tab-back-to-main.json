@@ -4,6 +4,9 @@
     "name": "Docking arbitration demo: drag a torn-off tab back to the main window",
     "tags": ["docking", "multiwindow", "drag", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
     "target_hints": [
       "This script exercises a cross-window tab drag: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
       "It relies on schema v2 window-targeted steps to migrate the active script across windows.",

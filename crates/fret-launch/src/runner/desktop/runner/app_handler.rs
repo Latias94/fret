@@ -291,10 +291,22 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 // winit may not emit `WindowEvent::MouseInput`. When releasing over any window,
                 // prefer the regular window event path; otherwise we can incorrectly "force tear-off"
                 // even when the user is trying to dock back into another window.
-                if let Some(pos) = self.cursor_screen_pos
-                    && self.window_under_cursor(pos, None).is_some()
-                {
-                    return;
+                if let Some(pos) = self.cursor_screen_pos {
+                    let caps = self
+                        .app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    let reliable_window_under_cursor = caps.ui.window_hover_detection
+                        == fret_runtime::WindowHoverDetectionQuality::Reliable;
+                    if reliable_window_under_cursor
+                        && self
+                            .window_under_cursor_platform(pos, None)
+                            .window
+                            .is_some()
+                    {
+                        return;
+                    }
                 }
 
                 // Releasing the mouse button outside any window may not deliver a

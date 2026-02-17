@@ -385,24 +385,20 @@ pub(super) fn input_group(cx: &mut ElementContext<'_, App>, models: &ComboboxMod
 }
 
 pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
-    let rtl_combo = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::Combobox::new(models.rtl_value.clone(), models.rtl_open.clone())
-                .a11y_label("Combobox RTL")
-                .width(Px(260.0))
-                .placeholder("???? ???? ?????")
-                .query_model(models.rtl_query.clone())
-                .items([
-                    shadcn::ComboboxItem::new("next", "Next.js"),
-                    shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-                    shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-                ])
-                .into_element(cx)
-                .test_id("ui-gallery-combobox-rtl-trigger")
-        },
-    );
+    let rtl_combo = doc_layout::rtl(cx, |cx| {
+        shadcn::Combobox::new(models.rtl_value.clone(), models.rtl_open.clone())
+            .a11y_label("Combobox RTL")
+            .width(Px(260.0))
+            .placeholder("???? ???? ?????")
+            .query_model(models.rtl_query.clone())
+            .items([
+                shadcn::ComboboxItem::new("next", "Next.js"),
+                shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+                shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-combobox-rtl-trigger")
+    });
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()

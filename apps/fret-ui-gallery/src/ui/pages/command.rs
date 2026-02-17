@@ -237,18 +237,14 @@ pub(super) fn preview_command_palette(
         .heading("RTL")
         .into(),
     ];
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
-                .placeholder("Type a command or search...")
-                .a11y_label("RTL command list")
-                .entries(rtl_entries)
-                .into_element(cx)
-                .test_id("ui-gallery-command-rtl")
-        },
-    );
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
+            .placeholder("Type a command or search...")
+            .a11y_label("RTL command list")
+            .entries(rtl_entries)
+            .into_element(cx)
+            .test_id("ui-gallery-command-rtl")
+    });
 
     let last = cx
         .app
@@ -256,33 +252,23 @@ pub(super) fn preview_command_palette(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let notes = stack::vstack(
+    let notes_stack = doc_layout::notes(
+        cx,
+        [
+            "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
+            "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
+            "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
+            "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
+        ],
+    );
+
+    let state_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/command.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
-                ),
-                shadcn::typography::muted(cx, Arc::from(format!("Last action: {last}"))),
-            ]
-        },
+        |cx| vec![cx.text(format!("last action: {last}"))],
     );
 
     let body = doc_layout::render_doc_page(
@@ -291,8 +277,21 @@ pub(super) fn preview_command_palette(
             "Preview follows shadcn Command docs order: Basic, Shortcuts, Groups, Scrollable, RTL.",
         ),
         vec![
+            DocSection::new("State", state_content)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"let last = cx
+    .app
+    .models()
+    .get_cloned(&last_action)
+    .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+cx.text(format!("last action: {last}")).into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic_dialog)
-                .description("CommandDialog with a trigger button and an overlay list.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-basic")
                 .code(
                     "rust",
                     r#"let dialog = shadcn::CommandDialog::new(open, query, items)
@@ -301,27 +300,67 @@ pub(super) fn preview_command_palette(
     .into_element(cx, |cx| {
         shadcn::Button::new("Open Command Menu").toggle_model(open).into_element(cx)
     });"#,
-                )
-                .max_w(Px(760.0)),
+                ),
             DocSection::new("Shortcuts", shortcuts_palette)
-                .description("Inline CommandPalette entries with visible keyboard shortcuts.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-shortcuts")
+                .code(
+                    "rust",
+                    r#"let palette = shadcn::CommandPalette::new(query, Vec::new())
+    .entries([
+        shadcn::CommandGroup::new([item_a, item_b]).heading("Suggestions").into(),
+        shadcn::CommandSeparator::new().into(),
+        item_with_shortcut.into(),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Groups", groups_palette)
-                .description("Group headings + separators for structured command catalogs.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"let entries = vec![
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Calendar").keywords(["events"]),
+        shadcn::CommandItem::new("Calculator").keywords(["math"]),
+    ])
+    .heading("Suggestions")
+    .into(),
+    shadcn::CommandSeparator::new().into(),
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Profile").shortcut("Cmd+,"),
+        shadcn::CommandItem::new("Settings").shortcut("Cmd+S"),
+    ])
+    .heading("Settings")
+    .into(),
+];
+
+shadcn::CommandPalette::new(query, Vec::new())
+    .placeholder("Search grouped commands...")
+    .entries(entries)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Scrollable", scrollable_palette)
-                .description(
-                    "Constrain list height to keep layouts stable while filtering long lists.",
-                )
-                .max_w(Px(760.0)),
-            DocSection::new("RTL", rtl_content)
-                .description(
-                    "Direction provider sample to validate RTL layout and shortcut rendering.",
-                )
-                .max_w(Px(760.0)),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes.")
-                .max_w(Px(820.0)),
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-scrollable")
+                .code(
+                    "rust",
+                    r#"shadcn::CommandPalette::new(query, Vec::new())
+    .entries(long_entries)
+    .refine_scroll_layout(LayoutRefinement::default().h_px(Px(220.0)).max_h(Px(220.0)))
+
+with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx)
+});"#,
+                ),
+            DocSection::new("RTL", rtl).max_w(Px(760.0)).code(
+                "rust",
+                r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx),
+);"#,
+            ),
+            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
     );
 

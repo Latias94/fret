@@ -665,6 +665,7 @@ pub struct FieldLabel {
     text: Arc<str>,
     layout: LayoutRefinement,
     for_control: Option<ControlId>,
+    text_color: Option<ColorRef>,
 }
 
 impl FieldLabel {
@@ -673,6 +674,7 @@ impl FieldLabel {
             text: text.into(),
             layout: LayoutRefinement::default(),
             for_control: None,
+            text_color: None,
         }
     }
 
@@ -690,9 +692,14 @@ impl FieldLabel {
         self
     }
 
+    pub fn text_color(mut self, text_color: ColorRef) -> Self {
+        self.text_color = Some(text_color);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, px, line_height) = {
+        let (default_fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
 
             // Upstream `FieldLabel` uses `leading-snug` instead of the plain `Label` default.
@@ -713,6 +720,11 @@ impl FieldLabel {
             (fg, px, line_height)
         };
 
+        let fg = self
+            .text_color
+            .clone()
+            .unwrap_or(ColorRef::Color(default_fg));
+
         let Some(for_control) = self.for_control.clone() else {
             let align = match direction_prim::use_direction_in_scope(cx, None) {
                 direction_prim::LayoutDirection::Rtl => TextAlign::End,
@@ -724,7 +736,7 @@ impl FieldLabel {
                 .text_size_px(px)
                 .line_height_px(line_height)
                 .font_medium()
-                .text_color(ColorRef::Color(fg))
+                .text_color(fg)
                 .wrap(TextWrap::Word)
                 .text_align(align)
                 .into_element(cx);
@@ -734,6 +746,7 @@ impl FieldLabel {
         let pressable_layout = decl_style::layout_style(&theme, self.layout);
         let control_registry = control_registry_model(cx);
         let text = self.text.clone();
+        let fg = fg.clone();
 
         cx.pressable_with_id_props(move |cx, _st, id| {
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
@@ -817,7 +830,7 @@ impl FieldLabel {
                 .text_size_px(px)
                 .line_height_px(line_height)
                 .font_medium()
-                .text_color(ColorRef::Color(fg))
+                .text_color(fg.clone())
                 .wrap(TextWrap::Word)
                 .text_align(align)
                 .into_element(cx);

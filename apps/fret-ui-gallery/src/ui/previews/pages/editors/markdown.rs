@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn markdown_editor_source_text() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
@@ -495,7 +496,9 @@ pub(in crate::ui) fn preview_markdown_editor_source(
             .test_id("ui-gallery-markdown-editor-root"),
     );
 
-    vec![header, body]
+    let page = doc_layout::wrap_preview_page(cx, None, "Markdown", vec![header, body]);
+
+    vec![page]
 }
 
 pub(in crate::ui) fn selection_perf_source() -> Arc<str> {

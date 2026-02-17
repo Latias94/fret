@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_chart_torture(
     cx: &mut ElementContext<'_, App>,
@@ -13,19 +14,6 @@ pub(in crate::ui) fn preview_chart_torture(
     use fret_chart::ChartCanvas;
     use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
-
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: stress canvas charts with pan/zoom (candidate for prepaint-windowed sampling)."),
-                cx.text("Use scripted drag+wheel steps to validate correctness and collect perf bundles."),
-            ]
-        },
-    );
 
     let chart =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -156,5 +144,18 @@ pub(in crate::ui) fn preview_chart_torture(
             )]
         });
 
-    vec![header, chart]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Goal: stress canvas charts with pan/zoom (candidate for prepaint-windowed sampling).",
+        ),
+        vec![DocSection::new("Chart", chart)
+            .description(
+                "Use scripted drag+wheel steps to validate correctness and collect perf bundles.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

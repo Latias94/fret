@@ -186,6 +186,34 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
     }
 }
 
+fn normalize_text_measure_constraints(
+    mut constraints: LayoutConstraints,
+    width: Length,
+    wrap: TextWrap,
+) -> LayoutConstraints {
+    // During intrinsic sizing, parents may pass `available.width = 0` as a placeholder for
+    // "unknown". Treat that as non-definite so shrink-wrapped text can report its natural width
+    // (and avoid pathological mid-word wrapping when `TextWrap::Word` is enabled).
+    //
+    // This mirrors gpui's behavior: text wraps only when a definite width is known/available; for
+    // min/max-content probes, wrap width is omitted.
+    if width != Length::Auto {
+        return constraints;
+    }
+    if constraints.known.width.is_some() {
+        return constraints;
+    }
+    if constraints.available.width.definite() != Some(Px(0.0)) {
+        return constraints;
+    }
+
+    constraints.available.width = match wrap {
+        TextWrap::Word | TextWrap::None => AvailableSpace::MaxContent,
+        TextWrap::Grapheme => AvailableSpace::MinContent,
+    };
+    constraints
+}
+
 fn max_non_absolute_children<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     window: AppWindowId,
@@ -516,15 +544,17 @@ impl ElementHostWidget {
     }
 
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
+        let layout_constraints =
+            normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
+        let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
-        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
             .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
-        let constraints = TextConstraints {
+        let text_constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
@@ -532,9 +562,10 @@ impl ElementHostWidget {
             scale_factor: cx.scale_factor,
         };
         cx.tree
-            .debug_record_text_constraints_measured(cx.node, constraints);
-        let metrics = cx.services.text().measure(&input, constraints);
-        let clamped = clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints);
+            .debug_record_text_constraints_measured(cx.node, text_constraints);
+        let metrics = cx.services.text().measure(&input, text_constraints);
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
             let font_stack_key = cx
@@ -575,15 +606,17 @@ impl ElementHostWidget {
         cx: &mut MeasureCx<'_, H>,
         props: crate::element::StyledTextProps,
     ) -> Size {
+        let layout_constraints =
+            normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
+        let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
-        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
             .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
-        let constraints = TextConstraints {
+        let text_constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
@@ -591,9 +624,10 @@ impl ElementHostWidget {
             scale_factor: cx.scale_factor,
         };
         cx.tree
-            .debug_record_text_constraints_measured(cx.node, constraints);
-        let metrics = cx.services.text().measure(&input, constraints);
-        let clamped = clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints);
+            .debug_record_text_constraints_measured(cx.node, text_constraints);
+        let metrics = cx.services.text().measure(&input, text_constraints);
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
             let font_stack_key = cx
@@ -634,15 +668,17 @@ impl ElementHostWidget {
         cx: &mut MeasureCx<'_, H>,
         props: crate::element::SelectableTextProps,
     ) -> Size {
+        let layout_constraints =
+            normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
+        let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
-        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
             .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
-        let constraints = TextConstraints {
+        let text_constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
@@ -650,9 +686,10 @@ impl ElementHostWidget {
             scale_factor: cx.scale_factor,
         };
         cx.tree
-            .debug_record_text_constraints_measured(cx.node, constraints);
-        let metrics = cx.services.text().measure(&input, constraints);
-        let clamped = clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints);
+            .debug_record_text_constraints_measured(cx.node, text_constraints);
+        let metrics = cx.services.text().measure(&input, text_constraints);
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
             let font_stack_key = cx

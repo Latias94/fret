@@ -243,7 +243,9 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
     - Fret: enable via `DockingInteractionSettings::transparent_payload_during_follow` (default false), or force on via
       `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`. This makes the dock-floating follow window semi-transparent and best-effort
       “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
-      - Anchor: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`).
+      - Anchor: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
+        `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style),
+        `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
@@ -563,6 +565,7 @@ Open parity question:
     - backends may provide `MouseHoveredViewport`, otherwise heuristics run (including “peek behind moving viewport”).
   - Fret:
     - runner uses `cursor_screen_pos` + `window_under_cursor(...)` and a “prefer_not” moving window rule.
+    - Diagnostics expose the selection source (`platform_*` vs `latched`/`heuristic_*`) so we can gate regressions.
   - Evidence anchors:
     - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`:
       - `route_internal_drag_hover_from_cursor`
@@ -571,6 +574,9 @@ Open parity question:
         - Windows: Win32 z-order walk (`WindowFromPoint` + `GetWindow(GW_HWNDNEXT)`) prefers the true frontmost window.
         - macOS: `NSApp.orderedWindows` ordering prefers the true frontmost window.
         - Fallback: focus/raise-based best-effort ordering (`window_hit_test_order`).
+    - Diagnostics + gates:
+      - Predicate: `crates/fret-diag-protocol/src/lib.rs` (`dock_drag_window_under_cursor_source_is`)
+      - Gate: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json` (asserts `source=platform`)
 
 ---
 

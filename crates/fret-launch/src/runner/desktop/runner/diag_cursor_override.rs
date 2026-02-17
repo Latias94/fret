@@ -4,6 +4,10 @@ use std::time::SystemTime;
 use fret_core::AppWindowId;
 use slotmap::KeyData;
 use winit::dpi::PhysicalPosition;
+#[cfg(target_os = "windows")]
+use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+#[cfg(target_os = "windows")]
+use winit::window::Window;
 
 #[derive(Debug)]
 pub(super) struct DiagCursorScreenPosOverride {
@@ -17,6 +21,18 @@ enum CursorOverrideKindV1 {
     ScreenPhysical,
     WindowClientPhysical,
     WindowClientLogical,
+}
+
+#[cfg(target_os = "windows")]
+fn win32_decoration_offset_for_window(
+    window: &dyn Window,
+) -> Option<winit::dpi::PhysicalPosition<i32>> {
+    let handle = window.window_handle().ok()?;
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return None;
+    };
+    let hwnd = handle.hwnd.get();
+    super::win32::decoration_offset_for_hwnd(hwnd)
 }
 
 impl DiagCursorScreenPosOverride {
@@ -71,6 +87,10 @@ impl DiagCursorScreenPosOverride {
                 let Ok(outer) = state.window.outer_position() else {
                     return false;
                 };
+                #[cfg(target_os = "windows")]
+                let deco = win32_decoration_offset_for_window(state.window.as_ref())
+                    .unwrap_or_else(|| state.window.surface_position());
+                #[cfg(not(target_os = "windows"))]
                 let deco = state.window.surface_position();
                 let origin = super::window::client_origin_screen(outer, deco);
                 PhysicalPosition::new(origin.x + x_px, origin.y + y_px)
@@ -86,6 +106,10 @@ impl DiagCursorScreenPosOverride {
                 let Ok(outer) = state.window.outer_position() else {
                     return false;
                 };
+                #[cfg(target_os = "windows")]
+                let deco = win32_decoration_offset_for_window(state.window.as_ref())
+                    .unwrap_or_else(|| state.window.surface_position());
+                #[cfg(not(target_os = "windows"))]
                 let deco = state.window.surface_position();
                 let origin = super::window::client_origin_screen(outer, deco);
                 let scale = state.window.scale_factor().max(0.000_001);

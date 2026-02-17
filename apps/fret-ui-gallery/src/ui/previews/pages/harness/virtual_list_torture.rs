@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_virtual_list_torture(
     cx: &mut ElementContext<'_, App>,
@@ -601,5 +602,13 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             .test_id("ui-gallery-virtual-list-torture-root"),
     );
 
-    vec![root]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit).",
+        ),
+        vec![DocSection::new("Harness", root).no_shell().max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

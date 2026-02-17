@@ -50,14 +50,18 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .test_id(test_id)
     };
 
-    let demo = stack::vstack(
+    let demo_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
+                shadcn::typography::muted(
+                    cx,
+                    "shadcn Chart is Recharts composition. Fret page focuses on chart tooltip/legend contracts.",
+                ),
                 tooltip(
                     cx,
                     "January",
@@ -77,12 +81,12 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let component = stack::vstack(
+    let component_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
                 shadcn::typography::muted(
@@ -97,12 +101,12 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let tooltip_section = stack::vstack(
+    let tooltip_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
                 tooltip(
@@ -133,12 +137,12 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let legend_section = stack::vstack(
+    let legend_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
                 legend(
@@ -159,12 +163,12 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let accessibility = stack::vstack(
+    let accessibility_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
                 shadcn::typography::muted(
@@ -179,65 +183,43 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let rtl = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                |cx| {
-                    vec![
-                        tooltip(
-                            cx,
-                            "?????",
-                            shadcn::ChartTooltipIndicator::Dot,
-                            false,
-                            false,
-                            "ui-gallery-chart-rtl-tooltip",
-                        ),
-                        legend(
-                            cx,
-                            shadcn::ChartLegendVerticalAlign::Bottom,
-                            true,
-                            false,
-                            "ui-gallery-chart-rtl-legend",
-                        ),
-                    ]
-                },
-            )
-        },
-    );
+    let rtl = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            |cx| {
+                vec![
+                    tooltip(
+                        cx,
+                        "?????",
+                        shadcn::ChartTooltipIndicator::Dot,
+                        false,
+                        false,
+                        "ui-gallery-chart-rtl-tooltip",
+                    ),
+                    legend(
+                        cx,
+                        shadcn::ChartLegendVerticalAlign::Bottom,
+                        true,
+                        false,
+                        "ui-gallery-chart-rtl-legend",
+                    ),
+                ]
+            },
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/chart.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "This page validates tooltip/legend composition parity, not full chart drawing parity.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Accessibility and full Recharts API integration are intentionally tracked as follow-up work.",
-                ),
-            ]
-        },
+        [
+            "This page validates tooltip/legend composition parity, not full chart drawing parity.",
+            "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
+            "Accessibility and full Recharts API integration are intentionally tracked as follow-up work.",
+            "When adding chart runtime later, keep this page order unchanged for quick docs side-by-side checks.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -246,14 +228,33 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "Preview follows shadcn Chart docs flow: Demo -> Component -> Tooltip -> Legend -> Accessibility -> RTL.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("shadcn Chart is Recharts composition. Fret page focuses on tooltip/legend contracts.")
-                .max_w(Px(760.0)),
-            DocSection::new("Component", component)
-                .description("Color mapping + composition notes for chart surfaces.")
-                .max_w(Px(760.0)),
-            DocSection::new("Tooltip", tooltip_section)
-                .description("Tooltip content variants (dot/line/dashed indicators).")
+            DocSection::new("Demo", demo_content).max_w(Px(760.0)).code(
+                "rust",
+                r#"let (chart_1, chart_2) =
+    cx.with_theme(|theme| (theme.color_token("chart-1"), theme.color_token("chart-2")));
+
+shadcn::ChartTooltipContent::new()
+    .label("January")
+    .items([
+        shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
+        shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
+    ])
+    .indicator(shadcn::ChartTooltipIndicator::Dot)
+    .into_element(cx);"#,
+            ),
+            DocSection::new("Component", component_content)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"// Validate tooltip/legend contracts first, then add renderer bindings later.
+shadcn::typography::muted(
+    cx,
+    "This page focuses on tooltip/legend composition, not full chart rendering.",
+);"#,
+                ),
+            DocSection::new("Tooltip", tooltip_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-tooltip")
                 .code(
                     "rust",
                     r#"let tooltip = shadcn::ChartTooltipContent::new()
@@ -264,20 +265,44 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     ])
     .indicator(shadcn::ChartTooltipIndicator::Line)
     .into_element(cx);"#,
-                )
-                .max_w(Px(760.0)),
-            DocSection::new("Legend", legend_section)
-                .description("Legend vertical align + wrapping behavior.")
-                .max_w(Px(760.0)),
-            DocSection::new("Accessibility", accessibility)
-                .description("Documented parity gap until chart runtime integration lands.")
-                .max_w(Px(760.0)),
+                ),
+            DocSection::new("Legend", legend_content)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-legend")
+                .code(
+                    "rust",
+                    r#"let legend = shadcn::ChartLegendContent::new()
+    .items([
+        shadcn::ChartLegendItem::new("Desktop"),
+        shadcn::ChartLegendItem::new("Mobile"),
+    ])
+    .vertical_align(shadcn::ChartLegendVerticalAlign::Bottom)
+    .wrap(true)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Accessibility", accessibility_content)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"// Parity gap marker: upstream Recharts supports `accessibilityLayer`.
+shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+    shadcn::AlertTitle::new("Not yet implemented").into_element(cx),
+    shadcn::AlertDescription::new("Chart accessibility layer is tracked as follow-up work.")
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("Direction provider sample to validate RTL tooltip/legend layouts.")
-                .max_w(Px(760.0)),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes.")
-                .max_w(Px(820.0)),
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-chart-rtl")
+                .code(
+                    "rust",
+                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::ChartTooltipContent::new().label("?????").into_element(cx)
+})"#,
+                ),
+            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
     );
 
