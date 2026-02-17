@@ -17,6 +17,7 @@ aiming for Dear ImGui docking branch “multi-viewports” hand-feel parity.
 Platform note:
 
 - macOS-specific plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+- Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
 - Detailed parity matrix (mechanics + hand feel): `docs/docking-imgui-parity-matrix.md`
 
