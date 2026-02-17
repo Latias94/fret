@@ -1552,7 +1552,14 @@ impl Tabs {
                                                             .nowrap();
                                                         if let Some(line_height) = style.line_height
                                                         {
-                                                            text = text.line_height_px(line_height);
+                                                            // Match web baseline behavior by giving the label a fixed line box
+                                                            // height when a line-height is configured. This allows the text
+                                                            // host widget to apply CSS-like "half-leading" centering rather
+                                                            // than centering by the prepared glyph bounds, which can read as
+                                                            // slightly bottom-heavy in GPU-first layout.
+                                                            text = text
+                                                                .line_height_px(line_height)
+                                                                .h_px(line_height);
                                                         }
                                                         if let Some(letter_spacing_em) =
                                                             style.letter_spacing_em
