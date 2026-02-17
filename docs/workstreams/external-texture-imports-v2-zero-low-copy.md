@@ -54,9 +54,13 @@ It builds on v1’s contract-path closure:
     transitions, and a minimal diag correctness gate exists.
   - A runner-facing DX12 shared allocation export helper exists (queue/resource + wgpu transitions), and the path has a
     steady-state perf baseline.
+- Deterministic fallback is centralized (to prevent demo/caller drift):
+  - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
+    (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
 - Next up (native uplift, practical):
-  - Factor the deterministic fallback chain into a single helper in `fret-launch` (so demos/callers don’t drift).
-  - Pick the first real native producer that can write into a shared allocation (per-platform, capability-gated).
+  - Validate the first real native producer that writes into a shared allocation (per-platform, capability-gated),
+    starting with Windows MF -> DX12 GPU copy, and lock its failure modes behind explicit capabilities.
+  - Add a steady-state perf baseline for the MF DX12 GPU-copy path once correctness is stable.
 
 ## Recommended execution order
 

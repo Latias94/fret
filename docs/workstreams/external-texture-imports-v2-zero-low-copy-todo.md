@@ -120,8 +120,6 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       produce the best available path on capable backends (and deterministically degrade otherwise):
       - Prefer shared allocation where external-handle import is blocked (producer writes into renderer-owned texture).
       - Use true external-handle import only when upstream exposes a supported mechanism.
-    - Factor the deterministic fallback chain into a single helper in `fret-launch`
-      (so demos/callers can’t diverge across platforms).
     - Investigate native `ExternalZeroCopy` feasibility on wgpu 28:
       - likely requires a supported way to wrap/import platform GPU textures (e.g. D3D12/Metal/IOSurface)
         into a `wgpu::Texture`/`TextureView` safely; treat as capability-gated and potentially blocked
