@@ -226,6 +226,40 @@ pub(super) fn set_dock_drag_transparent_payload(
     enabled: bool,
     alpha: f32,
 ) -> bool {
+    let opacity = if enabled { alpha } else { 1.0 };
+    let ok_alpha = set_window_opacity(window, opacity);
+    let ok_mouse = set_window_mouse_passthrough(window, enabled);
+    if !enabled {
+        // When disabling, nudge ordering to avoid rare cases where a previously ignoring-mouse
+        // window does not immediately resume receiving pointer events.
+        bring_window_to_front(window, None);
+    }
+    ok_alpha && ok_mouse
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn set_dock_drag_transparent_payload(
+    window: &dyn Window,
+    enabled: bool,
+    alpha: f32,
+) -> bool {
+    let opacity = if enabled { alpha } else { 1.0 };
+    let ok_alpha = set_window_opacity(window, opacity);
+    let ok_mouse = set_window_mouse_passthrough(window, enabled);
+    ok_alpha && ok_mouse
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+pub(super) fn set_dock_drag_transparent_payload(
+    _window: &dyn Window,
+    _enabled: bool,
+    _alpha: f32,
+) -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -249,32 +283,45 @@ pub(super) fn set_dock_drag_transparent_payload(
     }
 
     unsafe {
-        let nil: *mut Object = std::ptr::null_mut();
-        let alpha: f64 = if enabled {
-            (alpha.clamp(0.0, 1.0)) as f64
-        } else {
-            1.0
-        };
+        let alpha = (opacity.clamp(0.0, 1.0)) as f64;
         let _: () = msg_send![ns_window, setAlphaValue: alpha];
-        let ignore: bool = enabled;
-        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+    }
+    true
+}
 
-        // When disabling, nudge the window ordering to avoid rare cases where a previously
-        // ignoring-mouse window does not immediately resume receiving pointer events.
-        if !enabled {
-            let _: () = msg_send![ns_window, orderFront: nil];
-        }
+#[cfg(target_os = "macos")]
+pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+    use objc::runtime::Object;
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let ns_window: *mut Object = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
+                if ns_view.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    unsafe { msg_send![ns_view, window] }
+                }
+            }
+            _ => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    };
+    if ns_window.is_null() {
+        return false;
     }
 
+    unsafe {
+        let ignore: bool = enabled;
+        let _: () = msg_send![ns_window, setIgnoresMouseEvents: ignore];
+    }
     true
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_dock_drag_transparent_payload(
-    window: &dyn Window,
-    enabled: bool,
-    alpha: f32,
-) -> bool {
+pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -287,19 +334,35 @@ pub(super) fn set_dock_drag_transparent_payload(
     if hwnd == 0 {
         return false;
     }
+    super::win32::set_window_alpha(hwnd, opacity);
+    true
+}
 
-    let alpha = if enabled { alpha } else { 1.0 };
-    super::win32::set_window_alpha(hwnd, alpha);
+#[cfg(target_os = "windows")]
+pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
     super::win32::set_window_mouse_passthrough(hwnd, enabled);
     true
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_dock_drag_transparent_payload(
-    _window: &dyn Window,
-    _enabled: bool,
-    _alpha: f32,
-) -> bool {
+pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
+    false
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
     false
 }
 

@@ -99,6 +99,7 @@ The request is intentionally small and “intent-oriented”:
 - `decorations: Option<WindowDecorationsRequest>` — request a window decoration policy.
 - `resizable: Option<bool>`
 - `transparent: Option<bool>` — requests a transparent composited window background.
+- `opacity: Option<WindowOpacity>` — requests global window opacity (0..=255), not per-pixel transparency.
 - `z_level: Option<WindowZLevel>` — `Normal`, `AlwaysOnTop`.
 - `taskbar: Option<TaskbarVisibility>` — `Show`, `Hide`.
 - `activation: Option<ActivationPolicy>` — `Activates` (default), `NonActivating`.
@@ -107,6 +108,8 @@ The request is intentionally small and “intent-oriented”:
 Notes:
 
 - `transparent` is not only a window flag; it is also a rendering/compositing contract (see §6).
+- `opacity` maps to OS/global window alpha when supported (e.g. “transparent payload” style UX in
+  Dear ImGui uses `Platform_SetWindowAlpha` for viewports).
 - `NonActivating` defines focus semantics; it is allowed to still receive pointer events.
 - `Passthrough` is defined at the window level (not per-pixel). Per-pixel hit regions are out of
   scope for v1.

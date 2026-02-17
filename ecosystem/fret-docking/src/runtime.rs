@@ -293,6 +293,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
                     activation: Some(fret_runtime::ActivationPolicy::Activates),
                     z_level: None,
+                    ..Default::default()
                 },
             })));
             true
@@ -363,6 +364,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
                     activation: Some(fret_runtime::ActivationPolicy::Activates),
                     z_level: None,
+                    ..Default::default()
                 },
             })));
             true

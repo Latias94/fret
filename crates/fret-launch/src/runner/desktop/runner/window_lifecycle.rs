@@ -66,6 +66,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             });
         }
 
+        if let Some(mouse) = style.mouse {
+            let passthrough = matches!(mouse, fret_runtime::MousePolicy::Passthrough);
+            let _ = super::window::set_window_mouse_passthrough(window.as_ref(), passthrough);
+        }
+        if let Some(opacity) = style.opacity {
+            let _ = super::window::set_window_opacity(window.as_ref(), opacity.as_f32());
+        }
+
         Ok((window, accessibility))
     }
 
