@@ -145,6 +145,10 @@ impl Renderer {
             frame_perf.render_target_updates_ingest_fallbacks =
                 self.perf_pending_render_target_updates_ingest_fallbacks;
             self.perf_pending_render_target_updates_ingest_fallbacks = 0;
+
+            frame_perf.render_target_metadata_degradations_color_encoding_dropped =
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped;
+            self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = 0;
         }
 
         #[cfg(debug_assertions)]
@@ -4218,6 +4222,13 @@ impl Renderer {
                 .perf
                 .render_target_updates_ingest_fallbacks
                 .saturating_add(frame_perf.render_target_updates_ingest_fallbacks);
+            self.perf
+                .render_target_metadata_degradations_color_encoding_dropped = self
+                .perf
+                .render_target_metadata_degradations_color_encoding_dropped
+                .saturating_add(
+                    frame_perf.render_target_metadata_degradations_color_encoding_dropped,
+                );
 
             self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
             self.perf.svg_rasters_live =
@@ -4563,6 +4574,8 @@ impl Renderer {
                     .render_target_updates_requested_ingest_cpu_upload,
                 render_target_updates_ingest_fallbacks: frame_perf
                     .render_target_updates_ingest_fallbacks,
+                render_target_metadata_degradations_color_encoding_dropped: frame_perf
+                    .render_target_metadata_degradations_color_encoding_dropped,
                 svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
                 svg_rasters_live: frame_perf.svg_rasters_live,
                 svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,

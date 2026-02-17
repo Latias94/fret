@@ -12701,6 +12701,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_render_target_updates_ingest_fallbacks: u64,
     #[serde(default)]
+    pub renderer_render_target_metadata_degradations_color_encoding_dropped: u64,
+    #[serde(default)]
     pub renderer_svg_raster_budget_bytes: u64,
     #[serde(default)]
     pub renderer_svg_rasters_live: u64,
@@ -13071,6 +13073,7 @@ impl UiFrameStatsV1 {
             renderer_render_target_updates_requested_ingest_gpu_copy: 0,
             renderer_render_target_updates_requested_ingest_cpu_upload: 0,
             renderer_render_target_updates_ingest_fallbacks: 0,
+            renderer_render_target_metadata_degradations_color_encoding_dropped: 0,
             renderer_svg_raster_budget_bytes: 0,
             renderer_svg_rasters_live: 0,
             renderer_svg_standalone_bytes_live: 0,
@@ -13165,6 +13168,9 @@ impl UiFrameStatsV1 {
                 .render_target_updates_requested_ingest_cpu_upload;
             out.renderer_render_target_updates_ingest_fallbacks =
                 sample.perf.render_target_updates_ingest_fallbacks;
+            out.renderer_render_target_metadata_degradations_color_encoding_dropped = sample
+                .perf
+                .render_target_metadata_degradations_color_encoding_dropped;
             out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
             out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
             out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;

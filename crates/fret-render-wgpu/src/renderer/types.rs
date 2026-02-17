@@ -206,6 +206,10 @@ pub struct RenderPerfSnapshot {
     pub render_target_updates_requested_ingest_cpu_upload: u64,
     pub render_target_updates_ingest_fallbacks: u64,
 
+    // Imported render targets (best-effort). Metadata degradations for strategies that cannot
+    // preserve declared semantics.
+    pub render_target_metadata_degradations_color_encoding_dropped: u64,
+
     // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
     // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
     pub svg_raster_budget_bytes: u64,
@@ -331,6 +335,7 @@ pub(super) struct RenderPerfStats {
     pub(super) render_target_updates_requested_ingest_gpu_copy: u64,
     pub(super) render_target_updates_requested_ingest_cpu_upload: u64,
     pub(super) render_target_updates_ingest_fallbacks: u64,
+    pub(super) render_target_metadata_degradations_color_encoding_dropped: u64,
 
     pub(super) svg_raster_budget_bytes: u64,
     pub(super) svg_rasters_live: u64,

@@ -216,6 +216,7 @@ pub struct Renderer {
         [u64; RenderTargetIngestStrategy::COUNT],
     perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],
     perf_pending_render_target_updates_ingest_fallbacks: u64,
+    perf_pending_render_target_metadata_degradations_color_encoding_dropped: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
     last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,

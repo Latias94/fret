@@ -38,6 +38,14 @@ It builds on v1’s contract-path closure:
 - TODOs: `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md`
 - Milestones: `docs/workstreams/external-texture-imports-v2-zero-low-copy-milestones.md`
 
+## Current status (practical)
+
+- M0 complete (ADR 0282 locked to executable detail).
+- M2A complete (Windows MF real source wired end-to-end as `CpuUpload`, with steady perf + correctness gates).
+- Next up:
+  - M1: extend the portable metadata surface for real media correctness (bounded enums + deterministic degradation).
+  - M2B: time-box a native `ExternalZeroCopy` feasibility spike behind explicit capabilities (likely D3D12/Metal import).
+
 ## Recommended execution order
 
 1. Lock the bounded strategy set + metadata semantics (ADR 0282 exit criteria).

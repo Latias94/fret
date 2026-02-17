@@ -131,15 +131,20 @@ becomes observable via a counter/hint (workstream TODOs).
   - Preserve across all strategies.
   - If a backend cannot apply the requested orientation, degrade deterministically to the identity
     orientation (`r0`, `mirror_x=false`) and record a counter/hint.
+- `color_encoding: RenderTargetColorEncoding` (bounded colorimetry hints)
+  - Best-effort hints for real media sources (video/camera/remote desktop):
+    - primaries, transfer function, matrix coefficients, and range.
+  - Preserve across all strategies when representable.
+  - If a backend cannot preserve the effective values for a strategy, degrade deterministically to
+    `unknown` values and record a counter/hint (see workstream `EXTV2-diag-040`).
 - `requested_ingest_strategy` vs `ingest_strategy`
   - Always populate both (or keep `unknown`) so capability-gated fallbacks are observable in perf
     snapshots/bundles.
 - `frame_timestamp_ns`
   - Diagnostics-only. If not available, set `None`. No correctness semantics depend on it.
 
-**Explicit deferral (non-goal):** real video colorimetry (transfer/matrix/range, ICC, HDR) is
-intentionally out of scope for v2. If/when we add it, it must be introduced as bounded enums with
-deterministic degradations and perf gates (this ADR’s exit criteria still applies).
+**Explicit deferral (non-goal):** full color management (ICC profiles, HDR tone mapping, arbitrary
+transfer functions) remains out of scope for v2.
 
 ## Capability matrix (expected reality)
 

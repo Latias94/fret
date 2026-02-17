@@ -14,6 +14,58 @@ pub enum RenderTargetColorSpace {
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum RenderTargetColorRange {
+    #[default]
+    Unknown,
+    Full,
+    Limited,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RenderTargetColorPrimaries {
+    #[default]
+    Unknown,
+    Bt709,
+    DisplayP3,
+    Bt2020,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RenderTargetTransferFunction {
+    #[default]
+    Unknown,
+    Srgb,
+    Linear,
+    Bt1886,
+    Pq,
+    Hlg,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RenderTargetMatrixCoefficients {
+    #[default]
+    Unknown,
+    /// Identity transform for already-RGB content.
+    Rgb,
+    Bt601,
+    Bt709,
+    Bt2020Ncl,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct RenderTargetColorEncoding {
+    pub primaries: RenderTargetColorPrimaries,
+    pub transfer: RenderTargetTransferFunction,
+    pub matrix: RenderTargetMatrixCoefficients,
+    pub range: RenderTargetColorRange,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RenderTargetAlphaMode {
     #[default]
     Premultiplied,
@@ -70,6 +122,12 @@ impl Default for RenderTargetOrientation {
 pub struct RenderTargetMetadata {
     pub alpha_mode: RenderTargetAlphaMode,
     pub orientation: RenderTargetOrientation,
+    /// Content color encoding hints for real media sources (video/camera/remote desktop).
+    ///
+    /// These are best-effort hints. Producers should set them when they can, and renderers must
+    /// degrade deterministically when the effective ingest strategy cannot preserve them.
+    #[serde(default)]
+    pub color_encoding: RenderTargetColorEncoding,
     /// Requested ingestion strategy (what the caller wanted).
     ///
     /// This is a diagnostic hint for capability-gated fallback behavior. Renderers may
@@ -89,6 +147,7 @@ impl Default for RenderTargetMetadata {
         Self {
             alpha_mode: RenderTargetAlphaMode::Premultiplied,
             orientation: RenderTargetOrientation::default(),
+            color_encoding: RenderTargetColorEncoding::default(),
             requested_ingest_strategy: RenderTargetIngestStrategy::Unknown,
             ingest_strategy: RenderTargetIngestStrategy::Unknown,
             frame_timestamp_ns: None,
@@ -129,5 +188,20 @@ mod tests {
 
         let json = serde_json::to_string(&o).expect("serialize orientation");
         assert_eq!(json, "{\"rotation\":\"r0\",\"mirror_x\":false}");
+    }
+
+    #[test]
+    fn render_target_metadata_color_encoding_defaults_when_missing() {
+        let json = r#"{
+            "alpha_mode":"premultiplied",
+            "orientation":{"rotation":"r0","mirror_x":false},
+            "requested_ingest_strategy":"unknown",
+            "ingest_strategy":"unknown",
+            "frame_timestamp_ns":null
+        }"#;
+
+        let meta: RenderTargetMetadata =
+            serde_json::from_str(json).expect("deserialize metadata without color_encoding");
+        assert_eq!(meta.color_encoding, RenderTargetColorEncoding::default());
     }
 }

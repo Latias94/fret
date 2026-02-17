@@ -23,6 +23,9 @@ Deliverables:
   sources, and is bounded (no open-ended strings).
 - Deterministic degradation rules exist for any metadata not representable on a target/backend.
 - Diagnostics surface explicit counters/hints for metadata degradations.
+  - Minimum expected set for “real media” correctness:
+    - alpha mode + orientation (already required by v1),
+    - bounded color encoding hints (primaries, transfer, matrix, range).
 
 Exit criteria:
 

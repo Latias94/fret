@@ -79,6 +79,9 @@ impl Renderer {
             render_target_updates_ingest_fallbacks: self
                 .perf
                 .render_target_updates_ingest_fallbacks,
+            render_target_metadata_degradations_color_encoding_dropped: self
+                .perf
+                .render_target_metadata_degradations_color_encoding_dropped,
             svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
             svg_rasters_live: self.perf.svg_rasters_live,
             svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,

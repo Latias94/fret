@@ -599,6 +599,7 @@ impl Renderer {
             perf_pending_render_target_updates_by_ingest: [0;
                 fret_render_core::RenderTargetIngestStrategy::COUNT],
             perf_pending_render_target_updates_ingest_fallbacks: 0,
+            perf_pending_render_target_metadata_degradations_color_encoding_dropped: 0,
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
             last_render_plan_segment_report: None,
@@ -672,6 +673,18 @@ impl Renderer {
         &mut self,
         desc: RenderTargetDescriptor,
     ) -> fret_core::RenderTargetId {
+        let mut desc = desc;
+        if Self::render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+            desc.color_space,
+            desc.metadata.color_encoding,
+        ) {
+            desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
+            if self.perf_enabled {
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
+                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
+                    .saturating_add(1);
+            }
+        }
         if self.perf_enabled {
             let effective_ix =
                 render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
@@ -731,6 +744,18 @@ impl Renderer {
         id: fret_core::RenderTargetId,
         desc: RenderTargetDescriptor,
     ) -> bool {
+        let mut desc = desc;
+        if Self::render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+            desc.color_space,
+            desc.metadata.color_encoding,
+        ) {
+            desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
+            if self.perf_enabled {
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
+                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
+                    .saturating_add(1);
+            }
+        }
         if self.perf_enabled {
             let effective_ix =
                 render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
@@ -757,6 +782,50 @@ impl Renderer {
         self.viewport_bind_groups.remove(&id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
+    }
+
+    fn render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+        color_space: fret_render_core::RenderTargetColorSpace,
+        encoding: fret_render_core::RenderTargetColorEncoding,
+    ) -> bool {
+        use fret_render_core::RenderTargetColorPrimaries;
+        use fret_render_core::RenderTargetColorRange;
+        use fret_render_core::RenderTargetMatrixCoefficients;
+        use fret_render_core::RenderTargetTransferFunction;
+
+        if encoding == fret_render_core::RenderTargetColorEncoding::default() {
+            return false;
+        }
+
+        let expected_transfer = match color_space {
+            fret_render_core::RenderTargetColorSpace::Srgb => RenderTargetTransferFunction::Srgb,
+            fret_render_core::RenderTargetColorSpace::Linear => {
+                RenderTargetTransferFunction::Linear
+            }
+        };
+
+        if encoding.primaries != RenderTargetColorPrimaries::Unknown
+            && encoding.primaries != RenderTargetColorPrimaries::Bt709
+        {
+            return true;
+        }
+        if encoding.transfer != RenderTargetTransferFunction::Unknown
+            && encoding.transfer != expected_transfer
+        {
+            return true;
+        }
+        if encoding.matrix != RenderTargetMatrixCoefficients::Unknown
+            && encoding.matrix != RenderTargetMatrixCoefficients::Rgb
+        {
+            return true;
+        }
+        if encoding.range != RenderTargetColorRange::Unknown
+            && encoding.range != RenderTargetColorRange::Full
+        {
+            return true;
+        }
+
+        false
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
