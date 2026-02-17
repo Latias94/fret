@@ -3657,6 +3657,7 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
 
         let mut normalized_constraints = constraints;
         if normalized_constraints.wrap == TextWrap::None {
@@ -3666,11 +3667,13 @@ impl TextSystem {
         let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(text);
         if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(hit) = bucket
-                .iter()
-                .find(|e| e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text)
+            && let Some(idx) = bucket.iter().position(|e| {
+                e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text
+            })
+            && let Some(hit) = bucket.remove(idx)
         {
             let mut metrics = hit.metrics;
+            bucket.push_back(hit);
             if constraints.wrap == TextWrap::None
                 && constraints.overflow == TextOverflow::Ellipsis
                 && let Some(max_width) = constraints.max_width
@@ -3805,42 +3808,15 @@ impl TextSystem {
                 }
             }
         } else {
-            // Prefer the same wrap policy as `prepare` so `measure` stays layout-consistent.
-            // This matters even under fractional scale factors where we may snap line heights.
-            if normalized_constraints.wrap == TextWrap::Word
-                && normalized_constraints.overflow == TextOverflow::Clip
-                && normalized_constraints.max_width.is_some()
-                && !text.contains('\n')
-            {
-                let wrapped = crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
-                    TextInputRef::plain(text, style),
-                    normalized_constraints,
-                );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            } else {
-                // Keep measurement aligned with prepare/paint under fractional scale factors.
-                //
-                // `shape_single_line_metrics` can disagree with full shaping near wrap boundaries
-                // when we also snap vertical layout to device pixels (common on Windows at
-                // 125%/150% DPI). Prefer the full wrapper in that case so layout height matches
-                // the prepared blob.
-                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-                let wrapped = if snap_vertical {
-                    crate::text::wrapper::wrap_with_constraints(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    )
-                } else {
-                    crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    )
-                };
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            }
+            // Keep measurement aligned with prepare/paint under fractional scale factors while
+            // avoiding per-glyph work in layout. The metrics-only wrapper shares the same Parley
+            // shaping + line breaking, but does not materialize glyph runs.
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::plain(text, style),
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -3851,7 +3827,11 @@ impl TextSystem {
             spans: None,
             metrics,
         });
-        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+        let limit = match normalized_constraints.wrap {
+            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+            TextWrap::Word | TextWrap::Grapheme => MEASURE_CACHE_PER_BUCKET_LIMIT,
+        };
+        while bucket.len() > limit {
             bucket.pop_front();
         }
 
@@ -3872,6 +3852,7 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
 
         let mut normalized_constraints = constraints;
         if normalized_constraints.wrap == TextWrap::None {
@@ -3883,7 +3864,7 @@ impl TextSystem {
         let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
 
         if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(hit) = bucket.iter().find(|e| {
+            && let Some(idx) = bucket.iter().position(|e| {
                 e.text_hash == text_hash
                     && e.spans_hash == spans_hash
                     && e.text.as_ref() == rich.text.as_ref()
@@ -3891,8 +3872,10 @@ impl TextSystem {
                         Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
                     })
             })
+            && let Some(hit) = bucket.remove(idx)
         {
             let mut metrics = hit.metrics;
+            bucket.push_back(hit);
             if constraints.wrap == TextWrap::None
                 && constraints.overflow == TextOverflow::Ellipsis
                 && let Some(max_width) = constraints.max_width
@@ -4048,45 +4031,16 @@ impl TextSystem {
             }
         } else {
             let text = rich.text.as_ref();
-            if normalized_constraints.wrap == TextWrap::Word
-                && normalized_constraints.overflow == TextOverflow::Clip
-                && normalized_constraints.max_width.is_some()
-                && !text.contains('\n')
-            {
-                let wrapped = self.wrap_for_prepare(
-                    TextInputRef::Attributed {
-                        text,
-                        base: base_style,
-                        spans: rich.spans.as_ref(),
-                    },
-                    normalized_constraints,
-                );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            } else {
-                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-                let wrapped = if snap_vertical {
-                    crate::text::wrapper::wrap_with_constraints(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    )
-                } else {
-                    crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    )
-                };
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            }
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::Attributed {
+                    text,
+                    base: base_style,
+                    spans: rich.spans.as_ref(),
+                },
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -4097,7 +4051,11 @@ impl TextSystem {
             spans: Some(rich.spans.clone()),
             metrics,
         });
-        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+        let limit = match normalized_constraints.wrap {
+            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+            TextWrap::Word | TextWrap::Grapheme => MEASURE_CACHE_PER_BUCKET_LIMIT,
+        };
+        while bucket.len() > limit {
             bucket.pop_front();
         }
 
