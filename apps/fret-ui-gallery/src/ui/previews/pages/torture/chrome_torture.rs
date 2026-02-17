@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_chrome_torture(
     cx: &mut ElementContext<'_, App>,
@@ -18,21 +19,6 @@ pub(in crate::ui) fn preview_chrome_torture(
     checkbox: Model<bool>,
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: exercise hover/focus/pressed chrome under view-cache + shell."),
-                cx.text(
-                    "This page intentionally mixes many focusable widgets and overlay triggers.",
-                ),
-            ]
-        },
-    );
-
     let body = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -162,5 +148,17 @@ pub(in crate::ui) fn preview_chrome_torture(
             .test_id("ui-gallery-chrome-torture-root"),
     );
 
-    vec![header, content]
+    let page =
+        doc_layout::render_doc_page(
+            cx,
+            Some("Goal: exercise hover/focus/pressed chrome under view-cache + shell."),
+            vec![DocSection::new("Harness", content)
+            .description(
+                "This page intentionally mixes many focusable widgets and overlay triggers.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+        );
+
+    vec![page]
 }

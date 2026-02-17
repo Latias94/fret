@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_node_graph_cull_torture(
     cx: &mut ElementContext<'_, App>,
@@ -233,19 +234,6 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
         graph
     }
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: stress a large node-graph canvas with viewport-driven culling (candidate for prepaint-windowed cull windows)."),
-                cx.text("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles."),
-            ]
-        },
-    );
-
     #[derive(Default)]
     struct HarnessState {
         graph: Option<Model<Graph>>,
@@ -302,5 +290,18 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
             )]
         });
 
-    vec![header, surface]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Goal: stress a large node-graph canvas with viewport-driven culling (candidate for prepaint-windowed cull windows).",
+        ),
+        vec![DocSection::new("Canvas", surface)
+            .description(
+                "Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

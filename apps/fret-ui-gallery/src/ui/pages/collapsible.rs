@@ -271,19 +271,18 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         .test_id(test_id_prefix)
     };
 
-    let demo_content = details_collapsible(
+    let demo = details_collapsible(
         cx,
         "ui-gallery-collapsible-demo",
         None,
         "Order #4189",
         "Shipped",
     );
-    let demo = demo_content;
 
     let controlled_now = cx
         .get_model_copied(&controlled_open, Invalidation::Layout)
         .unwrap_or(false);
-    let controlled_content = stack::vstack(
+    let controlled_state = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -325,9 +324,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         },
     )
     .test_id("ui-gallery-collapsible-controlled");
-    let controlled_state = controlled_content;
 
-    let basic_content = shadcn::Collapsible::uncontrolled(false)
+    let basic = shadcn::Collapsible::uncontrolled(false)
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
@@ -357,7 +355,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             },
         )
         .test_id("ui-gallery-collapsible-basic");
-    let basic = basic_content;
 
     let input_field = |cx: &mut ElementContext<'_, App>,
                        test_id: &'static str,
@@ -491,7 +488,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
     };
 
-    let file_tree_content = {
+    let file_tree = {
         let ui_button = file_leaf(cx, "button.rs");
         let ui_dialog = file_leaf(cx, "dialog.rs");
         let ui_folder = folder(
@@ -532,53 +529,26 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
         .test_id("ui-gallery-collapsible-file-tree")
     };
-    let file_tree = file_tree_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            details_collapsible(
-                cx,
-                "ui-gallery-collapsible-rtl",
-                Some(rtl_open.clone()),
-                "Order #4189",
-                "Shipped",
-            )
-        },
-    );
-    let rtl = rtl_content;
+    let rtl = doc_layout::rtl(cx, |cx| {
+        details_collapsible(
+            cx,
+            "ui-gallery-collapsible-rtl",
+            Some(rtl_open.clone()),
+            "Order #4189",
+            "Shipped",
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`.",
+            "Use controlled mode (`Model<bool>`) when outside state (URL/query, form mode, or saved layout) needs to drive disclosure.",
+            "For dense editor UIs, keep trigger chrome compact and put expensive children under `CollapsibleContent`.",
+            "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
+            "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -588,7 +558,27 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Uncontrolled disclosure with a compact trigger and a details list."),
+                .description("Uncontrolled disclosure with a compact trigger and a details list.")
+                .code(
+                    "rust",
+                    r#"shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+    cx,
+    |cx, open, is_open| {
+        shadcn::Button::new(if is_open { "Hide details" } else { "Show details" })
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open)
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::CollapsibleContent::new(vec![
+            cx.text("• Tracking ID: 41F2"),
+            cx.text("• Carrier: UPS"),
+            cx.text("• ETA: Tomorrow"),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
                 .code(
@@ -615,11 +605,64 @@ shadcn::Collapsible::new(open.clone()).into_element_with_open_model(cx, |cx, ope
 );"#,
                 ),
             DocSection::new("Settings Panel", settings)
-                .description("Collapsible used to hide optional/advanced form fields."),
+                .description("Collapsible used to hide optional/advanced form fields.")
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
+    cx,
+    |cx, open, is_open| {
+        shadcn::Button::new(if is_open { "Advanced" } else { "More settings" })
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open)
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::CollapsibleContent::new(vec![stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_start(),
+            |cx| vec![
+                shadcn::Input::new(radius_bl).a11y_label("Bottom-left").into_element(cx),
+                shadcn::Input::new(radius_br).a11y_label("Bottom-right").into_element(cx),
+            ],
+        )])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("File Tree", file_tree)
-                .description("Nested collapsibles with independent open state per node."),
+                .description("Nested collapsibles with independent open state per node.")
+                .code(
+                    "rust",
+                    r#"let folder = |cx: &mut ElementContext<'_, App>, label: &'static str, open: Model<bool>, children: Vec<AnyElement>| {
+    shadcn::Collapsible::new(open).into_element_with_open_model(
+        cx,
+        |cx, open, is_open| shadcn::Button::new(format!("{} {label}", if is_open { "▼" } else { "▶" }))
+            .variant(shadcn::ButtonVariant::Ghost)
+            .toggle_model(open)
+            .into_element(cx),
+        |cx| shadcn::CollapsibleContent::new(vec![stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N1).items_start(),
+            |_cx| children,
+        )])
+        .into_element(cx),
+    )
+};
+
+let src = folder(cx, "src", src_open, vec![file_leaf(cx, "main.rs")]);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("Direction provider should keep trigger/content alignment stable."),
+                .description("Direction provider should keep trigger/content alignment stable.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Collapsible::new(open).into_element_with_open_model(cx, trigger, content),
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

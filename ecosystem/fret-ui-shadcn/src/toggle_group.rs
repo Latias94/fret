@@ -474,7 +474,6 @@ impl ToggleGroup {
             enabled: roving_focus && !group_disabled,
             wrap: loop_navigation,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
-            ..Default::default()
         };
 
         cx.container(group_props, move |cx| {

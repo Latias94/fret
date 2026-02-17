@@ -62,7 +62,7 @@ pub(in crate::ui) fn preview_ai_inline_citation_demo(
         .into_element(cx);
 
     let title = cx.text("InlineCitation (AI Elements): hover card + pager + selection seam.");
-    let hint = cx.text("Hover a citation to preview sources; activate to select a source id.");
+    let hint = cx.text("Hover a citation to preview sources; activate to select a source id. (Upstream uses hover-card + carousel header.)");
     let row_label = cx.text("Citations:");
 
     let row = stack::hstack(

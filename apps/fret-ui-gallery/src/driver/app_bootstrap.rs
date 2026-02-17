@@ -204,18 +204,6 @@ pub(super) fn register_commands_and_menus(app: &mut App) {
             .with_category("Gallery")
             .with_keywords(["copy", "clipboard", "link", "page"]),
     );
-    app.commands_mut().register(
-        CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
-        CommandMeta::new("Copy usage")
-            .with_category("Gallery")
-            .with_keywords(["copy", "clipboard", "usage", "code"]),
-    );
-    app.commands_mut().register(
-        CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
-        CommandMeta::new("Copy notes")
-            .with_category("Gallery")
-            .with_keywords(["copy", "clipboard", "notes", "docs"]),
-    );
 
     app.commands_mut().register(
         CommandId::new(CMD_SHELL_SHARE_SHEET_SMOKE),

@@ -310,7 +310,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{ContainerProps, SemanticsProps};
+    use fret_ui::element::{ContainerProps, Overflow, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
 
     #[test]

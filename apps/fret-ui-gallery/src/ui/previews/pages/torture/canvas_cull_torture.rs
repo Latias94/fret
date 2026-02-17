@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_canvas_cull_torture(
     cx: &mut ElementContext<'_, App>,
@@ -14,19 +15,6 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
     use fret_ui::canvas::CanvasTextConstraints;
     use fret_ui::element::{CanvasCachePolicy, Length};
     use std::cmp::Ordering;
-
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: stress a pan/zoom canvas scene with viewport-driven culling (candidate for prepaint-windowed cull windows)."),
-                cx.text("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles."),
-            ]
-        },
-    );
 
     let canvas =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -172,5 +160,18 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
             ]
         });
 
-    vec![header, canvas]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Goal: stress a pan/zoom canvas scene with viewport-driven culling (candidate for prepaint-windowed cull windows).",
+        ),
+        vec![DocSection::new("Canvas", canvas)
+            .description(
+                "Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

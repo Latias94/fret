@@ -897,9 +897,8 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -949,9 +948,8 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -974,9 +972,8 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1004,9 +1001,8 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1037,9 +1033,8 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1065,9 +1060,8 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1091,9 +1085,8 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1121,9 +1114,8 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1146,9 +1138,8 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1170,9 +1161,8 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1200,9 +1190,8 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1234,7 +1223,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
             window: None,
             predicate: UiPredicateV1::ActiveItemIs {
                 container: test_id("select-scroll-viewport"),
-                item: test_id("ui-gallery-select-item-item-01"),
+                item: test_id("ui-gallery-select-item-blueberry"),
             },
             timeout_frames: 240,
         })
@@ -1252,9 +1241,8 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1285,9 +1273,8 @@ fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1318,9 +1305,8 @@ fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1351,9 +1337,8 @@ fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,
@@ -1395,9 +1380,8 @@ fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .wait_overlay_placement_trace(
             UiOverlayPlacementTraceQueryV1 {
-                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                kind: Some(UiOverlayPlacementTraceKindV1::PlacedRect),
                 anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
-                content_test_id: Some("select-scroll-viewport".to_string()),
                 ..UiOverlayPlacementTraceQueryV1::default()
             },
             240,

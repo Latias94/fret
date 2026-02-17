@@ -7,8 +7,6 @@ use time::Date;
 
 #[derive(Clone)]
 pub(crate) struct UiGalleryModels {
-    pub(crate) content_tab: Model<Option<Arc<str>>>,
-
     pub(crate) theme_preset: Model<Option<Arc<str>>>,
     pub(crate) theme_preset_open: Model<bool>,
     pub(crate) motion_preset: Model<Option<Arc<str>>>,

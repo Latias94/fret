@@ -195,5 +195,5 @@ Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in 
 
 Licensed under either of:
 
-- MIT License
-- Apache License, Version 2.0
+- MIT License (`LICENSE-MIT`)
+- Apache License, Version 2.0 (`LICENSE-APACHE`)

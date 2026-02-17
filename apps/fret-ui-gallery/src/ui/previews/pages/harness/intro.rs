@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_intro(
     cx: &mut ElementContext<'_, App>,
@@ -66,5 +67,24 @@ pub(in crate::ui) fn preview_intro(
             .test_id("ui-gallery-intro-preview-note"),
     );
 
-    vec![grid, note]
+    let preview = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4)
+            .items_start(),
+        |_cx| vec![grid, note],
+    );
+
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Pick a page from the sidebar to explore UI contracts and composed recipes."),
+        vec![
+            DocSection::new("Overview", preview)
+                .no_shell()
+                .max_w(Px(980.0)),
+        ],
+    );
+
+    vec![page]
 }

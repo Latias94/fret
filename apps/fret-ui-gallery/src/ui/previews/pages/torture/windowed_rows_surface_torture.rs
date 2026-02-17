@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_windowed_rows_surface_torture(
     cx: &mut ElementContext<'_, App>,
@@ -11,19 +12,6 @@ pub(in crate::ui) fn preview_windowed_rows_surface_torture(
     use fret_ui_kit::declarative::windowed_rows_surface::{
         WindowedRowsSurfaceProps, windowed_rows_surface,
     };
-
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: baseline scroll windowing via a stable element tree (Scroll + Canvas)."),
-                cx.text("This is the 'single-node surface' escape hatch: paint only visible rows, avoid per-row subtrees."),
-            ]
-        },
-    );
 
     let len = 200_000usize;
     let row_h = Px(22.0);
@@ -95,5 +83,16 @@ pub(in crate::ui) fn preview_windowed_rows_surface_torture(
             ]
         });
 
-    vec![header, surface]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Goal: baseline scroll windowing via a stable element tree (Scroll + Canvas)."),
+        vec![DocSection::new("Surface", surface)
+            .description(
+                "This is the 'single-node surface' escape hatch: paint only visible rows, avoid per-row subtrees.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn code_view_torture_source() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
@@ -62,7 +63,9 @@ pub(in crate::ui) fn preview_code_view_torture(
             .test_id("ui-gallery-code-view-root"),
     );
 
-    vec![header, block]
+    let page = doc_layout::wrap_preview_page(cx, None, "Code view", vec![header, block]);
+
+    vec![page]
 }
 
 pub(in crate::ui) fn code_editor_mvp_source() -> String {

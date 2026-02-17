@@ -181,7 +181,7 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 text: prepared.blob,
-                color: Color::TRANSPARENT,
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT),
             },
             SceneOp::Path {
                 order: DrawOrder(0),

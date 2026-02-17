@@ -24,6 +24,7 @@ use zip::write::FileOptions;
 
 pub mod api;
 pub mod artifacts;
+mod bundle_index;
 mod cli;
 mod commands;
 mod compare;
@@ -171,6 +172,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_after_run: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
+    let mut meta_out: Option<PathBuf> = None;
+    let mut test_ids_out: Option<PathBuf> = None;
+    let mut query_out: Option<PathBuf> = None;
+    let mut slice_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -187,12 +192,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut timeout_ms: u64 = 240_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
+    let mut stats_verbose: bool = false;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
     let mut trace_chrome: bool = false;
     let mut trace_out: Option<PathBuf> = None;
     let mut warmup_frames: u64 = 0;
+    let mut max_test_ids: usize = 200;
     let mut lint_all_test_ids_bounds: bool = false;
     let mut lint_eps_px: f32 = 0.5;
     let mut suite_lint: bool = true;
@@ -629,7 +636,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let p = PathBuf::from(v);
                 pick_apply_out = Some(p.clone());
                 triage_out = Some(p.clone());
-                lint_out = Some(p);
+                lint_out = Some(p.clone());
+                meta_out = Some(p.clone());
+                query_out = Some(p.clone());
+                slice_out = Some(p.clone());
+                test_ids_out = Some(p);
+                i += 1;
+            }
+            "--max-test-ids" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-test-ids".to_string());
+                };
+                max_test_ids = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --max-test-ids (expected usize)".to_string())?;
                 i += 1;
             }
             "--all-test-ids" => {
@@ -1671,6 +1692,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--verbose" => {
+                stats_verbose = true;
+                i += 1;
+            }
             "--with" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -2098,6 +2123,41 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             lint_out,
             lint_all_test_ids_bounds,
             lint_eps_px,
+            warmup_frames,
+            stats_json,
+        ),
+        "meta" => commands::artifacts::cmd_meta(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            meta_out,
+            warmup_frames,
+            stats_json,
+        ),
+        "test-ids" => commands::artifacts::cmd_test_ids(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            test_ids_out,
+            warmup_frames,
+            max_test_ids,
+            stats_json,
+        ),
+        "query" => commands::query::cmd_query(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            query_out,
+            warmup_frames,
+            stats_json,
+        ),
+        "slice" => commands::slice::cmd_slice(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            slice_out,
             warmup_frames,
             stats_json,
         ),
@@ -7258,15 +7318,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(script_key.clone()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -7492,15 +7551,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(script_key.clone()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -7543,21 +7601,26 @@ See: `docs/tracy.md`.\n";
                             timeout_ms,
                             poll_ms,
                         );
-                        if let Ok(summary) = &result
-                            && summary.stage.as_deref() == Some("failed")
-                        {
-                            if let Some(dir) = wait_for_failure_dump_bundle(
-                                &resolved_out_dir,
-                                summary,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                    if let Ok(summary) = result.as_mut() {
-                                        summary.last_bundle_dir = Some(name.to_string());
-                                    }
-                                }
+                        let last_bundle_dir_name = match result.as_ref() {
+                            Ok(summary) if summary.stage.as_deref() == Some("failed") => {
+                                wait_for_failure_dump_bundle(
+                                    &resolved_out_dir,
+                                    summary,
+                                    timeout_ms,
+                                    poll_ms,
+                                )
+                                .and_then(|dir| {
+                                    dir.file_name()
+                                        .and_then(|s| s.to_str())
+                                        .map(ToString::to_string)
+                                })
                             }
+                            _ => None,
+                        };
+                        if let Some(name) = last_bundle_dir_name
+                            && let Ok(summary) = result.as_mut()
+                        {
+                            summary.last_bundle_dir = Some(name);
                         }
                         let result = match result {
                             Ok(v) => v,
@@ -8399,15 +8462,14 @@ See: `docs/tracy.md`.\n";
                             &resolved_script_result_path,
                             &perf_capabilities_check_path,
                         )
-                        .map_err(|err| {
+                        .inspect_err(|err| {
                             write_tooling_failure_script_result_if_missing(
                                 &resolved_script_result_path,
                                 "tooling.run.failed",
-                                &err,
+                                err,
                                 "tooling_error",
                                 Some(src.display().to_string()),
                             );
-                            err
                         })?;
 
                         match result.stage {
@@ -8450,21 +8512,26 @@ See: `docs/tracy.md`.\n";
                             timeout_ms,
                             poll_ms,
                         );
-                        if let Ok(summary) = &result
-                            && summary.stage.as_deref() == Some("failed")
-                        {
-                            if let Some(dir) = wait_for_failure_dump_bundle(
-                                &resolved_out_dir,
-                                summary,
-                                timeout_ms,
-                                poll_ms,
-                            ) {
-                                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                    if let Ok(summary) = result.as_mut() {
-                                        summary.last_bundle_dir = Some(name.to_string());
-                                    }
-                                }
+                        let last_bundle_dir_name = match result.as_ref() {
+                            Ok(summary) if summary.stage.as_deref() == Some("failed") => {
+                                wait_for_failure_dump_bundle(
+                                    &resolved_out_dir,
+                                    summary,
+                                    timeout_ms,
+                                    poll_ms,
+                                )
+                                .and_then(|dir| {
+                                    dir.file_name()
+                                        .and_then(|s| s.to_str())
+                                        .map(ToString::to_string)
+                                })
                             }
+                            _ => None,
+                        };
+                        if let Some(name) = last_bundle_dir_name
+                            && let Ok(summary) = result.as_mut()
+                        {
+                            summary.last_bundle_dir = Some(name);
                         }
                         let result = match result {
                             Ok(v) => v,
@@ -10022,7 +10089,11 @@ See: `docs/tracy.md`.\n";
                         .unwrap_or_else(|_| "{}".to_string())
                 );
             } else {
-                report.print_human(&bundle_path);
+                if stats_verbose {
+                    report.print_human(&bundle_path);
+                } else {
+                    report.print_human_brief(&bundle_path);
+                }
             }
             if let Some(test_id) = check_stale_paint_test_id.as_deref() {
                 check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
@@ -10462,6 +10533,14 @@ pub(crate) fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
     dir.join("check.lint.json")
 }
 
+pub(crate) fn default_meta_out_path(bundle_path: &Path) -> PathBuf {
+    crate::bundle_index::default_bundle_meta_path(bundle_path)
+}
+
+pub(crate) fn default_test_ids_out_path(bundle_path: &Path) -> PathBuf {
+    crate::bundle_index::default_test_ids_path(bundle_path)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
@@ -10582,6 +10661,27 @@ pub(crate) fn pack_bundle_dir_to_zip(
         if screenshots_dir.is_dir() {
             let screenshots_prefix = format!("{bundle_name}/_root/screenshots");
             zip_add_screenshots(&mut zip, &screenshots_dir, &screenshots_prefix, options)?;
+        }
+    }
+
+    if include_root_artifacts || include_triage {
+        let meta_path = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)?;
+        let test_ids_index_path =
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames)?;
+        let test_ids_path =
+            crate::bundle_index::ensure_test_ids_json(&bundle_json, warmup_frames, 500)?;
+
+        for (src, rel) in [
+            (meta_path, "bundle.meta.json"),
+            (test_ids_index_path, "test_ids.index.json"),
+            (test_ids_path, "test_ids.json"),
+        ] {
+            if src.is_file() {
+                let dst = format!("{bundle_name}/_root/{rel}");
+                zip.start_file(dst, options).map_err(|e| e.to_string())?;
+                let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+                std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+            }
         }
     }
 

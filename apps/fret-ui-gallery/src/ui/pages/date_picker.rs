@@ -170,22 +170,6 @@ pub(super) fn preview_date_picker(
         }
     };
 
-    let gap_card = |cx: &mut ElementContext<'_, App>,
-                    title: &'static str,
-                    details: &'static str,
-                    test_id: &'static str| {
-        let alert_content = shadcn::Alert::new([
-            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
-            shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
-            shadcn::AlertDescription::new(details).into_element(cx),
-        ])
-        .variant(shadcn::AlertVariant::Default)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
-        .into_element(cx)
-        .test_id(test_id);
-        (title, alert_content)
-    };
-
     let basic_selected = cx
         .app
         .models()
@@ -290,66 +274,42 @@ pub(super) fn preview_date_picker(
             .test_id("ui-gallery-date-picker-dob")
     };
 
-    let (input_title, input) = gap_card(
+    let (input_title, input) = doc_layout::gap_card(
         cx,
         "Input",
         "Input-driven parsing is not yet exposed by current Fret DatePicker API. This section remains explicit to keep docs parity auditable.",
         "ui-gallery-date-picker-input-gap",
     );
 
-    let (time_title, time_picker) = gap_card(
+    let (time_title, time_picker) = doc_layout::gap_card(
         cx,
         "Time Picker",
         "Time selection widgets are currently implemented in Calendar recipes, but not yet unified into DatePicker API.",
         "ui-gallery-date-picker-time-gap",
     );
 
-    let (nl_title, natural_language) = gap_card(
+    let (nl_title, natural_language) = doc_layout::gap_card(
         cx,
         "Natural Language Picker",
         "Natural-language parsing (e.g. chrono-node style) is not available in this runtime surface yet.",
         "ui-gallery-date-picker-natural-gap",
     );
 
-    let rtl = {
-        fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
-                    .placeholder("Pick a date")
-                    .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-date-picker-rtl")
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
+            .placeholder("Pick a date")
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-date-picker-rtl");
 
-    let notes_stack = stack::vstack(
+    let notes_stack = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Date picker parity should follow docs sequence even when some recipe surfaces are not yet available in the API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep unsupported examples visible as explicit gap cards to avoid hidden regressions in future alignment passes.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "For date-of-birth flows, dropdown month/year caption improves large-jump navigation compared with arrow-only controls.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Add deterministic test IDs on every scenario so diag scripts can capture state transitions and layout snapshots.",
-                ),
-            ]
-        },
+        [
+            "Date picker parity should follow docs sequence even when some recipe surfaces are not yet available in the API.",
+            "Keep unsupported examples visible as explicit gap cards to avoid hidden regressions in future alignment passes.",
+            "For date-of-birth flows, dropdown month/year caption improves large-jump navigation compared with arrow-only controls.",
+            "Add deterministic test IDs on every scenario so diag scripts can capture state transitions and layout snapshots.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -396,13 +356,25 @@ pub(super) fn preview_date_picker(
                 .max_w(Px(780.0)),
             DocSection::new(input_title, input)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: Input-driven parsing is not exposed by current DatePicker API yet."#,
+                ),
             DocSection::new(time_title, time_picker)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: Time selection widgets are not yet unified into DatePicker API."#,
+                ),
             DocSection::new(nl_title, natural_language)
                 .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: Natural-language parsing is not available in this runtime surface yet."#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(

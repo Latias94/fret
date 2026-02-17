@@ -32,7 +32,7 @@ pub(super) fn tab_strip_view(
 
         WorkspaceTabStrip::new(selected.clone())
             .tabs(workspace_tab_ids.iter().map(|tab_id| {
-                let (title, _origin, _docs, _usage) = page_meta(tab_id.as_ref());
+                let (title, _origin) = page_meta(tab_id.as_ref());
                 let dirty = workspace_dirty_ids
                     .iter()
                     .any(|d| d.as_ref() == tab_id.as_ref());

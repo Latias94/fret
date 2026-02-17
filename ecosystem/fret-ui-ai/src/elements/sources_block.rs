@@ -1,21 +1,47 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant,
+    TextStyle, TextWrap,
+};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, PressableA11y, PressableKeyActivation, PressableProps,
+    SemanticsDecoration, SemanticsProps, TextProps,
+};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Radius, Space};
-
-use fret_ui_shadcn::{
-    Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent,
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
 };
 
+use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
+
 use crate::model::SourceItem;
+
+fn text_xs_style(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let size = theme
+        .metric_by_key("component.text.xs_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.text.xs_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight,
+        slant: TextSlant::Normal,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
 
 #[derive(Clone)]
 /// A collapsible list view for assistant sources/references (AI Elements `sources.tsx`-style).
@@ -69,7 +95,7 @@ impl SourcesBlock {
             highlighted_source_model: None,
             test_id_root: None,
             test_id_row_prefix: None,
-            layout: LayoutRefinement::default(),
+            layout: LayoutRefinement::default().mb(Space::N4),
             chrome: ChromeRefinement::default(),
         }
     }
@@ -125,7 +151,19 @@ impl SourcesBlock {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let root_layout = decl_style::layout_style(&theme, self.layout);
-        let excerpt_color = theme.color_by_key("muted-foreground");
+        let excerpt_color = theme
+            .color_by_key("muted-foreground")
+            .unwrap_or_else(|| theme.color_token("muted-foreground"));
+        let title_color = theme.color_token("foreground");
+
+        let icon_color = ColorRef::Token {
+            key: "foreground",
+            fallback: ColorFallback::ThemeTextPrimary,
+        };
+        let list_theme = theme.clone();
+        let trigger_theme = theme.clone();
+        let list_icon_color = icon_color.clone();
+        let trigger_icon_color = icon_color.clone();
 
         let highlight_bg = theme
             .color_by_key("accent")
@@ -160,7 +198,7 @@ impl SourcesBlock {
         let list = stack::vstack(
             cx,
             stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default())
                 .gap(Space::N2),
             move |cx| {
                 let mut out = Vec::new();
@@ -173,7 +211,28 @@ impl SourcesBlock {
                         .as_ref()
                         .is_some_and(|id| id.as_ref() == item.id.as_ref());
 
-                    let icon = decl_icon::icon(cx, ids::ui::BOOK);
+                    let icon = decl_icon::icon_with(
+                        cx,
+                        ids::ui::BOOK,
+                        Some(Px(16.0)),
+                        Some(list_icon_color.clone()),
+                    );
+
+                    let title_text = cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: item.title.clone(),
+                        style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
+                        color: Some(title_color),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Ellipsis,
+                        align: TextAlign::Start,
+                    });
+
+                    let title_row = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |_cx| vec![icon, title_text],
+                    );
 
                     let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
                         (Some(url), Some(handler)) => {
@@ -186,22 +245,28 @@ impl SourcesBlock {
                                 handler(host, cx, reason, link.clone());
                             });
 
-                            let title = cx.text(item.title.clone());
-                            let mut btn = Button::new(item.title.clone())
-                                .variant(ButtonVariant::Link)
-                                .size(ButtonSize::Sm)
-                                .children([icon, title])
-                                .on_activate(on_activate);
-                            if let Some(id) = row_test_id.clone() {
-                                btn = btn.test_id(Arc::<str>::from(format!("{id}-link")));
-                            }
-                            btn.into_element(cx)
+                            let link_test_id = row_test_id
+                                .clone()
+                                .map(|id| Arc::<str>::from(format!("{id}-link")));
+
+                            cx.pressable(
+                                PressableProps {
+                                    key_activation: PressableKeyActivation::EnterOnly,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Link),
+                                        label: Some(item.title.clone()),
+                                        test_id: link_test_id,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx, _state| {
+                                    cx.pressable_on_activate(on_activate.clone());
+                                    [title_row]
+                                },
+                            )
                         }
-                        _ => stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2),
-                            move |cx| vec![icon, cx.text(item.title.clone())],
-                        ),
+                        _ => title_row,
                     };
 
                     let active_badge = if is_highlighted {
@@ -225,7 +290,7 @@ impl SourcesBlock {
                     let row = stack::hstack(
                         cx,
                         stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
+                            .layout(LayoutRefinement::default())
                             .gap(Space::N2)
                             .justify(Justify::Between),
                         move |_cx| {
@@ -242,8 +307,8 @@ impl SourcesBlock {
                         cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: excerpt,
-                            style: None,
-                            color: excerpt_color,
+                            style: Some(text_xs_style(&list_theme, FontWeight::NORMAL)),
+                            color: Some(excerpt_color),
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
@@ -303,57 +368,50 @@ impl SourcesBlock {
         let collapsible = Collapsible::uncontrolled(default_open).into_element_with_open_model(
             cx,
             move |cx, open_model, is_open| {
-                let debug_toggle = std::env::var_os("FRET_DIAG_DEBUG_AI_SOURCES_TOGGLE")
-                    .is_some_and(|v| !v.is_empty() && v != "0");
-                let debug_test_id = trigger_test_id.clone();
-                let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
-                    let store = host.models_mut();
-                    let prev = store.get_copied(&open_model).unwrap_or(false);
-                    let _ = store.update(&open_model, |v| *v = !*v);
-                    let next = store.get_copied(&open_model).unwrap_or(!prev);
-
-                    if debug_toggle {
-                        eprintln!(
-                            "ai sources toggle activated test_id={} prev={} next={} reason={reason:?}",
-                            debug_test_id.as_deref().unwrap_or("<none>"),
-                            prev,
-                            next
-                        );
-                    }
-                    host.notify(cx);
+                let label = cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: Arc::<str>::from(format!("Used {count} sources")),
+                    style: Some(text_xs_style(&trigger_theme, FontWeight::MEDIUM)),
+                    color: Some(title_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::Start,
                 });
-
-                let label = cx.text(format!("Used {count} sources"));
                 let chevron_id = if is_open {
                     ids::ui::CHEVRON_UP
                 } else {
                     ids::ui::CHEVRON_DOWN
                 };
-                let chevron = decl_icon::icon(cx, chevron_id);
+                let chevron = decl_icon::icon_with(
+                    cx,
+                    chevron_id,
+                    Some(Px(16.0)),
+                    Some(trigger_icon_color.clone()),
+                );
                 let row = stack::hstack(
                     cx,
                     stack::HStackProps::default()
                         .layout(LayoutRefinement::default())
-                        .gap(Space::N2),
+                        .gap(Space::N2)
+                        .items_center(),
                     move |_cx| vec![label, chevron],
                 );
 
-                let mut btn = Button::new(format!("Used {count} sources"))
-                    .variant(ButtonVariant::Ghost)
-                    .size(ButtonSize::Sm)
-                    .children([row])
-                    .on_activate(on_activate)
-                    .refine_layout(LayoutRefinement::default());
-                if let Some(test_id) = trigger_test_id.clone() {
-                    btn = btn.test_id(test_id);
-                }
-                btn.into_element(cx)
+                let trigger = CollapsibleTrigger::new(open_model, [row]).into_element(cx, is_open);
+                let Some(test_id) = trigger_test_id.clone() else {
+                    return trigger;
+                };
+
+                trigger.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Button)
+                        .test_id(test_id),
+                )
             },
             move |cx| {
                 let content = CollapsibleContent::new(vec![list.clone()])
-                    .refine_style(ChromeRefinement::default().p(Space::N2).pt(Space::N3))
                     .refine_style(chrome.clone())
-                    .refine_layout(LayoutRefinement::default().w_full())
+                    .refine_layout(LayoutRefinement::default().mt(Space::N3))
                     .into_element(cx);
 
                 let Some(test_id) = content_test_id.clone() else {

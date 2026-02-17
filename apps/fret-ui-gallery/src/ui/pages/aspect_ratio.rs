@@ -40,7 +40,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             .test_id(test_id)
     };
 
-    let demo_content = ratio_example(
+    let demo = ratio_example(
         cx,
         16.0 / 9.0,
         Px(384.0),
@@ -48,9 +48,8 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Landscape media",
         "ui-gallery-aspect-ratio-demo",
     );
-    let demo = demo_content;
 
-    let square_content = ratio_example(
+    let square = ratio_example(
         cx,
         1.0,
         Px(192.0),
@@ -58,9 +57,8 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Square media",
         "ui-gallery-aspect-ratio-square",
     );
-    let square = square_content;
 
-    let portrait_content = ratio_example(
+    let portrait = ratio_example(
         cx,
         9.0 / 16.0,
         Px(160.0),
@@ -68,54 +66,27 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "Portrait media",
         "ui-gallery-aspect-ratio-portrait",
     );
-    let portrait = portrait_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            ratio_example(
-                cx,
-                16.0 / 9.0,
-                Px(384.0),
-                "16:9",
-                "RTL layout sample",
-                "ui-gallery-aspect-ratio-rtl",
-            )
-        },
-    );
-    let rtl = rtl_content;
+    let rtl = doc_layout::rtl(cx, |cx| {
+        ratio_example(
+            cx,
+            16.0 / 9.0,
+            Px(384.0),
+            "16:9",
+            "RTL layout sample",
+            "ui-gallery-aspect-ratio-rtl",
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Pick ratio by content type: 16:9 for landscape previews, 1:1 for avatars/thumbnails, 9:16 for reels or short video cards.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep max width explicit on narrow ratios to avoid over-tall layouts in dense editor sidebars.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL and constrained width together so captions and controls remain stable during localization.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
+            "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
+            "Pick ratio by content type: 16:9 for landscape previews, 1:1 for avatars/thumbnails, 9:16 for reels or short video cards.",
+            "Keep max width explicit on narrow ratios to avoid over-tall layouts in dense editor sidebars.",
+            "Validate RTL and constrained width together so captions and controls remain stable during localization.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -132,11 +103,36 @@ shadcn::AspectRatio::new(16.0 / 9.0, content)
     .into_element(cx);"#,
                 ),
             DocSection::new("Square", square)
-                .description("1:1 square media for avatars/thumbnails."),
+                .description("1:1 square media for avatars/thumbnails.")
+                .code(
+                    "rust",
+                    r#"let content = cx.text("1:1");
+shadcn::AspectRatio::new(1.0, content)
+    .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Portrait", portrait)
-                .description("9:16 portrait media for reels/short video cards."),
+                .description("9:16 portrait media for reels/short video cards.")
+                .code(
+                    "rust",
+                    r#"let content = cx.text("9:16");
+shadcn::AspectRatio::new(9.0 / 16.0, content)
+    .refine_layout(LayoutRefinement::default().max_w(Px(240.0)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("AspectRatio should remain direction-agnostic."),
+                .description("AspectRatio should remain direction-agnostic.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        let content = cx.text("RTL layout sample");
+        shadcn::AspectRatio::new(16.0 / 9.0, content).into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
         ],
     );

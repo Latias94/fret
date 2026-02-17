@@ -20,7 +20,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id(test_id)
     };
 
-    let demo_content = stack::vstack(
+    let demo = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -49,9 +49,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     )
     .test_id("ui-gallery-alert-demo");
-    let demo = demo_content;
 
-    let basic_content = build_alert(
+    let basic = build_alert(
         cx,
         "ui-gallery-alert-basic",
         shadcn::AlertVariant::Default,
@@ -59,9 +58,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         "Account updated successfully",
         "Your profile information has been saved and applied immediately.",
     );
-    let basic = basic_content;
 
-    let destructive_content = build_alert(
+    let destructive = build_alert(
         cx,
         "ui-gallery-alert-destructive",
         shadcn::AlertVariant::Destructive,
@@ -69,9 +67,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         "Payment failed",
         "Please verify card details, billing address, and available funds.",
     );
-    let destructive = destructive_content;
 
-    let action_content = {
+    let action = {
         let action = stack::hstack(
             cx,
             stack::HStackProps::default()
@@ -99,9 +96,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-alert-action")
     };
-    let action = action_content;
 
-    let custom_colors_content = shadcn::Alert::new([
+    let custom_colors = shadcn::Alert::new([
         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
         shadcn::AlertTitle::new("Your subscription expires in 3 days").into_element(cx),
         shadcn::AlertDescription::new(
@@ -127,61 +123,33 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-alert-colors");
-    let custom_colors = custom_colors_content;
 
-    let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N3).items_start(),
-                |cx| {
-                    ui::children![cx; build_alert(
-                        cx,
-                        "ui-gallery-alert-rtl",
-                        shadcn::AlertVariant::Default,
-                        "lucide.info",
-                        "RTL alert sample",
-                        "This alert validates right-to-left layout and text alignment.",
-                    )]
-                },
-            )
-        },
-    );
-    let rtl = rtl_content;
+    let rtl = doc_layout::rtl(cx, |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N3).items_start(),
+            |cx| {
+                ui::children![cx; build_alert(
+                    cx,
+                    "ui-gallery-alert-rtl",
+                    shadcn::AlertVariant::Default,
+                    "lucide.info",
+                    "RTL alert sample",
+                    "This alert validates right-to-left layout and text alignment.",
+                )]
+            },
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            ui::children![
-                cx;
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current gallery uses an inline action row to approximate shadcn `AlertAction` behavior.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
+            "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
+            "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
+            "Current gallery uses an inline action row to approximate shadcn `AlertAction` behavior.",
+            "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -206,19 +174,92 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("Basic", basic)
                 .description("Default variant for neutral info.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-check")),
+    shadcn::AlertTitle::new("Account updated successfully").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.variant(shadcn::AlertVariant::Default)
+.into_element(cx);"#,
+                ),
             DocSection::new("Destructive", destructive)
                 .description("Destructive variant for critical errors.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
+    shadcn::AlertTitle::new("Payment failed").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.variant(shadcn::AlertVariant::Destructive)
+.into_element(cx);"#,
+                ),
             DocSection::new("Action", action)
                 .description("Inline action row composed inside the alert.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"let action_row = stack::hstack(
+    cx,
+    stack::HStackProps::default()
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end(),
+    |cx| {
+        ui::children![cx;
+            shadcn::Button::new("Enable")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm),
+        ]
+    },
+);
+
+shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.moon")),
+    shadcn::AlertTitle::new("Dark mode is now available").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+    action_row,
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
+    shadcn::AlertTitle::new("Your subscription expires soon").into_element(cx),
+    shadcn::AlertDescription::new("...").into_element(cx),
+])
+.refine_style(
+    ChromeRefinement::default()
+        .bg(ColorRef::Color(CoreColor { r: 1.0, g: 0.98, b: 0.92, a: 1.0 }))
+        .border_color(ColorRef::Color(CoreColor { r: 0.98, g: 0.85, b: 0.45, a: 1.0 })),
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
-                .max_w(Px(720.0)),
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Alert::new([
+            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+            shadcn::AlertTitle::new("RTL alert sample").into_element(cx),
+            shadcn::AlertDescription::new("...").into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

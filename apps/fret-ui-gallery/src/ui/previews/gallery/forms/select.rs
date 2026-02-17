@@ -37,7 +37,9 @@ pub(in crate::ui) fn preview_select(
                 shadcn::SelectItem::new("banana", "Banana")
                     .test_id("ui-gallery-select-item-banana")
                     .into(),
-                shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+                shadcn::SelectItem::new("blueberry", "Blueberry")
+                    .test_id("ui-gallery-select-item-blueberry")
+                    .into(),
                 shadcn::SelectItem::new("grapes", "Grapes").into(),
                 shadcn::SelectItem::new("pineapple", "Pineapple").into(),
             ])

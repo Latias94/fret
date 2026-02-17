@@ -112,7 +112,7 @@ pub(in crate::ui) fn preview_ai_sources_demo(
 
     let block = ui_ai::SourcesBlock::new(sources_for_block)
         .title("Used sources")
-        .default_open(true)
+        .default_open(false)
         .on_open_url(on_open_url)
         .highlighted_source_model(selected_for_block)
         .test_id_root("ui-ai-sources-demo-root")
@@ -121,12 +121,15 @@ pub(in crate::ui) fn preview_ai_sources_demo(
 
     let title =
         cx.text("SourcesBlock (AI Elements): collapsible list + highlight + open-url seam.");
+    let hint = cx.text(
+        "Upstream AI Elements defaults sources to collapsed; activate the trigger to expand.",
+    );
 
     vec![stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
-        move |_cx| vec![title, marker_selected, marker_url, citations, block],
+        move |_cx| vec![title, marker_selected, marker_url, citations, hint, block],
     )]
 }

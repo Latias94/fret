@@ -374,50 +374,24 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         content
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::InputGroup::new(rtl_value)
-                    .a11y_label("RTL input group")
-                    .leading([shadcn::InputGroupText::new("lock").into_element(cx)])
-                    .trailing([shadcn::InputGroupText::new("sk-...").into_element(cx)])
-                    .refine_layout(max_w_xs.clone())
-                    .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-input-group-rtl");
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::InputGroup::new(rtl_value)
+            .a11y_label("RTL input group")
+            .leading([shadcn::InputGroupText::new("lock").into_element(cx)])
+            .trailing([shadcn::InputGroupText::new("sk-...").into_element(cx)])
+            .refine_layout(max_w_xs.clone())
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-input-group-rtl");
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "`Custom Input` is represented as a composition approximation in the current API.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
+            "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
+            "`Custom Input` is represented as a composition approximation in the current API.",
+            "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -437,14 +411,60 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .into_element(cx);"#,
                 ),
             DocSection::new("Align / inline-start", align_inline_start)
-                .description("Inline-start addon (leading slot)."),
+                .description("Inline-start addon (leading slot).")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Inline start addon")
+    .leading([shadcn::InputGroupText::new("@").into_element(cx)])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Align / inline-end", align_inline_end)
-                .description("Inline-end addon (trailing slot)."),
+                .description("Inline-end addon (trailing slot).")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Inline end addon")
+    .trailing([shadcn::InputGroupText::new(".com").into_element(cx)])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Align / block-start", align_block_start)
-                .description("Block-start helper text with a divider."),
+                .description("Block-start helper text with a divider.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Block start addon")
+    .block_start([shadcn::InputGroupText::new("Write a concise title").into_element(cx)])
+    .block_start_border_bottom(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Align / block-end", align_block_end)
-                .description("Textarea-style block-end footer with buttons."),
-            DocSection::new("Icon", icon).description("Icon-like leading adornment."),
+                .description("Textarea-style block-end footer with buttons.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .textarea()
+    .a11y_label("Block end addon")
+    .block_end([
+        shadcn::InputGroupText::new("0/200").into_element(cx),
+        shadcn::InputGroupButton::new("Publish")
+            .size(shadcn::InputGroupButtonSize::Sm)
+            .variant(shadcn::ButtonVariant::Outline)
+            .into_element(cx),
+    ])
+    .block_end_border_top(true)
+    .textarea_min_height(Px(84.0))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Icon", icon)
+                .description("Icon-like leading adornment.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Icon example")
+    .leading([shadcn::InputGroupText::new("search").into_element(cx)])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Text", text)
                 .description("Leading/trailing text addons should not overlap the control.")
                 .code(
@@ -455,19 +475,104 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .into_element(cx);"#,
                 ),
             DocSection::new("Button", button)
-                .description("Trailing button; set `trailing_has_button(true)` for layout."),
+                .description("Trailing button; set `trailing_has_button(true)` for layout.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Button example")
+    .trailing([shadcn::InputGroupButton::new("Search")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx)])
+    .trailing_has_button(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Kbd", kbd)
-                .description("Kbd-like addons (layout hints for monospace pills)."),
+                .description("Kbd-like addons (layout hints for monospace pills).")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Kbd example")
+    .leading([shadcn::InputGroupText::new("Ctrl").into_element(cx)])
+    .trailing([shadcn::InputGroupText::new("K").into_element(cx)])
+    .leading_has_kbd(true)
+    .trailing_has_kbd(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Dropdown", dropdown)
-                .description("Leading button + caret composition approximation."),
+                .description("Leading button + caret composition approximation.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Dropdown example")
+    .leading([
+        shadcn::InputGroupButton::new("All")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .into_element(cx),
+        shadcn::InputGroupText::new("v").into_element(cx),
+    ])
+    .leading_has_button(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Spinner", spinner)
-                .description("Leading spinner while fetching results."),
+                .description("Leading spinner while fetching results.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .a11y_label("Spinner example")
+    .leading([shadcn::Spinner::new().into_element(cx)])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Textarea", textarea)
-                .description("Textarea mode with a footer row and min height."),
+                .description("Textarea mode with a footer row and min height.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .textarea()
+    .a11y_label("Textarea example")
+    .block_end([
+        shadcn::InputGroupText::new("Shift+Enter for newline").into_element(cx),
+        shadcn::InputGroupButton::new("Send")
+            .size(shadcn::InputGroupButtonSize::Sm)
+            .variant(shadcn::ButtonVariant::Outline)
+            .into_element(cx),
+    ])
+    .block_end_border_top(true)
+    .textarea_min_height(Px(100.0))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Custom Input", custom_input)
-                .description("Custom/extended input chrome via slots."),
+                .description("Custom/extended input chrome via slots.")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(model)
+    .textarea()
+    .a11y_label("Custom input example")
+    .block_start([shadcn::InputGroupText::new("Custom control (approx)").into_element(cx)])
+    .block_start_border_bottom(true)
+    .block_end([shadcn::InputGroupButton::new("Resize")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .size(shadcn::InputGroupButtonSize::Sm)
+        .into_element(cx)])
+    .block_end_border_top(true)
+    .textarea_min_height(Px(88.0))
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("InputGroup layout under an RTL direction provider."),
+                .description("InputGroup layout under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::InputGroup::new(model)
+            .a11y_label("RTL input group")
+            .leading([shadcn::InputGroupText::new("lock").into_element(cx)])
+            .trailing([shadcn::InputGroupText::new("sk-...").into_element(cx)])
+            .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and invariants."),
         ],
     );

@@ -3,6 +3,7 @@ use super::super::layout_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::widget::MeasureCx;
 
 mod flex;
 mod grid;
@@ -820,6 +821,33 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(0.0), Px(0.0)), props.layout, cx.available)
             }
             ElementInstance::Text(props) => {
+                if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(None, None),
+                        LayoutSize::new(
+                            AvailableSpace::Definite(cx.available.width),
+                            AvailableSpace::Definite(cx.available.height),
+                        ),
+                    );
+
+                    // Avoid re-entrant `with_widget_mut(cx.node)` by measuring the current widget
+                    // directly (using the same intrinsic measurement semantics as `MeasureCx`).
+                    let mut measure_cx = MeasureCx {
+                        app: cx.app,
+                        tree: cx.tree,
+                        node: cx.node,
+                        window: cx.window,
+                        focus: cx.focus,
+                        children: cx.children,
+                        constraints,
+                        scale_factor: cx.scale_factor,
+                        services: cx.services,
+                        observe_model: cx.observe_model,
+                        observe_global: cx.observe_global,
+                    };
+                    return self.measure_impl(&mut measure_cx);
+                }
+
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -848,7 +876,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
-                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
+                measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);
@@ -926,6 +954,31 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::StyledText(props) => {
+                if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(None, None),
+                        LayoutSize::new(
+                            AvailableSpace::Definite(cx.available.width),
+                            AvailableSpace::Definite(cx.available.height),
+                        ),
+                    );
+
+                    let mut measure_cx = MeasureCx {
+                        app: cx.app,
+                        tree: cx.tree,
+                        node: cx.node,
+                        window: cx.window,
+                        focus: cx.focus,
+                        children: cx.children,
+                        constraints,
+                        scale_factor: cx.scale_factor,
+                        services: cx.services,
+                        observe_model: cx.observe_model,
+                        observe_global: cx.observe_global,
+                    };
+                    return self.measure_impl(&mut measure_cx);
+                }
+
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -954,7 +1007,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
-                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
+                measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);
@@ -1044,6 +1097,31 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::SelectableText(props) => {
+                if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(None, None),
+                        LayoutSize::new(
+                            AvailableSpace::Definite(cx.available.width),
+                            AvailableSpace::Definite(cx.available.height),
+                        ),
+                    );
+
+                    let mut measure_cx = MeasureCx {
+                        app: cx.app,
+                        tree: cx.tree,
+                        node: cx.node,
+                        window: cx.window,
+                        focus: cx.focus,
+                        children: cx.children,
+                        constraints,
+                        scale_factor: cx.scale_factor,
+                        services: cx.services,
+                        observe_model: cx.observe_model,
+                        observe_global: cx.observe_global,
+                    };
+                    return self.measure_impl(&mut measure_cx);
+                }
+
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
                     .app
@@ -1072,7 +1150,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
-                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
+                measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);

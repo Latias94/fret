@@ -34,3 +34,32 @@ jobs:
 
       - name: Check generated icon artifacts
         run: python3 tools/check_icons_generation.py --pack all
+
+  cargo-deny-licenses:
+    name: cargo-deny (licenses/sources/advisories)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.19.0
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check licenses
+        run: cargo deny check licenses
+
+      - name: Check sources
+        run: cargo deny check sources
+
+      - name: Check advisories
+        run: cargo deny check advisories

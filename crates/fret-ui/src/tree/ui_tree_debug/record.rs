@@ -326,6 +326,7 @@ impl<H: UiHost> UiTree<H> {
         *self.debug_paint_cache_replays.entry(node).or_default() += replayed_ops;
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_layout_engine_solve(
         &mut self,
         root: NodeId,

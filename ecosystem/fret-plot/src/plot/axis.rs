@@ -18,8 +18,8 @@ impl Default for AxisLabelFormat {
 impl AxisLabelFormat {
     pub fn key(self) -> u64 {
         match self {
-            Self::Number(f) => 0x4e554d00_0000_0000u64 ^ u64::from(f.key()),
-            Self::TimeSeconds(f) => 0x54494d00_0000_0000u64 ^ f.key(),
+            Self::Number(f) => 0x4e55_4d00_0000_0000u64 ^ u64::from(f.key()),
+            Self::TimeSeconds(f) => 0x5449_4d00_0000_0000u64 ^ f.key(),
         }
     }
 
@@ -240,13 +240,13 @@ impl AxisLabelFormatter {
 
     pub fn number(fmt: AxisNumberFormat) -> Self {
         Self::custom(
-            0x4e554d00_0000_0000u64 ^ u64::from(fmt.key()),
+            0x4e55_4d00_0000_0000u64 ^ u64::from(fmt.key()),
             move |v, span| format_number(v, span, fmt),
         )
     }
 
     pub fn time_seconds(fmt: TimeAxisFormat) -> Self {
-        Self::custom(0x54494d00_0000_0000u64 ^ fmt.key(), move |v, span| {
+        Self::custom(0x5449_4d00_0000_0000u64 ^ fmt.key(), move |v, span| {
             format_time_seconds(v, span, fmt)
         })
     }

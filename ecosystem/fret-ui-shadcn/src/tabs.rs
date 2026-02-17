@@ -41,17 +41,6 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn luma_linear(c: Color) -> f32 {
-    // `Theme` colors are stored in linear space; approximate WCAG relative luminance.
-    (c.r * 0.2126) + (c.g * 0.7152) + (c.b * 0.0722)
-}
-
-fn theme_is_dark(theme: &Theme) -> bool {
-    let fg = theme.color_token("foreground");
-    let bg = theme.color_token("background");
-    luma_linear(fg) > luma_linear(bg)
-}
-
 fn apply_trigger_inherited_style(
     mut element: AnyElement,
     fg: Color,
@@ -192,8 +181,9 @@ fn tabs_shared_indicator<H: UiHost>(
     style_override: &TabsStyle,
 ) -> AnyElement {
     cx.named("tabs_shared_indicator", move |cx| {
-        let id = cx.root_id();
-        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx
+            .last_bounds_for_element(container_id)
+            .unwrap_or(cx.bounds);
         let tab_bounds = selected_idx
             .and_then(|idx| {
                 cx.with_state_for(container_id, TabsListLayoutRuntime::default, |rt| {
@@ -224,12 +214,8 @@ fn tabs_shared_indicator<H: UiHost>(
                 states |= WidgetStates::SELECTED;
             }
 
-            let fg_inactive = if theme_is_dark(theme) {
-                tabs_list_fg_muted(theme)
-            } else {
-                theme.color_token("foreground")
-            };
-            let fg_inactive = ColorRef::Color(fg_inactive);
+            // shadcn new-york-v4: inactive triggers inherit `text-muted-foreground` from the list.
+            let fg_inactive = ColorRef::Color(tabs_list_fg_muted(theme));
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -373,9 +359,16 @@ fn tabs_shared_indicator<H: UiHost>(
             }
 
             let bounds = p.bounds();
+            // The shared indicator targets trigger bounds tracked relative to the *list container*
+            // element (`container_bounds`). Depending on how absolute-positioned children are
+            // resolved in the current layout backend, the canvas bounds may be anchored to the
+            // container's padding box or content box. Convert from container-local offsets to
+            // canvas-local offsets so the indicator stays aligned under list padding.
+            let dx = container_bounds.origin.x.0 - bounds.origin.x.0;
+            let dy = container_bounds.origin.y.0 - bounds.origin.y.0;
 
-            let x_px = x.value.clamp(0.0, bounds.size.width.0);
-            let y_px = y.value.clamp(0.0, bounds.size.height.0);
+            let x_px = (x.value + dx).clamp(0.0, bounds.size.width.0);
+            let y_px = (y.value + dy).clamp(0.0, bounds.size.height.0);
             let max_width = (bounds.size.width.0 - x_px).max(0.0);
             let max_height = (bounds.size.height.0 - y_px).max(0.0);
             let width_px = width.value.clamp(0.0, max_width);
@@ -1270,6 +1263,23 @@ impl Tabs {
                         list_children.push(cx.roving_flex(
                             RovingFlexProps {
                                 flex: FlexProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        // shadcn new-york-v4: `TabsList` is an `inline-flex` container with
+                                        // `items-center`. Our list is a container overlaying multiple
+                                        // children (shared-indicator + trigger row), so we keep the list as
+                                        // a non-flex container and instead stretch the trigger row to the
+                                        // list content box and center triggers within it.
+                                        //
+                                        // Without this, the trigger row shrink-wraps to `trigger_h` and is
+                                        // top-aligned in the list content box, producing a 1px off-center
+                                        // active highlight (bottom gap only).
+                                        layout.size.height = Length::Fill;
+                                        if list_full_width {
+                                            layout.size.width = Length::Fill;
+                                        }
+                                        layout
+                                    },
                                     direction: match orientation {
                                         TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
                                         TabsOrientation::Vertical => fret_core::Axis::Vertical,
@@ -1312,14 +1322,9 @@ impl Tabs {
                                     }));
                                 }
 
-                                // shadcn new-york-v4: inactive triggers are `text-foreground` in
-                                // light mode and `text-muted-foreground` in dark mode.
-                                let fg_inactive = if theme_is_dark(&theme) {
-                                    tabs_list_fg_muted(&theme)
-                                } else {
-                                    theme.color_token("foreground")
-                                };
-                                let fg_inactive = ColorRef::Color(fg_inactive);
+                                // shadcn new-york-v4: `TabsList` sets `text-muted-foreground`, so
+                                // inactive triggers inherit it in both themes.
+                                let fg_inactive = ColorRef::Color(tabs_list_fg_muted(&theme));
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
@@ -1343,8 +1348,13 @@ impl Tabs {
                                 let pad_y = MetricRef::space(Space::N1).resolve(&theme);
                                 // new-york-v4: trigger uses `h-[calc(100%-1px)]` relative to the list
                                 // content box (after list padding).
+                                //
+                                // In Fret, centering a `-1px` height delta produces a half-pixel
+                                // offset which can snap inconsistently and read as a 1px vertical
+                                // misalignment in the active highlight. Prefer an even delta so
+                                // the centered position lands on whole pixels.
                                 let trigger_h = Px(
-                                    (list_height.0 - list_padding.0 * 2.0 - 1.0).max(0.0),
+                                    (list_height.0 - list_padding.0 * 2.0 - 2.0).max(0.0),
                                 );
                                 let trigger_refinement = if list_full_width {
                                     LayoutRefinement::default().flex_1().h_px(trigger_h)
@@ -1542,7 +1552,14 @@ impl Tabs {
                                                             .nowrap();
                                                         if let Some(line_height) = style.line_height
                                                         {
-                                                            text = text.line_height_px(line_height);
+                                                            // Match web baseline behavior by giving the label a fixed line box
+                                                            // height when a line-height is configured. This allows the text
+                                                            // host widget to apply CSS-like "half-leading" centering rather
+                                                            // than centering by the prepared glyph bounds, which can read as
+                                                            // slightly bottom-heavy in GPU-first layout.
+                                                            text = text
+                                                                .line_height_px(line_height)
+                                                                .h_px(line_height);
                                                         }
                                                         if let Some(letter_spacing_em) =
                                                             style.letter_spacing_em
@@ -1566,7 +1583,12 @@ impl Tabs {
 
                                                 vec![cx.flex(
                                                     FlexProps {
-                                                        layout: LayoutStyle::default(),
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width = Length::Fill;
+                                                            layout.size.height = Length::Fill;
+                                                            layout
+                                                        },
                                                         direction: fret_core::Axis::Horizontal,
                                                         gap: Px(6.0),
                                                         padding: Edges::all(Px(0.0)),
@@ -1820,6 +1842,68 @@ mod tests {
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn tabs_selected_trigger_is_vertically_centered_in_tab_list() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-vert-center",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![Tabs::new(model.clone()).items(items).into_element(cx)]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let tab_list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TabList)
+            .expect("tablist node");
+        let selected_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.flags.selected)
+            .expect("selected tab");
+
+        let tab_list_top = tab_list.bounds.origin.y.0;
+        let tab_list_bottom = tab_list.bounds.origin.y.0 + tab_list.bounds.size.height.0;
+        let tab_top = selected_tab.bounds.origin.y.0;
+        let tab_bottom = selected_tab.bounds.origin.y.0 + selected_tab.bounds.size.height.0;
+
+        let top_margin = tab_top - tab_list_top;
+        let bottom_margin = tab_list_bottom - tab_bottom;
+
+        let diff = (top_margin - bottom_margin).abs();
+        assert!(
+            diff <= 0.51,
+            "selected tab should be vertically centered in tablist: top_margin={top_margin:.3}, bottom_margin={bottom_margin:.3}, diff={diff:.3}"
+        );
+    }
 
     #[derive(Default)]
     struct FakeServices;

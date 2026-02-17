@@ -676,6 +676,7 @@ fn render_code_block_header<H: UiHost>(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_code_block_body<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -920,6 +921,7 @@ struct CodeBlockWindowedLineRichCache {
 }
 
 impl CodeBlockWindowedLineRichCache {
+    #[allow(clippy::too_many_arguments)]
     fn resolve(
         &mut self,
         theme_revision: u64,
@@ -1117,6 +1119,7 @@ fn render_code_block_line_row<H: UiHost>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_code_block_windowed_lines<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -1233,10 +1236,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         move |cx| {
             let mut out = Vec::new();
 
-            let thumb_x = thumb.clone();
-            let thumb_hover_x = thumb_hover.clone();
-            let thumb_y = thumb.clone();
-            let thumb_hover_y = thumb_hover.clone();
+            let thumb_x = thumb;
+            let thumb_hover_x = thumb_hover;
+            let thumb_y = thumb;
+            let thumb_hover_y = thumb_hover;
 
             let scroll_x_and_bar = cx.stack_props(
                 StackProps {
@@ -1273,8 +1276,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                             scroll_target: Some(scroll_x_id),
                             scroll_handle: scroll_x_handle.clone(),
                             style: ScrollbarStyle {
-                                thumb: thumb_x.clone(),
-                                thumb_hover: thumb_hover_x.clone(),
+                                thumb: thumb_x,
+                                thumb_hover: thumb_hover_x,
                                 ..Default::default()
                             },
                         });
@@ -1318,8 +1321,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                     scroll_target: Some(list_id),
                     scroll_handle: scroll_y_handle.base_handle().clone(),
                     style: ScrollbarStyle {
-                        thumb: thumb_y.clone(),
-                        thumb_hover: thumb_hover_y.clone(),
+                        thumb: thumb_y,
+                        thumb_hover: thumb_hover_y,
                         ..Default::default()
                     },
                 });

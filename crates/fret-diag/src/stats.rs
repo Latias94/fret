@@ -1289,6 +1289,162 @@ struct BundleStatsModelSourceHotspot {
 }
 
 impl BundleStatsReport {
+    pub(super) fn print_human_brief(&self, bundle_path: &Path) {
+        println!("bundle: {}", bundle_path.display());
+        println!(
+            "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
+            self.windows,
+            self.snapshots,
+            self.snapshots_considered,
+            self.snapshots_skipped_warmup,
+            self.snapshots_with_model_changes,
+            self.snapshots_with_global_changes,
+            self.snapshots_with_propagated_model_changes,
+            self.snapshots_with_propagated_global_changes
+        );
+        if self.warmup_frames > 0 {
+            println!("warmup_frames={}", self.warmup_frames);
+        }
+        println!("sort={}", self.sort.as_str());
+        println!(
+            "time sum (us): total={} layout={} prepaint={} paint={}",
+            self.sum_total_time_us,
+            self.sum_layout_time_us,
+            self.sum_prepaint_time_us,
+            self.sum_paint_time_us
+        );
+        println!(
+            "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+            self.p50_total_time_us,
+            self.p95_total_time_us,
+            self.p50_ui_thread_cpu_time_us,
+            self.p95_ui_thread_cpu_time_us,
+            self.p50_layout_time_us,
+            self.p95_layout_time_us,
+            self.p50_prepaint_time_us,
+            self.p95_prepaint_time_us,
+            self.p50_paint_time_us,
+            self.p95_paint_time_us,
+            self.p50_dispatch_time_us,
+            self.p95_dispatch_time_us,
+            self.p50_hit_test_time_us,
+            self.p95_hit_test_time_us
+        );
+        println!(
+            "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
+            self.p50_layout_engine_solve_time_us,
+            self.p95_layout_engine_solve_time_us,
+            self.p50_paint_widget_time_us,
+            self.p95_paint_widget_time_us,
+            self.p50_paint_text_prepare_time_us,
+            self.p95_paint_text_prepare_time_us
+        );
+        if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
+            let mode = if self.pointer_move_frames_present {
+                "pointer_move"
+            } else {
+                "dispatch_frames_fallback"
+            };
+            println!(
+                "derived({mode}) frames_considered={} max.us(dispatch/hit_test)={}/{} dispatch_at=window:{}/tick:{}/frame:{} hit_test_at=window:{}/tick:{}/frame:{} snapshots_with_global_changes={}",
+                self.pointer_move_frames_considered,
+                self.pointer_move_max_dispatch_time_us,
+                self.pointer_move_max_hit_test_time_us,
+                self.pointer_move_max_dispatch_window,
+                self.pointer_move_max_dispatch_tick_id,
+                self.pointer_move_max_dispatch_frame_id,
+                self.pointer_move_max_hit_test_window,
+                self.pointer_move_max_hit_test_tick_id,
+                self.pointer_move_max_hit_test_frame_id,
+                self.pointer_move_snapshots_with_global_changes
+            );
+        }
+
+        if self.top.is_empty() {
+            return;
+        }
+
+        println!("top (sort={}):", self.sort.as_str());
+        for row in &self.top {
+            let ts = row
+                .timestamp_unix_ms
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "-".to_string());
+            let mut line = format!(
+                "  window={} tick={} frame={} ts={} cpu.us={} cpu.cycles={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                row.window,
+                row.tick_id,
+                row.frame_id,
+                ts,
+                row.ui_thread_cpu_time_us,
+                row.ui_thread_cpu_cycle_time_delta_cycles,
+                row.total_time_us,
+                row.layout_time_us,
+                row.prepaint_time_us,
+                row.paint_time_us,
+                row.layout_engine_solve_time_us,
+                row.paint_cache_misses,
+                row.layout_nodes_performed,
+                row.paint_nodes_performed,
+                row.paint_record_visual_bounds_time_us,
+                row.paint_record_visual_bounds_calls,
+                row.cache_roots,
+                row.cache_roots_reused,
+                row.cache_replayed_ops,
+                row.paint_cache_replay_time_us,
+                row.paint_cache_bounds_translate_time_us,
+                row.paint_cache_bounds_translated_nodes,
+                row.view_cache_contained_relayouts,
+                row.cache_roots_contained_relayout,
+                row.set_children_barrier_writes,
+                row.barrier_relayouts_scheduled,
+                row.barrier_relayouts_performed,
+                row.virtual_list_visible_range_checks,
+                row.virtual_list_visible_range_refreshes,
+                row.invalidation_walk_calls,
+                row.invalidation_walk_nodes,
+                row.invalidation_walk_calls_hover,
+                row.invalidation_walk_calls_focus,
+                row.invalidation_walk_calls_other,
+                row.invalidation_walk_nodes_hover,
+                row.invalidation_walk_nodes_focus,
+                row.invalidation_walk_nodes_other,
+                row.hover_declarative_layout_invalidations,
+                row.hover_declarative_hit_test_invalidations,
+                row.hover_declarative_paint_invalidations,
+                row.model_change_invalidation_roots,
+                row.global_change_invalidation_roots,
+                row.changed_models,
+                row.changed_globals,
+                row.propagated_model_change_models,
+                row.propagated_model_change_observation_edges,
+                row.propagated_model_change_unobserved_models,
+                row.propagated_global_change_globals,
+                row.propagated_global_change_observation_edges,
+                row.propagated_global_change_unobserved_globals
+            );
+            if row.renderer_encode_scene_us > 0
+                || row.renderer_prepare_text_us > 0
+                || row.renderer_prepare_svg_us > 0
+                || row.renderer_upload_us > 0
+                || row.renderer_record_passes_us > 0
+            {
+                line.push_str(&format!(
+                    " renderer.us(encode/ensure/plan/upload/record/finish/svg/text)={}/{}/{}/{}/{}/{}/{}/{}",
+                    row.renderer_encode_scene_us,
+                    row.renderer_ensure_pipelines_us,
+                    row.renderer_plan_compile_us,
+                    row.renderer_upload_us,
+                    row.renderer_record_passes_us,
+                    row.renderer_encoder_finish_us,
+                    row.renderer_prepare_svg_us,
+                    row.renderer_prepare_text_us,
+                ));
+            }
+            println!("{line}");
+        }
+    }
+
     pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         println!(

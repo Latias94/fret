@@ -37,6 +37,8 @@ unsafe extern "system" {
     fn WindowFromPoint(point: Point) -> isize;
     fn GetAncestor(hwnd: isize, ga_flags: u32) -> isize;
     fn GetWindow(hwnd: isize, cmd: u32) -> isize;
+    fn GetWindowRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
+    fn ClientToScreen(hwnd: isize, lp_point: *mut Point) -> i32;
     fn GetWindowLongW(hwnd: isize, index: i32) -> i32;
     fn SetWindowLongW(hwnd: isize, index: i32, new_long: i32) -> i32;
     fn SetLayeredWindowAttributes(hwnd: isize, cr_key: u32, alpha: u8, flags: u32) -> i32;
@@ -81,6 +83,31 @@ pub(super) fn window_under_cursor_root(screen_pos: PhysicalPosition<f64>) -> Opt
 pub(super) fn next_window_in_z_order(hwnd: isize) -> Option<isize> {
     let next = unsafe { GetWindow(hwnd, GW_HWNDNEXT) };
     if next == 0 { None } else { Some(next) }
+}
+
+pub(super) fn decoration_offset_for_hwnd(hwnd: isize) -> Option<winit::dpi::PhysicalPosition<i32>> {
+    if hwnd == 0 {
+        return None;
+    }
+
+    let mut outer = Rect::default();
+    let ok = unsafe { GetWindowRect(hwnd, &mut outer) };
+    if ok == 0 {
+        return None;
+    }
+
+    // Client origin in screen coordinates. This is the most robust way to recover "decoration
+    // offset" (client origin relative to outer origin) on Windows, including under mixed DPI.
+    let mut client = Point { x: 0, y: 0 };
+    let ok = unsafe { ClientToScreen(hwnd, &mut client) };
+    if ok == 0 {
+        return None;
+    }
+
+    Some(winit::dpi::PhysicalPosition::new(
+        client.x.saturating_sub(outer.left),
+        client.y.saturating_sub(outer.top),
+    ))
 }
 
 pub(super) fn set_window_mouse_passthrough(hwnd: isize, enabled: bool) {

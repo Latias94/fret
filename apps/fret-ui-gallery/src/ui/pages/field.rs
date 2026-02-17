@@ -491,41 +491,34 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-field-group");
         content
     };
-    let rtl = {
-        let content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::FieldSet::new([
-                    shadcn::FieldLegend::new("طريقة الدفع").into_element(cx),
-                    shadcn::FieldDescription::new("جميع المعاملات آمنة ومشفرة").into_element(cx),
-                    shadcn::FieldGroup::new([
-                        shadcn::Field::new([
-                            shadcn::FieldLabel::new("الاسم على البطاقة").into_element(cx),
-                            shadcn::Input::new(rtl_name)
-                                .a11y_label("الاسم على البطاقة")
-                                .placeholder("Evil Rabbit")
-                                .into_element(cx),
-                        ])
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::FieldSet::new([
+            shadcn::FieldLegend::new("طريقة الدفع").into_element(cx),
+            shadcn::FieldDescription::new("جميع المعاملات آمنة ومشفرة").into_element(cx),
+            shadcn::FieldGroup::new([
+                shadcn::Field::new([
+                    shadcn::FieldLabel::new("الاسم على البطاقة").into_element(cx),
+                    shadcn::Input::new(rtl_name)
+                        .a11y_label("الاسم على البطاقة")
+                        .placeholder("Evil Rabbit")
                         .into_element(cx),
-                        shadcn::Field::new([
-                            shadcn::FieldLabel::new("رقم البطاقة").into_element(cx),
-                            shadcn::Input::new(rtl_number)
-                                .a11y_label("رقم البطاقة")
-                                .placeholder("1234 5678 9012 3456")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
                 ])
-                .refine_layout(max_w_md.clone())
-                .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-field-rtl");
-        content
-    };
+                .into_element(cx),
+                shadcn::Field::new([
+                    shadcn::FieldLabel::new("رقم البطاقة").into_element(cx),
+                    shadcn::Input::new(rtl_number)
+                        .a11y_label("رقم البطاقة")
+                        .placeholder("1234 5678 9012 3456")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_md.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-field-rtl");
 
     let responsive = {
         let content = shadcn::FieldSet::new([
@@ -580,32 +573,14 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         content
     };
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Field page follows upstream docs section order for deterministic parity checks.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "RTL and Responsive samples are included to exercise orientation and direction contracts.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
+            "Field page follows upstream docs section order for deterministic parity checks.",
+            "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
+            "RTL and Responsive samples are included to exercise orientation and direction contracts.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -626,19 +601,143 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 .into_element(cx);"#,
                 ),
             DocSection::new("Textarea", textarea)
-                .description("Textarea field with explicit height and helper copy."),
-            DocSection::new("Select", select).description("Select composed inside a Field shell."),
-            DocSection::new("Slider", slider).description(
-                "Non-text controls should still use FieldTitle/Description for context.",
-            ),
+                .description("Textarea field with explicit height and helper copy.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Feedback").into_element(cx),
+    shadcn::Textarea::new(model)
+        .a11y_label("Feedback")
+        .refine_layout(LayoutRefinement::default().h_px(Px(96.0)))
+        .into_element(cx),
+    shadcn::FieldDescription::new("Share your thoughts about our service.").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Select", select)
+                .description("Select composed inside a Field shell.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Department").into_element(cx),
+    shadcn::Select::new(value, open)
+        .placeholder("Choose department")
+        .items([
+            shadcn::SelectItem::new("engineering", "Engineering"),
+            shadcn::SelectItem::new("design", "Design"),
+        ])
+        .into_element(cx),
+    shadcn::FieldDescription::new("Select your department or area of work.").into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Slider", slider)
+                .description(
+                    "Non-text controls should still use FieldTitle/Description for context.",
+                )
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldTitle::new("Price Range").into_element(cx),
+    shadcn::FieldDescription::new("Set your budget range ($200-$800).").into_element(cx),
+    shadcn::Slider::new(values)
+        .range(0.0, 1000.0)
+        .step(10.0)
+        .a11y_label("Price Range")
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Fieldset", fieldset)
-                .description("FieldSet groups multiple fields with a legend + description."),
+                .description("FieldSet groups multiple fields with a legend + description.")
+                .code(
+                    "rust",
+                    r#"let row = stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N4),
+    |cx| {
+        vec![
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("City").into_element(cx),
+                shadcn::Input::new(city).placeholder("New York").into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Postal Code").into_element(cx),
+                shadcn::Input::new(zip).placeholder("90502").into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ]
+    },
+);
+
+shadcn::FieldSet::new([
+    shadcn::FieldLegend::new("Address Information").into_element(cx),
+    shadcn::FieldDescription::new("We need your address to deliver your order.").into_element(cx),
+    shadcn::FieldGroup::new([row]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Checkbox", checkbox)
-                .description("Horizontal Field orientation keeps checkbox + label aligned."),
+                .description("Horizontal Field orientation keeps checkbox + label aligned.")
+                .code(
+                    "rust",
+                    r#"shadcn::FieldSet::new([
+    shadcn::FieldLegend::new("Show these items on the desktop")
+        .variant(shadcn::FieldLegendVariant::Label)
+        .into_element(cx),
+    shadcn::FieldDescription::new("Select the items you want to show.").into_element(cx),
+    shadcn::FieldGroup::new([
+        shadcn::Field::new([
+            shadcn::Checkbox::new(a).a11y_label("Hard disks").into_element(cx),
+            shadcn::FieldLabel::new("Hard disks").into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx),
+    ])
+    .checkbox_group()
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Radio", radio)
-                .description("RadioGroup nested under Field for label copy."),
+                .description("RadioGroup nested under Field for label copy.")
+                .code(
+                    "rust",
+                    r#"shadcn::FieldSet::new([
+    shadcn::FieldLabel::new("Subscription Plan").into_element(cx),
+    shadcn::FieldDescription::new("Pick a plan.").into_element(cx),
+    shadcn::RadioGroup::uncontrolled(Some("monthly"))
+        .a11y_label("Subscription Plan")
+        .item(shadcn::RadioGroupItem::new("monthly", "Monthly"))
+        .item(shadcn::RadioGroupItem::new("yearly", "Yearly"))
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Switch", switch)
-                .description("Switch composed with title + description."),
+                .description("Switch composed with title + description.")
+                .code(
+                    "rust",
+                    r#"let control_id = "mfa-switch";
+shadcn::Field::new([
+    shadcn::FieldContent::new([
+        shadcn::FieldLabel::new("Multi-factor authentication")
+            .for_control(control_id)
+            .into_element(cx),
+        shadcn::FieldDescription::new("Enable MFA for your account.").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Switch::new(model)
+        .control_id(control_id)
+        .a11y_label("Multi-factor authentication")
+        .into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.into_element(cx);"#,
+                ),
             DocSection::new("Choice Card", choice_card)
                 .description("Choice-card radios combine FieldContent with rich labels.")
                 .code(
@@ -655,9 +754,59 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .into_element(cx);"#,
                 ),
             DocSection::new("Field Group", field_group)
-                .description("FieldGroup provides separators and checkbox-group composition."),
+                .description("FieldGroup provides separators and checkbox-group composition.")
+                .code(
+                    "rust",
+                    r#"shadcn::FieldGroup::new([
+    shadcn::FieldSet::new([
+        shadcn::FieldLabel::new("Responses").into_element(cx),
+        shadcn::FieldGroup::new([shadcn::Field::new([
+            shadcn::Checkbox::new(a).a11y_label("Push notifications").into_element(cx),
+            shadcn::FieldLabel::new("Push notifications").into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx)])
+        .checkbox_group()
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::FieldSeparator::new().into_element(cx),
+    shadcn::FieldSet::new([
+        shadcn::FieldLabel::new("Tasks").into_element(cx),
+        shadcn::FieldGroup::new([shadcn::Field::new([
+            shadcn::Checkbox::new(b).a11y_label("Email notifications").into_element(cx),
+            shadcn::FieldLabel::new("Email notifications").into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx)])
+        .checkbox_group()
+        .into_element(cx),
+    ])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("All Field compositions should render correctly under RTL direction."),
+                .description("All Field compositions should render correctly under RTL direction.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::FieldSet::new([
+            shadcn::FieldLegend::new("طريقة الدفع").into_element(cx),
+            shadcn::FieldGroup::new([shadcn::Field::new([
+                shadcn::FieldLabel::new("الاسم على البطاقة").into_element(cx),
+                shadcn::Input::new(model).placeholder("Evil Rabbit").into_element(cx),
+            ])
+            .into_element(cx)])
+            .into_element(cx),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Responsive Layout", responsive)
                 .description(
                     "Responsive orientation collapses label/content layouts for narrow containers.",
