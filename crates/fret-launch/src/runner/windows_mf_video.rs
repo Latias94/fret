@@ -10,7 +10,7 @@ use fret_render::{
     RenderTargetMatrixCoefficients, RenderTargetTransferFunction,
 };
 use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -856,6 +856,11 @@ fn lock_and_copy(buffer: &IMFMediaBuffer) -> anyhow::Result<Vec<u8>> {
     Ok(out)
 }
 
+/// Normalize a user-provided URL or filesystem path into a string accepted by
+/// `MFCreateSourceReaderFromURL`.
+///
+/// - If `raw` looks like a URL (contains `://`), it is returned as-is.
+/// - Otherwise the path is canonicalized (and directories pick the first matching video file).
 pub fn resolve_source_reader_url(raw: &str) -> anyhow::Result<String> {
     let raw = raw.trim();
     anyhow::ensure!(!raw.is_empty(), "empty Media Foundation source URL/path");
@@ -885,52 +890,20 @@ pub fn resolve_source_reader_url(raw: &str) -> anyhow::Result<String> {
             .first()
             .cloned()
             .context("FRET_MF_VIDEO_PATH points to a directory but no video files were found")?;
+        let picked = std::fs::canonicalize(&picked)
+            .with_context(|| format!("canonicalize({})", picked.display()))?;
         tracing::info!(
             dir = %path.display(),
             file = %picked.display(),
             "FRET_MF_VIDEO_PATH points to a directory; picked a video file"
         );
-        return Ok(path_to_file_url(&picked));
+        return Ok(picked.to_string_lossy().to_string());
     }
 
     let path = std::fs::canonicalize(&path)
         .with_context(|| format!("canonicalize({})", path.display()))?;
-    let url = path_to_file_url(&path);
-    tracing::info!(url, "using Media Foundation source file URL");
-    Ok(url)
-}
-
-fn path_to_file_url(path: &Path) -> String {
-    let mut p = path.to_string_lossy().to_string();
-    if let Some(stripped) = p.strip_prefix(r"\\?\") {
-        p = stripped.to_string();
-    }
-    let mut p = p.replace('\\', "/");
-
-    // Windows drive path: `C:\foo\bar` -> `file:///C:/foo/bar`.
-    if p.len() >= 2 && p.as_bytes()[1] == b':' {
-        p.insert(0, '/');
-        return format!("file://{}", percent_encode_url_path(&p));
-    }
-
-    // Best-effort fallback: treat it as an already-normalized absolute path.
-    // (UNC paths are not supported by this helper yet.)
-    format!("file://{}", percent_encode_url_path(&p))
-}
-
-fn percent_encode_url_path(path: &str) -> String {
-    let mut out = String::with_capacity(path.len());
-    for b in path.as_bytes() {
-        let c = *b as char;
-        let keep = c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~' | '/' | ':');
-        if keep {
-            out.push(c);
-        } else {
-            out.push('%');
-            out.push_str(&format!("{:02X}", b));
-        }
-    }
-    out
+    tracing::info!(path = %path.display(), "using Media Foundation source file path");
+    Ok(path.to_string_lossy().to_string())
 }
 
 #[cfg(test)]
@@ -954,7 +927,15 @@ mod tests {
         std::fs::write(root.join("a.mp4"), b"dummy").unwrap();
 
         let resolved = resolve_source_reader_url(root.to_str().unwrap()).unwrap();
-        assert!(resolved.to_ascii_lowercase().ends_with("/a.mp4"));
+        let resolved = resolved.replace('\\', "/").to_ascii_lowercase();
+        assert!(
+            !resolved.contains("://"),
+            "expected a file path, got: {resolved}"
+        );
+        assert!(
+            resolved.ends_with("/a.mp4"),
+            "expected a.mp4, got: {resolved}"
+        );
 
         let _ = std::fs::remove_dir_all(&root);
     }
