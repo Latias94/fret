@@ -2,7 +2,7 @@
   "generated_unix_ms": 1771322942091,
   "headroom_pct": 20,
   "kind": "perf_baseline",
-  "out_path": "F:\\SourceCodes\\Rust\\fret-worktrees\\ws-renderer-vnext-fearless-refactor-v1\\docs/workstreams/perf-baselines/external-video-imports-mf-dx12-gpu-copy.windows-local.v1.json",
+  "out_path": "docs/workstreams/perf-baselines/external-video-imports-mf-dx12-gpu-copy.windows-local.v1.json",
   "repeat": 1,
   "rows": [
     {
