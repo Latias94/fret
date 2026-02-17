@@ -7068,6 +7068,9 @@ impl UiDiagnosticsService {
         dump_max_snapshots_override: Option<usize>,
         request_id: Option<u64>,
     ) -> Option<PathBuf> {
+        #[cfg(not(feature = "diagnostics-ws"))]
+        let _ = request_id;
+
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
         if let Some(label) = label {

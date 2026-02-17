@@ -55,9 +55,9 @@ mod wmf {
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
         MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateDXGIDeviceManager,
         MFCreateMediaType, MFCreateSourceReaderFromURL, MFMediaType_Video, MFNominalRange,
-        MFNominalRange_0_255, MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_NV12,
-        MFVideoFormat_RGB32, MFVideoPrimaries, MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020,
-        MFVideoPrimaries_DCI_P3, MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
+        MFNominalRange_0_255, MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_RGB32,
+        MFVideoPrimaries, MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020, MFVideoPrimaries_DCI_P3,
+        MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
         MFVideoTransFunc_Unknown, MFVideoTransFunc_sRGB, MFVideoTransferFunction,
         MFVideoTransferMatrix, MFVideoTransferMatrix_BT601, MFVideoTransferMatrix_BT709,
         MFVideoTransferMatrix_BT2020_10, MFVideoTransferMatrix_Unknown,
@@ -714,12 +714,10 @@ mod wmf {
                 unsafe { std::mem::zeroed() };
             input_desc.FourCC = 0;
             input_desc.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
-            unsafe {
-                input_desc.Anonymous.Texture2D = D3D11_TEX2D_VPIV {
-                    MipSlice: 0,
-                    ArraySlice: 0,
-                };
-            }
+            input_desc.Anonymous.Texture2D = D3D11_TEX2D_VPIV {
+                MipSlice: 0,
+                ArraySlice: 0,
+            };
             let mut input_view: Option<ID3D11VideoProcessorInputView> = None;
             unsafe {
                 self.video_device
@@ -736,9 +734,7 @@ mod wmf {
             let mut output_desc: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC =
                 unsafe { std::mem::zeroed() };
             output_desc.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
-            unsafe {
-                output_desc.Anonymous.Texture2D = D3D11_TEX2D_VPOV { MipSlice: 0 };
-            }
+            output_desc.Anonymous.Texture2D = D3D11_TEX2D_VPOV { MipSlice: 0 };
             let mut output_view: Option<ID3D11VideoProcessorOutputView> = None;
             unsafe {
                 self.video_device
