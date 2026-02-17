@@ -25,7 +25,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Contract changes
 
-- [ ] BWARP-core-020 Add a new `EffectStep` variant for backdrop warp (v1) in `fret-core`.
+- [x] BWARP-core-020 Add a new `EffectStep` variant for backdrop warp (v1) in `fret-core`.
   - Notes:
     - Prefer a small enum for warp function selection (bounded vocabulary).
     - Keep chromatic aberration optional and bounded by a small max.

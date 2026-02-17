@@ -319,6 +319,20 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         state = mix_px(state, radius_px);
                         mix_u64(state, u64::from(downsample))
                     }
+                    EffectStep::BackdropWarpV1(w) => {
+                        let mut state = mix_u64(state, 7);
+                        state = mix_px(state, w.strength_px);
+                        state = mix_px(state, w.scale_px);
+                        state = mix_f32(state, w.phase);
+                        state = mix_px(state, w.chromatic_aberration_px);
+                        mix_u64(
+                            state,
+                            match w.kind {
+                                BackdropWarpKindV1::Wave => 1,
+                                BackdropWarpKindV1::LensReserved => 2,
+                            },
+                        )
+                    }
                     EffectStep::ColorAdjust {
                         saturation,
                         brightness,

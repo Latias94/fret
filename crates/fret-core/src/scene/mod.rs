@@ -98,12 +98,87 @@ pub enum DitherMode {
     Bayer4x4,
 }
 
+/// Bounded backdrop warp parameters (v1).
+///
+/// This is a mechanism-level surface intended to enable refraction-like liquid glass effects by
+/// sampling the already-rendered backdrop with a deterministic UV displacement. Higher-level
+/// recipes (normal-map assets, interaction curves, multi-layer stacks) remain ecosystem policy.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BackdropWarpV1 {
+    /// Displacement strength in logical pixels (pre-scale-factor).
+    pub strength_px: crate::Px,
+    /// Spatial scale for the warp field in logical pixels.
+    pub scale_px: crate::Px,
+    /// Deterministic phase/seed value (no hidden time dependency).
+    pub phase: f32,
+    /// Optional chromatic aberration magnitude in logical pixels.
+    pub chromatic_aberration_px: crate::Px,
+    pub kind: BackdropWarpKindV1,
+}
+
+impl BackdropWarpV1 {
+    pub const MAX_STRENGTH_PX: crate::Px = crate::Px(24.0);
+    pub const MIN_SCALE_PX: crate::Px = crate::Px(1.0);
+    pub const MAX_SCALE_PX: crate::Px = crate::Px(1024.0);
+    pub const MAX_CHROMATIC_ABERRATION_PX: crate::Px = crate::Px(8.0);
+
+    pub fn sanitize(self) -> Self {
+        let strength_px = if self.strength_px.0.is_finite() {
+            crate::Px(self.strength_px.0.clamp(0.0, Self::MAX_STRENGTH_PX.0))
+        } else {
+            crate::Px(0.0)
+        };
+
+        let scale_px = if self.scale_px.0.is_finite() {
+            crate::Px(
+                self.scale_px
+                    .0
+                    .clamp(Self::MIN_SCALE_PX.0, Self::MAX_SCALE_PX.0),
+            )
+        } else {
+            Self::MIN_SCALE_PX
+        };
+
+        let phase = if self.phase.is_finite() {
+            self.phase
+        } else {
+            0.0
+        };
+
+        let chromatic_aberration_px = if self.chromatic_aberration_px.0.is_finite() {
+            crate::Px(
+                self.chromatic_aberration_px
+                    .0
+                    .clamp(0.0, Self::MAX_CHROMATIC_ABERRATION_PX.0),
+            )
+        } else {
+            crate::Px(0.0)
+        };
+
+        Self {
+            strength_px,
+            scale_px,
+            phase,
+            chromatic_aberration_px,
+            kind: self.kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackdropWarpKindV1 {
+    Wave,
+    /// Reserved for a lens-like warp in a future v1.x/v2. Renderers may treat this as `Wave`.
+    LensReserved,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectStep {
     GaussianBlur {
         radius_px: crate::Px,
         downsample: u32,
     },
+    BackdropWarpV1(BackdropWarpV1),
     ColorAdjust {
         saturation: f32,
         brightness: f32,
@@ -135,6 +210,7 @@ impl EffectStep {
                 }
                 EffectStep::ColorMatrix { m }
             }
+            EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },

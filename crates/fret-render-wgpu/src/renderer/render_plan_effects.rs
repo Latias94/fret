@@ -155,6 +155,9 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::BackdropWarpV1(_w) => {
+                // Not yet implemented in the effect chain.
+            }
             fret_core::EffectStep::ColorAdjust {
                 saturation,
                 brightness,

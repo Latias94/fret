@@ -314,6 +314,13 @@ impl SceneRecording {
                                 radius_px,
                                 downsample,
                             } => px_is_finite(radius_px) && downsample > 0,
+                            EffectStep::BackdropWarpV1(w) => {
+                                px_is_finite(w.strength_px)
+                                    && px_is_finite(w.scale_px)
+                                    && w.scale_px.0 > 0.0
+                                    && w.phase.is_finite()
+                                    && px_is_finite(w.chromatic_aberration_px)
+                            }
                             EffectStep::ColorAdjust {
                                 saturation,
                                 brightness,

@@ -103,6 +103,10 @@ pub(super) fn compile_for_scene(
                 )
                 .is_some()
             }
+            fret_core::EffectStep::BackdropWarpV1(_w) => {
+                // Not yet implemented; v1 contract surface is staged in `fret-core` first.
+                false
+            }
             fret_core::EffectStep::ColorAdjust { .. } => {
                 effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
             }
