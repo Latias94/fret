@@ -263,6 +263,73 @@ impl ImportedViewportRenderTarget {
         Ok(())
     }
 
+    /// Attempt a native external import, but deterministically fall back to a caller-provided
+    /// copy/owned update when the import cannot be performed.
+    ///
+    /// This helper exists to centralize v2's "bounded strategy set + deterministic fallback"
+    /// plumbing (ADR 0282) so demos and call sites don't re-implement the same chain.
+    ///
+    /// Return value:
+    /// - `Ok(effective)` when the native import succeeded (effective strategy is taken from the
+    ///   imported frame's metadata),
+    /// - `Err(err)` when the import failed or was unsupported; in this case the fallback update
+    ///   is applied with `requested` vs `fallback_effective` attribution baked into metadata.
+    pub fn push_native_external_import_update_with_requested_ingest_strategy_or_fallback(
+        &mut self,
+        renderer: &mut Renderer,
+        update: &mut EngineFrameUpdate,
+        ctx: &fret_render::WgpuContext,
+        caps: &fret_render::RendererCapabilities,
+        requested: RenderTargetIngestStrategy,
+        frame: Box<dyn NativeExternalTextureFrame>,
+        fallback_view: wgpu::TextureView,
+        fallback_size: (u32, u32),
+        fallback_metadata: RenderTargetMetadata,
+        fallback_effective: RenderTargetIngestStrategy,
+    ) -> Result<RenderTargetIngestStrategy, NativeExternalImportError> {
+        let imported = match frame.import(ctx, caps) {
+            Ok(imported) => imported,
+            Err(err) => {
+                let metadata =
+                    Self::with_ingest_strategies(fallback_metadata, requested, fallback_effective);
+
+                if !self.is_registered() {
+                    let _ = self.ensure_registered_with_metadata(
+                        renderer,
+                        fallback_view.clone(),
+                        fallback_size,
+                        metadata,
+                    );
+                }
+
+                self.push_update_with_metadata(update, fallback_view, fallback_size, metadata);
+                return Err(err);
+            }
+        };
+
+        let effective = imported.metadata.ingest_strategy;
+        let metadata = Self::with_ingest_strategies(imported.metadata, requested, effective);
+
+        if !self.is_registered() {
+            let _ = self.ensure_registered_with_metadata(
+                renderer,
+                imported.view.clone(),
+                imported.size,
+                metadata,
+            );
+        }
+
+        self.push_update_with_metadata_and_keepalive(
+            update,
+            imported.view,
+            imported.size,
+            metadata,
+            imported.keepalive,
+        );
+
+        Ok(effective)
+    }
+
     /// Record an unregister request as a runner delta and clear the local id.
     pub fn push_unregister(&mut self, update: &mut EngineFrameUpdate) {
         if !self.is_registered() {

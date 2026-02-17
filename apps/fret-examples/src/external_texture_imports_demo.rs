@@ -482,24 +482,22 @@ fn record_engine_frame(
         });
         if let Err(err) = st
             .target
-            .push_native_external_import_update_with_requested_ingest_strategy(
+            .push_native_external_import_update_with_requested_ingest_strategy_or_fallback(
                 renderer,
                 &mut update,
                 context,
                 &renderer_caps,
                 RenderTargetIngestStrategy::ExternalZeroCopy,
                 frame,
+                view.clone(),
+                st.target_px_size,
+                RenderTargetMetadata::default(),
+                effective_strategy,
             )
         {
             tracing::warn!(
                 ?err,
-                "native external import adapter path failed; falling back"
-            );
-            st.target.push_update_with_metadata(
-                &mut update,
-                view.clone(),
-                st.target_px_size,
-                metadata,
+                "native external import adapter path failed; fell back"
             );
         }
     } else {

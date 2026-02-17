@@ -57,11 +57,14 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Evidence anchors:
     - `crates/fret-launch/src/runner/native_external_import.rs`
     - `crates/fret-launch/src/runner/imported_viewport_target.rs`
+      - `ImportedViewportRenderTarget::push_native_external_import_update_with_requested_ingest_strategy_or_fallback(...)`
     - Adapter-request attribution (requested vs effective) is now verifiable in a native demo:
       - `apps/fret-examples/src/external_texture_imports_demo.rs` (KeyN adapter path requests `ExternalZeroCopy`)
       - Perf script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`
   - Remaining:
+    - Decide the first "real native external frame source" to implement (recommended on Windows: Media Foundation;
+      macOS AVFoundation next).
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
       produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise).
 
