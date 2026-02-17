@@ -100,7 +100,7 @@ mod wmf {
             let hpath = HSTRING::from(path.as_str());
             let reader = unsafe {
                 MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
-                    .context("MFCreateSourceReaderFromURL")?
+                    .with_context(|| format!("MFCreateSourceReaderFromURL({path})"))?
             };
 
             // Request a predictable software-decoded output format first: RGB32 (little-endian BGRA).
@@ -407,7 +407,7 @@ mod wmf {
 
             let reader = unsafe {
                 MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
-                    .context("MFCreateSourceReaderFromURL")?
+                    .with_context(|| format!("MFCreateSourceReaderFromURL({path})"))?
             };
 
             // Attempt to request RGB32 output. With a DXGI device manager configured, the source
