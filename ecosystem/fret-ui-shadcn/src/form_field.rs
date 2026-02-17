@@ -4,6 +4,7 @@ use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
@@ -111,7 +112,13 @@ impl FormField {
 
         let mut children: Vec<AnyElement> = Vec::new();
         if let Some(label) = self.label.as_ref() {
-            children.push(FormLabel::new(Arc::clone(label)).into_element(cx));
+            let mut label = FormLabel::new(Arc::clone(label));
+            if invalid {
+                label = label.text_color(ColorRef::Color(
+                    fret_ui::Theme::global(&*cx.app).color_token("destructive"),
+                ));
+            }
+            children.push(label.into_element(cx));
         }
 
         let mut control = self.control;

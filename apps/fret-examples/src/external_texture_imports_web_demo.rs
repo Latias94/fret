@@ -516,7 +516,6 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
 
         let semantics_snapshot = state.ui.semantics_snapshot();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.drive_script_for_window(
                 app,
                 window,
@@ -524,7 +523,6 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
                 scale_factor,
                 Some(&state.ui),
                 semantics_snapshot,
-                element_runtime,
             )
         });
 

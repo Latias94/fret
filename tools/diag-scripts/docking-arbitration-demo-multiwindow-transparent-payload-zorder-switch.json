@@ -1,16 +1,17 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: overlapped windows switch hover by z-order",
-    "tags": ["docking", "multiwindow", "hover", "zorder", "gate"],
+    "name": "Docking arbitration demo: transparent payload preserves cross-window hover by z-order",
+    "tags": ["docking", "multiwindow", "hover", "zorder", "transparent_payload", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
-      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
+      "FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD": "1"
     },
     "target_hints": [
-      "This script overlaps two OS windows and asserts that cross-window dock drag hover routing follows window z-order when the cursor is in the overlap region.",
-      "It raises each window without moving the cursor and expects `dock_drag_current_window_is` to switch accordingly (ImGui-style).",
-      "Cursor overrides are expressed in screen-space physical pixels."
+      "This gate runs the overlapped multi-window hover routing scenario with ImGui-style transparent payload enabled.",
+      "While a dock-floating window follows the cursor, the backend may otherwise report the moving window as hovered; transparent payload makes it click-through so we can peek behind it.",
+      "Expected: `dock_drag_current_window_is` still switches correctly according to OS z-order in the overlap region."
     ]
   },
   "steps": [
@@ -62,6 +63,12 @@
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_transparent_payload_applied_is", "applied": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
       "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" },
       "timeout_frames": 120
     },
@@ -94,7 +101,7 @@
     { "type": "pointer_up", "window": { "kind": "last_seen" } },
     { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-overlap-zorder-switch" },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch" },
     { "type": "wait_frames", "n": 2 }
   ]
 }

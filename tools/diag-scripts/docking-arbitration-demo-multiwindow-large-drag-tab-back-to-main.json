@@ -1,16 +1,17 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: runner poll-up finishes cross-window dock drags (Win32 path)",
-    "tags": ["docking", "multiwindow", "gate", "windows"],
-    "required_capabilities": ["diag.script_v2", "diag.multi_window", "diag.mouse_buttons_override"],
+    "name": "Docking arbitration demo: large preset drag a torn-off tab back to the main window",
+    "tags": ["docking", "multiwindow", "large", "drag", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "large",
       "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
     },
     "target_hints": [
-      "This script gates a Windows-specific fallback: finishing a cross-window dock drag when the left mouse release is not delivered to any window.",
-      "It starts a cross-window tab drag, intentionally omits pointer_up, then uses a diagnostics-only mouse-button override to make the runner believe the left button is down while the OS reports it as up.",
-      "The runner should detect this mismatch and finish the drag using cursor-based drop routing (ImGui-style)."
+      "Large preset variant of the cross-window tab drag gate: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
+      "Expected behavior: after merge-back the dock graph returns to the large preset canonical signature.",
+      "Note: cursor overrides are expressed in window-client logical pixels."
     ]
   },
   "steps": [
@@ -22,12 +23,34 @@
     { "type": "wait_frames", "n": 2 },
 
     {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right]),tabs([demo.viewport.extra.0]),tabs([demo.viewport.extra.1])]),split(h,[tabs([demo.viewport.extra.2]),tabs([demo.viewport.extra.3]),tabs([demo.viewport.extra.4]),tabs([demo.viewport.extra.5])]),split(h,[tabs([demo.viewport.extra.6]),tabs([demo.viewport.extra.7]),tabs([demo.viewport.extra.8]),tabs([demo.viewport.extra.9])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+
+    {
       "type": "wait_bounds_stable",
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
       "stable_frames": 12,
       "max_move_px": 0.5,
       "timeout_frames": 240
     },
+
     {
       "type": "drag_pointer_until",
       "window": { "kind": "current" },
@@ -43,7 +66,6 @@
 
     { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 180.0, "y_px": 180.0 },
     { "type": "wait_frames", "n": 10 },
-
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
@@ -72,28 +94,25 @@
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "first_seen" }, "x_px": 220.0, "y_px": 220.0 },
-    { "type": "set_mouse_buttons", "left": true },
+    { "type": "pointer_up", "window": { "kind": "last_seen" } },
+    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },
-    { "type": "pointer_up", "window": { "kind": "last_seen" } },
-
-    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }, "timeout_frames": 240 },
     {
       "type": "assert",
       "window": { "kind": "first_seen" },
       "predicate": {
         "kind": "dock_graph_signature_is",
-        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right]),tabs([demo.viewport.extra.0]),tabs([demo.viewport.extra.1])]),split(h,[tabs([demo.viewport.extra.2]),tabs([demo.viewport.extra.3]),tabs([demo.viewport.extra.4]),tabs([demo.viewport.extra.5])]),split(h,[tabs([demo.viewport.extra.6]),tabs([demo.viewport.extra.7]),tabs([demo.viewport.extra.8]),tabs([demo.viewport.extra.9])]),tabs([demo.controls])]);floatings=[])"
       }
     },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-release-outside-windows-poll-up" },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-large-drag-tab-back-to-main" },
     { "type": "wait_frames", "n": 2 }
   ]
 }

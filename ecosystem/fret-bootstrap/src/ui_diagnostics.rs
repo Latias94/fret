@@ -1225,13 +1225,12 @@ impl UiDiagnosticsService {
 
     pub fn drive_script_for_window(
         &mut self,
-        app: &App,
+        app: &mut App,
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
         ui: Option<&UiTree<App>>,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-        element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
         if !self.is_enabled() {
             return UiScriptFrameOutput::default();
@@ -1276,6 +1275,7 @@ impl UiDiagnosticsService {
                 screenshot_wait: None,
                 v2_step_state: None,
                 pointer_session: None,
+                pending_cancel_cross_window_drag: None,
                 last_reported_step: Some(0),
                 selector_resolution_trace: Vec::new(),
                 hit_test_trace: Vec::new(),
@@ -1343,6 +1343,14 @@ impl UiDiagnosticsService {
 
             return output;
         };
+
+        if let Some(pointer_id) = active.pending_cancel_cross_window_drag.take() {
+            if app.drag(pointer_id).is_some_and(|d| d.cross_window_hover) {
+                app.cancel_drag(pointer_id);
+            }
+        }
+
+        let element_runtime = app.global::<ElementRuntime>();
 
         if active.next_step >= active.steps.len() {
             let passed_step_index = active.steps.len().saturating_sub(1) as u32;
@@ -3773,24 +3781,31 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
                 output.request_redraw = true;
 
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
-                    if target_window != window {
-                        handoff_to = Some(target_window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(target_window));
+                let step_has_state = active.v2_step_state.as_ref().is_some_and(|s| match s {
+                    V2StepState::DragPointer(state) => state.step_index == step_index,
+                    _ => false,
+                });
+
+                if !step_has_state {
+                    if let Some(target_window) =
+                        self.resolve_window_target(window, target_window.as_ref())
+                    {
+                        if target_window != window {
+                            handoff_to = Some(target_window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                            active.v2_step_state = None;
+                        }
+                    } else if target_window.is_some() {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-drag_pointer-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
                         output.request_redraw = true;
-                        active.v2_step_state = None;
                     }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-drag_pointer-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
                 }
 
                 if stop_script {
@@ -3909,6 +3924,7 @@ impl UiDiagnosticsService {
                             );
                             V2DragPointerState {
                                 step_index,
+                                window,
                                 steps: steps.max(1),
                                 button,
                                 start,
@@ -3919,7 +3935,14 @@ impl UiDiagnosticsService {
                     };
 
                     let done = push_drag_playback_frame(&mut state, &mut output.events);
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        state.window,
+                        drag_playback_last_position(&state).x.0,
+                        drag_playback_last_position(&state).y.0,
+                    );
                     if done {
+                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
                         if let Some(ui) = ui {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
@@ -3960,25 +3983,32 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
                 output.request_redraw = true;
 
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
-                    if target_window != window {
-                        handoff_to = Some(target_window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(target_window));
-                        output.request_redraw = true;
+                let step_has_state = active.v2_step_state.as_ref().is_some_and(|s| match s {
+                    V2StepState::DragPointerUntil(state) => state.step_index == step_index,
+                    _ => false,
+                });
+
+                if !step_has_state {
+                    if let Some(target_window) =
+                        self.resolve_window_target(window, target_window.as_ref())
+                    {
+                        if target_window != window {
+                            handoff_to = Some(target_window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                            active.v2_step_state = None;
+                        }
+                    } else if target_window.is_some() {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-drag_pointer_until-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
                         active.v2_step_state = None;
+                        output.request_redraw = true;
                     }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-drag_pointer_until-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    active.v2_step_state = None;
-                    output.request_redraw = true;
                 }
 
                 if stop_script {
@@ -4002,6 +4032,7 @@ impl UiDiagnosticsService {
                             remaining_frames: timeout_frames,
                             playback: V2DragPointerState {
                                 step_index,
+                                window,
                                 steps: steps.max(1),
                                 button,
                                 start: Point::default(),
@@ -4038,6 +4069,13 @@ impl UiDiagnosticsService {
                                 state.playback.button,
                                 state.playback.end,
                             ));
+                            let _ = write_cursor_override_window_client_logical(
+                                &self.cfg.out_dir,
+                                state.playback.window,
+                                state.playback.end.x.0,
+                                state.playback.end.y.0,
+                            );
+                            active.pending_cancel_cross_window_drag = Some(PointerId(0));
                         }
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
@@ -4096,12 +4134,19 @@ impl UiDiagnosticsService {
 
                         let done =
                             push_drag_playback_frame(&mut state.playback, &mut output.events);
+                        let _ = write_cursor_override_window_client_logical(
+                            &self.cfg.out_dir,
+                            state.playback.window,
+                            drag_playback_last_position(&state.playback).x.0,
+                            drag_playback_last_position(&state.playback).y.0,
+                        );
                         if state.playback.frame >= 1 {
                             state.down_issued = true;
                         }
 
                         // Keep polling for the predicate across frames; hold at end if playback is done.
                         if done {
+                            active.pending_cancel_cross_window_drag = Some(PointerId(0));
                             // Hold: emit an `Over` tick at the end position to keep drag routing alive.
                             output.events.extend(pointer_move_with_internal_over_events(
                                 state.playback.button,
@@ -5467,6 +5512,7 @@ impl UiDiagnosticsService {
                             }
                             V2DragPointerState {
                                 step_index,
+                                window,
                                 steps: steps.max(1),
                                 button,
                                 start,
@@ -5517,8 +5563,15 @@ impl UiDiagnosticsService {
                     };
 
                     let done = push_drag_playback_frame(&mut playback, &mut output.events);
+                    let _ = write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        playback.window,
+                        drag_playback_last_position(&playback).x.0,
+                        drag_playback_last_position(&playback).y.0,
+                    );
                     output.request_redraw = true;
                     if done {
+                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         if self.cfg.script_auto_dump {
@@ -9039,6 +9092,7 @@ struct ActiveScript {
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     pointer_session: Option<V2PointerSessionState>,
+    pending_cancel_cross_window_drag: Option<PointerId>,
     last_reported_step: Option<usize>,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
@@ -9185,6 +9239,12 @@ struct V2MenuSelectPathState {
 #[derive(Debug, Clone)]
 struct V2DragPointerState {
     step_index: usize,
+    /// The window that owns this synthetic pointer session.
+    ///
+    /// Diagnostics drag playback intentionally behaves like a captured pointer: we keep emitting
+    /// `Down/Move/Up` into the same window for the duration of the step, even if the runtime's
+    /// notion of a "current window" changes mid-drag (e.g. multi-window docking tear-off).
+    window: AppWindowId,
     /// Total move segments (not counting the initial `move+down` frame and the final `up` frame).
     steps: u32,
     button: UiMouseButtonV1,
@@ -10147,13 +10207,17 @@ impl UiDockDropResolveDiagnosticsV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
     pub dragging: bool,
     pub cross_window_hover: bool,
+    #[serde(default)]
+    pub transparent_payload_applied: bool,
+    #[serde(default)]
+    pub window_under_cursor_source: String,
 }
 
 impl UiDockDragDiagnosticsV1 {
@@ -10164,7 +10228,26 @@ impl UiDockDragDiagnosticsV1 {
             current_window: snapshot.current_window.data().as_ffi(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
+            transparent_payload_applied: snapshot.transparent_payload_applied,
+            window_under_cursor_source: dock_drag_window_under_cursor_source_label(
+                snapshot.window_under_cursor_source,
+            )
+            .to_string(),
         }
+    }
+}
+
+fn dock_drag_window_under_cursor_source_label(
+    source: fret_runtime::WindowUnderCursorSource,
+) -> &'static str {
+    use fret_runtime::WindowUnderCursorSource as Src;
+    match source {
+        Src::Unknown => "unknown",
+        Src::PlatformWin32 => "platform_win32",
+        Src::PlatformMacos => "platform_macos",
+        Src::Latched => "latched",
+        Src::HeuristicZOrder => "heuristic_z_order",
+        Src::HeuristicRects => "heuristic_rects",
     }
 }
 
@@ -16562,6 +16645,11 @@ fn eval_predicate(
             overlap_h > eps
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
+        UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
+        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => snapshot
+            .caps
+            .as_ref()
+            .is_some_and(|c| c.ui_window_hover_detection == *quality),
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
@@ -16579,6 +16667,36 @@ fn eval_predicate(
             Some(drag) => drag.dragging == *active,
             None => !*active,
         },
+        UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => {
+            match docking.and_then(|d| d.dock_drag) {
+                Some(drag) => drag.dragging && drag.transparent_payload_applied == *applied,
+                None => !*applied,
+            }
+        }
+        UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
+            let Some(drag) = docking.and_then(|d| d.dock_drag) else {
+                return false;
+            };
+            if !drag.dragging {
+                return false;
+            }
+
+            use fret_runtime::WindowUnderCursorSource as Src;
+            let have = drag.window_under_cursor_source;
+            let want = source.as_str();
+
+            match want {
+                "platform" => matches!(have, Src::PlatformWin32 | Src::PlatformMacos),
+                "platform_win32" => matches!(have, Src::PlatformWin32),
+                "platform_macos" => matches!(have, Src::PlatformMacos),
+                "latched" => matches!(have, Src::Latched),
+                "heuristic" => matches!(have, Src::HeuristicZOrder | Src::HeuristicRects),
+                "heuristic_z_order" => matches!(have, Src::HeuristicZOrder),
+                "heuristic_rects" => matches!(have, Src::HeuristicRects),
+                "unknown" => matches!(have, Src::Unknown),
+                _ => false,
+            }
+        }
         UiPredicateV1::DockFloatingDragActiveIs { active } => {
             match docking.and_then(|d| d.floating_drag) {
                 Some(drag) => drag.activated == *active,
@@ -17310,6 +17428,23 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
             true
         }
         _ => true,
+    }
+}
+
+fn drag_playback_last_position(state: &V2DragPointerState) -> Point {
+    let steps = state.steps.max(1);
+    let final_frame = steps.saturating_add(1);
+
+    match state.frame {
+        0 | 1 => state.start,
+        f if (2..=final_frame).contains(&f) => {
+            let move_frame = (f - 1).min(steps);
+            let t = move_frame as f32 / steps as f32;
+            let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+            let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+            Point::new(fret_core::Px(x), fret_core::Px(y))
+        }
+        _ => state.end,
     }
 }
 
@@ -19620,15 +19755,14 @@ mod tests {
         );
         svc.pending_script_run_id = Some(1);
 
-        let app = App::new();
+        let mut app = App::new();
         let _ = svc.drive_script_for_window(
-            &app,
+            &mut app,
             window,
             window_bounds,
             1.0,
             None,
             Some(&snapshot),
-            None,
         );
 
         let bytes =

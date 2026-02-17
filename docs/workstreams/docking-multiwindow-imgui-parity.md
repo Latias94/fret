@@ -17,6 +17,7 @@ aiming for Dear ImGui docking branch “multi-viewports” hand-feel parity.
 Platform note:
 
 - macOS-specific plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+- Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
 - Detailed parity matrix (mechanics + hand feel): `docs/docking-imgui-parity-matrix.md`
 
@@ -89,6 +90,25 @@ Out of scope:
 7) **Escape cancels dock drag safely (P0)**
    - Cancels drag session, stops tear-off follow, clears internal-drag hover, and does not fight overlays.
 
+## Interaction model (what “ImGui-style” means in practice)
+
+This section exists to avoid a common confusion: in Dear ImGui, “multi-viewports” means **multiple OS
+platform windows**, but the gesture people remember as “drag the window title” is actually dragging the
+ImGui window/tab title **inside the client area**, not the OS window decoration title bar.
+
+For Fret, the intended UX contract is:
+
+- Re-docking a torn-off panel/tabs is performed by **dragging the tab** (or docking chrome title band)
+  inside the dock host widget.
+- Dragging the **OS window title bar** of a `DockFloating` window is treated as an OS-managed “move
+  the platform window” gesture and is not a docking interaction.
+
+Rationale:
+
+- It keeps the interaction portable and consistent across backends (winit + platform window managers).
+- It avoids coupling docking to platform-specific tracked window-move loops.
+- It aligns with ADR 0041: docking is an internal-drag/session problem, not a platform window-move problem.
+
 ## Baseline architecture (current shape)
 
 Non-normative summary of the current layering:
@@ -108,7 +128,9 @@ Evidence anchors:
 - Arbitration rules: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Optional “transparent payload” (ImGui-style):
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
-  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_dock_drag_transparent_payload`)
+  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
+    `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
+    `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
 
 ## Cross-platform gaps (common failure modes)

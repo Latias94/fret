@@ -253,23 +253,76 @@ pub(in crate::ui) fn preview_select(
     };
 
     let invalid = {
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Fruit").into_element(cx),
-            shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+        #[derive(Default)]
+        struct InvalidModels {
+            value: Option<Model<Option<Arc<str>>>>,
+            open: Option<Model<bool>>,
+        }
+
+        let (value, open) = cx.with_state(InvalidModels::default, |st| {
+            (st.value.clone(), st.open.clone())
+        });
+        let (value, open) = match (value, open) {
+            (Some(value), Some(open)) => (value, open),
+            _ => {
+                let value = cx.app.models_mut().insert(None::<Arc<str>>);
+                let open = cx.app.models_mut().insert(false);
+                cx.with_state(InvalidModels::default, |st| {
+                    st.value = Some(value.clone());
+                    st.open = Some(open.clone());
+                });
+                (value, open)
+            }
+        };
+
+        let selected = cx.watch_model(&value).cloned().unwrap_or_default();
+        let invalid = selected.is_none();
+
+        let label = {
+            let mut label = shadcn::FieldLabel::new("Fruit");
+            if invalid {
+                let theme = Theme::global(&*cx.app);
+                label = label.text_color(fret_ui_kit::ColorRef::Color(
+                    theme.color_token("destructive"),
+                ));
+            }
+            label
+                .into_element(cx)
+                .test_id("ui-gallery-select-invalid-label")
+        };
+
+        let select =
+            shadcn::Select::new_controllable(cx, Some(value), None::<Arc<str>>, Some(open), false)
                 .placeholder("Select a fruit")
-                .aria_invalid(true)
+                .aria_invalid(invalid)
                 .entries([shadcn::SelectGroup::new([
-                    shadcn::SelectItem::new("apple", "Apple").into(),
-                    shadcn::SelectItem::new("banana", "Banana").into(),
-                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+                    shadcn::SelectItem::new("apple", "Apple")
+                        .test_id("ui-gallery-select-invalid-item-apple")
+                        .into(),
+                    shadcn::SelectItem::new("banana", "Banana")
+                        .test_id("ui-gallery-select-invalid-item-banana")
+                        .into(),
+                    shadcn::SelectItem::new("blueberry", "Blueberry")
+                        .test_id("ui-gallery-select-invalid-item-blueberry")
+                        .into(),
                 ])
                 .into()])
-                .into_element(cx),
-            shadcn::FieldError::new("Please select a fruit.").into_element(cx),
-        ])
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-select-invalid")
+                .trigger_test_id("ui-gallery-select-invalid-trigger")
+                .into_element(cx);
+
+        let mut children = vec![label, select];
+        if invalid {
+            children.push(
+                shadcn::FieldError::new("Please select a fruit.")
+                    .into_element(cx)
+                    .test_id("ui-gallery-select-invalid-error"),
+            );
+        }
+
+        shadcn::Field::new(children)
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
+            .into_element(cx)
+            .test_id("ui-gallery-select-invalid")
     };
 
     let rtl = {

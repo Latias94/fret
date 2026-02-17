@@ -1,15 +1,16 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: overlapped windows switch hover by z-order",
-    "tags": ["docking", "multiwindow", "hover", "zorder", "gate"],
+    "name": "Docking arbitration demo: large preset overlapped windows switch hover by z-order",
+    "tags": ["docking", "multiwindow", "large", "hover", "zorder", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "large",
       "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
     },
     "target_hints": [
-      "This script overlaps two OS windows and asserts that cross-window dock drag hover routing follows window z-order when the cursor is in the overlap region.",
-      "It raises each window without moving the cursor and expects `dock_drag_current_window_is` to switch accordingly (ImGui-style).",
+      "Large preset variant of the z-order hover routing gate: overlaps two OS windows and asserts that cross-window dock drag hover routing follows OS z-order in the overlap region.",
+      "Expected behavior: raising each window without moving the cursor switches `dock_drag_current_window_is` accordingly (ImGui-style).",
       "Cursor overrides are expressed in screen-space physical pixels."
     ]
   },
@@ -29,7 +30,13 @@
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },
 
@@ -59,12 +66,6 @@
     { "type": "pointer_down", "window": { "kind": "last_seen" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
     { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
-    {
-      "type": "wait_until",
-      "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" },
-      "timeout_frames": 120
-    },
 
     {
       "type": "wait_until",
@@ -94,7 +95,21 @@
     { "type": "pointer_up", "window": { "kind": "last_seen" } },
     { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-overlap-zorder-switch" },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right]),tabs([demo.viewport.extra.0]),tabs([demo.viewport.extra.1])]),split(h,[tabs([demo.viewport.extra.2]),tabs([demo.viewport.extra.3]),tabs([demo.viewport.extra.4]),tabs([demo.viewport.extra.5])]),split(h,[tabs([demo.viewport.extra.6]),tabs([demo.viewport.extra.7]),tabs([demo.viewport.extra.8]),tabs([demo.viewport.extra.9])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-large-overlap-zorder-switch" },
     { "type": "wait_frames", "n": 2 }
   ]
 }

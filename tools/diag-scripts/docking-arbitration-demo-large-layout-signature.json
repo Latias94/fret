@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: large preset produces a stable dock graph signature",
+    "tags": ["docking", "nary", "large", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "large"
+    },
+    "target_hints": [
+      "This script gates the 'large' preset layout used by multi-window docking stress tests.",
+      "Expected behavior: the dock graph starts in a stable, canonical form with a deterministic signature."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_outer_position", "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right]),tabs([demo.viewport.extra.0]),tabs([demo.viewport.extra.1])]),split(h,[tabs([demo.viewport.extra.2]),tabs([demo.viewport.extra.3]),tabs([demo.viewport.extra.4]),tabs([demo.viewport.extra.5])]),split(h,[tabs([demo.viewport.extra.6]),tabs([demo.viewport.extra.7]),tabs([demo.viewport.extra.8]),tabs([demo.viewport.extra.9])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-large-layout-signature" },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}

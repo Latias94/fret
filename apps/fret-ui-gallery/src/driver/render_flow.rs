@@ -288,7 +288,10 @@ fn render_root_contents(
             layout.size.height = Length::Px(Px(0.0));
             layout.flex.grow = 0.0;
             layout.flex.shrink = 0.0;
-            cx.spacer(SpacerProps { layout, min: Px(0.0) })
+            cx.spacer(SpacerProps {
+                layout,
+                min: Px(0.0),
+            })
         })
     });
     content.push(command_palette);
