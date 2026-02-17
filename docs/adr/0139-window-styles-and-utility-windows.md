@@ -75,6 +75,14 @@ Extend `fret_runtime::CreateWindowRequest` with a portable style request value:
 
 `WindowStyleRequest` is pure data and must not contain backend types.
 
+In addition to create-time application, the runner may accept **best-effort runtime style patch**
+requests via:
+
+- `Effect::Window(WindowRequest::SetStyle { window, style })`
+
+This is explicitly a *patch* mechanism: each `Some(...)` facet updates that aspect; `None` leaves it
+unchanged. Unsupported facets may be ignored based on capabilities/platform constraints.
+
 In addition, `CreateWindowRequest` should carry a portable **window role** that affects host/runner
 policy (but does not imply a backend type):
 

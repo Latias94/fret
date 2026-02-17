@@ -382,6 +382,16 @@ pub enum WindowRequest {
         window: AppWindowId,
         sender: Option<AppWindowId>,
     },
+    /// Best-effort request to update OS window style facets at runtime.
+    ///
+    /// Semantics:
+    /// - This is a patch request: each `Some(...)` field updates that facet, `None` leaves it
+    ///   unchanged.
+    /// - Runners may ignore unsupported facets based on platform constraints.
+    SetStyle {
+        window: AppWindowId,
+        style: WindowStyleRequest,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
