@@ -20,6 +20,7 @@ pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_i
 struct NodeContext {
     node: NodeId,
     measured: bool,
+    min_content_width_as_max: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -459,6 +460,7 @@ impl TaffyLayoutEngine {
             NodeContext {
                 node: NodeId::default(),
                 measured: false,
+                min_content_width_as_max: false,
             },
         ) {
             Ok(id) => id,
@@ -587,10 +589,19 @@ impl TaffyLayoutEngine {
                     let quantized = (value * quantum).round() / quantum;
                     quantized.to_bits()
                 }
-                fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+                fn avail_key(
+                    avail: taffy::style::AvailableSpace,
+                    min_content_as_max: bool,
+                ) -> (u8, u32) {
                     match avail {
                         taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
-                        taffy::style::AvailableSpace::MinContent => (1, 0),
+                        taffy::style::AvailableSpace::MinContent => {
+                            if min_content_as_max {
+                                (2, 0)
+                            } else {
+                                (1, 0)
+                            }
+                        }
                         taffy::style::AvailableSpace::MaxContent => (2, 0),
                     }
                 }
@@ -599,8 +610,8 @@ impl TaffyLayoutEngine {
                     node: ctx.node,
                     known_w: known.width.map(quantize_size_key_bits),
                     known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width),
-                    avail_h: avail_key(avail.height),
+                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                    avail_h: avail_key(avail.height, false),
                 };
                 if let Some(size) = measure_cache.get(&key) {
                     measure_cache_hits = measure_cache_hits.saturating_add(1);
@@ -625,7 +636,13 @@ impl TaffyLayoutEngine {
                             taffy::style::AvailableSpace::Definite(w) => {
                                 AvailableSpace::Definite(Px(w / sf))
                             }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MinContent => {
+                                if ctx.min_content_width_as_max {
+                                    AvailableSpace::MaxContent
+                                } else {
+                                    AvailableSpace::MinContent
+                                }
+                            }
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
                         },
                         match avail.height {
@@ -802,6 +819,7 @@ impl TaffyLayoutEngine {
             NodeContext {
                 node,
                 measured: false,
+                min_content_width_as_max: false,
             },
         ) {
             Ok(id) => id,
@@ -825,17 +843,59 @@ impl TaffyLayoutEngine {
             .tree
             .get_node_context(id)
             .copied()
-            .unwrap_or(NodeContext { node, measured });
+            .unwrap_or(NodeContext {
+                node,
+                measured,
+                min_content_width_as_max: false,
+            });
         if ctx.node == node && ctx.measured == measured {
             return;
         }
         self.node_solved_stamp.remove(node);
         self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
-        if let Err(err) = self
+        if let Err(err) = self.tree.set_node_context(
+            id,
+            Some(NodeContext {
+                node,
+                measured,
+                min_content_width_as_max: ctx.min_content_width_as_max,
+            }),
+        ) {
+            Self::warn_taffy_error_once("set_node_context", err);
+        }
+        if let Err(err) = self.tree.mark_dirty(id) {
+            Self::warn_taffy_error_once("mark_dirty", err);
+        }
+    }
+
+    pub fn set_measure_min_content_width_as_max(&mut self, node: NodeId, enabled: bool) {
+        let Some(id) = self.request_layout_node(node).map(|id| id.0) else {
+            return;
+        };
+        let ctx = self
             .tree
-            .set_node_context(id, Some(NodeContext { node, measured }))
-        {
+            .get_node_context(id)
+            .copied()
+            .unwrap_or(NodeContext {
+                node,
+                measured: false,
+                min_content_width_as_max: enabled,
+            });
+        if ctx.node == node && ctx.min_content_width_as_max == enabled {
+            return;
+        }
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
+        self.invalidate_solved_ancestors(node);
+        if let Err(err) = self.tree.set_node_context(
+            id,
+            Some(NodeContext {
+                node,
+                measured: ctx.measured,
+                min_content_width_as_max: enabled,
+            }),
+        ) {
             Self::warn_taffy_error_once("set_node_context", err);
         }
         if let Err(err) = self.tree.mark_dirty(id) {
@@ -991,10 +1051,16 @@ impl TaffyLayoutEngine {
             quantized.to_bits()
         }
 
-        fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+        fn avail_key(avail: taffy::style::AvailableSpace, min_content_as_max: bool) -> (u8, u32) {
             match avail {
                 taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
-                taffy::style::AvailableSpace::MinContent => (1, 0),
+                taffy::style::AvailableSpace::MinContent => {
+                    if min_content_as_max {
+                        (2, 0)
+                    } else {
+                        (1, 0)
+                    }
+                }
                 taffy::style::AvailableSpace::MaxContent => (2, 0),
             }
         }
@@ -1068,8 +1134,8 @@ impl TaffyLayoutEngine {
                     node: ctx.node,
                     known_w: known.width.map(quantize_size_key_bits),
                     known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width),
-                    avail_h: avail_key(avail.height),
+                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                    avail_h: avail_key(avail.height, false),
                 };
                 if let Some(size) = measure_cache.get(&key) {
                     measure_cache_hits = measure_cache_hits.saturating_add(1);
@@ -1099,7 +1165,13 @@ impl TaffyLayoutEngine {
                             taffy::style::AvailableSpace::Definite(w) => {
                                 AvailableSpace::Definite(Px(w / sf))
                             }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MinContent => {
+                                if ctx.min_content_width_as_max {
+                                    AvailableSpace::MaxContent
+                                } else {
+                                    AvailableSpace::MinContent
+                                }
+                            }
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
                         },
                         match avail.height {

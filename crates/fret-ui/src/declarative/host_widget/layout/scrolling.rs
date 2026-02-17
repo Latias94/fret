@@ -687,13 +687,28 @@ impl ElementHostWidget {
         let defer_probe_on_resize = scroll_defer_unbounded_probe_on_resize_enabled();
         let defer_probe_on_invalidation = scroll_defer_unbounded_probe_on_invalidation_enabled();
         let prev_viewport = handle.viewport_size();
-        let viewport_changed = prev_viewport.width.0 > 0.0
-            && prev_viewport.height.0 > 0.0
+        let viewport_known = prev_viewport.width.0 > 0.0 && prev_viewport.height.0 > 0.0;
+        let viewport_changed = viewport_known
             && (prev_viewport.width.0.to_bits() != available.width.0.to_bits()
                 || prev_viewport.height.0.to_bits() != available.height.0.to_bits());
 
-        let should_defer_unbounded_probe_on_resize =
-            wants_unbounded_probe && defer_probe_on_resize && viewport_changed;
+        let can_defer_probe_with_cached_max_child =
+            cached_max_child.is_some_and(|size| size != Size::default());
+        let can_defer_probe_with_cached_children = can_defer_probe_with_cached_max_child
+            || cx.children.iter().copied().any(|child| {
+                cx.tree
+                    .node_measured_size(child)
+                    .is_some_and(|size| size != Size::default())
+            });
+        let viewport_became_known_during_resize = !viewport_known
+            && cx.tree.interactive_resize_active()
+            && available.width.0 > 0.0
+            && available.height.0 > 0.0
+            && can_defer_probe_with_cached_children;
+
+        let should_defer_unbounded_probe_on_resize = wants_unbounded_probe
+            && defer_probe_on_resize
+            && (viewport_changed || viewport_became_known_during_resize);
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
             && defer_probe_on_invalidation
             && cx

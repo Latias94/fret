@@ -28,6 +28,12 @@ pub(super) struct NodeMeasureCache {
     pub(super) size: Size,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct TextWrapNoneMeasureCache {
+    pub(super) fingerprint: u64,
+    pub(super) size: Size,
+}
+
 pub(super) struct Node<H: UiHost> {
     pub(super) widget: Option<Box<dyn Widget<H>>>,
     pub(super) element: Option<GlobalElementId>,
@@ -37,6 +43,7 @@ pub(super) struct Node<H: UiHost> {
     pub(super) bounds_written_paint_pass: u64,
     pub(super) measured_size: Size,
     pub(super) measure_cache: Option<NodeMeasureCache>,
+    pub(super) text_wrap_none_measure_cache: Option<TextWrapNoneMeasureCache>,
     pub(super) invalidation: InvalidationFlags,
     pub(super) paint_invalidated_by_hit_test_only: bool,
     pub(super) paint_cache: Option<PaintCacheEntry>,
@@ -116,6 +123,7 @@ impl<H: UiHost> Node<H> {
             bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             measure_cache: None,
+            text_wrap_none_measure_cache: None,
             invalidation: InvalidationFlags {
                 layout: true,
                 paint: true,

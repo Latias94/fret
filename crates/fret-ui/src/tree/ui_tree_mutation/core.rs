@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::tree::node_storage::TextWrapNoneMeasureCache;
 
 impl<H: UiHost> UiTree<H> {
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
@@ -10,6 +11,25 @@ impl<H: UiHost> UiTree<H> {
             self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
         }
         id
+    }
+
+    pub(crate) fn set_node_text_wrap_none_measure_cache(
+        &mut self,
+        node: NodeId,
+        fingerprint: u64,
+        size: Size,
+    ) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.text_wrap_none_measure_cache = Some(TextWrapNoneMeasureCache { fingerprint, size });
+    }
+
+    pub(crate) fn clear_node_text_wrap_none_measure_cache(&mut self, node: NodeId) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.text_wrap_none_measure_cache = None;
     }
 
     #[cfg(test)]
@@ -45,6 +65,13 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
+        let mark_cache_root_dirty = value
+            && self.view_cache_active()
+            && self
+                .nodes
+                .get(node)
+                .is_some_and(|n| n.view_cache.enabled);
+
         let Some(n) = self.nodes.get_mut(node) else {
             return;
         };
@@ -58,6 +85,14 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             n.invalidation.layout,
         );
+
+        if mark_cache_root_dirty {
+            self.mark_cache_root_dirty(
+                node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        }
     }
 
     pub fn set_root(&mut self, root: NodeId) {
