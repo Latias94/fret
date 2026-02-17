@@ -212,6 +212,7 @@ Multi-window (ImGui-style) helpers (requires `diag.multi_window`):
 - Tear-off then overlap windows: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-positioning.json`
 - Cross-window hover switching (cursor override): `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
 - Drag tab back to main window: `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- Drag tab into a different tab stack: `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
 
 Windows-specific gate (poll-up completion):
 
