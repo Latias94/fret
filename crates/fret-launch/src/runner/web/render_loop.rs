@@ -460,9 +460,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
 
         self.scene.clear();
+        let render_text_debug_enabled =
+            std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
         let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
             .is_some_and(|v| !v.is_empty())
-            || std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
+            || render_text_debug_enabled;
         if render_text_diag_enabled {
             gfx.renderer.begin_text_diagnostics_frame();
         }
@@ -534,12 +536,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             },
         );
         if render_text_diag_enabled {
-            self.app
-                .set_global(gfx.renderer.text_diagnostics_snapshot(self.frame_id));
-            self.app
-                .set_global(gfx.renderer.text_font_trace_snapshot(self.frame_id));
-            self.app
-                .set_global(gfx.renderer.text_fallback_policy_snapshot(self.frame_id));
+            let diagnostics = gfx.renderer.text_diagnostics_snapshot(self.frame_id);
+            let trace = gfx.renderer.text_font_trace_snapshot(self.frame_id);
+            let policy = gfx.renderer.text_fallback_policy_snapshot(self.frame_id);
+
+            if render_text_debug_enabled {
+                self.app.set_global(diagnostics);
+                self.app.set_global(trace);
+                self.app.set_global(policy);
+            } else {
+                self.app.with_global_mut_untracked(
+                    fret_core::RendererTextPerfSnapshot::default,
+                    |slot, _app| {
+                        *slot = diagnostics;
+                    },
+                );
+                self.app.with_global_mut_untracked(
+                    fret_core::RendererTextFontTraceSnapshot::default,
+                    |slot, _app| {
+                        *slot = trace;
+                    },
+                );
+                self.app.with_global_mut_untracked(
+                    fret_core::RendererTextFallbackPolicySnapshot::default,
+                    |slot, _app| {
+                        *slot = policy;
+                    },
+                );
+            }
         }
 
         if let Some(perf) = gfx.renderer.take_last_frame_perf_snapshot() {

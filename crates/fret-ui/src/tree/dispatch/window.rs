@@ -255,6 +255,8 @@ impl<H: UiHost> UiTree<H> {
                     dispatch_phase: InputDispatchPhase::Bubble,
                 };
                 if let Some(window) = self.window {
+                    let is_pointer_move =
+                        matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
                     if let Some(mode) = app
                         .global::<fret_runtime::WindowTextBoundaryModeService>()
                         .and_then(|svc| svc.mode(window))
@@ -278,12 +280,29 @@ impl<H: UiHost> UiTree<H> {
                     let window_arbitration = self.window_input_arbitration_snapshot();
                     input_ctx.window_arbitration = Some(window_arbitration);
 
-                    app.with_global_mut(
-                        fret_runtime::WindowInputContextService::default,
-                        |svc, _app| {
-                            svc.set_snapshot(window, input_ctx.clone());
-                        },
-                    );
+                    if is_pointer_move {
+                        // Keep pointer-move dispatch cheap: publish the snapshot without
+                        // participating in global-change propagation.
+                        app.with_global_mut_untracked(
+                            fret_runtime::WindowInputContextService::default,
+                            |svc, _app| {
+                                svc.set_snapshot(window, input_ctx.clone());
+                            },
+                        );
+                    } else {
+                        let needs_update = app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(window))
+                            .is_none_or(|prev| prev != &input_ctx);
+                        if needs_update {
+                            app.with_global_mut(
+                                fret_runtime::WindowInputContextService::default,
+                                |svc, _app| {
+                                    svc.set_snapshot(window, input_ctx.clone());
+                                },
+                            );
+                        }
+                    }
                 }
                 input_ctx
             },
@@ -2500,6 +2519,8 @@ impl<H: UiHost> UiTree<H> {
             || {
                 if let Some(window) = self.window {
                     let (_active_layers, barrier_root) = self.active_input_layers();
+                    let is_pointer_move =
+                        matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. }));
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
@@ -2540,14 +2561,29 @@ impl<H: UiHost> UiTree<H> {
                     let window_arbitration = self.window_input_arbitration_snapshot();
                     input_ctx.window_arbitration = Some(window_arbitration);
 
-                    app.with_global_mut(
-                        fret_runtime::WindowInputContextService::default,
-                        |svc, _app| {
-                            svc.set_snapshot(window, input_ctx.clone());
-                        },
-                    );
+                    if is_pointer_move {
+                        app.with_global_mut_untracked(
+                            fret_runtime::WindowInputContextService::default,
+                            |svc, _app| {
+                                svc.set_snapshot(window, input_ctx);
+                            },
+                        );
+                    } else {
+                        let needs_update = app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(window))
+                            .is_none_or(|prev| prev != &input_ctx);
+                        if needs_update {
+                            app.with_global_mut(
+                                fret_runtime::WindowInputContextService::default,
+                                |svc, _app| {
+                                    svc.set_snapshot(window, input_ctx.clone());
+                                },
+                            );
+                        }
 
-                    self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+                        self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+                    }
                 }
             },
         );
