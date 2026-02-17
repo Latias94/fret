@@ -12,7 +12,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Design lock
 
-- [ ] BWARP-adr-010 Add an ADR for the bounded backdrop warp surface (v1):
+- [~] BWARP-adr-010 Add an ADR for the bounded backdrop warp surface (v1):
       contract shape, deterministic degradation rules, and wasm/mobile constraints.
   - Exit criteria:
     - step parameters are bounded (no open-ended shader sources),
@@ -20,7 +20,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - degradation order is explicit and testable,
     - sample counts and quality knobs are bounded and observable.
   - Evidence anchors:
-    - `docs/adr/` (new ADR)
+    - `docs/adr/0284-backdrop-warp-effect-step-v1.md`
     - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 
 ## Contract changes
@@ -67,4 +67,3 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Evidence anchors:
     - `apps/fret-examples/src/liquid_glass_demo.rs` (uses the new step when enabled)
     - `apps/fret-demo/src/bin/liquid_glass_demo.rs` (entrypoint, if needed)
-

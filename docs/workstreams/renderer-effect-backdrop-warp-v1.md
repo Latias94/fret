@@ -108,3 +108,6 @@ Implementation must be branchless (or use uniform branches) around sampling:
 - TODOs: `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
 - Milestones: `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`
 
+Related ADR:
+
+- `docs/adr/0284-backdrop-warp-effect-step-v1.md`

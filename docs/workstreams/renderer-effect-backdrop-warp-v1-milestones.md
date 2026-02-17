@@ -17,7 +17,7 @@ Exit criteria:
 
 Evidence anchors:
 
-- `docs/adr/` (new ADR)
+- `docs/adr/0284-backdrop-warp-effect-step-v1.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 
 ## M1 — wgpu implementation + WebGPU shader validation
@@ -57,4 +57,3 @@ Exit criteria:
 Evidence anchors:
 
 - `apps/fret-examples/src/liquid_glass_demo.rs`
-
