@@ -69,6 +69,12 @@ This ADR is tracked as a workstream:
 This ADR defines a bounded set of strategies. Concrete backend implementations may add internal
 details, but must map into one of these categories:
 
+0. **Owned (renderer-owned texture)**
+   - Example: the producer writes directly into a renderer-owned texture (e.g. shared allocation),
+     or the source already lives on the same device and is simply sampled via `TextureView` updates.
+   - This path exists to keep the UI contract stable even when "true external handle import" is
+     blocked, and is often a better fallback than doing extra copies.
+
 1. **Zero-copy (external texture sampling)**
    - Example: WebGPU `ExternalTexture` sampling for WebCodecs `VideoFrame`.
    - Requires explicit capability gating and a deterministic fallback.
@@ -89,8 +95,10 @@ be observable in diagnostics/perf snapshots.
 For a given target/backend, the effective strategy is selected by a deterministic ordered chain:
 
 1. Prefer **zero-copy** if the backend reports support and the source provides an eligible frame.
-2. Else prefer **low-copy GPU copy**.
-3. Else fall back to **CPU upload**.
+2. Else prefer **owned** when the source can be made available as a renderer-owned texture without
+   extra readback (e.g. shared allocation write paths).
+3. Else prefer **low-copy GPU copy**.
+4. Else fall back to **CPU upload**.
 
 This chain must be stable across machines for the same capability snapshot, and must not depend
 on timing or opportunistic resource availability.

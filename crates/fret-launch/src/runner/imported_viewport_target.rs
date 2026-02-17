@@ -235,6 +235,7 @@ impl ImportedViewportRenderTarget {
             ],
             RenderTargetIngestStrategy::ExternalZeroCopy => &[
                 RenderTargetIngestStrategy::ExternalZeroCopy,
+                RenderTargetIngestStrategy::Owned,
                 RenderTargetIngestStrategy::GpuCopy,
                 RenderTargetIngestStrategy::CpuUpload,
             ],
@@ -610,5 +611,18 @@ mod tests {
             &[],
         );
         assert_eq!(effective, RenderTargetIngestStrategy::CpuUpload);
+    }
+
+    #[test]
+    fn deterministic_fallback_considers_owned_for_external_zero_copy() {
+        let available = &[
+            RenderTargetIngestStrategy::CpuUpload,
+            RenderTargetIngestStrategy::Owned,
+        ];
+        let effective = ImportedViewportRenderTarget::select_deterministic_fallback_effective(
+            RenderTargetIngestStrategy::ExternalZeroCopy,
+            available,
+        );
+        assert_eq!(effective, RenderTargetIngestStrategy::Owned);
     }
 }
