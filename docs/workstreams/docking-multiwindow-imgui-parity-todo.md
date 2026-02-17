@@ -187,12 +187,17 @@ Each TODO is labeled:
   - Current implementation (v1 subset; best-effort per backend):
     - `CreateWindowRequest` carries a portable `role` and `style` request (ADR 0139 shape).
     - Docking tear-off windows request `TaskbarVisibility::Hide` and `ActivationPolicy::Activates`.
+    - Docking follow applies temporary runtime style patches via `WindowRequest::SetStyle` (ImGui-style):
+      - `z_level`: request `AlwaysOnTop` while following, patch back to `Normal` when follow stops (capability-gated).
+      - Optional transparent payload: `opacity` + `mouse=Passthrough` while following, patch back when follow stops.
     - Desktop runner applies `with_active(...)` and Windows `skip_taskbar` at creation time.
   - Evidence anchors:
     - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
     - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
     - Docking create request wiring: `ecosystem/fret-docking/src/runtime.rs` (`WindowRequest::Create` for `DockFloating`)
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
+    - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
+    - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)
   - Remaining gaps (keep ADR 0139 scope honest):
     - No portable capabilities for style facets yet (only best-effort application).
     - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.

@@ -147,6 +147,11 @@ Contract expectation:
 
 - A reliable hover provider should naturally “peek behind” click-through windows.
 - Diagnostics must expose whether transparent payload was applied to the active dock drag session.
+  - In Fret, this is applied via `WindowRequest::SetStyle` facets (`mouse`, `opacity`) while the follow loop is active.
+
+In addition, while following the cursor the runner may request a temporary `WindowZLevel::AlwaysOnTop`
+(capability-gated) to keep the moving payload visible above other app windows (ImGui-style). This is
+also applied via `WindowRequest::SetStyle` and patched back to `Normal` when follow stops.
 
 ## Platform implementation plan (avoid heuristics)
 

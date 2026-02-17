@@ -132,6 +132,8 @@ Evidence anchors:
     `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
     `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
+  - Note: the follow loop also requests a temporary `WindowZLevel::AlwaysOnTop` (capability-gated) so the moving window stays
+    visible above other app windows. This is applied via `WindowRequest::SetStyle` and patched back to `Normal` when follow stops.
 
 ## Cross-platform gaps (common failure modes)
 
