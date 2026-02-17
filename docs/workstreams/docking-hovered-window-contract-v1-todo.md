@@ -63,7 +63,7 @@ Each TODO is labeled:
 
 ## P0 — Windows (Win32) correctness hardening
 
-- [ ] DWHW-P0-win32-001 Prefer OS z-order for all `Reliable` hover selection; never fall back to
+- [x] DWHW-P0-win32-001 Prefer OS z-order for all `Reliable` hover selection; never fall back to
   internal z-order lists when Win32 APIs are available.
   - Rationale: avoid “z-order drift” causing flaky hover selection under overlap.
   - Evidence anchors:
@@ -71,12 +71,21 @@ Each TODO is labeled:
   - Acceptance:
     - `docking-arbitration-demo-multiwindow-overlap-zorder-switch` remains stable across repeated
       runs (no flicker, no mis-targeting).
+  - Progress:
+    - `WindowHoverDetectionQuality::Reliable` routes window selection through the Win32 provider:
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor_win32`)
 
-- [ ] DWHW-P0-win32-002 Ensure `prefer_not` skip semantics are complete under overlap.
+- [x] DWHW-P0-win32-002 Ensure `prefer_not` skip semantics are complete under overlap.
   - Goal: when the moving payload window is under cursor, selection returns the window behind it
     when present.
   - Acceptance:
     - Transparent payload gate passes even if the payload window is topmost.
+  - Progress:
+    - `prefer_not` is threaded into the Win32 z-order walk and the macOS ordered-window scan:
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor_win32`, `window_under_cursor_macos`)
+    - Cross-window routing uses `prefer_not` when following a dock payload window:
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
 
 ## P1 — macOS reliable hover selection (or explicit degradation)
 
@@ -135,5 +144,5 @@ Existing relevant gates:
 
 TODO gates:
 
-- [ ] Add a “provider source is OS-backed” assertion for Windows.
+- [x] Add a “provider source is OS-backed” assertion for Windows.
 - [ ] Add a “capability downgraded” assertion for Wayland sessions.

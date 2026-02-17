@@ -563,6 +563,7 @@ Open parity question:
     - backends may provide `MouseHoveredViewport`, otherwise heuristics run (including “peek behind moving viewport”).
   - Fret:
     - runner uses `cursor_screen_pos` + `window_under_cursor(...)` and a “prefer_not” moving window rule.
+    - Diagnostics expose the selection source (`platform_*` vs `latched`/`heuristic_*`) so we can gate regressions.
   - Evidence anchors:
     - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`:
       - `route_internal_drag_hover_from_cursor`
@@ -571,6 +572,9 @@ Open parity question:
         - Windows: Win32 z-order walk (`WindowFromPoint` + `GetWindow(GW_HWNDNEXT)`) prefers the true frontmost window.
         - macOS: `NSApp.orderedWindows` ordering prefers the true frontmost window.
         - Fallback: focus/raise-based best-effort ordering (`window_hit_test_order`).
+    - Diagnostics + gates:
+      - Predicate: `crates/fret-diag-protocol/src/lib.rs` (`dock_drag_window_under_cursor_source_is`)
+      - Gate: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json` (asserts `source=platform`)
 
 ---
 
