@@ -88,6 +88,13 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - Correctness script (DX12-only; requires `FRET_WGPU_BACKEND=dx12` and shared-allocation flag):
       - `tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-correctness.json`
 
+- [x] EXTV2-native-104 Add a runner-facing shared allocation export helper (DX12-only):
+      centralize “export queue/resource + wgpu transitions” so real producers can write into
+      renderer-owned textures without duplicating unsafe backend plumbing.
+  - Evidence anchors:
+    - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard`)
+    - `apps/fret-examples/src/external_texture_imports_demo.rs` (uses the helper in DX12 clear mode)
+
 - [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.

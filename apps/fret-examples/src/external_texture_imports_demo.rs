@@ -875,95 +875,63 @@ fn record_engine_frame(
         }
         #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
         ExternalTextureImportsMode::Dx12ClearSharedAllocation => {
-            if let (Some(queue_guard), Some(tex_guard)) = (
-                unsafe { context.queue.as_hal::<wgpu::hal::dx12::Api>() },
-                unsafe { texture.as_hal::<wgpu::hal::dx12::Api>() },
+            let guard = match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::begin(
+                context,
+                texture,
+                wgpu::wgt::TextureUses::COLOR_TARGET,
             ) {
-                let queue = queue_guard.as_raw().clone();
-                let resource = unsafe { tex_guard.raw_resource() }.clone();
-
-                if st.dx12_clear.is_none() {
-                    let Some(rtv_format) = dx12_clear::rtv_format_for_wgpu(st.target.format())
-                    else {
-                        tracing::warn!(
-                            format = ?st.target.format(),
-                            "dx12 clear mode: unsupported target format; falling back"
-                        );
-                        st.mode = ExternalTextureImportsMode::CheckerGpu;
-                        return update;
-                    };
-                    match dx12_clear::Dx12ClearState::new(&resource, rtv_format)
-                        .context("init Dx12ClearState")
-                    {
-                        Ok(state) => st.dx12_clear = Some(state),
-                        Err(err) => {
-                            tracing::warn!(?err, "dx12 clear mode: init failed; falling back");
-                            st.dx12_clear = None;
-                            st.mode = ExternalTextureImportsMode::CheckerGpu;
-                            return update;
-                        }
-                    }
-                }
-
-                let t = frame_id.0 as f32 * (1.0 / 60.0);
-                let pulse = (t * 0.75).sin() * 0.5 + 0.5;
-                let color = [
-                    0.05 + pulse * 0.35,
-                    0.08 + pulse * 0.20,
-                    0.12 + (1.0 - pulse) * 0.25,
-                    1.0,
-                ];
-
-                if let Some(dx12) = st.dx12_clear.as_mut() {
-                    // Interop contract:
-                    // 1) wgpu transitions to COLOR_TARGET (render target),
-                    // 2) native DX12 clears using the same command queue,
-                    // 3) wgpu transitions back to RESOURCE for sampling.
-                    let mut enc =
-                        context
-                            .device
-                            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                label: Some("external texture imports dx12 interop pre-transition"),
-                            });
-                    enc.transition_resources(
-                        std::iter::empty(),
-                        std::iter::once(wgpu::wgt::TextureTransition {
-                            texture,
-                            selector: None,
-                            state: wgpu::wgt::TextureUses::COLOR_TARGET,
-                        }),
+                Ok(guard) => guard,
+                Err(err) => {
+                    tracing::warn!(
+                        ?err,
+                        "dx12 clear mode: shared allocation export unavailable; falling back"
                     );
-                    context.queue.submit([enc.finish()]);
+                    st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    return update;
+                }
+            };
 
-                    if let Err(err) = dx12.clear_on_queue(&queue, &resource, color) {
-                        tracing::warn!(?err, "dx12 clear mode: native clear failed; falling back");
+            if st.dx12_clear.is_none() {
+                let Some(rtv_format) = dx12_clear::rtv_format_for_wgpu(st.target.format()) else {
+                    tracing::warn!(
+                        format = ?st.target.format(),
+                        "dx12 clear mode: unsupported target format; falling back"
+                    );
+                    st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    return update;
+                };
+                match dx12_clear::Dx12ClearState::new(guard.resource(), rtv_format)
+                    .context("init Dx12ClearState")
+                {
+                    Ok(state) => st.dx12_clear = Some(state),
+                    Err(err) => {
+                        tracing::warn!(?err, "dx12 clear mode: init failed; falling back");
                         st.dx12_clear = None;
                         st.mode = ExternalTextureImportsMode::CheckerGpu;
                         return update;
                     }
-
-                    let mut enc =
-                        context
-                            .device
-                            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                label: Some(
-                                    "external texture imports dx12 interop post-transition",
-                                ),
-                            });
-                    enc.transition_resources(
-                        std::iter::empty(),
-                        std::iter::once(wgpu::wgt::TextureTransition {
-                            texture,
-                            selector: None,
-                            state: wgpu::wgt::TextureUses::RESOURCE,
-                        }),
-                    );
-                    context.queue.submit([enc.finish()]);
                 }
+            }
+
+            let t = frame_id.0 as f32 * (1.0 / 60.0);
+            let pulse = (t * 0.75).sin() * 0.5 + 0.5;
+            let color = [
+                0.05 + pulse * 0.35,
+                0.08 + pulse * 0.20,
+                0.12 + (1.0 - pulse) * 0.25,
+                1.0,
+            ];
+
+            if let Some(dx12) = st.dx12_clear.as_mut() {
+                if let Err(err) = dx12.clear_on_queue(guard.queue_raw(), guard.resource(), color) {
+                    tracing::warn!(?err, "dx12 clear mode: native clear failed; falling back");
+                    st.dx12_clear = None;
+                    st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    return update;
+                }
+                guard.finish();
             } else {
-                tracing::warn!(
-                    "dx12 clear mode requested but current wgpu backend is not DX12; falling back"
-                );
+                tracing::warn!("dx12 clear mode: missing dx12 state; falling back");
                 st.mode = ExternalTextureImportsMode::CheckerGpu;
             }
 

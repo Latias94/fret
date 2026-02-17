@@ -72,6 +72,7 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std"
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
+windows = { workspace = true, features = ["Win32_Graphics_Direct3D12"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "linux"))'.dependencies]
 zbus.workspace = true
