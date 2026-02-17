@@ -117,48 +117,22 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         content
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::NativeSelect::new("Select language")
-                    .a11y_label("RTL native select")
-                    .refine_layout(select_width.clone())
-                    .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-native-select-rtl");
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::NativeSelect::new("Select language")
+            .a11y_label("RTL native select")
+            .refine_layout(select_width.clone())
+            .into_element(cx)
+    })
+    .test_id("ui-gallery-native-select-rtl");
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current NativeSelect API is label-based; explicit option/optgroup nodes are not exposed yet.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Groups example is a practical approximation until optgroup-level API is added.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use NativeSelect for native browser behavior/mobile ergonomics; use Select for richer overlays and custom interactions.",
-                ),
-            ]
-        },
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
+            "Current NativeSelect API is label-based; explicit option/optgroup nodes are not exposed yet.",
+            "Groups example is a practical approximation until optgroup-level API is added.",
+            "Use NativeSelect for native browser behavior/mobile ergonomics; use Select for richer overlays and custom interactions.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -178,19 +152,71 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 ),
             DocSection::new("Groups", groups)
                 .description("Optgroup-like grouping is approximated with multiple selects.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N2).items_start(),
+    |cx| {
+        vec![
+            shadcn::NativeSelect::new("Fruits").a11y_label("Fruits group").into_element(cx),
+            shadcn::NativeSelect::new("Vegetables").a11y_label("Vegetables group").into_element(cx),
+        ]
+    },
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled)
                 .description("Disabled native select.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new("Disabled")
+    .a11y_label("Disabled select")
+    .disabled(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state via `aria_invalid(true)`.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new("Select a country")
+    .a11y_label("Invalid select")
+    .aria_invalid(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Native Select vs Select", native_vs_select)
                 .description("Compare native and styled select side-by-side.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"stack::vstack(cx, stack::VStackProps::default().gap(Space::N3).items_start(), |cx| {
+    vec![
+        shadcn::NativeSelect::new("Native select").a11y_label("Native select").into_element(cx),
+        shadcn::Select::new(value, open)
+            .placeholder("Styled select")
+            .items([
+                shadcn::SelectItem::new("apple", "Apple"),
+                shadcn::SelectItem::new("banana", "Banana"),
+            ])
+            .into_element(cx),
+    ]
+})
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Native select under an RTL direction provider.")
-                .max_w(Px(820.0)),
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::NativeSelect::new("Select language").into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

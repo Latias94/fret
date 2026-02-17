@@ -31,8 +31,13 @@ pub fn materialize_bundle_json(
     let export_dir = export_root.join(exported_unix_ms.to_string());
     std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
 
-    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
-        .map_err(|e| e.to_string())?;
+    let bundle_path = export_dir.join("bundle.json");
+    std::fs::write(&bundle_path, bundle_json.as_bytes()).map_err(|e| e.to_string())?;
+
+    // Best-effort sidecars for fast interactive querying (avoid grepping `bundle.json`).
+    let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, 0);
+    let _ = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, 0);
+    let _ = crate::bundle_index::ensure_test_ids_json(&bundle_path, 0, 500);
 
     Ok(export_dir)
 }

@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 #[derive(Default)]
 struct UiKitListTortureModels {
@@ -101,5 +102,18 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
             .test_id("ui-gallery-ui-kit-list-torture-root"),
     );
 
-    vec![root]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177)."),
+        vec![
+            DocSection::new("Harness", root)
+                .description(
+                    "Expect: scroll boundary shifts reconcile without scroll-window dirty views.",
+                )
+                .no_shell()
+                .max_w(Px(980.0)),
+        ],
+    );
+
+    vec![page]
 }

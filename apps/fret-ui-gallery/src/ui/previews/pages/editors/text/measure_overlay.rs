@@ -1,4 +1,5 @@
 use super::super::super::super::super::*;
+use crate::ui::doc_layout;
 
 pub(in crate::ui) fn preview_text_measure_overlay(
     cx: &mut ElementContext<'_, App>,
@@ -271,5 +272,7 @@ pub(in crate::ui) fn preview_text_measure_overlay(
             .test_id("ui-gallery-text-measure-overlay-root"),
     );
 
-    vec![header, panel]
+    let page = doc_layout::wrap_preview_page(cx, None, "Text measure overlay", vec![header, panel]);
+
+    vec![page]
 }

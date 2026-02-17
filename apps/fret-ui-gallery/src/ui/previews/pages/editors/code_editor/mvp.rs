@@ -7,6 +7,7 @@ mod prelude {
     pub(super) use super::super::super::super::super::super::*;
 }
 
+use crate::ui::doc_layout;
 use prelude::*;
 
 pub(in crate::ui) fn preview_code_editor_mvp(
@@ -118,5 +119,7 @@ pub(in crate::ui) fn preview_code_editor_mvp(
             .test_id("ui-gallery-code-editor-root"),
     );
 
-    vec![header, panel]
+    let page = doc_layout::wrap_preview_page(cx, None, "Code editor", vec![header, panel]);
+
+    vec![page]
 }

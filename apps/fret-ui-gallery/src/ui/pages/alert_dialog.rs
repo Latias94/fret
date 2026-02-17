@@ -223,49 +223,30 @@ pub(super) fn preview_alert_dialog(
         Some("lucide.trash-2"),
     );
 
-    let rtl_dialog = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            build_dialog(
-                cx,
-                "ui-gallery-alert-dialog-rtl",
-                rtl_open,
-                "عرض الحوار",
-                shadcn::ButtonVariant::Outline,
-                "هل أنت متأكد تمامًا؟",
-                "لا يمكن التراجع عن هذا الإجراء. سيؤدي ذلك إلى حذف حسابك نهائيًا من خوادمنا.",
-                "إلغاء",
-                "متابعة",
-                shadcn::ButtonVariant::Default,
-                shadcn::AlertDialogContentSize::Default,
-                None,
-            )
-        },
-    );
+    let rtl_dialog = doc_layout::rtl(cx, |cx| {
+        build_dialog(
+            cx,
+            "ui-gallery-alert-dialog-rtl",
+            rtl_open,
+            "عرض الحوار",
+            shadcn::ButtonVariant::Outline,
+            "هل أنت متأكد تمامًا؟",
+            "لا يمكن التراجع عن هذا الإجراء. سيؤدي ذلك إلى حذف حسابك نهائيًا من خوادمنا.",
+            "إلغاء",
+            "متابعة",
+            shadcn::ButtonVariant::Default,
+            shadcn::AlertDialogContentSize::Default,
+            None,
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                doc_layout::muted_full_width(
-                    cx,
-                    "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
-                ),
-                doc_layout::muted_full_width(
-                    cx,
-                    "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
-                ),
-                doc_layout::muted_full_width(
-                    cx,
-                    "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
-                ),
-            ]
-        },
+        [
+            "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
+            "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
+            "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -307,7 +288,26 @@ pub(super) fn preview_alert_dialog(
                 .max_w(Px(760.0)),
             DocSection::new("Basic", basic_content)
                 .description("A minimal alert dialog with default buttons.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+let dialog = build_dialog(
+    cx,
+    "ui-gallery-alert-dialog-basic",
+    open,
+    "Show Dialog",
+    shadcn::ButtonVariant::Outline,
+    "Are you absolutely sure?",
+    "This action cannot be undone.",
+    "Cancel",
+    "Continue",
+    shadcn::ButtonVariant::Default,
+    shadcn::AlertDialogContentSize::Default,
+    None,
+);"#,
+                ),
             DocSection::new("Small", small_content)
                 .description("Compact dialog size for short copy.")
                 .test_id_prefix("ui-gallery-alert-dialog-small")
@@ -336,7 +336,26 @@ let header = shadcn::AlertDialogHeader::new([title, description])
                 .max_w(Px(760.0)),
             DocSection::new("Small with Media", small_with_media_content)
                 .description("Small size + media variant.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+build_dialog(
+    cx,
+    "ui-gallery-alert-dialog-small-media",
+    open,
+    "Show Dialog",
+    shadcn::ButtonVariant::Outline,
+    "Allow accessory to connect?",
+    "Do you want to allow the USB accessory to connect to this device?",
+    "Don't allow",
+    "Allow",
+    shadcn::ButtonVariant::Default,
+    shadcn::AlertDialogContentSize::Sm,
+    Some("lucide.bluetooth"),
+);"#,
+                ),
             DocSection::new("Destructive", destructive_content)
                 .description("Destructive styling for irreversible actions.")
                 .test_id_prefix("ui-gallery-alert-dialog-destructive")
@@ -349,7 +368,28 @@ let header = shadcn::AlertDialogHeader::new([title, description])
                 .max_w(Px(760.0)),
             DocSection::new("RTL", rtl_dialog)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .max_w(Px(760.0)),
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| build_dialog(
+        cx,
+        "ui-gallery-alert-dialog-rtl",
+        open,
+        "عرض الحوار",
+        shadcn::ButtonVariant::Outline,
+        "هل أنت متأكد تمامًا؟",
+        "لا يمكن التراجع عن هذا الإجراء.",
+        "إلغاء",
+        "متابعة",
+        shadcn::ButtonVariant::Default,
+        shadcn::AlertDialogContentSize::Default,
+        None,
+    ),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Guidelines and best practices for alert dialogs.")
                 .max_w(Px(760.0)),

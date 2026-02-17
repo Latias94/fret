@@ -491,73 +491,43 @@ pub(super) fn preview_context_menu(
         menu
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::ContextMenu::new(rtl_open.clone()).into_element(
             cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                shadcn::ContextMenu::new(rtl_open.clone()).into_element(
+                trigger_surface(
                     cx,
-                    |cx| {
-                        trigger_surface(
-                            cx,
-                            "Right click in RTL",
-                            "ui-gallery-context-menu-rtl-trigger",
-                        )
-                    },
-                    |_cx| {
-                        vec![
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Open")
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Settings")
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                            shadcn::ContextMenuEntry::Separator,
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Delete")
-                                    .variant(
-                                        shadcn::context_menu::ContextMenuItemVariant::Destructive,
-                                    )
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                        ]
-                    },
+                    "Right click in RTL",
+                    "ui-gallery-context-menu-rtl-trigger",
                 )
             },
-        );
+            |_cx| {
+                vec![
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Open").on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Settings").on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Separator,
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Delete")
+                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                ]
+            },
+        )
+    });
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Keep context menu entries task-focused; destructive entries should be visually separated by a divider.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Prefer checkboxes/radio groups for persistent menu state so users can infer current mode before selecting.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use icon + shortcut combinations sparingly: icons improve scanning, shortcuts improve expert throughput.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep explicit RTL coverage in gallery so submenu direction and destructive styling stay parity-auditable.",
-                ),
-            ]
-        },
+        [
+            "Keep context menu entries task-focused; destructive entries should be visually separated by a divider.",
+            "Prefer checkboxes/radio groups for persistent menu state so users can infer current mode before selecting.",
+            "Use icon + shortcut combinations sparingly: icons improve scanning, shortcuts improve expert throughput.",
+            "Keep explicit RTL coverage in gallery so submenu direction and destructive styling stay parity-auditable.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -574,12 +544,60 @@ pub(super) fn preview_context_menu(
 let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entries);"#,
                 ),
             DocSection::new("Submenu", submenu)
-                .description("Nested submenu entries for grouped actions."),
+                .description("Nested submenu entries for grouped actions.")
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("More tools").submenu(vec![
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Rename").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Duplicate").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+        shadcn::ContextMenuEntry::Separator,
+        shadcn::ContextMenuEntry::Item(
+            shadcn::ContextMenuItem::new("Archive").on_select(CMD_MENU_CONTEXT_ACTION),
+        ),
+    ]),
+);"#,
+                ),
             DocSection::new("Shortcuts", shortcuts)
-                .description("Trailing shortcuts for command discovery."),
+                .description("Trailing shortcuts for command discovery.")
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Open File")
+        .trailing(shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx))
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("Groups", groups)
-                .description("Explicit groups and labels for structured menus."),
-            DocSection::new("Icons", icons).description("Leading icons for visual scanning."),
+                .description("Explicit groups and labels for structured menus.")
+                .code(
+                    "rust",
+                    r#"vec![
+    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Actions")),
+    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Open")),
+    shadcn::ContextMenuEntry::Separator,
+    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("View")),
+    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Toggle sidebar")),
+];"#,
+                ),
+            DocSection::new("Icons", icons)
+                .description("Leading icons for visual scanning.")
+                .code(
+                    "rust",
+                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Settings")
+        .leading(icon(cx, "lucide.settings"))
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Checkbox items are bound to boolean models.")
                 .code(
@@ -599,9 +617,29 @@ let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entrie
 );"#,
                 ),
             DocSection::new("Destructive", destructive)
-                .description("Destructive items use a dedicated visual variant."),
+                .description("Destructive items use a dedicated visual variant.")
+                .code(
+                    "rust",
+                    r#"shadcn::ContextMenuEntry::Item(
+    shadcn::ContextMenuItem::new("Delete project")
+        .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+        .on_select(CMD_MENU_CONTEXT_ACTION),
+);"#,
+                ),
             DocSection::new("RTL", rtl)
-                .description("Menu layout should follow right-to-left direction context."),
+                .description("Menu layout should follow right-to-left direction context.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| {
+            vec![shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Open"))]
+        })
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

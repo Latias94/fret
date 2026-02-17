@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
     cx: &mut ElementContext<'_, App>,
@@ -22,19 +23,6 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
         hovered: Option<usize>,
         selected: Option<usize>,
     }
-
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: demonstrate paint-only hover/selection chrome on a prepaint-windowed row surface (ADR 0175 + ADR 0166)."),
-                cx.text("Pattern: stable tree (Scroll + PointerRegion + Canvas), row hit-testing in pointer hooks, paint-only visuals in Canvas."),
-            ]
-        },
-    );
 
     let len = 200_000usize;
     let row_h = Px(22.0);
@@ -190,5 +178,18 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
             vec![root]
         });
 
-    vec![header, surface]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Goal: demonstrate paint-only hover/selection chrome on a prepaint-windowed row surface (ADR 0175 + ADR 0166).",
+        ),
+        vec![DocSection::new("Surface", surface)
+            .description(
+                "Pattern: stable tree (Scroll + PointerRegion + Canvas), row hit-testing in pointer hooks, paint-only visuals in Canvas.",
+            )
+            .no_shell()
+            .max_w(Px(980.0))],
+    );
+
+    vec![page]
 }

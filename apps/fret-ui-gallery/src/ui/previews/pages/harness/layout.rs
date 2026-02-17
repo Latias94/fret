@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_layout(
     cx: &mut ElementContext<'_, App>,
@@ -36,12 +37,12 @@ pub(in crate::ui) fn preview_layout(
         },
     );
 
-    vec![
-        ui::text_block(
-            cx,
-            "Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing).",
-        )
-        .into_element(cx),
-        row,
-    ]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing)."),
+        vec![DocSection::new("Demo", row)
+            .description("In a horizontal flex row, prefer `flex-1 + min-w-0` (equal columns) over percent widths (`w-full`).")],
+    );
+
+    vec![page]
 }

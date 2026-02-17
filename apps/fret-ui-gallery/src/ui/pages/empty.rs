@@ -25,9 +25,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-    };
+    let icon = doc_layout::icon;
 
     let demo = {
         let empty = shadcn::Empty::new([
@@ -223,66 +221,43 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         empty
     };
 
-    let rtl = {
-        let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::Empty::new([
-                    shadcn::empty::EmptyHeader::new([
-                        shadcn::empty::EmptyMedia::new([icon(cx, "lucide.folder-search")])
-                            .variant(shadcn::empty::EmptyMediaVariant::Icon)
-                            .into_element(cx),
-                        shadcn::empty::EmptyTitle::new("RTL Empty State").into_element(cx),
-                        shadcn::empty::EmptyDescription::new(
-                            "This empty state uses RTL direction context for layout and alignment.",
-                        )
-                        .into_element(cx),
-                    ])
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Empty::new([
+            shadcn::empty::EmptyHeader::new([
+                shadcn::empty::EmptyMedia::new([icon(cx, "lucide.folder-search")])
+                    .variant(shadcn::empty::EmptyMediaVariant::Icon)
                     .into_element(cx),
-                    shadcn::empty::EmptyContent::new([
-                        shadcn::InputGroup::new(rtl_search_query.clone())
-                            .a11y_label("RTL search")
-                            .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
-                            .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
-                            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
-                            .test_id("ui-gallery-empty-rtl-input-group")
-                            .into_element(cx),
-                        shadcn::Button::new("Create Project").into_element(cx),
-                    ])
+                shadcn::empty::EmptyTitle::new("RTL Empty State").into_element(cx),
+                shadcn::empty::EmptyDescription::new(
+                    "This empty state uses RTL direction context for layout and alignment.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::empty::EmptyContent::new([
+                shadcn::InputGroup::new(rtl_search_query.clone())
+                    .a11y_label("RTL search")
+                    .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
+                    .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
+                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
+                    .test_id("ui-gallery-empty-rtl-input-group")
                     .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
-                .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-empty-rtl");
+                shadcn::Button::new("Create Project").into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-empty-rtl");
 
-        rtl_content
-    };
-
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
-                ),
-            ]
-        },
+        [
+            "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
+            "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
+            "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -298,13 +273,71 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     r#"let empty = shadcn::Empty::new([header, content]).into_element(cx);"#,
                 ),
             DocSection::new("Outline", outline)
-                .description("Outlined empty state for low-emphasis surfaces."),
+                .description("Outlined empty state for low-emphasis surfaces.")
+                .code(
+                    "rust",
+                    r#"let muted_fg = cx.with_theme(|theme| theme.color_token("muted-foreground"));
+
+shadcn::Empty::new([header, content])
+    .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(muted_fg)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Background", background)
-                .description("Muted background recipe for empty states embedded in cards."),
+                .description("Muted background recipe for empty states embedded in cards.")
+                .code(
+                    "rust",
+                    r#"let muted = cx.with_theme(|theme| theme.color_token("muted"));
+
+shadcn::Empty::new([header, content])
+    .refine_style(ChromeRefinement::default().bg(ColorRef::Color(muted)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Avatar", avatar)
-                .description("Empty state media can be an avatar instead of an icon."),
+                .description("Empty state media can be an avatar instead of an icon.")
+                .code(
+                    "rust",
+                    r#"let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
+    .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
+    .into_element(cx);
+
+shadcn::Empty::new([
+    shadcn::empty::EmptyHeader::new([
+        shadcn::empty::EmptyMedia::new([avatar]).into_element(cx),
+        shadcn::empty::EmptyTitle::new("User Offline").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::empty::EmptyContent::new([shadcn::Button::new("Leave Message").into_element(cx)])
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Avatar Group", avatar_group)
-                .description("Media can also be a composed row of avatars."),
+                .description("Media can also be a composed row of avatars.")
+                .code(
+                    "rust",
+                    r#"let avatars = stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N1).items_center(),
+    |cx| {
+        vec![
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)]).into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)]).into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)]).into_element(cx),
+        ]
+    },
+);
+
+shadcn::Empty::new([
+    shadcn::empty::EmptyHeader::new([
+        shadcn::empty::EmptyMedia::new([avatars]).into_element(cx),
+        shadcn::empty::EmptyTitle::new("No Team Members").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::empty::EmptyContent::new([shadcn::Button::new("Invite Members").into_element(cx)])
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("InputGroup", input_group)
                 .description("Empty states can include search inputs and trailing affordances.")
                 .code(
@@ -314,7 +347,15 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .trailing([shadcn::InputGroupText::new("/").into_element(cx)]);"#,
                 ),
             DocSection::new("RTL", rtl)
-                .description("Empty layout should follow right-to-left direction context."),
+                .description("Empty layout should follow right-to-left direction context.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Empty::new([header, content]).into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

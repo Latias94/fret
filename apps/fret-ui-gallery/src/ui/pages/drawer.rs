@@ -450,73 +450,49 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         row
     };
 
-    let rtl = {
-        let open_for_trigger = rtl_open.clone();
-        let open_for_close = rtl_open.clone();
+    let open_for_trigger = rtl_open.clone();
+    let open_for_close = rtl_open.clone();
 
-        fret_ui_kit::primitives::direction::with_direction_provider(
+    let rtl = doc_layout::rtl(cx, move |cx| {
+        shadcn::Drawer::new(rtl_open.clone()).into_element(
             cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             move |cx| {
-                shadcn::Drawer::new(rtl_open.clone()).into_element(
-                    cx,
-                    move |cx| {
-                        shadcn::Button::new("Open RTL Drawer")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(open_for_trigger.clone())
-                            .test_id("ui-gallery-drawer-rtl-trigger")
-                            .into_element(cx)
-                    },
-                    move |cx| {
-                        shadcn::DrawerContent::new([
-                            shadcn::DrawerHeader::new([
-                                shadcn::DrawerTitle::new("RTL Drawer").into_element(cx),
-                                shadcn::DrawerDescription::new(
-                                    "Drawer layout should follow right-to-left direction context.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::DrawerFooter::new([shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(open_for_close.clone())
-                                .into_element(cx)])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
-                        .test_id("ui-gallery-drawer-rtl-content")
-                    },
-                )
+                shadcn::Button::new("Open RTL Drawer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(open_for_trigger.clone())
+                    .test_id("ui-gallery-drawer-rtl-trigger")
+                    .into_element(cx)
+            },
+            move |cx| {
+                shadcn::DrawerContent::new([
+                    shadcn::DrawerHeader::new([
+                        shadcn::DrawerTitle::new("RTL Drawer").into_element(cx),
+                        shadcn::DrawerDescription::new(
+                            "Drawer layout should follow right-to-left direction context.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open_for_close.clone())
+                        .into_element(cx)])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-drawer-rtl-content")
             },
         )
-    };
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
-                ),
-            ]
-        },
+        [
+            "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
+            "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
+            "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
+            "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
@@ -579,9 +555,27 @@ shadcn::DrawerContent::new([
             DocSection::new("Responsive Dialog", responsive_dialog).descriptions([
                 "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
                 "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
-            ]),
+            ])
+            .code(
+                "rust",
+                r#"let desktop = shadcn::Dialog::new(desktop_open).into_element(cx, trigger, content);
+let mobile = shadcn::Drawer::new(mobile_open).into_element(cx, trigger, content);
+
+ui::h_flex(cx, move |_cx| [desktop, mobile])
+    .gap(Space::N2)
+    .wrap()
+    .into_element(cx);"#,
+            ),
             DocSection::new("RTL", rtl)
-                .description("Drawer layout should follow right-to-left direction context."),
+                .description("Drawer layout should follow right-to-left direction context.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Drawer::new(open).into_element(cx, trigger, content),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

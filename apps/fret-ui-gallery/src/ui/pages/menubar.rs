@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use shadcn::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu,
@@ -18,31 +20,7 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     }
 
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-    };
+    let icon = doc_layout::icon;
 
     let view_bookmarks_bar =
         cx.with_state(MenubarModels::default, |st| st.view_bookmarks_bar.clone());
@@ -138,11 +116,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 MenubarEntry::Item(MenubarItem::new("Print").close_on_select(false)),
             ])),
         ]);
-        let menubar = Menubar::new([file])
+        Menubar::new([file])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Demo", body)
+            .into_element(cx)
     };
 
     let checkbox = {
@@ -179,11 +155,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 "Superscript",
             )),
         ]);
-        let menubar = Menubar::new([view, format])
+        Menubar::new([view, format])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Checkbox", body)
+            .into_element(cx)
     };
 
     let radio = {
@@ -204,11 +178,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .item(MenubarRadioItemSpec::new("dark", "Dark"))
                 .item(MenubarRadioItemSpec::new("system", "System")),
         )]);
-        let menubar = Menubar::new([profiles, themes])
+        Menubar::new([profiles, themes])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Radio", body)
+            .into_element(cx)
     };
 
     let submenu = {
@@ -241,11 +213,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             MenubarEntry::Item(MenubarItem::new("Copy")),
             MenubarEntry::Item(MenubarItem::new("Paste")),
         ]);
-        let menubar = Menubar::new([file, edit])
+        Menubar::new([file, edit])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "Submenu", body)
+            .into_element(cx)
     };
 
     let with_icons = {
@@ -273,45 +243,158 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     .variant(shadcn::menubar::MenubarItemVariant::Destructive),
             ),
         ]))]);
-        let menubar = Menubar::new([file, more])
+        Menubar::new([file, more])
             .refine_layout(width.clone())
-            .into_element(cx);
-        let body = centered(cx, menubar);
-        section(cx, "With Icons", body)
+            .into_element(cx)
     };
 
-    let rtl = {
-        let body = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let file = MenubarMenu::new("ملف").entries([
-                    MenubarEntry::Item(
-                        MenubarItem::new("علامة تبويب جديدة")
-                            .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
-                    ),
-                    MenubarEntry::Item(
-                        MenubarItem::new("نافذة جديدة")
-                            .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
-                    ),
-                    MenubarEntry::Separator,
-                    MenubarEntry::Item(
-                        MenubarItem::new("طباعة...")
-                            .trailing(MenubarShortcut::new("⌘P").into_element(cx)),
-                    ),
-                ]);
-                Menubar::new([file])
-                    .refine_layout(width.clone())
-                    .into_element(cx)
-            },
-        );
-        let body = centered(cx, body);
-        section(cx, "RTL", body)
-    };
+    let rtl = doc_layout::rtl(cx, |cx| {
+        let file = MenubarMenu::new("ملف").entries([
+            MenubarEntry::Item(
+                MenubarItem::new("علامة تبويب جديدة")
+                    .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("نافذة جديدة")
+                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("طباعة...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+            ),
+        ]);
+        Menubar::new([file])
+            .refine_layout(width.clone())
+            .into_element(cx)
+    });
 
-    vec![stack::vstack(
+    let body = doc_layout::render_doc_page(
         cx,
-        stack::VStackProps::default().gap(Space::N6).items_start(),
-        |_cx| vec![demo, checkbox, radio, submenu, with_icons, rtl],
-    )]
+        Some(
+            "Preview follows shadcn Menubar docs order: Demo, Checkbox, Radio, Submenu, With Icons, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu, MenubarShortcut};
+
+let file = MenubarMenu::new("File").entries([
+    MenubarEntry::Group(MenubarGroup::new([
+        MenubarEntry::Item(
+            MenubarItem::new("New Tab")
+                .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+        ),
+        MenubarEntry::Item(MenubarItem::new("New Window")),
+    ])),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(MenubarItem::new("Print...")),
+]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
+            DocSection::new("Checkbox", checkbox)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{
+    Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarShortcut,
+};
+
+let show_bookmarks = cx.app.models_mut().insert(false);
+
+let view = MenubarMenu::new("View").entries([
+    MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+        show_bookmarks,
+        "Always Show Bookmarks Bar",
+    )),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(
+        MenubarItem::new("Reload").trailing(MenubarShortcut::new("⌘R").into_element(cx)),
+    ),
+]);
+
+Menubar::new([view]).into_element(cx);"#,
+                ),
+            DocSection::new("Radio", radio)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{
+    Menubar, MenubarEntry, MenubarMenu, MenubarRadioGroup, MenubarRadioItemSpec,
+};
+
+let theme = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
+
+let theme_menu = MenubarMenu::new("Theme").entries([MenubarEntry::RadioGroup(
+    MenubarRadioGroup::new(theme)
+        .item(MenubarRadioItemSpec::new("light", "Light"))
+        .item(MenubarRadioItemSpec::new("dark", "Dark"))
+        .item(MenubarRadioItemSpec::new("system", "System")),
+)]);
+
+Menubar::new([theme_menu]).into_element(cx);"#,
+                ),
+            DocSection::new("Submenu", submenu)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+
+let file = MenubarMenu::new("File").entries([
+    MenubarEntry::Submenu(MenubarItem::new("Share").submenu([
+        MenubarEntry::Item(MenubarItem::new("Email link")),
+        MenubarEntry::Item(MenubarItem::new("Messages")),
+        MenubarEntry::Item(MenubarItem::new("Notes")),
+    ])),
+    MenubarEntry::Separator,
+    MenubarEntry::Item(MenubarItem::new("Print...")),
+]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
+            DocSection::new("With Icons", with_icons)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+
+let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+let file = MenubarMenu::new("File").entries([MenubarEntry::Group(shadcn::MenubarGroup::new([
+    MenubarEntry::Item(MenubarItem::new("Help").leading(icon(cx, "lucide.info"))),
+    MenubarEntry::Item(
+        MenubarItem::new("Delete")
+            .leading(icon(cx, "lucide.trash"))
+            .variant(shadcn::menubar::MenubarItemVariant::Destructive),
+    ),
+]))]);
+
+Menubar::new([file]).into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        let file = shadcn::MenubarMenu::new("ملف").entries([
+            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("علامة تبويب جديدة")),
+            shadcn::MenubarEntry::Separator,
+            shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("طباعة...")),
+        ]);
+
+        shadcn::Menubar::new([file]).into_element(cx)
+    },
+);"#,
+                ),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-menubar-component")]
 }

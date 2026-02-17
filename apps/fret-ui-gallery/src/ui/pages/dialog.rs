@@ -386,84 +386,59 @@ pub(super) fn preview_dialog(
         content
     };
 
-    let rtl = {
-        let open_for_trigger = rtl_open.clone();
-        let close_open = rtl_open.clone();
-        let save_open = rtl_open.clone();
-        let name_model = rtl_name.clone();
-        let username_model = rtl_username.clone();
+    let open_for_trigger = rtl_open.clone();
+    let close_open = rtl_open.clone();
+    let save_open = rtl_open.clone();
+    let name_model = rtl_name.clone();
+    let username_model = rtl_username.clone();
 
-        let content = fret_ui_kit::primitives::direction::with_direction_provider(
+    let rtl = doc_layout::rtl(cx, move |cx| {
+        shadcn::Dialog::new(rtl_open.clone()).into_element(
             cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            move |cx| {
-                shadcn::Dialog::new(rtl_open.clone()).into_element(
-                    cx,
-                    |cx| {
-                        shadcn::Button::new("Open RTL Dialog")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .test_id("ui-gallery-dialog-rtl-trigger")
-                            .toggle_model(open_for_trigger.clone())
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        shadcn::DialogContent::new([
-                            shadcn::DialogClose::new(close_open.clone()).into_element(cx),
-                            shadcn::DialogHeader::new([
-                                shadcn::DialogTitle::new("RTL Profile").into_element(cx),
-                                shadcn::DialogDescription::new(
-                                    "This example renders dialog layout in right-to-left direction.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            profile_fields(cx, name_model.clone(), username_model.clone()),
-                            shadcn::DialogFooter::new([
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .toggle_model(close_open.clone())
-                                    .into_element(cx),
-                                shadcn::Button::new("Save")
-                                    .toggle_model(save_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
-                        .test_id("ui-gallery-dialog-rtl-content")
-                    },
-                )
+            |cx| {
+                shadcn::Button::new("Open RTL Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dialog-rtl-trigger")
+                    .toggle_model(open_for_trigger.clone())
+                    .into_element(cx)
             },
-        );
-        content
-    };
+            |cx| {
+                shadcn::DialogContent::new([
+                    shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("RTL Profile").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "This example renders dialog layout in right-to-left direction.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    profile_fields(cx, name_model.clone(), username_model.clone()),
+                    shadcn::DialogFooter::new([
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                        shadcn::Button::new("Save")
+                            .toggle_model(save_open.clone())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-rtl-content")
+            },
+        )
+    });
 
-    let notes = stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
-                ),
-            ]
-        },
+        [
+            "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
+            "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
+            "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
+            "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
