@@ -37,6 +37,10 @@ pub struct DragSession {
     /// If set, requests the runner to treat this drag as a "move the OS window" interaction for
     /// the given window id, while still allowing cross-window docking hover/drop routing.
     pub follow_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: true when the runner has applied an ImGui-style "transparent
+    /// payload" treatment to the moving dock window (e.g. click-through/NoInputs while following
+    /// the cursor).
+    pub transparent_payload_applied: bool,
     pub dragging: bool,
     pub phase: DragPhase,
     payload: Box<dyn Any>,
@@ -62,6 +66,7 @@ impl DragSession {
             position: start_position,
             cursor_grab_offset: None,
             follow_window: None,
+            transparent_payload_applied: false,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),
@@ -87,6 +92,7 @@ impl DragSession {
             position: start_position,
             cursor_grab_offset: None,
             follow_window: None,
+            transparent_payload_applied: false,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),

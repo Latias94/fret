@@ -1127,6 +1127,12 @@ pub enum UiPredicateV1 {
     DockDragActiveIs {
         active: bool,
     },
+    /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
+    /// "transparent payload" applied to the moving window (e.g. click-through/NoInputs while the
+    /// dock-floating window follows the cursor).
+    DockDragTransparentPayloadAppliedIs {
+        applied: bool,
+    },
     /// True when the latest docking diagnostics report an active in-window floating drag session.
     ///
     /// This is intended to gate "floating window" hand-feel regressions without relying on pixels.

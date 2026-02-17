@@ -229,6 +229,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if let Some(follow) = self.dock_tearoff_follow.as_mut() {
                 follow.transparent_payload_applied = want_transparent_payload;
             }
+            if let Some(pointer_id) = pointer_id
+                && let Some(drag) = self.app.drag_mut(pointer_id)
+            {
+                drag.transparent_payload_applied = want_transparent_payload;
+            }
         }
 
         let Some(pos) = self.compute_window_outer_position_from_cursor_grab(window, grab_offset)
@@ -295,6 +300,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         {
             let _ =
                 super::window::set_dock_drag_transparent_payload(state.window.as_ref(), false, 1.0);
+        }
+        if let Some(pointer_id) = self.dock_drag_pointer_id()
+            && let Some(drag) = self.app.drag_mut(pointer_id)
+        {
+            drag.transparent_payload_applied = false;
         }
 
         if let Some(state) = self.windows.get(follow.window) {

@@ -523,6 +523,21 @@ fn script_v2_roundtrip_dock_drag_active_is_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_drag_transparent_payload_applied_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_transparent_payload_applied_is", "applied": true }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_dock_graph_signature_predicates() {
     assert_script_v2_roundtrip(
         r#"{

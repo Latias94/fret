@@ -12,6 +12,9 @@ pub struct DockDragDiagnostics {
     pub current_window: AppWindowId,
     pub dragging: bool,
     pub cross_window_hover: bool,
+    /// True when the runner has applied an ImGui-style "transparent payload" treatment to the
+    /// moving dock window (e.g. click-through/NoInputs while following the cursor).
+    pub transparent_payload_applied: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

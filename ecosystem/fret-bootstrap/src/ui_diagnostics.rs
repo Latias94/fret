@@ -16630,6 +16630,12 @@ fn eval_predicate(
             Some(drag) => drag.dragging == *active,
             None => !*active,
         },
+        UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => {
+            match docking.and_then(|d| d.dock_drag) {
+                Some(drag) => drag.dragging && drag.transparent_payload_applied == *applied,
+                None => !*applied,
+            }
+        }
         UiPredicateV1::DockFloatingDragActiveIs { active } => {
             match docking.and_then(|d| d.floating_drag) {
                 Some(drag) => drag.activated == *active,
