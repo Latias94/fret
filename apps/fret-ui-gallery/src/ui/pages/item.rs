@@ -467,43 +467,177 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             DocSection::new("Variant", variant)
                 .description("Default / Outline / Muted variants.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let base = shadcn::Item::new([
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Default").into_element(cx),
+        shadcn::ItemDescription::new("Neutral style").into_element(cx),
+    ])
+    .into_element(cx),
+])
+.on_click(CMD_APP_OPEN);
+
+let outline = base.clone().variant(shadcn::ItemVariant::Outline).into_element(cx);
+let muted = base.variant(shadcn::ItemVariant::Muted).into_element(cx);"#,
+                ),
             DocSection::new("Size", size)
                 .description("Row density presets (default + small).")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let default_row = shadcn::Item::new([shadcn::ItemContent::new([
+    shadcn::ItemTitle::new("Default Size").into_element(cx),
+    shadcn::ItemDescription::new("Regular density").into_element(cx),
+])
+.into_element(cx)])
+.size(shadcn::ItemSize::Default)
+.into_element(cx);
+
+let compact_row = shadcn::Item::new([shadcn::ItemContent::new([
+    shadcn::ItemTitle::new("Small Size").into_element(cx),
+    shadcn::ItemDescription::new("Compact density").into_element(cx),
+])
+.into_element(cx)])
+.size(shadcn::ItemSize::Sm)
+.into_element(cx);"#,
+                ),
             DocSection::new("Icon", icon)
                 .description("Icon media variant for app navigation rows.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let media = shadcn::ItemMedia::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.chart-column-big")),
+])
+.variant(shadcn::ItemMediaVariant::Icon)
+.into_element(cx);
+
+shadcn::Item::new([
+    media,
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Analytics").into_element(cx),
+        shadcn::ItemDescription::new("Open dashboard metrics and trends.").into_element(cx),
+    ])
+    .into_element(cx),
+])
+.on_click(CMD_APP_OPEN)
+.into_element(cx);"#,
+                ),
             DocSection::new("Avatar", avatar)
                 .description("Compose Avatar inside ItemMedia for people lists.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("DC").into_element(cx)])
+    .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(28.0)))
+    .into_element(cx);
+
+let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
+
+shadcn::Item::new([
+    media,
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Dana Chen").into_element(cx),
+        shadcn::ItemDescription::new("Design review owner").into_element(cx),
+    ])
+    .into_element(cx),
+])
+.on_click(CMD_APP_OPEN)
+.into_element(cx);"#,
+                ),
             DocSection::new("Image", image)
                 .description("Media slot can be styled as an image placeholder.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let props = cx.with_theme(|theme| {
+    decl_style::container_props(
+        theme,
+        ChromeRefinement::default()
+            .bg(ColorRef::Color(theme.color_token("muted")))
+            .rounded(Radius::Sm),
+        LayoutRefinement::default().size_full(),
+    )
+});
+let placeholder = cx.container(props, |cx| vec![shadcn::typography::muted(cx, "IMG")]);
+
+let media = shadcn::ItemMedia::new([placeholder])
+    .variant(shadcn::ItemMediaVariant::Image)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Group", group)
                 .description("Group rows with separators and consistent spacing.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ItemGroup::new([
+    shadcn::Item::new([/* row */]).into_element(cx),
+    shadcn::ItemSeparator::new().into_element(cx),
+    shadcn::Item::new([/* row */]).into_element(cx),
+])
+.gap(Px(8.0))
+.into_element(cx);"#,
+                ),
             DocSection::new("Header", header)
                 .description("Header row pairs a title with a trailing action.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ItemHeader::new([
+    shadcn::ItemTitle::new("Recent Files").into_element(cx),
+    shadcn::Button::new("View all")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .size(shadcn::ButtonSize::Sm)
+        .on_click(CMD_APP_OPEN)
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Link", link)
                 .description("Clickable list row (approximates docs link usage).")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Item::new([shadcn::ItemContent::new([
+    shadcn::ItemTitle::new("Dashboard").into_element(cx),
+    shadcn::ItemDescription::new("Overview of your account and activity.").into_element(cx),
+])
+.into_element(cx)])
+.variant(shadcn::ItemVariant::Outline)
+.on_click(CMD_APP_OPEN)
+.into_element(cx);"#,
+                ),
             DocSection::new("Dropdown", dropdown)
                 .description("Trailing ghost action button (menu placeholder).")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::ItemActions::new([shadcn::Button::new("Actions")
+    .variant(shadcn::ButtonVariant::Ghost)
+    .size(shadcn::ButtonSize::Sm)
+    .on_click(CMD_APP_OPEN)
+    .into_element(cx)])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Validate text alignment and action placement under RTL.")
                 .max_w(Px(920.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Item::new([shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("???? ??????").into_element(cx),
+            shadcn::ItemDescription::new("...").into_element(cx),
+        ])
+        .into_element(cx)])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and implementation notes.")
                 .max_w(Px(820.0)),

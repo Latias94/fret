@@ -656,19 +656,68 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
                 ),
             DocSection::new("Submenu", submenu)
                 .description("Nested submenu entries for grouped actions.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenuEntry::Item(
+    shadcn::DropdownMenuItem::new("More tools").submenu(vec![
+        shadcn::DropdownMenuEntry::Item(
+            shadcn::DropdownMenuItem::new("Rename").on_select(CMD_MENU_DROPDOWN_APPLE),
+        ),
+        shadcn::DropdownMenuEntry::Item(
+            shadcn::DropdownMenuItem::new("Duplicate").on_select(CMD_MENU_DROPDOWN_ORANGE),
+        ),
+    ]),
+);"#,
+                ),
             DocSection::new("Shortcuts", shortcuts)
                 .description("Trailing shortcuts for command discovery.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenuEntry::Item(
+    shadcn::DropdownMenuItem::new("Open file")
+        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+O").into_element(cx))
+        .on_select(CMD_MENU_DROPDOWN_APPLE),
+);"#,
+                ),
             DocSection::new("Icons", icons)
                 .description("Leading icons for visual scanning.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+shadcn::DropdownMenuEntry::Item(
+    shadcn::DropdownMenuItem::new("Settings")
+        .leading(icon(cx, "lucide.settings"))
+        .on_select(CMD_MENU_DROPDOWN_ORANGE),
+);"#,
+                ),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Checkbox items are bound to boolean models.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let show_status_bar = cx.app.models_mut().insert(true);
+
+shadcn::DropdownMenuEntry::CheckboxItem(shadcn::DropdownMenuCheckboxItem::new(
+    show_status_bar,
+    "Status Bar",
+));"#,
+                ),
             DocSection::new("Checkboxes Icons", checkboxes_icons)
                 .description("Checkbox items can also render leading icons.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let show_activity_bar = cx.app.models_mut().insert(false);
+let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+shadcn::DropdownMenuEntry::CheckboxItem(
+    shadcn::DropdownMenuCheckboxItem::new(show_activity_bar, "Activity Bar")
+        .leading(icon(cx, "lucide.panel-left")),
+);"#,
+                ),
             DocSection::new("Radio Group", radio_group)
                 .description("Radio groups are bound to a single selected value.")
                 .code(
@@ -681,19 +730,89 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
                 ),
             DocSection::new("Radio Icons", radio_icons)
                 .description("Radio items can render leading icons.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+};
+
+shadcn::DropdownMenuEntry::RadioGroup(
+    shadcn::DropdownMenuRadioGroup::new(theme_mode)
+        .item(
+            shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
+                .leading(icon(cx, "lucide.sun")),
+        )
+        .item(
+            shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
+                .leading(icon(cx, "lucide.moon")),
+        ),
+);"#,
+                ),
             DocSection::new("Destructive", destructive)
                 .description("Destructive items use a dedicated visual variant.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenuEntry::Item(
+    shadcn::DropdownMenuItem::new("Delete")
+        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+        .on_select(CMD_MENU_DROPDOWN_ORANGE),
+);"#,
+                ),
             DocSection::new("Avatar", avatar)
                 .description("Menu triggers can be non-button elements (e.g. avatar).")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+shadcn::DropdownMenu::new(open.clone()).into_element(
+    cx,
+    |cx| shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)]).into_element(cx),
+    |_cx| {
+        vec![shadcn::DropdownMenuEntry::Item(
+            shadcn::DropdownMenuItem::new("Log out").on_select(CMD_MENU_DROPDOWN_ORANGE),
+        )]
+    },
+);"#,
+                ),
             DocSection::new("Complex", complex)
                 .description("Composed menu with arrows, submenus, and destructive actions.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::DropdownMenu::new(open)
+    .arrow(true)
+    .into_element(cx, trigger, |cx| {
+        vec![
+            shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("Actions")),
+            shadcn::DropdownMenuEntry::Separator,
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Share").submenu(vec![
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Copy link").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                    ),
+                ]),
+            ),
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Delete")
+                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .on_select(CMD_MENU_DROPDOWN_ORANGE),
+            ),
+        ]
+    });"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Menu layout should follow right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::DropdownMenu::new(open).into_element(cx, trigger, |_cx| {
+            vec![shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Dashboard"))]
+        })
+    },
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],
