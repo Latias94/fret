@@ -65,9 +65,22 @@ pub(super) fn preview_data_table(
             "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
         ),
         vec![
-            DocSection::new("Guide Demo", demo)
-                .max_w(Px(900.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Guide Demo", demo).max_w(Px(900.0)).code(
+                "rust",
+                r#"// This page currently reuses the legacy recipe surface while the guide-aligned
+// split (toolbar/pagination/columns) is stabilized.
+let content = super::super::preview_data_table_legacy(cx, state.clone());
+
+stack::vstack(
+    cx,
+    stack::VStackProps::default()
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full()),
+    |_cx| content,
+)
+.into_element(cx);"#,
+            ),
             DocSection::new("Code", code_preview)
                 .max_w(Px(900.0))
                 .test_id_prefix("ui-gallery-data-table-code")

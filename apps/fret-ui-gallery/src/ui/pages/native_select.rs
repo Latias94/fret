@@ -179,23 +179,70 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             DocSection::new("Groups", groups)
                 .description("Optgroup-like grouping is approximated with multiple selects.")
                 .max_w(Px(820.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N2).items_start(),
+    |cx| {
+        vec![
+            shadcn::NativeSelect::new("Fruits").a11y_label("Fruits group").into_element(cx),
+            shadcn::NativeSelect::new("Vegetables").a11y_label("Vegetables group").into_element(cx),
+        ]
+    },
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled)
                 .description("Disabled native select.")
                 .max_w(Px(820.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new("Disabled")
+    .a11y_label("Disabled select")
+    .disabled(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state via `aria_invalid(true)`.")
                 .max_w(Px(820.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new("Select a country")
+    .a11y_label("Invalid select")
+    .aria_invalid(true)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Native Select vs Select", native_vs_select)
                 .description("Compare native and styled select side-by-side.")
                 .max_w(Px(820.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"stack::vstack(cx, stack::VStackProps::default().gap(Space::N3).items_start(), |cx| {
+    vec![
+        shadcn::NativeSelect::new("Native select").a11y_label("Native select").into_element(cx),
+        shadcn::Select::new(value, open)
+            .placeholder("Styled select")
+            .items([
+                shadcn::SelectItem::new("apple", "Apple"),
+                shadcn::SelectItem::new("banana", "Banana"),
+            ])
+            .into_element(cx),
+    ]
+})
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Native select under an RTL direction provider.")
                 .max_w(Px(820.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::NativeSelect::new("Select language").into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

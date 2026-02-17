@@ -307,7 +307,18 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 ),
             DocSection::new("Trigger Delays", trigger_delays)
                 .description("Compare instant vs delayed open/close behavior.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let instant = shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(0)
+    .close_delay_frames(0)
+    .into_element(cx);
+
+let delayed = shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(16)
+    .close_delay_frames(12)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Positioning", positioning)
                 .description("Placement is controlled by `side` and `align`.")
                 .code(
@@ -318,13 +329,40 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 ),
             DocSection::new("Basic", basic)
                 .description("A minimal hover card with shorter delays.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let trigger = shadcn::Button::new("Basic")
+    .variant(shadcn::ButtonVariant::Outline)
+    .into_element(cx);
+let content = shadcn::HoverCardContent::new(vec![/* card */]).into_element(cx);
+
+shadcn::HoverCard::new(trigger, content)
+    .open_delay_frames(10)
+    .close_delay_frames(10)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Sides", sides)
                 .description("Visual sweep of side placements.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::HoverCard::new(trigger, content)
+    .side(shadcn::HoverCardSide::Left)
+    .into_element(cx);
+
+shadcn::HoverCard::new(trigger, content)
+    .side(shadcn::HoverCardSide::Top)
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Hover card should respect right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::HoverCard::new(trigger, content).side(shadcn::HoverCardSide::Left).into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

@@ -1,10 +1,5 @@
 use super::*;
 
-// A searchable placeholder used while migrating UI Gallery pages.
-// Prefer real, copy-pastable snippets per section over time.
-pub(in crate::ui) const TODO_RUST_CODE: &str =
-    "// TODO: add a minimal, copy-pastable snippet for this example.\n";
-
 pub(in crate::ui) struct DocSection {
     pub title: &'static str,
     pub title_test_id: Option<&'static str>,

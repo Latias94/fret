@@ -301,7 +301,16 @@ pub(super) fn preview_command_palette(
         vec![
             DocSection::new("State", state_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let last = cx
+    .app
+    .models()
+    .get_cloned(&last_action)
+    .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+cx.text(format!("last action: {last}")).into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic_dialog)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-basic")
@@ -329,7 +338,29 @@ pub(super) fn preview_command_palette(
                 ),
             DocSection::new("Groups", groups_palette)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let entries = vec![
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Calendar").keywords(["events"]),
+        shadcn::CommandItem::new("Calculator").keywords(["math"]),
+    ])
+    .heading("Suggestions")
+    .into(),
+    shadcn::CommandSeparator::new().into(),
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Profile").shortcut("Cmd+,"),
+        shadcn::CommandItem::new("Settings").shortcut("Cmd+S"),
+    ])
+    .heading("Settings")
+    .into(),
+];
+
+shadcn::CommandPalette::new(query, Vec::new())
+    .placeholder("Search grouped commands...")
+    .entries(entries)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Scrollable", scrollable_palette)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-scrollable")
@@ -343,9 +374,14 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
     shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx)
 });"#,
                 ),
-            DocSection::new("RTL", rtl_content)
-                .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("RTL", rtl_content).max_w(Px(760.0)).code(
+                "rust",
+                r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx),
+);"#,
+            ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
     );

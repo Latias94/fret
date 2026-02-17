@@ -212,14 +212,64 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     DocSection::new("With Keyboard Shortcut", keyboard_tooltip).description(
                         "Compose richer content (e.g. key hints) inside the tooltip panel.",
                     )
-                    .code("rust", doc_layout::TODO_RUST_CODE),
+                    .code(
+                        "rust",
+                        r#"shadcn::Tooltip::new(
+    shadcn::Button::new("")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::IconSm)
+        .children([shadcn::icon::icon(
+            cx,
+            fret_icons::IconId::new_static("lucide.save"),
+        )])
+        .into_element(cx),
+    shadcn::TooltipContent::new(vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| vec![cx.text("Save Changes"), shadcn::Kbd::new("S").into_element(cx)],
+    )])
+    .into_element(cx),
+)
+.side(shadcn::TooltipSide::Top)
+.arrow(true)
+.into_element(cx);"#,
+                    ),
                     DocSection::new("Disabled Button", disabled_tooltip).description(
                         "Use a non-disabled wrapper as the trigger so hover/focus can still open the tooltip.",
                     )
-                    .code("rust", doc_layout::TODO_RUST_CODE),
+                    .code(
+                        "rust",
+                        r#"let trigger = stack::hstack(
+    cx,
+    stack::HStackProps::default().items_center(),
+    |cx| {
+        vec![shadcn::Button::new("Disabled")
+            .variant(shadcn::ButtonVariant::Outline)
+            .disabled(true)
+            .into_element(cx)]
+    },
+);
+
+shadcn::Tooltip::new(
+    trigger,
+    shadcn::TooltipContent::new([shadcn::TooltipContent::text(cx, "Unavailable")])
+        .into_element(cx),
+)
+.side(shadcn::TooltipSide::Top)
+.into_element(cx);"#,
+                    ),
                     DocSection::new("RTL", rtl_row)
                         .description("Tooltip placement and alignment should work under RTL.")
-                        .code("rust", doc_layout::TODO_RUST_CODE),
+                        .code(
+                            "rust",
+                            r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Tooltip::new(trigger, content)
+        .side(shadcn::TooltipSide::Left)
+        .into_element(cx),
+);"#,
+                        ),
                     DocSection::new("Notes", notes)
                         .description("Implementation notes and regression guidelines."),
                 ],

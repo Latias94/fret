@@ -250,12 +250,30 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "Preview follows shadcn Chart docs flow: Demo -> Component -> Tooltip -> Legend -> Accessibility -> RTL.",
         ),
         vec![
-            DocSection::new("Demo", demo_content)
-                .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+            DocSection::new("Demo", demo_content).max_w(Px(760.0)).code(
+                "rust",
+                r#"let (chart_1, chart_2) =
+    cx.with_theme(|theme| (theme.color_token("chart-1"), theme.color_token("chart-2")));
+
+shadcn::ChartTooltipContent::new()
+    .label("January")
+    .items([
+        shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
+        shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
+    ])
+    .indicator(shadcn::ChartTooltipIndicator::Dot)
+    .into_element(cx);"#,
+            ),
             DocSection::new("Component", component_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"// Validate tooltip/legend contracts first, then add renderer bindings later.
+shadcn::typography::muted(
+    cx,
+    "This page focuses on tooltip/legend composition, not full chart rendering.",
+);"#,
+                ),
             DocSection::new("Tooltip", tooltip_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-tooltip")
@@ -286,7 +304,17 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("Accessibility", accessibility_content)
                 .max_w(Px(760.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"// Parity gap marker: upstream Recharts supports `accessibilityLayer`.
+shadcn::Alert::new([
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+    shadcn::AlertTitle::new("Not yet implemented").into_element(cx),
+    shadcn::AlertDescription::new("Chart accessibility layer is tracked as follow-up work.")
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-rtl")

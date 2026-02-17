@@ -299,16 +299,70 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("Outline", outline)
                 .description("Outlined empty state for low-emphasis surfaces.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let muted_fg = cx.with_theme(|theme| theme.color_token("muted-foreground"));
+
+shadcn::Empty::new([header, content])
+    .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(muted_fg)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Background", background)
                 .description("Muted background recipe for empty states embedded in cards.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let muted = cx.with_theme(|theme| theme.color_token("muted"));
+
+shadcn::Empty::new([header, content])
+    .refine_style(ChromeRefinement::default().bg(ColorRef::Color(muted)))
+    .into_element(cx);"#,
+                ),
             DocSection::new("Avatar", avatar)
                 .description("Empty state media can be an avatar instead of an icon.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
+    .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
+    .into_element(cx);
+
+shadcn::Empty::new([
+    shadcn::empty::EmptyHeader::new([
+        shadcn::empty::EmptyMedia::new([avatar]).into_element(cx),
+        shadcn::empty::EmptyTitle::new("User Offline").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::empty::EmptyContent::new([shadcn::Button::new("Leave Message").into_element(cx)])
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Avatar Group", avatar_group)
                 .description("Media can also be a composed row of avatars.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let avatars = stack::hstack(
+    cx,
+    stack::HStackProps::default().gap(Space::N1).items_center(),
+    |cx| {
+        vec![
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)]).into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)]).into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)]).into_element(cx),
+        ]
+    },
+);
+
+shadcn::Empty::new([
+    shadcn::empty::EmptyHeader::new([
+        shadcn::empty::EmptyMedia::new([avatars]).into_element(cx),
+        shadcn::empty::EmptyTitle::new("No Team Members").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::empty::EmptyContent::new([shadcn::Button::new("Invite Members").into_element(cx)])
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("InputGroup", input_group)
                 .description("Empty states can include search inputs and trailing affordances.")
                 .code(
@@ -319,7 +373,14 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ),
             DocSection::new("RTL", rtl)
                 .description("Empty layout should follow right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Empty::new([header, content]).into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

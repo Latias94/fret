@@ -571,19 +571,117 @@ let optional = shadcn::Checkbox::new_optional(optional_model); // None => indete
                 ),
             DocSection::new("Invalid State", invalid_state)
                 .description("Invalid styling is currently approximated via destructive border.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
+
+shadcn::Field::new([
+    shadcn::FieldContent::new([
+        shadcn::FieldLabel::new("Accept terms").for_control("accept").into_element(cx),
+        shadcn::FieldDescription::new("You must accept before continuing.").into_element(cx),
+        shadcn::FieldError::new("Please accept the terms to proceed.").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Checkbox::new(model)
+        .control_id("accept")
+        .a11y_label("Accept terms")
+        .into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.refine_style(
+    ChromeRefinement::default()
+        .border_1()
+        .rounded(Radius::Md)
+        .border_color(ColorRef::Color(destructive))
+        .p(Space::N3),
+)
+.into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic)
                 .description("Field + checkbox + label composition.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::Checkbox::new(model)
+        .control_id("accept")
+        .a11y_label("Accept terms")
+        .into_element(cx),
+    shadcn::FieldLabel::new("Accept terms and conditions")
+        .for_control("accept")
+        .into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.into_element(cx);"#,
+                ),
             DocSection::new("Description", description_section)
                 .description("FieldContent keeps label and helper text aligned with the control.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldContent::new([
+        shadcn::FieldLabel::new("Enable notifications")
+            .for_control("notify")
+            .into_element(cx),
+        shadcn::FieldDescription::new("Receive updates and maintenance windows.").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::Checkbox::new(model)
+        .control_id("notify")
+        .a11y_label("Enable notifications")
+        .into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled_section)
                 .description("Disabled checkbox should block interaction and use muted styling.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::Checkbox::new(model)
+        .control_id("marketing")
+        .disabled(true)
+        .a11y_label("Marketing emails")
+        .into_element(cx),
+    shadcn::FieldContent::new([
+        shadcn::FieldLabel::new("Marketing emails")
+            .for_control("marketing")
+            .into_element(cx),
+        shadcn::FieldDescription::new("Managed by your organization.").into_element(cx),
+    ])
+    .into_element(cx),
+])
+.orientation(shadcn::FieldOrientation::Horizontal)
+.into_element(cx);"#,
+                ),
             DocSection::new("Group", group)
                 .description("Checkbox group pattern with per-item descriptions.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let item = |cx: &mut ElementContext<'_, App>,
+            label: &'static str,
+            desc: &'static str,
+            model: Model<bool>| {
+    shadcn::Field::new([
+        shadcn::Checkbox::new(model).a11y_label(label).into_element(cx),
+        shadcn::FieldContent::new([
+            shadcn::FieldLabel::new(label).into_element(cx),
+            shadcn::FieldDescription::new(desc).into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .into_element(cx)
+};
+
+stack::vstack(cx, stack::VStackProps::default().gap(Space::N3).items_start(), |cx| {
+    vec![
+        item(cx, "Security alerts", "Critical account changes.", model1.clone()),
+        item(cx, "Product updates", "Major feature releases.", model2.clone()),
+        item(cx, "Marketing emails", "Tips and announcements.", model3.clone()),
+    ]
+});"#,
+                ),
             DocSection::new("Table", table)
                 .description("Table selection pattern with header and row checkboxes.")
                 .code(

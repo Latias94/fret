@@ -187,23 +187,74 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Outline", outline)
                 .description("Outline variant for dense toolbars.")
                 .max_w(Px(480.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Toggle::uncontrolled(false)
+    .variant(shadcn::ToggleVariant::Outline)
+    .a11y_label("Toggle bold")
+    .children([
+        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold")),
+        cx.text("Bold"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("With Text", with_text)
                 .description("Default variant with icon + text.")
                 .max_w(Px(480.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Toggle::uncontrolled(false)
+    .a11y_label("Toggle italic with text")
+    .children([
+        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic")),
+        cx.text("Italic"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Size", size)
                 .description("Size presets: Sm / Default / Lg.")
                 .max_w(Px(480.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"stack::hstack(cx, stack::HStackProps::default().gap(Space::N2).items_center(), |cx| {
+    vec![
+        shadcn::Toggle::uncontrolled(false)
+            .variant(shadcn::ToggleVariant::Outline)
+            .size(shadcn::ToggleSize::Sm)
+            .label("Small")
+            .into_element(cx),
+        shadcn::Toggle::uncontrolled(false)
+            .variant(shadcn::ToggleVariant::Outline)
+            .size(shadcn::ToggleSize::Lg)
+            .label("Large")
+            .into_element(cx),
+    ]
+})
+.into_element(cx);"#,
+                ),
             DocSection::new("Disabled", disabled)
                 .description("Disabled toggles remain readable and non-interactive.")
                 .max_w(Px(480.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Toggle::uncontrolled(false)
+    .disabled(true)
+    .variant(shadcn::ToggleVariant::Outline)
+    .a11y_label("Toggle disabled")
+    .label("Disabled")
+    .into_element(cx);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Toggle content order and alignment under RTL.")
                 .max_w(Px(480.0))
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Toggle::uncontrolled(false).children([cx.text("Bookmark")]).into_element(cx),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and accessibility notes.")
                 .max_w(Px(820.0)),

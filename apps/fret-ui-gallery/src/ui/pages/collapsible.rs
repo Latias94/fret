@@ -589,7 +589,26 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         vec![
             DocSection::new("Demo", demo)
                 .description("Uncontrolled disclosure with a compact trigger and a details list.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+    cx,
+    |cx, open, is_open| {
+        shadcn::Button::new(if is_open { "Hide details" } else { "Show details" })
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open)
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::CollapsibleContent::new(vec![
+            cx.text("• Tracking ID: 41F2"),
+            cx.text("• Carrier: UPS"),
+            cx.text("• ETA: Tomorrow"),
+        ])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
                 .code(
@@ -617,13 +636,63 @@ shadcn::Collapsible::new(open.clone()).into_element_with_open_model(cx, |cx, ope
                 ),
             DocSection::new("Settings Panel", settings)
                 .description("Collapsible used to hide optional/advanced form fields.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let open = cx.app.models_mut().insert(false);
+
+shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
+    cx,
+    |cx, open, is_open| {
+        shadcn::Button::new(if is_open { "Advanced" } else { "More settings" })
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open)
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::CollapsibleContent::new(vec![stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_start(),
+            |cx| vec![
+                shadcn::Input::new(radius_bl).a11y_label("Bottom-left").into_element(cx),
+                shadcn::Input::new(radius_br).a11y_label("Bottom-right").into_element(cx),
+            ],
+        )])
+        .into_element(cx)
+    },
+);"#,
+                ),
             DocSection::new("File Tree", file_tree)
                 .description("Nested collapsibles with independent open state per node.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"let folder = |cx: &mut ElementContext<'_, App>, label: &'static str, open: Model<bool>, children: Vec<AnyElement>| {
+    shadcn::Collapsible::new(open).into_element_with_open_model(
+        cx,
+        |cx, open, is_open| shadcn::Button::new(format!("{} {label}", if is_open { "▼" } else { "▶" }))
+            .variant(shadcn::ButtonVariant::Ghost)
+            .toggle_model(open)
+            .into_element(cx),
+        |cx| shadcn::CollapsibleContent::new(vec![stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N1).items_start(),
+            |_cx| children,
+        )])
+        .into_element(cx),
+    )
+};
+
+let src = folder(cx, "src", src_open, vec![file_leaf(cx, "main.rs")]);"#,
+                ),
             DocSection::new("RTL", rtl)
                 .description("Direction provider should keep trigger/content alignment stable.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Collapsible::new(open).into_element_with_open_model(cx, trigger, content),
+);"#,
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

@@ -580,10 +580,26 @@ shadcn::DrawerContent::new([
                 "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
                 "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
             ])
-            .code("rust", doc_layout::TODO_RUST_CODE),
+            .code(
+                "rust",
+                r#"let desktop = shadcn::Dialog::new(desktop_open).into_element(cx, trigger, content);
+let mobile = shadcn::Drawer::new(mobile_open).into_element(cx, trigger, content);
+
+ui::h_flex(cx, move |_cx| [desktop, mobile])
+    .gap(Space::N2)
+    .wrap()
+    .into_element(cx);"#,
+            ),
             DocSection::new("RTL", rtl)
                 .description("Drawer layout should follow right-to-left direction context.")
-                .code("rust", doc_layout::TODO_RUST_CODE),
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Drawer::new(open).into_element(cx, trigger, content),
+);"#,
+                ),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],
