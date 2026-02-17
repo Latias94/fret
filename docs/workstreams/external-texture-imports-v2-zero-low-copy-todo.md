@@ -65,8 +65,9 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - First real native frame source (Windows/MF, stage M2A = CPU upload):
       - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`wmf::MfVideoReader`, CPU upload loop, test_ids)
       - `apps/fret-demo/src/bin/external_video_imports_mf_demo.rs` (demo entrypoint)
+      - Perf script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
+      - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
   - Remaining:
-    - Add a steady perf script + baseline for the MF CPU-upload path (M2A gate).
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
       produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise) (M2B+).
 
@@ -91,3 +92,6 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Native adapter-path gate (requested vs effective attribution in perf bundles):
     - Script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
     - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`
+  - MF CPU-upload gate (stage M2A; real source):
+    - Script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
+    - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
