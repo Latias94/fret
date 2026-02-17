@@ -67,6 +67,8 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `apps/fret-demo/src/bin/external_video_imports_mf_demo.rs` (demo entrypoint)
       - Perf script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
+      - Correctness script (requires `FRET_DIAG_SCREENSHOTS=1` + `--check-pixels-changed external-video-imports-mf-surface`):
+        - `tools/diag-scripts/external-video-imports-mf-cpu-upload-correctness.json`
   - Remaining:
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
       produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise) (M2B+).
