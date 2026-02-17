@@ -3954,6 +3954,69 @@ mod tests {
     }
 
     #[test]
+    fn select_trigger_respects_explicit_width_refinement() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "select_width_refinement",
+            |cx| {
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger semantics");
+        let trigger_bounds = ui
+            .debug_node_visual_bounds(trigger.id)
+            .expect("trigger bounds");
+        assert!(
+            trigger_bounds.size.width.0 >= 179.0,
+            "expected explicit width refinement (180px) to affect trigger bounds; got {:?}",
+            trigger_bounds
+        );
+    }
+
+    #[test]
     fn select_popover_items_have_collection_position_metadata() {
         let window = AppWindowId::default();
         let mut app = App::new();
