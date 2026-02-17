@@ -110,10 +110,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
-            .app
-            .drag(pointer_id)
-            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        let Some((drag_kind, drag_source_window, cross_window_hover, drag_follow_window)) =
+            self.app.drag(pointer_id).map(|d| {
+                (
+                    d.kind,
+                    d.source_window,
+                    d.cross_window_hover,
+                    d.follow_window,
+                )
+            })
         else {
             return self.clear_internal_drag_hover_if_needed();
         };
@@ -135,10 +140,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        // When a dock tear-off window is following the cursor, the cursor is always "inside" that
-        // moving window. Prefer other windows under the cursor so we can dock back into the main
-        // window (ImGui-style).
-        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
+        // When a dock drag uses a "moving payload" surface (ImGui-style multi-viewport docking),
+        // the cursor is often "inside" that payload window even when the intended hover target is
+        // behind it (e.g. docking back into the main window). Prefer another window under the
+        // cursor when possible.
+        //
+        // NOTE: `dock_tearoff_follow` is the runner-managed follow state. `drag.follow_window` is
+        // the UI-provided hint. For tab drags originating from an already-floating window, we
+        // treat the source window itself as the moving payload.
+        let prefer_not = self
+            .dock_tearoff_follow
+            .map(|f| f.window)
+            .or(drag_follow_window)
+            .or_else(|| {
+                (drag_kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                    && self.dock_floating_windows.contains(&drag_source_window))
+                .then_some(drag_source_window)
+            });
 
         let hovered = if reliable_window_under_cursor {
             allow_window_under_cursor
@@ -241,10 +259,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
-            .app
-            .drag(pointer_id)
-            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        let Some((drag_kind, drag_source_window, cross_window_hover, drag_follow_window)) =
+            self.app.drag(pointer_id).map(|d| {
+                (
+                    d.kind,
+                    d.source_window,
+                    d.cross_window_hover,
+                    d.follow_window,
+                )
+            })
         else {
             return false;
         };
@@ -269,7 +292,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let prefer_not = self.dock_tearoff_follow.map(|f| f.window);
+        let prefer_not = self
+            .dock_tearoff_follow
+            .map(|f| f.window)
+            .or(drag_follow_window)
+            .or_else(|| {
+                (drag_kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                    && self.dock_floating_windows.contains(&drag_source_window))
+                .then_some(drag_source_window)
+            });
 
         let target = if reliable_window_under_cursor {
             allow_window_under_cursor
@@ -334,6 +365,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);
+
+        // Cross-window dock drags are runner-routed (Enter/Over/Drop). Ensure the drag session
+        // cannot get stuck if the pointer release is delivered to a different window than the
+        // original drag source (common in diagnostics injection and multi-window tear-off flows).
+        if self
+            .app
+            .drag(pointer_id)
+            .is_some_and(|d| d.cross_window_hover)
+        {
+            self.app.cancel_drag(pointer_id);
+            let _ = self.clear_internal_drag_hover_if_needed();
+        }
+        if self.dock_tearoff_follow.is_some() {
+            self.stop_dock_tearoff_follow(std::time::Instant::now(), true);
+        }
         true
     }
 }

@@ -2134,15 +2134,13 @@ fn ui_app_render<S>(
         #[cfg(feature = "tracing")]
         let _diag_guard = diag_span.enter();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.drive_script_for_window(
-                &*app,
+                app,
                 window,
                 bounds,
                 scale_factor,
                 Some(&state.ui),
                 semantics_snapshot,
-                element_runtime,
             )
         });
         for effect in drive.effects {

@@ -4,6 +4,9 @@
     "name": "Docking arbitration demo: repeated tear-off + drag-back loop does not leak dock graph structure",
     "tags": ["docking", "multiwindow", "drag", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
     "target_hints": [
       "This script repeatedly tears off a tab to create a floating OS window, then drags it back into the main window.",
       "Expected behavior: after each cycle the dock graph returns to the default canonical signature without deepening splits or growing node count.",

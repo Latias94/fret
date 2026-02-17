@@ -4,6 +4,9 @@
     "name": "Docking arbitration demo: runner poll-up finishes cross-window dock drags (Win32 path)",
     "tags": ["docking", "multiwindow", "gate", "windows"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window", "diag.mouse_buttons_override"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
     "target_hints": [
       "This script gates a Windows-specific fallback: finishing a cross-window dock drag when the left mouse release is not delivered to any window.",
       "It starts a cross-window tab drag, intentionally omits pointer_up, then uses a diagnostics-only mouse-button override to make the runner believe the left button is down while the OS reports it as up.",
@@ -94,4 +97,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

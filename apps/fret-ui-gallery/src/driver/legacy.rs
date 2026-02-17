@@ -2105,8 +2105,10 @@ impl UiGalleryDriver {
             "duration.shadcn.motion.collapsible.toggle".to_string(),
             sidebar_toggle,
         );
-        cfg.durations_ms
-            .insert("duration.shadcn.motion.toast.enter".to_string(), toast_enter);
+        cfg.durations_ms.insert(
+            "duration.shadcn.motion.toast.enter".to_string(),
+            toast_enter,
+        );
         cfg.durations_ms
             .insert("duration.shadcn.motion.toast.exit".to_string(), toast_exit);
         cfg.durations_ms.insert(
@@ -2188,10 +2190,8 @@ impl UiGalleryDriver {
             .insert("easing.motion.standard".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.emphasized".to_string(), shadcn_ease);
-        cfg.easings.insert(
-            "easing.motion.collapsible.toggle".to_string(),
-            shadcn_ease,
-        );
+        cfg.easings
+            .insert("easing.motion.collapsible.toggle".to_string(), shadcn_ease);
         cfg.easings
             .insert("easing.motion.layout.expand".to_string(), shadcn_ease);
         cfg.easings
@@ -3201,8 +3201,7 @@ impl WinitAppDriver for UiGalleryDriver {
                             &mut host,
                             window,
                             "Share sheet",
-                            shadcn::ToastMessageOptions::new()
-                                .description("Shared successfully."),
+                            shadcn::ToastMessageOptions::new().description("Shared successfully."),
                         );
                     }
                     fret_core::ShareSheetOutcome::Canceled => {
@@ -3534,15 +3533,13 @@ impl WinitAppDriver for UiGalleryDriver {
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
                 let wants_quit = svc.poll_exit_trigger();
-                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 let drive = svc.drive_script_for_window(
-                    &*app,
+                    app,
                     window,
                     bounds,
                     scale_factor,
                     Some(&state.ui),
                     semantics_snapshot,
-                    element_runtime,
                 );
                 (drive, wants_quit)
             },

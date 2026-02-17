@@ -4,6 +4,9 @@
     "name": "Docking arbitration demo: overlapped windows switch hover by z-order",
     "tags": ["docking", "multiwindow", "hover", "zorder", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
     "target_hints": [
       "This script overlaps two OS windows and asserts that cross-window dock drag hover routing follows window z-order when the cursor is in the overlap region.",
       "It raises each window without moving the cursor and expects `dock_drag_current_window_is` to switch accordingly (ImGui-style).",
@@ -84,4 +87,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-
