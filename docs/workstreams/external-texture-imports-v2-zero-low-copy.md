@@ -52,6 +52,8 @@ It builds on v1’s contract-path closure:
 - Shared allocation proof path landed (DX12-only):
   - A synthetic native writer clears a renderer-owned `wgpu::Texture` via the DX12 queue with deterministic state
     transitions, and a minimal diag correctness gate exists.
+  - A runner-facing DX12 shared allocation export helper exists (queue/resource + wgpu transitions), and the path has a
+    steady-state perf baseline.
 - Next up (native uplift, practical):
   - Factor the deterministic fallback chain into a single helper in `fret-launch` (so demos/callers don’t drift).
   - Pick the first real native producer that can write into a shared allocation (per-platform, capability-gated).
