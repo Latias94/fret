@@ -142,6 +142,19 @@
     { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-overlay-torture-steady" },
-    { "type": "wait_frames", "n": 2 }
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
+    { "type": "wait_frames", "n": 20 }
   ]
 }
