@@ -15,6 +15,10 @@ use fret_ui::{ElementContext, Invalidation, Theme};
 #[cfg(target_os = "windows")]
 mod wmf {
     use anyhow::Context as _;
+    use fret_render::{
+        RenderTargetColorEncoding, RenderTargetColorPrimaries, RenderTargetColorRange,
+        RenderTargetMatrixCoefficients, RenderTargetTransferFunction,
+    };
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
     use windows::Win32::Media::MediaFoundation::{
@@ -22,7 +26,13 @@ mod wmf {
         MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
         MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateMediaType,
-        MFCreateSourceReaderFromURL, MFMediaType_Video, MFShutdown, MFStartup, MFVideoFormat_RGB32,
+        MFCreateSourceReaderFromURL, MFMediaType_Video, MFNominalRange, MFNominalRange_0_255,
+        MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_RGB32, MFVideoPrimaries,
+        MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020, MFVideoPrimaries_DCI_P3,
+        MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
+        MFVideoTransFunc_Unknown, MFVideoTransFunc_sRGB, MFVideoTransferFunction,
+        MFVideoTransferMatrix, MFVideoTransferMatrix_BT601, MFVideoTransferMatrix_BT709,
+        MFVideoTransferMatrix_BT2020_10, MFVideoTransferMatrix_Unknown,
     };
     use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
     use windows::core::HSTRING;
@@ -40,6 +50,7 @@ mod wmf {
         reader: IMFSourceReader,
         size: (u32, u32),
         bytes_per_row: u32,
+        color_encoding: RenderTargetColorEncoding,
     }
 
     impl MfVideoReader {
@@ -96,13 +107,19 @@ mod wmf {
             }
 
             let (size, bytes_per_row) = Self::query_video_layout(&reader)?;
+            let color_encoding = Self::query_color_encoding(&reader)?;
 
             Ok(Self {
                 path,
                 reader,
                 size,
                 bytes_per_row,
+                color_encoding,
             })
+        }
+
+        pub fn color_encoding(&self) -> RenderTargetColorEncoding {
+            self.color_encoding
         }
 
         fn query_video_layout(reader: &IMFSourceReader) -> anyhow::Result<((u32, u32), u32)> {
@@ -128,6 +145,77 @@ mod wmf {
             };
 
             Ok(((w.max(1), h.max(1)), bytes_per_row.max(w.saturating_mul(4))))
+        }
+
+        #[allow(non_upper_case_globals)]
+        fn query_color_encoding(
+            reader: &IMFSourceReader,
+        ) -> anyhow::Result<RenderTargetColorEncoding> {
+            let media_type = unsafe {
+                reader
+                    .GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)
+                    .context("GetCurrentMediaType")?
+            };
+
+            let primaries = unsafe {
+                media_type
+                    .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_VIDEO_PRIMARIES)
+                    .ok()
+                    .map(|v| MFVideoPrimaries(v as i32))
+            };
+            let transfer = unsafe {
+                media_type
+                    .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_TRANSFER_FUNCTION)
+                    .ok()
+                    .map(|v| MFVideoTransferFunction(v as i32))
+            };
+            let matrix = unsafe {
+                media_type
+                    .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_YUV_MATRIX)
+                    .ok()
+                    .map(|v| MFVideoTransferMatrix(v as i32))
+            };
+            let range = unsafe {
+                media_type
+                    .GetUINT32(&windows::Win32::Media::MediaFoundation::MF_MT_VIDEO_NOMINAL_RANGE)
+                    .ok()
+                    .map(|v| MFNominalRange(v as i32))
+            };
+
+            Ok(RenderTargetColorEncoding {
+                primaries: match primaries {
+                    Some(MFVideoPrimaries_BT709) => RenderTargetColorPrimaries::Bt709,
+                    Some(MFVideoPrimaries_DCI_P3) => RenderTargetColorPrimaries::DisplayP3,
+                    Some(MFVideoPrimaries_BT2020) => RenderTargetColorPrimaries::Bt2020,
+                    _ => RenderTargetColorPrimaries::Unknown,
+                },
+                transfer: match transfer {
+                    Some(MFVideoTransFunc_sRGB) => RenderTargetTransferFunction::Srgb,
+                    Some(MFVideoTransFunc_709) => RenderTargetTransferFunction::Bt1886,
+                    Some(MFVideoTransFunc_2084) => RenderTargetTransferFunction::Pq,
+                    Some(MFVideoTransFunc_HLG) => RenderTargetTransferFunction::Hlg,
+                    Some(MFVideoTransFunc_Unknown) | None => RenderTargetTransferFunction::Unknown,
+                    _ => RenderTargetTransferFunction::Unknown,
+                },
+                matrix: match matrix {
+                    Some(MFVideoTransferMatrix_BT601) => RenderTargetMatrixCoefficients::Bt601,
+                    Some(MFVideoTransferMatrix_BT709) => RenderTargetMatrixCoefficients::Bt709,
+                    Some(MFVideoTransferMatrix_BT2020_10) => {
+                        RenderTargetMatrixCoefficients::Bt2020Ncl
+                    }
+                    // Our stage M2A output is RGB32, so a missing/unknown YUV matrix is best treated
+                    // as identity for now.
+                    Some(MFVideoTransferMatrix_Unknown) | None => {
+                        RenderTargetMatrixCoefficients::Rgb
+                    }
+                    _ => RenderTargetMatrixCoefficients::Unknown,
+                },
+                range: match range {
+                    Some(MFNominalRange_0_255) => RenderTargetColorRange::Full,
+                    Some(MFNominalRange_16_235) => RenderTargetColorRange::Limited,
+                    _ => RenderTargetColorRange::Unknown,
+                },
+            })
         }
 
         fn reset(&mut self) -> anyhow::Result<()> {
@@ -165,6 +253,7 @@ mod wmf {
                     let (size, bytes_per_row) = Self::query_video_layout(&self.reader)?;
                     self.size = size;
                     self.bytes_per_row = bytes_per_row;
+                    self.color_encoding = Self::query_color_encoding(&self.reader)?;
                 }
 
                 if (flags & (MF_SOURCE_READERF_ENDOFSTREAM.0 as u32)) != 0 {
@@ -609,7 +698,7 @@ fn record_engine_frame(
     let texture = st.texture.as_ref().expect("texture allocated");
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let metadata = RenderTargetMetadata::default();
+    let mut metadata = RenderTargetMetadata::default();
     match st.mode {
         ExternalVideoImportsMode::CheckerGpu => {
             st.target.push_update_with_ingest_strategies(
@@ -659,6 +748,10 @@ fn record_engine_frame(
         }
         #[cfg(target_os = "windows")]
         ExternalVideoImportsMode::MfVideoCpuUpload => {
+            if let Some(reader) = st.mf.as_ref() {
+                metadata.color_encoding = reader.color_encoding();
+            }
+
             // Stage M2A: request the v2 ceiling, but deterministically degrade to CPU upload.
             // The requested/effective split is visible in perf bundles.
             st.target.push_update_with_ingest_strategies(
