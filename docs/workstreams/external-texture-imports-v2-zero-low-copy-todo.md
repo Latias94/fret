@@ -129,6 +129,10 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard::export_raw`)
     - Correctness script (requires `FRET_WGPU_BACKEND=dx12`, `FRET_EXTV2_MF_DX12_GPU_COPY=1`, and a playable `FRET_MF_VIDEO_PATH`):
       - `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
+    - Perf script:
+      - `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-perf-steady.json`
+    - Baseline:
+      - `docs/workstreams/perf-baselines/external-video-imports-mf-dx12-gpu-copy.windows-local.v1.json`
   - Local verification (Windows DX12, 2026-02-17):
     - `FRET_WGPU_BACKEND=dx12 FRET_EXTV2_MF_DX12_GPU_COPY=1 FRET_MF_VIDEO_PATH=<dir_or_file> ... external_video_imports_mf_demo`
     - Run: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json` via `fret-diag-export` and confirm screenshots show decoded video frames.
