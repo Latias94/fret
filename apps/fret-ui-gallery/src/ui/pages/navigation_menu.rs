@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default, Clone)]
@@ -8,27 +9,6 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     }
 
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
 
     let state = cx.with_state(NavigationMenuModels::default, |st| st.clone());
     let demo_value = match state.demo_value {
@@ -292,7 +272,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty())
             .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-docs");
 
-        let menu = shadcn::NavigationMenu::new(demo_value.clone())
+        shadcn::NavigationMenu::new(demo_value.clone())
             .list(shadcn::NavigationMenuList::new([
                 getting_started,
                 components,
@@ -300,13 +280,26 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                 docs,
             ]))
             .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
-            .into_element(cx);
-        let body = centered(cx, menu);
-        section(cx, "Demo", body)
+            .into_element(cx)
+    };
+
+    let link_component = {
+        let docs = shadcn::NavigationMenuItem::new("docs", "Documentation", std::iter::empty())
+            .trigger_test_id("ui-gallery-navigation-menu-link-component-trigger-docs");
+        let examples = shadcn::NavigationMenuItem::new("examples", "Examples", std::iter::empty())
+            .trigger_test_id("ui-gallery-navigation-menu-link-component-trigger-examples");
+        let pricing = shadcn::NavigationMenuItem::new("pricing", "Pricing", std::iter::empty())
+            .trigger_test_id("ui-gallery-navigation-menu-link-component-trigger-pricing");
+
+        shadcn::NavigationMenu::uncontrolled::<Arc<str>>(None)
+            .viewport(false)
+            .indicator(false)
+            .list(shadcn::NavigationMenuList::new([docs, examples, pricing]))
+            .into_element(cx)
     };
 
     let rtl = {
-        let menu = fret_ui_kit::primitives::direction::with_direction_provider(
+        fret_ui_kit::primitives::direction::with_direction_provider(
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
@@ -487,14 +480,86 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                     .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
                     .into_element(cx)
             },
-        );
-        let body = centered(cx, menu);
-        section(cx, "RTL", body)
+        )
     };
 
-    vec![stack::vstack(
+    let notes = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N6).items_start(),
-        |_cx| vec![demo, rtl],
-    )]
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        |cx| {
+            vec![
+                doc_layout::muted_full_width(
+                    cx,
+                    "This page follows shadcn Navigation Menu docs flow: Demo, Link Component, RTL.",
+                ),
+                doc_layout::muted_full_width(
+                    cx,
+                    "Items with empty content behave like the shadcn `navigationMenuTriggerStyle()` link.",
+                ),
+                doc_layout::muted_full_width(
+                    cx,
+                    "Keep explicit RTL coverage in gallery so viewport placement and content sizing stay parity-auditable.",
+                ),
+            ]
+        },
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Preview follows shadcn Navigation Menu docs order: Demo, Link Component, RTL."),
+        vec![
+            DocSection::new("Demo", demo)
+                .title_test_id("ui-gallery-navigation-menu-section-title-demo")
+                .description("Hover or click triggers to open the viewport content.")
+                .code(
+                    "rust",
+                    r#"use fret_ui_shadcn as shadcn;
+use std::sync::Arc;
+
+let value = cx.app.models_mut().insert(None::<Arc<str>>);
+
+let item = shadcn::NavigationMenuItem::new(
+    "getting_started",
+    "Getting started",
+    [
+        shadcn::NavigationMenuLink::new(value.clone(), [cx.text("Introduction")])
+            .on_click("app.open")
+            .into_element(cx),
+    ],
+);
+
+let menu = shadcn::NavigationMenu::new(value)
+    .list(shadcn::NavigationMenuList::new([item]))
+                    .into_element(cx);"#,
+                )
+                .test_id_prefix("ui-gallery-navigation-menu-demo"),
+            DocSection::new("Link Component", link_component)
+                .title_test_id("ui-gallery-navigation-menu-section-title-link-component")
+                .description("Link-only items (no content) render with trigger-link styling.")
+                .code(
+                    "rust",
+                    r#"let menu = shadcn::NavigationMenu::uncontrolled::<Arc<str>>(None)
+    .viewport(false)
+    .indicator(false)
+    .list(shadcn::NavigationMenuList::new([
+        shadcn::NavigationMenuItem::new("docs", "Documentation", std::iter::empty()),
+    ]))
+                    .into_element(cx);"#,
+                )
+                .test_id_prefix("ui-gallery-navigation-menu-link-component"),
+            DocSection::new("RTL", rtl)
+                .title_test_id("ui-gallery-navigation-menu-section-title-rtl")
+                .description("Menu layout should follow right-to-left direction context.")
+                .test_id_prefix("ui-gallery-navigation-menu-rtl"),
+            DocSection::new("Notes", notes)
+                .description("Implementation notes and regression guidelines.")
+                .title_test_id("ui-gallery-navigation-menu-section-title-notes")
+                .test_id_prefix("ui-gallery-navigation-menu-notes"),
+        ],
+    );
+
+    vec![body]
 }

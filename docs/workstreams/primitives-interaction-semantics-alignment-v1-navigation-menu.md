@@ -56,6 +56,10 @@ Scripted repros:
 - `tools/diag-scripts/ui-gallery-navigation-menu-hover-switch-and-escape.json`
   - Scenario: hover-open → hover-switch across triggers → Escape close.
   - Requires `FRET_DIAG=1` (reserved var; set in the parent shell when using `--launch`).
+- `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json`
+  - Scenario: docs-style page layout smoke (Preview/Code tabs exist; Notes section is reachable).
+- `tools/diag-scripts/ui-gallery-navigation-menu-viewport-fixed-frame-delta.json`
+  - Scenario: viewport placement + size switch evidence capture (intended to run with fixed frame delta + screenshots).
 
 Test-id note (needed for scripts):
 
@@ -63,6 +67,9 @@ Test-id note (needed for scripts):
   to stamp stable trigger anchors.
 - `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` stamps stable `test_id` anchors for triggers
   and representative links (for scripts and manual inspection).
+- `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` stamps stable section title ids (e.g.
+  `ui-gallery-navigation-menu-section-title-notes`) so scripts can assert docs layout without relying
+  on global “Usage/Notes” scaffolding.
 
 ---
 

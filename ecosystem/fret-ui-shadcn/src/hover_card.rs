@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::hover_intent::{HoverIntentConfig, HoverIntentUpdate
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
 };
@@ -203,6 +204,8 @@ pub struct HoverCard {
     arrow_padding_override: Option<Px>,
     open_delay_frames: u32,
     close_delay_frames: u32,
+    open_delay_duration_override: Option<Duration>,
+    close_delay_duration_override: Option<Duration>,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_open_change: Option<OnOpenChange>,
@@ -221,6 +224,14 @@ impl std::fmt::Debug for HoverCard {
             .field("arrow", &self.arrow)
             .field("open_delay_frames", &self.open_delay_frames)
             .field("close_delay_frames", &self.close_delay_frames)
+            .field(
+                "open_delay_duration_override",
+                &self.open_delay_duration_override,
+            )
+            .field(
+                "close_delay_duration_override",
+                &self.close_delay_duration_override,
+            )
             .field("layout", &self.layout)
             .field("anchor_override", &self.anchor_override)
             .field("on_open_change", &self.on_open_change.is_some())
@@ -248,6 +259,8 @@ impl HoverCard {
             arrow_padding_override: None,
             open_delay_frames: hover_card_default_open_delay_frames(),
             close_delay_frames: hover_card_default_close_delay_frames(),
+            open_delay_duration_override: None,
+            close_delay_duration_override: None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
             on_open_change: None,
@@ -304,12 +317,36 @@ impl HoverCard {
 
     pub fn open_delay_frames(mut self, frames: u32) -> Self {
         self.open_delay_frames = frames;
+        self.open_delay_duration_override = None;
         self
     }
 
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames = frames;
+        self.close_delay_duration_override = None;
         self
+    }
+
+    /// Radix-compatible open delay (`openDelay`), expressed as wall-clock time.
+    pub fn open_delay_duration(mut self, duration: Duration) -> Self {
+        self.open_delay_duration_override = Some(duration);
+        self
+    }
+
+    /// Radix-compatible open delay (`openDelay`), expressed as wall-clock time.
+    pub fn open_delay(self, duration: Duration) -> Self {
+        self.open_delay_duration(duration)
+    }
+
+    /// Radix-compatible close delay (`closeDelay`), expressed as wall-clock time.
+    pub fn close_delay_duration(mut self, duration: Duration) -> Self {
+        self.close_delay_duration_override = Some(duration);
+        self
+    }
+
+    /// Radix-compatible close delay (`closeDelay`), expressed as wall-clock time.
+    pub fn close_delay(self, duration: Duration) -> Self {
+        self.close_delay_duration(duration)
     }
 
     pub fn window_margin(mut self, margin: Px) -> Self {
@@ -387,6 +424,8 @@ impl HoverCard {
         let side = self.side;
         let open_delay_frames = self.open_delay_frames;
         let close_delay_frames = self.close_delay_frames;
+        let open_delay_duration_override = self.open_delay_duration_override;
+        let close_delay_duration_override = self.close_delay_duration_override;
         let arrow = self.arrow;
         let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
             theme
@@ -582,7 +621,13 @@ impl HoverCard {
                 pointer_down_on_content_now = false;
             }
 
-            let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
+            let open_delay_ticks = open_delay_duration_override
+                .map(|d| tooltip_provider::ticks_for_duration_for_cx(cx, d))
+                .unwrap_or(open_delay_frames as u64);
+            let close_delay_ticks = close_delay_duration_override
+                .map(|d| tooltip_provider::ticks_for_duration_for_cx(cx, d))
+                .unwrap_or(close_delay_frames as u64);
+            let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
             let pointer_down_for_policy =
                 pointer_down_on_content_now && !text_selection_just_cleared;
             let force_close_after_selection_clear = text_selection_just_cleared && !hovered;

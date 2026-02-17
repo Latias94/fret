@@ -3,8 +3,13 @@ use super::super::*;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 use fret_runtime::Model;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign, PressableProps, ScrollAxis};
+use fret_ui::element::{
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PositionStyle,
+    PressableProps, ScrollAxis,
+};
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -45,48 +50,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         line_height_px: Px,
         aspect_square: bool,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
 
     let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
@@ -238,11 +201,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         None,
     );
 
-    let demo_inner_clicked_now = cx
-        .watch_model(&demo_inner_clicked)
-        .copied()
-        .unwrap_or(false);
-
+    let demo_inner_clicked = demo_inner_clicked.clone();
     let demo_body = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -250,13 +209,32 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         move |cx| {
-            let mut out = vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Drag starting on the inner button must not activate it; a click must activate it.",
-                ),
-                demo_content,
-            ];
+            let demo_inner_clicked_now = cx
+                .watch_model(&demo_inner_clicked)
+                .layout()
+                .copied_or_default();
+            let mut out = vec![demo_content];
+
+            let debug = cx
+                .container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = PositionStyle::Absolute;
+                            layout.size.width = Length::Px(Px(0.0));
+                            layout.size.height = Length::Px(Px(0.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )
+                .test_id(format!(
+                    "ui-gallery-carousel-demo-inner-clicked-debug-{:?}-{}",
+                    demo_inner_clicked.id(),
+                    demo_inner_clicked_now
+                ));
+            out.push(debug);
 
             if demo_inner_clicked_now {
                 out.push(
@@ -268,7 +246,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             out
         },
     );
-    let demo = section_card(cx, "Demo", demo_body);
+    let demo = demo_body;
 
     let animata_expandable = {
         let theme = Theme::global(&*cx.app).clone();
@@ -404,19 +382,11 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .gap(Space::N3)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::muted(
-                        cx,
-                        "Animata alignment pilot: expandable carousel that interpolates size via a deterministic transition driver (no DOM-based FLIP).",
-                    ),
-                    scroll,
-                ]
-            },
+            |_cx| vec![scroll],
         )
         .test_id("ui-gallery-carousel-expandable");
 
-        section_card(cx, "Animata: Expandable", content)
+        content
     };
 
     let sizes_content = stack::vstack(
@@ -426,29 +396,23 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Sizes`: use a smaller item basis to show multiple active items.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-size",
-                    shadcn::CarouselOrientation::Horizontal,
-                    Px(133.328),
-                    Space::N4,
-                    Px(384.0),
-                    None,
-                    SlideVisual {
-                        text_px: Px(30.0),
-                        line_height_px: Px(36.0),
-                        aspect_square: true,
-                    },
-                ),
-            ]
+            vec![carousel(
+                cx,
+                "ui-gallery-carousel-size",
+                shadcn::CarouselOrientation::Horizontal,
+                Px(133.328),
+                Space::N4,
+                Px(384.0),
+                None,
+                SlideVisual {
+                    text_px: Px(30.0),
+                    line_height_px: Px(36.0),
+                    aspect_square: true,
+                },
+            )]
         },
     );
-    let sizes = section_card(cx, "Sizes", sizes_content);
+    let sizes = sizes_content;
 
     let spacing_content = stack::vstack(
         cx,
@@ -457,29 +421,23 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Spacing`: tune track negative margin + item start padding together.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-spacing",
-                    shadcn::CarouselOrientation::Horizontal,
-                    Px(129.328),
-                    Space::N1,
-                    Px(384.0),
-                    None,
-                    SlideVisual {
-                        text_px: Px(24.0),
-                        line_height_px: Px(32.0),
-                        aspect_square: true,
-                    },
-                ),
-            ]
+            vec![carousel(
+                cx,
+                "ui-gallery-carousel-spacing",
+                shadcn::CarouselOrientation::Horizontal,
+                Px(129.328),
+                Space::N1,
+                Px(384.0),
+                None,
+                SlideVisual {
+                    text_px: Px(24.0),
+                    line_height_px: Px(32.0),
+                    aspect_square: true,
+                },
+            )]
         },
     );
-    let spacing = section_card(cx, "Spacing", spacing_content);
+    let spacing = spacing_content;
 
     let orientation_content = stack::vstack(
         cx,
@@ -488,29 +446,23 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Orientation`: vertical mode stacks items and rotates the controls.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-orientation-vertical",
-                    shadcn::CarouselOrientation::Vertical,
-                    Px(100.0),
-                    Space::N1,
-                    Px(320.0),
-                    Some(Px(200.0)),
-                    SlideVisual {
-                        text_px: Px(30.0),
-                        line_height_px: Px(36.0),
-                        aspect_square: false,
-                    },
-                ),
-            ]
+            vec![carousel(
+                cx,
+                "ui-gallery-carousel-orientation-vertical",
+                shadcn::CarouselOrientation::Vertical,
+                Px(100.0),
+                Space::N1,
+                Px(320.0),
+                Some(Px(200.0)),
+                SlideVisual {
+                    text_px: Px(30.0),
+                    line_height_px: Px(36.0),
+                    aspect_square: false,
+                },
+            )]
         },
     );
-    let orientation = section_card(cx, "Orientation", orientation_content);
+    let orientation = orientation_content;
 
     let options_content = stack::vstack(
         cx,
@@ -531,7 +483,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let options = section_card(cx, "Options", options_content);
+    let options = options_content;
 
     let api_content = stack::vstack(
         cx,
@@ -552,7 +504,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let api = section_card(cx, "API", api_content);
+    let api = api_content;
 
     let events_content = stack::vstack(
         cx,
@@ -573,7 +525,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let events = section_card(cx, "Events", events_content);
+    let events = events_content;
 
     let plugins_content = stack::vstack(
         cx,
@@ -594,94 +546,20 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let plugins = section_card(cx, "Plugins", plugins_content);
+    let plugins = plugins_content;
 
-    let preview_hint = shadcn::typography::muted(
-        cx,
-        "Preview follows shadcn Carousel docs flow: Demo -> Sizes -> Spacing -> Orientation -> Options -> API -> Events -> Plugins.",
-    );
-    let component_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                preview_hint,
-                demo,
-                animata_expandable,
-                sizes,
-                spacing,
-                orientation,
-                options,
-                api,
-                events,
-                plugins,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_stack).test_id("ui-gallery-carousel-component");
-
-    let code_block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                    .into_element(cx),
-                shadcn::CardContent::new(vec![ui::text_block(cx, snippet).into_element(cx)])
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        };
-
-    let code_stack = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                code_block(
-                    cx,
-                    "Basic",
-                    r#"let carousel = shadcn::Carousel::new(items)
-    .item_basis_main_px(Px(260.0))
-    .refine_layout(LayoutRefinement::default().max_w(Px(360.0)))
-    .into_element(cx);"#,
-                ),
-                code_block(
-                    cx,
-                    "Spacing + Orientation",
-                    r#"shadcn::Carousel::new(items)
-    .track_start_neg_margin(Space::N4)
-    .item_padding_start(Space::N4)
-    .orientation(shadcn::CarouselOrientation::Vertical)
-    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(300.0)))"#,
-                ),
-                code_block(
-                    cx,
-                    "RTL",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Carousel::new(items)
-        .orientation(shadcn::CarouselOrientation::Horizontal)
-        .into_element(cx)
-})"#,
-                ),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_stack);
-
-    let notes_stack = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/carousel.rs`.",
+                ),
                 shadcn::typography::muted(
                     cx,
                     "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
@@ -696,18 +574,59 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "API/plugins gaps are tracked here intentionally so future Embla parity work remains discoverable.",
+                    "API/plugins gaps are tracked intentionally so future Embla parity work remains discoverable.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_stack);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-carousel",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Carousel docs flow: Demo -> Sizes -> Spacing -> Orientation -> Options -> API -> Events -> Plugins.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description(
+                    "Drag starting on the inner button must not activate it; a click must activate it.",
+                )
+                .code(
+                    "rust",
+                    r#"let carousel = shadcn::Carousel::new(items)
+    .item_basis_main_px(Px(260.0))
+    .refine_layout(LayoutRefinement::default().max_w(Px(360.0)))
+    .into_element(cx);"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("Animata: Expandable", animata_expandable)
+                .description("Animata alignment pilot: interpolate size via a deterministic transition driver.")
+                .max_w(Px(760.0)),
+            DocSection::new("Sizes", sizes)
+                .description("Match docs `Sizes`: use a smaller item basis to show multiple active items.")
+                .max_w(Px(760.0)),
+            DocSection::new("Spacing", spacing)
+                .description("Match docs `Spacing`: tune track negative margin + item start padding together.")
+                .max_w(Px(760.0)),
+            DocSection::new("Orientation", orientation)
+                .description("Match docs `Orientation`: vertical mode stacks items and rotates controls.")
+                .max_w(Px(760.0)),
+            DocSection::new("Options", options)
+                .description("Documented parity gaps: upstream Embla options are not yet exposed in Fret.")
+                .max_w(Px(760.0)),
+            DocSection::new("API", api)
+                .description("Documented parity gaps: upstream `setApi` and event hooks are not yet exposed.")
+                .max_w(Px(760.0)),
+            DocSection::new("Events", events)
+                .description("Documented parity gaps: Embla events remain TODO until API contracts land.")
+                .max_w(Px(760.0)),
+            DocSection::new("Plugins", plugins)
+                .description("Documented parity gaps: Embla plugins are not yet supported.")
+                .max_w(Px(760.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and authoring notes.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-carousel-component")]
 }

@@ -46,6 +46,7 @@ Related tests/gates:
 
 - Scripted repros:
   - `tools/diag-scripts/ui-gallery-drawer-escape-focus-restore.json` (gate: escape close + focus restore)
+  - `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json` (gallery page layout + demo open/escape close)
 
 ---
 

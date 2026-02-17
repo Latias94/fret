@@ -520,7 +520,14 @@ let label = shadcn::Label::new("Email").into_element(cx);
 pub(crate) const DOC_MENUBAR: &str = r#"
 ## Menubar
 
-Reference: https://github.com/shadcn-ui/ui/blob/main/apps/v4/content/docs/components/base/menubar.mdx.
+Upstream reference:
+
+- https://github.com/shadcn-ui/ui/blob/main/apps/v4/content/docs/components/base/menubar.mdx
+- Base UI docs: https://base-ui.com/react/components/menubar
+
+## API Reference
+
+- Base UI Menubar API: https://base-ui.com/react/components/menubar#api-reference
 "#;
 
 pub(crate) const USAGE_MENUBAR: &str = r#"
@@ -560,7 +567,14 @@ pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
 pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
 ## Navigation Menu
 
-Reference: https://github.com/shadcn-ui/ui/blob/main/apps/v4/content/docs/components/base/navigation-menu.mdx.
+Upstream reference:
+
+- https://github.com/shadcn-ui/ui/blob/main/apps/v4/content/docs/components/base/navigation-menu.mdx
+- Base UI docs: https://base-ui.com/react/components/navigation-menu
+
+## API Reference
+
+- Base UI Navigation Menu API: https://base-ui.com/react/components/navigation-menu#api-reference
 "#;
 
 pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"

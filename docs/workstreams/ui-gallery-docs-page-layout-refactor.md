@@ -14,7 +14,13 @@ single-page layout:
 Non-goals:
 
 - This tracker is not about component behavior parity (that lives in shadcn/Base UI alignment workstreams).
-- This tracker does not attempt to unify the top-level UI Gallery “Preview/Usage/Notes” tabs in `content.rs`.
+- This tracker does not attempt to remove the top-level “Preview/Usage/Notes” tabs for non-shadcn pages.
+  - Shadcn group pages now render a single-page layout (Preview + inline Usage + inline Notes) via
+    `apps/fret-ui-gallery/src/ui/content.rs`.
+  - AI Elements gallery pages (id prefix `ai_`) also use the single-page layout so we can iterate on doc-like sections
+    without nested tab chrome.
+  - Inline Usage/Notes headings are anchored by `ui-gallery-section-usage-title` and
+    `ui-gallery-section-notes-title` for diag stability.
 
 ## Definition of Done (per component page)
 
@@ -46,6 +52,7 @@ Legend:
 | Field | `apps/fret-ui-gallery/src/ui/pages/field.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-field-docs-smoke.json` (1) | Keeps existing `ui-gallery-field-*` test IDs for future diag scripts. |
 | Input | `apps/fret-ui-gallery/src/ui/pages/input.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json` | Keeps `ui-gallery-input-basic` test ID stable for IME routing gates. |
 | Input Group | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json` | Keeps `ui-gallery-input-group-text-*` test IDs stable for non-overlap gates. |
+| Input OTP | `apps/fret-ui-gallery/src/ui/pages/input_otp.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json` (1) | Keeps `ui-gallery-input-otp-*` test IDs stable for future OTP behavior gates. |
 | Label | `apps/fret-ui-gallery/src/ui/pages/label.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-label-docs-smoke.json` (1) | Keeps examples small; relies on single-line section titles with ellipsis. |
 | Checkbox | `apps/fret-ui-gallery/src/ui/pages/checkbox.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-checkbox-rtl-and-checked-wrap.json` | Keeps `ui-gallery-checkbox-*` test IDs stable for the wrap/RTL regression script. |
 | Native Select | `apps/fret-ui-gallery/src/ui/pages/native_select.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-native-select-docs-smoke.json` (1) | Notes clarify NativeSelect vs Select usage intent. |
@@ -63,14 +70,25 @@ Legend:
 | Context Menu | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-context-menu-*.json` (5) | Adds a page-level docs smoke; existing overlay scripts still gate right-click/keyboard paths. |
 | Hover Card | `apps/fret-ui-gallery/src/ui/pages/hover_card.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-hover-card-docs-smoke.json` (1) | Overlay-level clamp gating lives in `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`. |
 
+### Shadcn/data + complex
+
+| Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
+|---|---|---|---|---|---|---|---|
+| Data Table | `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | Docs-style | Examples Partial / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-data-table-*.json` (16) | shadcn Data Table is a guide recipe; keep parity gaps explicit and gated. |
+| Carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-carousel-*.json` (3) | Keeps existing drag/swipe + expandable demo test IDs stable. |
+| Chart | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-chart-*.json` (1) | Focuses on tooltip/legend composition, not full chart runtime parity. |
+| Command | `apps/fret-ui-gallery/src/ui/pages/command.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-command-*.json` (1) | A11y AX activation scripts use the `tools/diag-scripts/a11y-*.json` prefix and are excluded from the ui-gallery suite. |
+
 ### Shadcn/navigation + misc
 
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
 | Breadcrumb | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-breadcrumb-*.json` (2) | Keeps existing section-title `test_id`s for single-line heading gates. |
+| Menubar | `apps/fret-ui-gallery/src/ui/pages/menubar.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json` (1) | Page migrated to `DocSection` layout; existing menubar item `test_id`s remain stable. |
+| Navigation Menu | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json` (1) | Adds Link Component section + page-level docs layout smoke gate. |
 | Toggle | `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-toggle-docs-smoke.json` (1) | Keeps `ui-gallery-toggle-*` test IDs stable for future diag scripts. |
 | Toggle Group | `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-toggle-group-docs-smoke.json` (1) | Keeps `ui-gallery-toggle-group-*` test IDs stable for future diag scripts. |
-| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Docs-style | Examples Partial / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-typography-docs-smoke.json` (1) | Candidate: add truncation/wrap sections for narrow windows + RTL. |
+| Typography | `apps/fret-ui-gallery/src/ui/pages/typography.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-typography-docs-smoke.json` (1) | Candidate: add truncation/wrap sections for narrow windows + RTL. |
 | Kbd | `apps/fret-ui-gallery/src/ui/pages/kbd.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-kbd-docs-smoke.json` (1) | Keeps existing `test_id`s for demo/group/button/input-group. |
 | Item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-item-docs-smoke.json` (1) | Candidate: add truncation/ellipsis examples for narrow sidebars. |
 | Collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-collapsible-*.json` (3) | Keeps `ui-gallery-collapsible-component` + demo/basic trigger/content test IDs for existing diag gates. |

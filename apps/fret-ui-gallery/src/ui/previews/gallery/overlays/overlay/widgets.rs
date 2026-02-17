@@ -193,8 +193,10 @@ fn underlay(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 fn tooltip(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    shadcn::Tooltip::new(
-        shadcn::Button::new("Tooltip (hover)")
+    use std::time::Duration;
+
+    let tooltip_a = shadcn::Tooltip::new(
+        shadcn::Button::new("Tooltip A (delay)")
             .variant(shadcn::ButtonVariant::Outline)
             .test_id("ui-gallery-tooltip-trigger")
             .into_element(cx),
@@ -208,13 +210,47 @@ fn tooltip(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .arrow(true)
     .arrow_test_id("ui-gallery-tooltip-arrow")
     .panel_test_id("ui-gallery-tooltip-panel")
-    .open_delay_frames(10)
-    .close_delay_frames(10)
     .side(shadcn::TooltipSide::Top)
-    .into_element(cx)
+    .into_element(cx);
+
+    let tooltip_b = shadcn::Tooltip::new(
+        shadcn::Button::new("Tooltip B (skip delay)")
+            .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-gallery-tooltip-skip-trigger")
+            .into_element(cx),
+        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+            cx,
+            "Skip-delay window should open this immediately after closing A.",
+        )])
+        .into_element(cx)
+        .test_id("ui-gallery-tooltip-skip-content"),
+    )
+    .arrow(true)
+    .arrow_test_id("ui-gallery-tooltip-skip-arrow")
+    .panel_test_id("ui-gallery-tooltip-skip-panel")
+    .side(shadcn::TooltipSide::Top)
+    .into_element(cx);
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |_cx| vec![tooltip_a, tooltip_b],
+    )
+    .test_id("ui-gallery-tooltip-delay-group-row");
+
+    shadcn::TooltipProvider::new()
+        .delay(Duration::from_millis(700))
+        .close_delay(Duration::ZERO)
+        .timeout_duration(Duration::from_millis(300))
+        .with(cx, |_cx| vec![row])
+        .into_iter()
+        .next()
+        .expect("tooltip provider returns one root element")
 }
 
 fn hover_card(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    use std::time::Duration;
+
     shadcn::HoverCard::new(
         shadcn::Button::new("HoverCard (hover)")
             .variant(shadcn::ButtonVariant::Outline)
@@ -227,8 +263,8 @@ fn hover_card(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-hovercard-content"),
     )
-    .open_delay_frames(10)
-    .close_delay_frames(10)
+    .open_delay(Duration::from_millis(700))
+    .close_delay(Duration::from_millis(300))
     .into_element(cx)
 }
 

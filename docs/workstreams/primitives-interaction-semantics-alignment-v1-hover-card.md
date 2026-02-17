@@ -45,6 +45,7 @@ Scripted repros (existing):
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (hover card open snapshot)
 - `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`
 - `tools/diag-scripts/ui-gallery-hovercard-hover-delayed-close.json`
+- `tools/diag-scripts/ui-gallery-hover-card-trigger-delays.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
 
 ---
@@ -66,5 +67,5 @@ Invariants:
 ## Audit checklist (dimension-driven)
 
 - [ ] `M` Document hover intent + delay state machine and reasons.
-- [ ] `M/I` Ensure delays are `Duration` and policy-level.
+- [x] `I` Surface `Duration` delays at recipe boundary (Radix `openDelay` / `closeDelay`).
 - [x] `G` Add/keep at least one diag script for: hover open → move away → delayed close.

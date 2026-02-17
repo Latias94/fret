@@ -758,7 +758,7 @@ impl UiGalleryDriver {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
 
-        app.with_global_mut(
+        app.with_global_mut_untracked(
             || UndoService::<ValueTx<f32>>::with_limit(256),
             |undo_svc, _app| {
                 undo_svc.set_active_document(window, doc.clone());
@@ -780,7 +780,7 @@ impl UiGalleryDriver {
             }
         }
 
-        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+        app.with_global_mut_untracked(WindowCommandAvailabilityService::default, |svc, _app| {
             svc.set_edit_availability(window, edit_can_undo, edit_can_redo);
         });
     }

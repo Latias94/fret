@@ -378,48 +378,52 @@ pub(crate) fn content_view(
         models.code_editor_inlays.clone(),
     );
 
-    let active_tab: Arc<str> = cx
-        .watch_model(&models.content_tab)
-        .layout()
-        .cloned()
-        .flatten()
-        .unwrap_or_else(|| Arc::from("preview"));
-
-    let docs_panel = if active_tab.as_ref() != "docs" {
-        Vec::new()
-    } else if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        vec![cx.text(docs_md)]
-    } else {
-        vec![markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)]
-    };
-    let usage_panel = if active_tab.as_ref() != "usage" {
-        Vec::new()
-    } else if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        vec![cx.text(usage_md)]
-    } else {
-        vec![markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)]
+    let render_markdown_or_text = |cx: &mut ElementContext<'_, App>, md: &'static str| {
+        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+            cx.text(md)
+        } else {
+            markdown::Markdown::new(Arc::from(md)).into_element(cx)
+        }
     };
 
-    let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
-        let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-            cx.text(docs_md)
-        } else {
-            markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
-        };
-        let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-            cx.text(usage_md)
-        } else {
-            markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
-        };
-
+    let section = |cx: &mut ElementContext<'_, App>,
+                   title: &'static str,
+                   test_id: &'static str,
+                   body: AnyElement| {
         stack::vstack(
             cx,
             stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N6),
-            |_cx| [preview_panel, usage_panel, docs_panel],
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |cx| vec![shadcn::typography::h3(cx, title).test_id(test_id), body],
         )
-    } else {
+    };
+
+    let is_shadcn_page = crate::spec::page_group_title(selected)
+        .is_some_and(|title| title == "Shadcn" || title == "Shadcn (Extras)");
+    let is_ai_page = selected.starts_with("ai_");
+    let use_tabs_layout = !(is_shadcn_page || is_ai_page) && (bisect & BISECT_DISABLE_TABS) == 0;
+
+    let body_content = if use_tabs_layout {
+        let active_tab: Arc<str> = cx
+            .watch_model(&models.content_tab)
+            .layout()
+            .cloned()
+            .flatten()
+            .unwrap_or_else(|| Arc::from("preview"));
+
+        let docs_panel = if active_tab.as_ref() != "docs" {
+            Vec::new()
+        } else {
+            vec![render_markdown_or_text(cx, docs_md)]
+        };
+        let usage_panel = if active_tab.as_ref() != "usage" {
+            Vec::new()
+        } else {
+            vec![render_markdown_or_text(cx, usage_md)]
+        };
+
         shadcn::Tabs::new(models.content_tab.clone())
             .refine_layout(LayoutRefinement::default().w_full())
             .list_full_width(true)
@@ -429,6 +433,37 @@ pub(crate) fn content_view(
                 shadcn::TabsItem::new("docs", "Notes", docs_panel),
             ])
             .into_element(cx)
+    } else {
+        let mut page_body_sections: Vec<AnyElement> = Vec::with_capacity(3);
+        page_body_sections.push(preview_panel);
+        if !usage_md.trim().is_empty() {
+            let usage_body =
+                render_markdown_or_text(cx, usage_md).test_id("ui-gallery-section-usage-body");
+            page_body_sections.push(section(
+                cx,
+                "Usage",
+                "ui-gallery-section-usage-title",
+                usage_body,
+            ));
+        }
+        if !docs_md.trim().is_empty() {
+            let notes_body =
+                render_markdown_or_text(cx, docs_md).test_id("ui-gallery-section-notes-body");
+            page_body_sections.push(section(
+                cx,
+                "Notes",
+                "ui-gallery-section-notes-title",
+                notes_body,
+            ));
+        }
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N6),
+            move |_cx| page_body_sections,
+        )
     };
 
     let body = cx.keyed("ui_gallery.content_body", |cx| {
@@ -437,7 +472,7 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| [header, tabs],
+            |_cx| [header, body_content],
         )
     });
 

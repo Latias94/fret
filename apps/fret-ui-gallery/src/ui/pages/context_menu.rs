@@ -233,21 +233,24 @@ pub(super) fn preview_context_menu(
                             .test_id("ui-gallery-context-menu-submenu-open"),
                     ),
                     shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("More tools").submenu(vec![
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Rename")
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Duplicate")
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                            shadcn::ContextMenuEntry::Separator,
-                            shadcn::ContextMenuEntry::Item(
-                                shadcn::ContextMenuItem::new("Archive")
-                                    .on_select(CMD_MENU_CONTEXT_ACTION),
-                            ),
-                        ]),
+                        shadcn::ContextMenuItem::new("More tools")
+                            .test_id("ui-gallery-context-menu-submenu-more-tools")
+                            .submenu(vec![
+                                shadcn::ContextMenuEntry::Item(
+                                    shadcn::ContextMenuItem::new("Rename")
+                                        .on_select(CMD_MENU_CONTEXT_ACTION)
+                                        .test_id("ui-gallery-context-menu-submenu-rename"),
+                                ),
+                                shadcn::ContextMenuEntry::Item(
+                                    shadcn::ContextMenuItem::new("Duplicate")
+                                        .on_select(CMD_MENU_CONTEXT_ACTION),
+                                ),
+                                shadcn::ContextMenuEntry::Separator,
+                                shadcn::ContextMenuEntry::Item(
+                                    shadcn::ContextMenuItem::new("Archive")
+                                        .on_select(CMD_MENU_CONTEXT_ACTION),
+                                ),
+                            ]),
                     ),
                     shadcn::ContextMenuEntry::Separator,
                     shadcn::ContextMenuEntry::Item(

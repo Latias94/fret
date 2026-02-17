@@ -2,6 +2,8 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use std::time::Duration;
+
     let profile_card = |cx: &mut ElementContext<'_, App>,
                         name: &'static str,
                         desc: &'static str,
@@ -38,8 +40,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "ui-gallery-hover-card-demo-content",
         );
         let hover = shadcn::HoverCard::new(trigger, content)
-            .open_delay_frames(10)
-            .close_delay_frames(100)
+            .open_delay(Duration::from_millis(100))
+            .close_delay(Duration::from_millis(200))
             .into_element(cx)
             .test_id("ui-gallery-hover-card-demo");
         hover
@@ -58,8 +60,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 "ui-gallery-hover-card-delay-instant-content",
             ),
         )
-        .open_delay_frames(0)
-        .close_delay_frames(0)
+        .open_delay(Duration::ZERO)
+        .close_delay(Duration::ZERO)
         .into_element(cx)
         .test_id("ui-gallery-hover-card-delay-instant");
 
@@ -71,12 +73,12 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             profile_card(
                 cx,
                 "Delayed",
-                "openDelay=16 closeDelay=12",
+                "openDelay=100ms closeDelay=200ms",
                 "ui-gallery-hover-card-delay-delayed-content",
             ),
         )
-        .open_delay_frames(16)
-        .close_delay_frames(12)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(200))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-delay-delayed");
 
@@ -104,8 +106,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         )
         .side(shadcn::HoverCardSide::Top)
         .align(shadcn::HoverCardAlign::Start)
-        .open_delay_frames(8)
-        .close_delay_frames(8)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-pos-top-start");
 
@@ -123,8 +125,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         )
         .side(shadcn::HoverCardSide::Right)
         .align(shadcn::HoverCardAlign::End)
-        .open_delay_frames(8)
-        .close_delay_frames(8)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-pos-right-end");
 
@@ -149,8 +151,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             "ui-gallery-hover-card-basic-content",
         );
         let hover = shadcn::HoverCard::new(trigger, content)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
+            .open_delay(Duration::from_millis(100))
+            .close_delay(Duration::from_millis(100))
             .into_element(cx)
             .test_id("ui-gallery-hover-card-basic");
         hover
@@ -170,8 +172,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Left)
-        .open_delay_frames(10)
-        .close_delay_frames(10)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-left");
 
@@ -188,8 +190,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Top)
-        .open_delay_frames(10)
-        .close_delay_frames(10)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-top");
 
@@ -206,8 +208,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Bottom)
-        .open_delay_frames(10)
-        .close_delay_frames(10)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-bottom");
 
@@ -224,8 +226,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ),
         )
         .side(shadcn::HoverCardSide::Right)
-        .open_delay_frames(10)
-        .close_delay_frames(10)
+        .open_delay(Duration::from_millis(100))
+        .close_delay(Duration::from_millis(100))
         .into_element(cx)
         .test_id("ui-gallery-hover-card-side-right");
 
@@ -255,8 +257,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         "ui-gallery-hover-card-rtl-content",
                     ),
                 )
-                .open_delay_frames(10)
-                .close_delay_frames(10)
+                .open_delay(Duration::from_millis(100))
+                .close_delay(Duration::from_millis(100))
                 .side(shadcn::HoverCardSide::Left)
                 .into_element(cx)
             },
@@ -301,8 +303,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .code(
                     "rust",
                     r#"let hover = shadcn::HoverCard::new(trigger, content)
-    .open_delay_frames(10)
-    .close_delay_frames(100)
+    .open_delay(Duration::from_millis(100))
+    .close_delay(Duration::from_millis(200))
     .into_element(cx);"#,
                 ),
             DocSection::new("Trigger Delays", trigger_delays)

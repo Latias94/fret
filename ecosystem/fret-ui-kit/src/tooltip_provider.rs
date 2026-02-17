@@ -1,12 +1,67 @@
 use std::collections::HashMap;
 
-use fret_core::Rect;
+use fret_core::{Rect, WindowFrameClockService, WindowMetricsService, time::Duration};
 use fret_runtime::FrameId;
 use fret_runtime::Model;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
+
+const REFERENCE_FRAME_DELTA_60HZ: Duration = Duration::from_nanos(1_000_000_000 / 60);
+const MAX_DURATION_TICKS: u64 = 10_000;
+
+fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    let Some(svc) = cx.app.global::<WindowFrameClockService>() else {
+        return REFERENCE_FRAME_DELTA_60HZ;
+    };
+
+    if let Some(fixed) = svc.effective_fixed_delta(cx.window) {
+        if fixed > Duration::ZERO {
+            return fixed;
+        }
+    }
+
+    let has_window_metrics = cx.app.global::<WindowMetricsService>().is_some();
+    if !has_window_metrics {
+        // Headless tests often drive "frames" without present-time. In that regime, snapshot
+        // deltas can reflect CPU time (near-zero), which would make Duration-to-ticks conversions
+        // explode and turn interaction gates flaky. Use a stable reference delta unless a fixed
+        // delta is explicitly configured.
+        return REFERENCE_FRAME_DELTA_60HZ;
+    }
+
+    svc.snapshot(cx.window)
+        .map(|s| s.delta)
+        .filter(|dt| *dt > Duration::ZERO)
+        .unwrap_or(REFERENCE_FRAME_DELTA_60HZ)
+}
+
+fn duration_to_ticks_ceil(duration: Duration, frame_delta: Duration) -> u64 {
+    if duration == Duration::ZERO {
+        return 0;
+    }
+
+    let frame_delta = if frame_delta == Duration::ZERO {
+        REFERENCE_FRAME_DELTA_60HZ
+    } else {
+        frame_delta
+    };
+
+    let duration_ns = duration.as_nanos();
+    let frame_delta_ns = frame_delta.as_nanos().max(1);
+    let ticks = (duration_ns + frame_delta_ns - 1) / frame_delta_ns;
+    ticks.clamp(1, MAX_DURATION_TICKS as u128) as u64
+}
+
+/// Converts a wall-clock `Duration` into a best-effort number of frame ticks for the current
+/// element context.
+///
+/// This is intended for overlay interaction policies that express delays in milliseconds upstream
+/// (Radix / Base UI), while Fret's internal state machines remain tick-based.
+pub fn ticks_for_duration_for_cx<H: UiHost>(cx: &ElementContext<'_, H>, duration: Duration) -> u64 {
+    duration_to_ticks_ceil(duration, effective_frame_delta_for_cx(cx))
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TooltipProviderConfig {
@@ -333,6 +388,17 @@ mod tests {
                 assert_eq!(open_delay_ticks(cx, 151), 10);
             });
         });
+    }
+
+    #[test]
+    fn duration_to_ticks_ceil_rounds_up() {
+        let dt16 = Duration::from_millis(16);
+
+        assert_eq!(duration_to_ticks_ceil(Duration::ZERO, dt16), 0);
+        assert_eq!(duration_to_ticks_ceil(Duration::from_millis(1), dt16), 1);
+        assert_eq!(duration_to_ticks_ceil(Duration::from_millis(16), dt16), 1);
+        assert_eq!(duration_to_ticks_ceil(Duration::from_millis(17), dt16), 2);
+        assert_eq!(duration_to_ticks_ceil(Duration::from_millis(160), dt16), 10);
     }
 
     #[test]

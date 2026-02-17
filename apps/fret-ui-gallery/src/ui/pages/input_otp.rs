@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct InputOtpPageModels {
@@ -135,79 +137,28 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         )
     });
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let section_card =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            let card = shell(cx, content);
-            let body = centered(cx, card);
-            section(cx, title, body)
-        };
-
     let otp_width = LayoutRefinement::default().w_full().max_w(Px(360.0));
 
-    let demo = {
-        let content = shadcn::InputOtp::new(demo_value)
-            .length(6)
-            .refine_layout(otp_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-input-otp-demo");
-        section_card(cx, "Demo", content)
-    };
+    let demo = shadcn::InputOtp::new(demo_value)
+        .length(6)
+        .refine_layout(otp_width.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-input-otp-demo");
 
-    let pattern = {
-        let content = shadcn::InputOtp::new(pattern_value)
-            .length(6)
-            .numeric_only(true)
-            .group_size(Some(6))
-            .refine_layout(otp_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-input-otp-pattern");
-        section_card(cx, "Pattern", content)
-    };
+    let pattern = shadcn::InputOtp::new(pattern_value)
+        .length(6)
+        .numeric_only(true)
+        .group_size(Some(6))
+        .refine_layout(otp_width.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-input-otp-pattern");
 
-    let separator = {
-        let content = shadcn::InputOtp::new(separator_value)
-            .length(6)
-            .group_size(Some(2))
-            .refine_layout(otp_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-input-otp-separator");
-        section_card(cx, "Separator", content)
-    };
+    let separator = shadcn::InputOtp::new(separator_value)
+        .length(6)
+        .group_size(Some(2))
+        .refine_layout(otp_width.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-input-otp-separator");
 
     let disabled = {
         let content = stack::vstack(
@@ -235,7 +186,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                 ]
             },
         );
-        section_card(cx, "Disabled", content)
+        content
     };
 
     let controlled = {
@@ -271,7 +222,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                 ]
             },
         );
-        section_card(cx, "Controlled", content)
+        content
     };
 
     let invalid = {
@@ -298,29 +249,23 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                 ]
             },
         );
-        section_card(cx, "Invalid", content)
+        content
     };
 
-    let four_digits = {
-        let content = shadcn::InputOtp::new(four_digits_value)
-            .length(4)
-            .numeric_only(true)
-            .refine_layout(otp_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-input-otp-four-digits");
-        section_card(cx, "Four Digits", content)
-    };
+    let four_digits = shadcn::InputOtp::new(four_digits_value)
+        .length(4)
+        .numeric_only(true)
+        .refine_layout(otp_width.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-input-otp-four-digits");
 
-    let alphanumeric = {
-        let content = shadcn::InputOtp::new(alphanumeric_value)
-            .length(6)
-            .numeric_only(false)
-            .group_size(Some(3))
-            .refine_layout(otp_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-input-otp-alphanumeric");
-        section_card(cx, "Alphanumeric", content)
-    };
+    let alphanumeric = shadcn::InputOtp::new(alphanumeric_value)
+        .length(6)
+        .numeric_only(false)
+        .group_size(Some(3))
+        .refine_layout(otp_width.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-input-otp-alphanumeric");
 
     let form = {
         let content = shadcn::Card::new(vec![
@@ -355,7 +300,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .into_element(cx);
-        section_card(cx, "Form", content)
+        content
     };
 
     let rtl = {
@@ -372,125 +317,83 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         )
         .test_id("ui-gallery-input-otp-rtl");
 
-        section_card(cx, "RTL", rtl_content)
+        rtl_content
     };
 
-    let component_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Preview follows shadcn Input OTP docs order: Demo, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL.",
-                ),
-                demo,
-                pattern,
-                separator,
-                disabled,
-                controlled,
-                invalid,
-                four_digits,
-                alphanumeric,
-                form,
-                rtl,
-            ]
-        },
-    );
-    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-input-otp-component");
-
-    let code_panel_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Base + Separator").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "InputOtp::new(model).length(6).group_size(Some(2));",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Pattern + Alphanumeric").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "InputOtp::new(model).length(6).numeric_only(false).group_size(Some(3));",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("Form Style").into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        ui::text_block(
-                            cx,
-                            "InputOtp::new(model).slot_size_px(Px(44.0), Px(48.0)).slot_text_px(Px(18.0)).slot_corner_mode(InputOtpSlotCornerMode::All);",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    );
-    let code_panel = shell(cx, code_panel_body);
-
-    let notes_panel_body = stack::vstack(
+    let notes = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
-                shadcn::typography::h4(cx, "Notes"),
                 shadcn::typography::muted(
                     cx,
-                    "InputOtp API maps docs `pattern` to `numeric_only`, and `separator` to `group_size`.",
+                    "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "`Disabled` and `Invalid` are currently style approximations due missing explicit state APIs.",
+                    "InputOtp maps docs `pattern` to `numeric_only`, and `separator` to `group_size`.",
                 ),
                 shadcn::typography::muted(
                     cx,
-                    "Each section has stable test_id for future diag scripts.",
+                    "`Disabled` and `Invalid` are currently style approximations due to missing explicit state APIs.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Each preview keeps stable `test_id`s so diag scripts can gate regressions.",
                 ),
             ]
         },
     );
-    let notes_panel = shell(cx, notes_panel_body);
 
-    super::render_component_page_tabs(
+    let body = doc_layout::render_doc_page(
         cx,
-        "ui-gallery-input-otp",
-        component_panel,
-        code_panel,
-        notes_panel,
-    )
+        Some(
+            "Preview follows shadcn Input OTP docs order: Demo, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL.",
+        ),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Base InputOtp with fixed length and model binding.")
+                .code("rust", "shadcn::InputOtp::new(model).length(6);")
+                .max_w(Px(860.0)),
+            DocSection::new("Pattern", pattern)
+                .description("Numeric-only input with fixed group sizing.")
+                .max_w(Px(860.0)),
+            DocSection::new("Separator", separator)
+                .description("Group-size separators for readability (e.g. 2-2-2).")
+                .max_w(Px(860.0)),
+            DocSection::new("Disabled", disabled)
+                .description("Visual-only disabled approximation until explicit state APIs land.")
+                .max_w(Px(860.0)),
+            DocSection::new("Controlled", controlled)
+                .description("Controlled value surface with a live summary under the slots.")
+                .max_w(Px(860.0)),
+            DocSection::new("Invalid", invalid)
+                .description("Destructive border styling to mark invalid OTP values.")
+                .max_w(Px(860.0)),
+            DocSection::new("Four Digits", four_digits)
+                .description("Shorter length configuration (e.g. PINs).")
+                .max_w(Px(860.0)),
+            DocSection::new("Alphanumeric", alphanumeric)
+                .description("Allow alphanumeric slots and group them for scanning.")
+                .max_w(Px(860.0)),
+            DocSection::new("Form", form)
+                .description("Form-style recipe with slot size + typography tweaks.")
+                .code(
+                    "rust",
+                    "InputOtp::new(model).slot_size_px(Px(44.0), Px(48.0)).slot_text_px(Px(18.0));",
+                )
+                .max_w(Px(860.0)),
+            DocSection::new("RTL", rtl)
+                .description("Direction provider sample to validate RTL slot order and grouping.")
+                .max_w(Px(860.0)),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and authoring notes.")
+                .max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-input-otp-component")]
 }

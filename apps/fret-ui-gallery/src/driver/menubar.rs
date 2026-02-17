@@ -19,12 +19,19 @@ pub(super) fn build_in_window_menu_bar(
     let show_in_window_menu_bar =
         fret_app::should_render_in_window_menu_bar(cx.app, fret_app::Platform::current());
 
-    cx.app.with_global_mut(
-        fret_runtime::WindowMenuBarFocusService::default,
-        |svc, _app| {
-            svc.set_present(cx.window, show_in_window_menu_bar && menu_bar.is_some());
-        },
-    );
+    let present = show_in_window_menu_bar && menu_bar.is_some();
+    let needs_update = cx
+        .app
+        .global::<fret_runtime::WindowMenuBarFocusService>()
+        .is_none_or(|svc| svc.present(cx.window) != present);
+    if needs_update {
+        cx.app.with_global_mut(
+            fret_runtime::WindowMenuBarFocusService::default,
+            |svc, _app| {
+                svc.set_present(cx.window, present);
+            },
+        );
+    }
 
     if !show_in_window_menu_bar {
         return Vec::new();

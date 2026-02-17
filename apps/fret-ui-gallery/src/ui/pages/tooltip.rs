@@ -2,6 +2,8 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use std::time::Duration;
+
     let make_tooltip = |cx: &mut ElementContext<'_, App>,
                         label: &'static str,
                         side: shadcn::TooltipSide,
@@ -15,14 +17,12 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         )
         .arrow(true)
         .side(side)
-        .open_delay_frames(10)
-        .close_delay_frames(10)
         .into_element(cx)
     };
 
     let body = shadcn::TooltipProvider::new()
-        .delay_duration_frames(10)
-        .skip_delay_duration_frames(5)
+        .delay(Duration::ZERO)
+        .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
             let demo_tooltip = shadcn::Tooltip::new(
                 shadcn::Button::new("Hover")
@@ -36,8 +36,6 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             )
             .arrow(true)
             .side(shadcn::TooltipSide::Top)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
             .into_element(cx)
             .test_id("ui-gallery-tooltip-demo");
 
@@ -77,8 +75,6 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .into_element(cx),
             )
             .side(shadcn::TooltipSide::Top)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
             .into_element(cx)
             .test_id("ui-gallery-tooltip-keyboard");
 
@@ -100,8 +96,6 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .into_element(cx),
             )
             .side(shadcn::TooltipSide::Top)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
             .into_element(cx)
             .test_id("ui-gallery-tooltip-disabled");
 
@@ -178,10 +172,10 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 Some("Preview follows shadcn Tooltip docs order for quick visual lookup."),
                 vec![
                     DocSection::new("Demo", demo_tooltip)
-                        .description("Basic tooltip with an arrow and a short content label.")
-                        .code(
-                            "rust",
-                            r#"let tooltip = shadcn::Tooltip::new(
+                .description("Basic tooltip with an arrow and a short content label.")
+                .code(
+                    "rust",
+                    r#"let tooltip = shadcn::Tooltip::new(
     shadcn::Button::new("Hover")
         .variant(shadcn::ButtonVariant::Outline)
         .into_element(cx),
@@ -190,10 +184,8 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 )
 .arrow(true)
 .side(shadcn::TooltipSide::Top)
-.open_delay_frames(10)
-.close_delay_frames(10)
 .into_element(cx);"#,
-                        ),
+                ),
                     DocSection::new("Side", side_row)
                         .description("Tooltips can be placed on the four sides of the trigger.")
                         .code(

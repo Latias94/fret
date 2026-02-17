@@ -27,17 +27,18 @@ Baseline: Radix Tooltip outcomes (provider delays, skip-delay window, pointer/ke
 
 - Primitives/policy:
   - `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
-  - `ecosystem/fret-ui-kit/src/primitives/tooltip_provider.rs`
+  - `ecosystem/fret-ui-kit/src/tooltip_provider.rs`
   - delay-group state machine: `ecosystem/fret-ui-headless/src/tooltip_delay_group.rs`
   - shared hover intent helper: `ecosystem/fret-ui-kit/src/primitives/hover_intent.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 
 Time-source note (audit focus):
 
-- The current Tooltip surface is **tick-based** (`open_delay_ticks*` / `close_delay_ticks*`), with a deterministic delay-group state machine.
-- The shadcn recipe configures delays in **ticks/frames**; misleading `*_ms` helpers were removed to avoid API names that do not match the underlying time source.
-- The workstream principle is “delays are semantic”; expect follow-up work to lift these to
-  `Duration` at the policy surface (or to clearly document “ticks” as the stable unit).
+- Internally, Tooltip interaction remains **tick-based** (`open_delay_ticks*` / `close_delay_ticks*`) with a deterministic delay-group state machine.
+- The shadcn recipe now surfaces **semantic wall-clock configuration** (`Duration`) for:
+  - `TooltipProvider::{delay, close_delay, timeout_duration}`
+  - `Tooltip::{open_delay, close_delay}`
+- `Duration` is mapped to ticks using `WindowFrameClockService` (prefers fixed delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS`), with a stable 60Hz fallback for headless/test environments to avoid flake.
 
 Related tests/gates:
 
@@ -53,7 +54,9 @@ Evidence (Radix web timeline parity gates):
 Scripted repros (existing):
 
 - `tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json`
+- `tools/diag-scripts/ui-gallery-tooltip-docs-smoke.json`
 - `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json`
+- `tools/diag-scripts/ui-gallery-tooltip-delay-group-skip-delay.json`
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (tooltip open snapshot)
 
 ---
@@ -72,10 +75,40 @@ Invariants:
 - Keyboard focus-triggered tooltip is distinct from hover-triggered tooltip.
 - Scroll/viewport clamp behavior is stable.
 
+### Provider delay-group model (Radix `TooltipProvider`)
+
+Radix tooltip providers apply a “delay then skip-delay window” behavior across instances:
+
+- First open after idle uses `delay`.
+- After a tooltip closes, subsequent tooltip hovers within a short `skip-delay` window open immediately.
+
+In Fret, this is implemented as a deterministic tick-based state machine:
+
+- Config: `TooltipDelayGroupConfig { delay_ticks, skip_delay_ticks }`
+- State: `TooltipDelayGroupState { last_closed_at }`
+- Transition: `note_closed(now)` records `last_closed_at`
+- Decision: `open_delay_ticks(now, cfg)` returns `0` if `now - last_closed_at <= skip_delay_ticks`, else `delay_ticks`.
+
+Anchors:
+
+- `ecosystem/fret-ui-headless/src/tooltip_delay_group.rs`
+- provider wiring + stack service: `ecosystem/fret-ui-kit/src/tooltip_provider.rs`
+
+### Trigger gating model (hover/focus vs explicit dismiss)
+
+Fret models Radix-like tooltip “open affordance” gates at the trigger:
+
+- Hover-open can be suppressed after an explicit dismiss (escape / outside press) until the pointer leaves the trigger.
+- Mouse hover-open is gated on “has seen pointer move” to avoid instant open on synthetic hover transitions.
+
+Anchors:
+
+- `TooltipTriggerEventModels` + `tooltip_trigger_update_gates`: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
+
 ---
 
 ## Audit checklist (dimension-driven)
 
-- [ ] `M` Document provider + delay group semantics (delay, skip-delay window).
-- [ ] `M/I` Ensure all delays are `Duration` and surfaced as policy configuration (not recipe magic).
+- [x] `M` Document provider + delay group semantics (delay, skip-delay window).
+- [x] `I` Surface `Duration` delay configuration at recipe/policy boundary.
 - [x] `G` Keep a diag script gating repeat-hover stability and skip-delay behavior.

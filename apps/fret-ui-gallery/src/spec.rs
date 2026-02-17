@@ -2786,6 +2786,16 @@ pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
         .find(|item| item.id == id)
 }
 
+pub(crate) fn page_group_title(id: &str) -> Option<&'static str> {
+    PAGE_GROUPS.iter().find_map(|group| {
+        group
+            .items
+            .iter()
+            .any(|item| item.id == id)
+            .then_some(group.title)
+    })
+}
+
 pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     static BY_COMMAND: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
     let by_command = BY_COMMAND.get_or_init(|| {
