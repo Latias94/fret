@@ -11,6 +11,7 @@ use fret_render::{
 };
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
     D3D11_CREATE_DEVICE_VIDEO_SUPPORT, D3D11_TEX2D_VPIV, D3D11_TEX2D_VPOV, D3D11_TEXTURE2D_DESC,
@@ -44,6 +45,9 @@ use windows::Win32::Media::MediaFoundation::{
 use windows::Win32::Media::MediaFoundation::{IMFDXGIBuffer, IMFDXGIDeviceManager};
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
 use windows::core::{BOOL, HSTRING, Interface as _};
+
+use super::SharedAllocationExportError;
+use super::dx12::Dx12SharedAllocationWriteGuard;
 
 const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi"];
 
@@ -314,6 +318,7 @@ impl Drop for MfVideoReader {
     }
 }
 
+#[derive(Debug)]
 pub struct Dx12Interop {
     on12: ID3D11On12Device,
     video_device: ID3D11VideoDevice,
@@ -771,6 +776,66 @@ impl Drop for Dx12Interop {
         unsafe {
             let _ = MFShutdown();
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum Dx12GpuCopyTick {
+    Copied {
+        size: (u32, u32),
+        color_encoding: RenderTargetColorEncoding,
+    },
+    EndOfStream,
+}
+
+#[derive(Debug, Error)]
+pub enum Dx12GpuCopySessionError {
+    #[error(transparent)]
+    SharedAllocation(#[from] SharedAllocationExportError),
+    #[error(transparent)]
+    Mf(#[from] anyhow::Error),
+}
+
+#[derive(Debug)]
+pub struct Dx12GpuCopySession {
+    interop: Dx12Interop,
+}
+
+impl Dx12GpuCopySession {
+    pub fn new(
+        ctx: &fret_render::WgpuContext,
+        texture: &wgpu::Texture,
+        path: &str,
+    ) -> Result<Self, Dx12GpuCopySessionError> {
+        let export = Dx12SharedAllocationWriteGuard::export_raw(ctx, texture)?;
+        let interop = Dx12Interop::new(&export.queue, &export.resource, path)?;
+        Ok(Self { interop })
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        self.interop.size()
+    }
+
+    pub fn tick(
+        &mut self,
+        ctx: &fret_render::WgpuContext,
+        texture: &wgpu::Texture,
+    ) -> Result<Dx12GpuCopyTick, Dx12GpuCopySessionError> {
+        let src = match self.interop.read_next_dxgi_texture()? {
+            Some(v) => v,
+            None => return Ok(Dx12GpuCopyTick::EndOfStream),
+        };
+
+        let guard =
+            Dx12SharedAllocationWriteGuard::begin(ctx, texture, wgpu::wgt::TextureUses::COPY_DST)?;
+        self.interop
+            .copy_into_dx12_shared_allocation(guard.resource(), &src)?;
+        guard.finish();
+
+        Ok(Dx12GpuCopyTick::Copied {
+            size: self.interop.size(),
+            color_encoding: self.interop.color_encoding(),
+        })
     }
 }
 

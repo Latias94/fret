@@ -46,7 +46,7 @@ struct ExternalVideoImportsState {
     #[cfg(target_os = "windows")]
     mf: Option<wmf::MfVideoReader>,
     #[cfg(target_os = "windows")]
-    mf_dx12: Option<wmf::Dx12Interop>,
+    mf_dx12: Option<wmf::Dx12GpuCopySession>,
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
@@ -295,6 +295,10 @@ fn record_engine_frame(
 
         st.texture = Some(texture);
         st.target_px_size = desired;
+        #[cfg(target_os = "windows")]
+        {
+            st.mf_dx12 = None;
+        }
     }
 
     let texture = st.texture.as_ref().expect("texture allocated");
@@ -395,27 +399,15 @@ fn record_engine_frame(
             };
 
             if st.mf_dx12.is_none() {
-                let export =
-                    match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::export_raw(
-                        context, texture,
-                    ) {
-                        Ok(export) => export,
-                        Err(err) => {
-                            tracing::warn!(
-                                ?err,
-                                "MF DX12 GPU copy mode requested but backend is not DX12; falling back"
-                            );
-                            st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
-                            return update;
-                        }
-                    };
-
-                match wmf::Dx12Interop::new(&export.queue, &export.resource, &path)
-                    .context("init MF DX12 interop")
+                match wmf::Dx12GpuCopySession::new(context, texture, &path)
+                    .context("init MF DX12 GPU copy session")
                 {
                     Ok(v) => st.mf_dx12 = Some(v),
                     Err(err) => {
-                        tracing::warn!(?err, "failed to init MF DX12 interop; falling back");
+                        tracing::warn!(
+                            ?err,
+                            "MF DX12 GPU copy mode requested but backend/session init failed; falling back"
+                        );
                         st.mf_dx12 = None;
                         st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                         return update;
@@ -423,59 +415,48 @@ fn record_engine_frame(
                 }
             }
 
-            let Some(interop) = st.mf_dx12.as_mut() else {
+            let Some(session) = st.mf_dx12.as_mut() else {
                 st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
                 return update;
             };
-            metadata.color_encoding = interop.color_encoding();
 
+            // If the session's decoded frame size disagrees with the currently allocated
+            // texture size, do not attempt a copy yet. Let the next frame reallocate the
+            // target to match the decoded size deterministically.
+            if session.size() != st.target_px_size {
+                return update;
+            }
+
+            let tick = match session.tick(context, texture) {
+                Ok(v) => v,
+                Err(err) => {
+                    tracing::warn!(?err, "MF DX12 GPU copy tick failed; falling back");
+                    st.mf_dx12 = None;
+                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
+                    return update;
+                }
+            };
+
+            let (size, color_encoding) = match tick {
+                wmf::Dx12GpuCopyTick::Copied {
+                    size,
+                    color_encoding,
+                } => (size, color_encoding),
+                wmf::Dx12GpuCopyTick::EndOfStream => {
+                    st.mf_dx12 = None;
+                    return update;
+                }
+            };
+
+            metadata.color_encoding = color_encoding;
             st.target.push_update_with_ingest_strategies(
                 &mut update,
                 view.clone(),
-                st.target_px_size,
+                size,
                 metadata,
                 RenderTargetIngestStrategy::ExternalZeroCopy,
                 RenderTargetIngestStrategy::GpuCopy,
             );
-
-            let src = match interop.read_next_dxgi_texture() {
-                Ok(Some(tex)) => tex,
-                Ok(None) => {
-                    // End-of-stream: drop state and restart on next frame.
-                    st.mf_dx12 = None;
-                    return update;
-                }
-                Err(err) => {
-                    tracing::warn!(?err, "MF DX12 GPU copy read failed; falling back");
-                    st.mf_dx12 = None;
-                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
-                    return update;
-                }
-            };
-
-            let guard = match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::begin(
-                context,
-                texture,
-                wgpu::wgt::TextureUses::COPY_DST,
-            ) {
-                Ok(guard) => guard,
-                Err(err) => {
-                    tracing::warn!(
-                        ?err,
-                        "MF DX12 GPU copy mode: shared allocation write unavailable; falling back"
-                    );
-                    st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
-                    return update;
-                }
-            };
-
-            if let Err(err) = interop.copy_into_dx12_shared_allocation(guard.resource(), &src) {
-                tracing::warn!(?err, "MF DX12 GPU copy mode: copy failed; falling back");
-                st.mf_dx12 = None;
-                st.mode = ExternalVideoImportsMode::MfVideoCpuUpload;
-                return update;
-            }
-            guard.finish();
         }
     }
 

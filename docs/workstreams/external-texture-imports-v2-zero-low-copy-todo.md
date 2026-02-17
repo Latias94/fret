@@ -177,6 +177,19 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       `FRET_EXTV2_DX12_SHARED_TEXTURE_PROBE=1`)
     - `docs/adr/0282-external-texture-imports-v2-zero-low-copy.md` (capability gating + strategy set)
 
+- [x] EXTV2-native-103 M2B: land a capability-gated “real producer → shared allocation” path on
+      Windows (MF → DX12 GPU copy into a renderer-owned texture), with deterministic fallback and
+      gates.
+  - Evidence anchors:
+    - Runner helper:
+      - `crates/fret-launch/src/runner/windows_mf_video.rs` (`Dx12GpuCopySession`, `Dx12GpuCopyTick`)
+    - Demo wiring + attribution (requested vs effective):
+      - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (mode `MfVideoDx12GpuCopy`)
+    - Gates:
+      - Perf script: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-perf-steady.json`
+      - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-dx12-gpu-copy.windows-local.v1.json`
+      - Correctness script: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
+
 - [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
       document prerequisites and the deterministic fallback behavior.
 

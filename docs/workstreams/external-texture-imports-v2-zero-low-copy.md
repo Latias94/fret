@@ -59,10 +59,11 @@ It builds on v1’s contract-path closure:
     (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
   - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
     (wrapper that removes `fallback_available` + closure boilerplate at call sites).
+- Windows MF → DX12 GPU-copy into a shared allocation is wired end-to-end (capability-gated),
+  and has steady-state perf + correctness scripts/baselines.
 - Next up (native uplift, practical):
-  - Validate the first real native producer that writes into a shared allocation (per-platform, capability-gated),
-    starting with Windows MF -> DX12 GPU copy, and lock its failure modes behind explicit capabilities.
-  - Add a steady-state perf baseline for the MF DX12 GPU-copy path once correctness is stable.
+  - Tighten capability gating and failure modes for “real producer → shared allocation” paths so the
+    demo code stays thin and drift-free (Windows first; then consider macOS/iOS AVF and Android).
 
 ## Recommended execution order
 
