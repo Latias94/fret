@@ -72,6 +72,10 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Remaining:
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
       produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise) (M2B+).
+    - Investigate native `ExternalZeroCopy` feasibility on wgpu 28:
+      - likely requires a supported way to wrap/import platform GPU textures (e.g. D3D12/Metal/IOSurface)
+        into a `wgpu::Texture`/`TextureView` safely; treat as capability-gated and potentially blocked
+        until upstream exposes the necessary APIs.
 
 - [ ] EXTV2-mobile-110 Define iOS/Android capability-gated plans (blocked until backend support exists):
       document prerequisites and the deterministic fallback behavior.
