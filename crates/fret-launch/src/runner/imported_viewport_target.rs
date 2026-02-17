@@ -197,6 +197,25 @@ impl ImportedViewportRenderTarget {
         );
     }
 
+    /// Record an imported view update while selecting an effective ingestion strategy via the v2
+    /// deterministic fallback chain (ADR 0282).
+    ///
+    /// This helper exists so demos and call sites only need to declare which strategies they can
+    /// supply, and do not duplicate the deterministic ordering logic.
+    pub fn push_update_with_deterministic_fallback(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+        requested: RenderTargetIngestStrategy,
+        available: &[RenderTargetIngestStrategy],
+    ) -> RenderTargetIngestStrategy {
+        let effective = Self::select_deterministic_fallback_effective(requested, available);
+        self.push_update_with_ingest_strategies(update, view, size, metadata, requested, effective);
+        effective
+    }
+
     /// Record an imported view update and a per-frame keepalive token.
     ///
     /// Use this when the imported view depends on an ephemeral external handle (e.g. a WebCodecs

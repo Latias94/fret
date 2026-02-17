@@ -786,13 +786,13 @@ fn record_engine_frame(
             }
         }
     } else {
-        st.target.push_update_with_ingest_strategies(
+        st.target.push_update_with_deterministic_fallback(
             &mut update,
             view.clone(),
             st.target_px_size,
             metadata,
             RenderTargetIngestStrategy::ExternalZeroCopy,
-            effective_strategy,
+            &[effective_strategy],
         );
     }
 
