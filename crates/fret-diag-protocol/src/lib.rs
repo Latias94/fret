@@ -1133,6 +1133,25 @@ pub enum UiPredicateV1 {
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
     },
+    /// True when the latest docking diagnostics report a dock drag session whose hovered-window
+    /// selection source matches `source`.
+    ///
+    /// This is primarily intended to gate multi-window docking hand-feel regressions: on
+    /// platforms that claim `ui.window_hover_detection=reliable`, we want to ensure the runner is
+    /// using an OS-backed "window under cursor" provider rather than a heuristic fallback.
+    ///
+    /// Supported sources:
+    /// - `platform`: any OS-backed platform hover provider
+    /// - `platform_win32`
+    /// - `platform_macos`
+    /// - `latched`
+    /// - `heuristic`: any heuristic fallback
+    /// - `heuristic_z_order`
+    /// - `heuristic_rects`
+    /// - `unknown`
+    DockDragWindowUnderCursorSourceIs {
+        source: String,
+    },
     /// True when the latest docking diagnostics report an active in-window floating drag session.
     ///
     /// This is intended to gate "floating window" hand-feel regressions without relying on pixels.

@@ -538,6 +538,21 @@ fn script_v2_roundtrip_dock_drag_transparent_payload_applied_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_drag_window_under_cursor_source_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_dock_graph_signature_predicates() {
     assert_script_v2_roundtrip(
         r#"{

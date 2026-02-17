@@ -54,6 +54,12 @@
     { "type": "pointer_down", "window": { "kind": "last_seen" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
     { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" },
+      "timeout_frames": 120
+    },
 
     {
       "type": "wait_until",

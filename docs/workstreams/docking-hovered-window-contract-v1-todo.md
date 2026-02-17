@@ -47,7 +47,7 @@ Each TODO is labeled:
       - `crates/fret-launch/src/runner/desktop/runner/window.rs`
       - `crates/fret-runtime/src/drag.rs`
 
-- [~] DWHW-P0-diag-002 Add a diagnostics event for “hover provider source” during dock drags.
+- [x] DWHW-P0-diag-002 Add a diagnostics event for “hover provider source” during dock drags.
   - Goal: bundles should answer “did we use OS-backed hover selection, or a fallback heuristic?”
   - Output: diagnostics ring event (string kind) or a structured field in docking diagnostics.
   - Acceptance:
@@ -57,8 +57,9 @@ Each TODO is labeled:
       - `crates/fret-runtime/src/interaction_diagnostics.rs`
       - `ecosystem/fret-docking/src/dock/space.rs`
       - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
-    - Remaining: add a script predicate and at least one gate that asserts the source for a known
-      scenario (e.g. Win32 overlapped z-order switching uses `platform_win32`).
+    - Added a script predicate and a gate:
+      - Predicate: `crates/fret-diag-protocol/src/lib.rs` (`dock_drag_window_under_cursor_source_is`)
+      - Gate: `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
 
 ## P0 — Windows (Win32) correctness hardening
 

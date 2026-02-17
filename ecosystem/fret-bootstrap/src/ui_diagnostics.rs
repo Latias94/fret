@@ -10204,13 +10204,17 @@ impl UiDockDropResolveDiagnosticsV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
     pub dragging: bool,
     pub cross_window_hover: bool,
+    #[serde(default)]
+    pub transparent_payload_applied: bool,
+    #[serde(default)]
+    pub window_under_cursor_source: String,
 }
 
 impl UiDockDragDiagnosticsV1 {
@@ -10221,7 +10225,26 @@ impl UiDockDragDiagnosticsV1 {
             current_window: snapshot.current_window.data().as_ffi(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
+            transparent_payload_applied: snapshot.transparent_payload_applied,
+            window_under_cursor_source: dock_drag_window_under_cursor_source_label(
+                snapshot.window_under_cursor_source,
+            )
+            .to_string(),
         }
+    }
+}
+
+fn dock_drag_window_under_cursor_source_label(
+    source: fret_runtime::WindowUnderCursorSource,
+) -> &'static str {
+    use fret_runtime::WindowUnderCursorSource as Src;
+    match source {
+        Src::Unknown => "unknown",
+        Src::PlatformWin32 => "platform_win32",
+        Src::PlatformMacos => "platform_macos",
+        Src::Latched => "latched",
+        Src::HeuristicZOrder => "heuristic_z_order",
+        Src::HeuristicRects => "heuristic_rects",
     }
 }
 
@@ -16634,6 +16657,30 @@ fn eval_predicate(
             match docking.and_then(|d| d.dock_drag) {
                 Some(drag) => drag.dragging && drag.transparent_payload_applied == *applied,
                 None => !*applied,
+            }
+        }
+        UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
+            let Some(drag) = docking.and_then(|d| d.dock_drag) else {
+                return false;
+            };
+            if !drag.dragging {
+                return false;
+            }
+
+            use fret_runtime::WindowUnderCursorSource as Src;
+            let have = drag.window_under_cursor_source;
+            let want = source.as_str();
+
+            match want {
+                "platform" => matches!(have, Src::PlatformWin32 | Src::PlatformMacos),
+                "platform_win32" => matches!(have, Src::PlatformWin32),
+                "platform_macos" => matches!(have, Src::PlatformMacos),
+                "latched" => matches!(have, Src::Latched),
+                "heuristic" => matches!(have, Src::HeuristicZOrder | Src::HeuristicRects),
+                "heuristic_z_order" => matches!(have, Src::HeuristicZOrder),
+                "heuristic_rects" => matches!(have, Src::HeuristicRects),
+                "unknown" => matches!(have, Src::Unknown),
+                _ => false,
             }
         }
         UiPredicateV1::DockFloatingDragActiveIs { active } => {
