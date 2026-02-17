@@ -45,6 +45,10 @@ Deliverables:
     - Note: “true external-handle import” may be blocked by upstream APIs. In that case, M2B may be
       satisfied by a capability-gated **shared allocation** path (producer writes into a
       renderer-owned `wgpu::Texture`), which can still be “no-copy” while classifying as `Owned`.
+    - Minimum proof for “shared allocation”:
+      - a synthetic native writer can update a renderer-owned texture on a supported backend (e.g. DX12),
+      - state transitions are deterministic and validated (no silent hazards),
+      - a lightweight gate exists (diag correctness and/or steady perf baseline).
 - A steady-state perf baseline exists for each landed path (non-regression + expected delta recorded).
 
 Exit criteria:

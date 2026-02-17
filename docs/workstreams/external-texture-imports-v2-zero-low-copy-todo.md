@@ -76,6 +76,18 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - Correctness script (requires `FRET_DIAG_SCREENSHOTS=1` + `--check-pixels-changed external-video-imports-mf-surface`):
         - `tools/diag-scripts/external-video-imports-mf-cpu-upload-correctness.json`
 
+- [x] EXTV2-native-103 M2B: prove a capability-gated **shared allocation** write path on native:
+      a synthetic producer writes into a renderer-owned `wgpu::Texture` via the backend’s native queue,
+      with deterministic state transitions and a minimal gate.
+  - Intent:
+    - This is the practical “no-copy” uplift when “import a foreign platform texture handle into wgpu”
+      is blocked upstream.
+    - This typically classifies as `Owned` in the bounded strategy set (the texture is renderer-owned).
+  - Evidence anchors:
+    - `apps/fret-examples/src/external_texture_imports_demo.rs` (DX12 clear shared-allocation mode; env-gated)
+    - Correctness script (DX12-only; requires `FRET_WGPU_BACKEND=dx12` and shared-allocation flag):
+      - `tools/diag-scripts/external-texture-imports-dx12-shared-allocation-clear-correctness.json`
+
 - [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.
@@ -85,7 +97,11 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `ImportedViewportRenderTarget::push_native_external_import_update_with_requested_ingest_strategy_or_fallback(...)`
   - Remaining:
     - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
-      produce `ExternalZeroCopy` on capable backends (and deterministically degrade otherwise).
+      produce the best available path on capable backends (and deterministically degrade otherwise):
+      - Prefer shared allocation where external-handle import is blocked (producer writes into renderer-owned texture).
+      - Use true external-handle import only when upstream exposes a supported mechanism.
+    - Factor the deterministic fallback chain into a single helper in `fret-launch`
+      (so demos/callers can’t diverge across platforms).
     - Investigate native `ExternalZeroCopy` feasibility on wgpu 28:
       - likely requires a supported way to wrap/import platform GPU textures (e.g. D3D12/Metal/IOSurface)
         into a `wgpu::Texture`/`TextureView` safely; treat as capability-gated and potentially blocked

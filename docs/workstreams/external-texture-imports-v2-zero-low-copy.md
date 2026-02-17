@@ -41,10 +41,20 @@ It builds on v1’s contract-path closure:
 ## Current status (practical)
 
 - M0 complete (ADR 0282 locked to executable detail).
+- M1 complete (portable metadata closure: bounded color encoding hints + deterministic degradation counters).
 - M2A complete (Windows MF real source wired end-to-end as `CpuUpload`, with steady perf + correctness gates).
-- Next up:
-  - M1: extend the portable metadata surface for real media correctness (bounded enums + deterministic degradation).
-  - M2B: time-box a native `ExternalZeroCopy` feasibility spike behind explicit capabilities (likely D3D12/Metal import).
+- M2B feasibility spike concluded:
+  - “Wrap/import a foreign platform texture handle into `wgpu::Texture`” is currently blocked by upstream APIs
+    (wgpu 28). The workstream records this explicitly and treats it as capability-gated + revisit-later.
+  - Native “no-copy” uplift remains viable via **shared allocation**: the runner/renderer allocates a
+    `wgpu::Texture` and hands its native handle to the producer/decoder to write into. This typically classifies as
+    `Owned` in the bounded strategy set.
+- Shared allocation proof path landed (DX12-only):
+  - A synthetic native writer clears a renderer-owned `wgpu::Texture` via the DX12 queue with deterministic state
+    transitions, and a minimal diag correctness gate exists.
+- Next up (native uplift, practical):
+  - Factor the deterministic fallback chain into a single helper in `fret-launch` (so demos/callers don’t drift).
+  - Pick the first real native producer that can write into a shared allocation (per-platform, capability-gated).
 
 ## Recommended execution order
 
@@ -53,7 +63,8 @@ It builds on v1’s contract-path closure:
 3. Land native/mobile low-copy improvements behind capabilities + counters.
    - Recommended staging:
      - M2A: wire a real frame source end-to-end (can start as `CpuUpload`/`GpuCopy`).
-     - M2B: add a true zero/low-copy fast path behind explicit capabilities (e.g. Windows D3D12).
+     - M2B: add a true zero/low-copy fast path behind explicit capabilities (e.g. Windows D3D12),
+       or satisfy “no-copy” via shared allocation when external-handle import is blocked.
 4. Keep web zero-copy explicitly blocked until the backend supports it; keep copy-path perf baselines green.
 
 ## Web DevTools WS notes (practical)
