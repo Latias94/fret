@@ -87,8 +87,8 @@ pub(crate) fn content_view(
                 ])
                 .refine_layout(
                     LayoutRefinement::default()
+                        .w_px(Px(180.0))
                         .max_w(Px(220.0))
-                        .min_w_0()
                         .flex_shrink(1.0),
                 )
                 .into_element(cx);
@@ -113,8 +113,8 @@ pub(crate) fn content_view(
                 ])
                 .refine_layout(
                     LayoutRefinement::default()
+                        .w_px(Px(180.0))
                         .max_w(Px(220.0))
-                        .min_w_0()
                         .flex_shrink(1.0),
                 )
                 .into_element(cx);
@@ -221,8 +221,8 @@ pub(crate) fn content_view(
                 ])
                 .refine_layout(
                     LayoutRefinement::default()
+                        .w_px(Px(180.0))
                         .max_w(Px(220.0))
-                        .min_w_0()
                         .flex_shrink(1.0),
                 )
                 .into_element(cx);
@@ -247,8 +247,8 @@ pub(crate) fn content_view(
                 ])
                 .refine_layout(
                     LayoutRefinement::default()
+                        .w_px(Px(180.0))
                         .max_w(Px(220.0))
-                        .min_w_0()
                         .flex_shrink(1.0),
                 )
                 .into_element(cx);

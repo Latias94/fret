@@ -368,8 +368,7 @@ fn preview_code_tabs(
     let code_el = centered(cx, code_shell);
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
-        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .shared_indicator_motion(true);
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
         let tabs_test_id = format!("{prefix}-tabs");
