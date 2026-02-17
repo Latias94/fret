@@ -208,6 +208,9 @@ Expose (at minimum) in docking diagnostics:
 - current dock drag window (`source_window`, `current_window`),
 - whether cross-window hover is active,
 - whether transparent payload is applied.
+- hovered-window selection source (OS-backed vs heuristic):
+  - `DragSession::window_under_cursor_source` (runner-owned hint)
+  - `DockDragDiagnostics::window_under_cursor_source` (captured via `WindowInteractionDiagnosticsStore`)
 
 ### Scripted gates (existing + recommended additions)
 

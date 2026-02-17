@@ -27,7 +27,7 @@ Each TODO is labeled:
 
 ## P0 — “Reliable means platform-backed” (no heuristic regression)
 
-- [ ] DWHW-P0-contract-001 Enforce “Reliable requires a platform-backed hover provider”.
+- [~] DWHW-P0-contract-001 Enforce “Reliable requires a platform-backed hover provider”.
   - Goal: do not report `ui.window_hover_detection=reliable` unless the runner has an OS-backed
     implementation that works under overlap.
   - Implementation sketch:
@@ -40,12 +40,25 @@ Each TODO is labeled:
   - Acceptance:
     - `Reliable` is never emitted on platforms/configs that cannot provide a correct overlapped
       hover selection path.
+  - Progress:
+    - Reliable routing uses platform-only hover selection (no heuristic fallback) and records the
+      selection source in the drag session:
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs`
+      - `crates/fret-runtime/src/drag.rs`
 
-- [ ] DWHW-P0-diag-002 Add a diagnostics event for “hover provider source” during dock drags.
+- [~] DWHW-P0-diag-002 Add a diagnostics event for “hover provider source” during dock drags.
   - Goal: bundles should answer “did we use OS-backed hover selection, or a fallback heuristic?”
   - Output: diagnostics ring event (string kind) or a structured field in docking diagnostics.
   - Acceptance:
     - Multi-window hover scripts can assert that the source matches the expected backend path.
+  - Progress:
+    - Added `window_under_cursor_source` to `DockDragDiagnostics` and plumbed it from the runner:
+      - `crates/fret-runtime/src/interaction_diagnostics.rs`
+      - `ecosystem/fret-docking/src/dock/space.rs`
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+    - Remaining: add a script predicate and at least one gate that asserts the source for a known
+      scenario (e.g. Win32 overlapped z-order switching uses `platform_win32`).
 
 ## P0 — Windows (Win32) correctness hardening
 
@@ -123,4 +136,3 @@ TODO gates:
 
 - [ ] Add a “provider source is OS-backed” assertion for Windows.
 - [ ] Add a “capability downgraded” assertion for Wayland sessions.
-

@@ -4,6 +4,7 @@ use fret_core::geometry::{Point, Rect};
 use fret_core::{AppWindowId, Axis, DockNodeId, DropZone, PointerId, RenderTargetId};
 
 use crate::FrameId;
+use crate::WindowUnderCursorSource;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DockDragDiagnostics {
@@ -15,6 +16,9 @@ pub struct DockDragDiagnostics {
     /// True when the runner has applied an ImGui-style "transparent payload" treatment to the
     /// moving dock window (e.g. click-through/NoInputs while following the cursor).
     pub transparent_payload_applied: bool,
+    /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
+    /// cross-window drag routing (OS-backed vs heuristic).
+    pub window_under_cursor_source: WindowUnderCursorSource,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

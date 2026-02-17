@@ -86,6 +86,12 @@ pub(super) struct RectF64 {
     pub(super) max_y: f64,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct WindowUnderCursorHit {
+    pub(super) window: Option<fret_core::AppWindowId>,
+    pub(super) source: fret_runtime::WindowUnderCursorSource,
+}
+
 #[cfg(target_os = "macos")]
 pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
     use objc::runtime::Class;
@@ -821,22 +827,45 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         ))
     }
 
-    pub(super) fn window_under_cursor(
+    pub(super) fn window_under_cursor_platform(
         &self,
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
-    ) -> Option<fret_core::AppWindowId> {
+    ) -> WindowUnderCursorHit {
         #[cfg(target_os = "macos")]
         if let Some(window) = self.window_under_cursor_macos(screen_pos, prefer_not) {
-            return Some(window);
+            return WindowUnderCursorHit {
+                window: Some(window),
+                source: fret_runtime::WindowUnderCursorSource::PlatformMacos,
+            };
         }
 
         #[cfg(target_os = "windows")]
         if let Some(window) = self.window_under_cursor_win32(screen_pos, prefer_not) {
-            return Some(window);
+            return WindowUnderCursorHit {
+                window: Some(window),
+                source: fret_runtime::WindowUnderCursorSource::PlatformWin32,
+            };
+        }
+
+        WindowUnderCursorHit {
+            window: None,
+            source: fret_runtime::WindowUnderCursorSource::Unknown,
+        }
+    }
+
+    pub(super) fn window_under_cursor_best_effort(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> WindowUnderCursorHit {
+        let platform = self.window_under_cursor_platform(screen_pos, prefer_not);
+        if platform.window.is_some() {
+            return platform;
         }
 
         let mut fallback: Option<fret_core::AppWindowId> = None;
+        let mut fallback_source = fret_runtime::WindowUnderCursorSource::Unknown;
         for &w in self.windows_z_order.iter().rev() {
             let Some(state) = self.windows.get(w) else {
                 continue;
@@ -857,9 +886,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             {
                 if prefer_not.is_some_and(|p| p == w) {
                     fallback = Some(w);
+                    fallback_source = fret_runtime::WindowUnderCursorSource::HeuristicZOrder;
                     continue;
                 }
-                return Some(w);
+                return WindowUnderCursorHit {
+                    window: Some(w),
+                    source: fret_runtime::WindowUnderCursorSource::HeuristicZOrder,
+                };
             }
         }
         // Fallback if the z-order list has drifted.
@@ -886,12 +919,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             {
                 if prefer_not.is_some_and(|p| p == w) {
                     fallback = Some(w);
+                    fallback_source = fret_runtime::WindowUnderCursorSource::HeuristicRects;
                     continue;
                 }
-                return Some(w);
+                return WindowUnderCursorHit {
+                    window: Some(w),
+                    source: fret_runtime::WindowUnderCursorSource::HeuristicRects,
+                };
             }
         }
-        fallback
+        WindowUnderCursorHit {
+            window: fallback,
+            source: if fallback.is_some() {
+                fallback_source
+            } else {
+                fret_runtime::WindowUnderCursorSource::Unknown
+            },
+        }
     }
 
     pub(super) fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {

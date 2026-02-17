@@ -80,6 +80,7 @@ pub use docking_settings::{
 };
 pub use drag::{
     DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
+    WindowUnderCursorSource,
 };
 pub use effect::DiagIncomingOpenItem;
 pub use effect::{
