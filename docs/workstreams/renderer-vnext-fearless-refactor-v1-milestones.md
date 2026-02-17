@@ -244,6 +244,18 @@ Progress record (Gradient tile modes: Repeat/Mirror):
   - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
   - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
+Progress record (Gradient color space: Oklab):
+
+- Date: 2026-02-17
+- Status: Landed (wgpu default renderer; Oklab stop interpolation in WGSL)
+- Evidence anchors:
+  - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `color_space`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_mix_colorspace`, Oklab conversions)
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (Oklab midpoint vs sRGB/linear)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
 ### M4b — Optional contract expansion (only if required)
 
 - Any contract changes (e.g. `Path` accepting `Paint`) are ADR-backed and conformance-gated.

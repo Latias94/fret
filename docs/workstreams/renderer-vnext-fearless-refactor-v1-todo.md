@@ -276,8 +276,17 @@ milestones) when implementation begins.
   - Gates:
     - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
-- [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
-  - Current: sanitize degrades Oklab to sRGB for determinism.
+- [x] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
+  - Landed (v1): `ColorSpace::Oklab` is preserved in sanitization and used for gradient stop interpolation
+    (linear/radial/sweep paints). Masks preserve the enum for forward-compatibility (mask gradients are alpha-only today).
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `color_space`)
+    - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `color_space`)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_mix_colorspace`, Oklab conversions)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (Oklab midpoint vs sRGB/linear)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
 ## Always-run guardrails (before/after each milestone)
 

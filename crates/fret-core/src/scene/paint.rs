@@ -178,7 +178,7 @@ impl Paint {
         fn degrade_color_space(color_space: ColorSpace) -> ColorSpace {
             match color_space {
                 ColorSpace::Srgb => ColorSpace::Srgb,
-                ColorSpace::Oklab => ColorSpace::Srgb,
+                ColorSpace::Oklab => ColorSpace::Oklab,
             }
         }
 

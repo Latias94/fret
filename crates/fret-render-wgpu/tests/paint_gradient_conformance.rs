@@ -348,6 +348,89 @@ fn gpu_linear_gradient_mirror_tile_conformance() {
 }
 
 #[test]
+fn gpu_linear_gradient_oklab_color_space_midpoint_differs_from_srgb() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (96u32, 64u32);
+    let left = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(48.0), Px(64.0)));
+    let right = Rect::new(Point::new(Px(48.0), Px(0.0)), Size::new(Px(48.0), Px(64.0)));
+
+    let (stops, stop_count) = stops_2(
+        Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+
+    let srgb_gradient = LinearGradient {
+        start: Point::new(Px(0.0), Px(0.0)),
+        end: Point::new(Px(48.0), Px(0.0)),
+        tile_mode: TileMode::Clamp,
+        color_space: ColorSpace::Srgb,
+        stop_count,
+        stops,
+    };
+    let oklab_gradient = LinearGradient {
+        start: Point::new(Px(48.0), Px(0.0)),
+        end: Point::new(Px(96.0), Px(0.0)),
+        tile_mode: TileMode::Clamp,
+        color_space: ColorSpace::Oklab,
+        stop_count,
+        stops,
+    };
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: left,
+        background: Paint::LinearGradient(srgb_gradient),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: right,
+        background: Paint::LinearGradient(oklab_gradient),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::TRANSPARENT,
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let srgb_mid = pixel_rgba(&pixels, size.0, 24, 32);
+    let oklab_mid = pixel_rgba(&pixels, size.0, 72, 32);
+
+    assert!(
+        srgb_mid[3] > 240 && oklab_mid[3] > 240,
+        "expected opaque alpha: srgb_mid={srgb_mid:?} oklab_mid={oklab_mid:?}"
+    );
+
+    let dr = u16::from(srgb_mid[0].abs_diff(oklab_mid[0]));
+    let dg = u16::from(srgb_mid[1].abs_diff(oklab_mid[1]));
+    let db = u16::from(srgb_mid[2].abs_diff(oklab_mid[2]));
+    let diff = dr + dg + db;
+    assert!(
+        diff >= 24,
+        "expected Oklab interpolation to differ visibly from sRGB/linear interpolation at the midpoint: srgb_mid={srgb_mid:?} oklab_mid={oklab_mid:?} diff={diff}"
+    );
+}
+
+#[test]
 fn gpu_radial_gradient_smoke_conformance() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,

@@ -506,6 +506,58 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  let rgb = vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+  return rgb;
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -527,7 +579,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -3781,6 +3833,57 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -3804,7 +3907,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, c, u);
+      return paint_mix_colorspace(p, prev_color, c, u);
     }
     prev_offset = off;
     prev_color = c;
@@ -4268,6 +4371,57 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -4289,7 +4443,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -4699,6 +4853,57 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -4720,7 +4925,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -5099,6 +5304,57 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -5120,7 +5376,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
