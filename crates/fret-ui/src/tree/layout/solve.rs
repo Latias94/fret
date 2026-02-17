@@ -152,23 +152,8 @@ impl<H: UiHost> UiTree<H> {
                 })
                 .collect();
             let solve_root = engine.last_solve_root().unwrap_or(root);
-            let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
-            let root_element_kind =
-                crate::declarative::frame::element_record_for_node(app, window, solve_root)
-                    .map(|record| record.instance.kind_name());
-            let root_element_path: Option<String> = root_element.and_then(|element| {
-                #[cfg(feature = "diagnostics")]
-                {
-                    crate::elements::with_window_state(app, window, |st| {
-                        st.debug_path_for_element(element)
-                    })
-                }
-                #[cfg(not(feature = "diagnostics"))]
-                {
-                    let _ = element;
-                    None
-                }
-            });
+            let (root_element, root_element_kind, root_element_path) =
+                self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
             self.debug_record_layout_engine_solve(
                 solve_root,
@@ -346,23 +331,8 @@ impl<H: UiHost> UiTree<H> {
             let solve_root = engine
                 .last_solve_root()
                 .unwrap_or_else(|| pending_solves[0].0);
-            let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
-            let root_element_kind =
-                crate::declarative::frame::element_record_for_node(app, window, solve_root)
-                    .map(|record| record.instance.kind_name());
-            let root_element_path: Option<String> = root_element.and_then(|element| {
-                #[cfg(feature = "diagnostics")]
-                {
-                    crate::elements::with_window_state(app, window, |st| {
-                        st.debug_path_for_element(element)
-                    })
-                }
-                #[cfg(not(feature = "diagnostics"))]
-                {
-                    let _ = element;
-                    None
-                }
-            });
+            let (root_element, root_element_kind, root_element_path) =
+                self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
             self.debug_record_layout_engine_solve(
                 solve_root,

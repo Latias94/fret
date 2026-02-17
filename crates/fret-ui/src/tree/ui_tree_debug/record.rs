@@ -1,6 +1,56 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn debug_resolve_layout_solve_root_label(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        solve_root: NodeId,
+    ) -> (
+        Option<GlobalElementId>,
+        Option<&'static str>,
+        Option<String>,
+    ) {
+        // Layout solve roots may be barrier/layout-only nodes without a corresponding element. For
+        // attribution, prefer the nearest ancestor that has an element, so perf bundles can be
+        // mapped back to a stable debug path / test_id (when present).
+        let mut cur = Some(solve_root);
+        while let Some(node) = cur {
+            let element = self.nodes.get(node).and_then(|n| n.element);
+            if let Some(element) = element {
+                let kind = crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| record.instance.kind_name());
+                let element_path: Option<String> = {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        crate::elements::with_window_state(app, window, |st| {
+                            st.debug_path_for_element(element)
+                        })
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        let _ = element;
+                        None
+                    }
+                };
+                return (Some(element), kind, element_path);
+            }
+
+            cur = self.nodes.get(node).and_then(|n| n.parent);
+        }
+
+        // Fallback when there is no element in the ancestry (layout-only roots). Prefer the widget
+        // type name so perf triage can still point at a meaningful mechanism surface.
+        let widget_kind = self
+            .nodes
+            .get(solve_root)
+            .and_then(|n| n.widget.as_ref())
+            .map(|w| w.debug_type_name());
+        let widget_path = widget_kind.map(|k| format!("widget:{k}"));
+
+        (None, widget_kind, widget_path)
+    }
+
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {
         if !self.debug_enabled {
             return;
