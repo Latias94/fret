@@ -95,6 +95,18 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard`)
     - `apps/fret-examples/src/external_texture_imports_demo.rs` (uses the helper in DX12 clear mode)
 
+- [~] EXTV2-native-105 Prototype a real native frame source landing as DX12 GPU copy (MF, env-gated):
+      decode via Media Foundation with a DXGI device manager and copy frames into a shared allocation
+      (requested `ExternalZeroCopy`, effective `GpuCopy`), with deterministic fallback to checker/CPU paths.
+  - Notes:
+    - This is intentionally capability-gated and experimental; it should not be considered portable until
+      the constraints are understood across driver/backends.
+  - Evidence anchors:
+    - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (`ExternalVideoImportsMode::MfVideoDx12GpuCopy`)
+    - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard::export_raw`)
+    - Correctness script (requires `FRET_WGPU_BACKEND=dx12`, `FRET_EXTV2_MF_DX12_GPU_COPY=1`, and a playable `FRET_MF_VIDEO_PATH`):
+      - `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
+
 - [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.

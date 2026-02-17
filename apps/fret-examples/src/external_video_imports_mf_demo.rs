@@ -12,6 +12,16 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
 
+fn env_flag_default_false(name: &str) -> bool {
+    let Ok(raw) = std::env::var(name) else {
+        return false;
+    };
+    matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
 #[cfg(target_os = "windows")]
 mod wmf {
     use anyhow::Context as _;
@@ -21,21 +31,33 @@ mod wmf {
     };
     use std::ffi::OsStr;
     use std::path::{Path, PathBuf};
+    use windows::Win32::Graphics::Direct3D11::{
+        D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, ID3D11Device, ID3D11DeviceContext, ID3D11Resource,
+        ID3D11Texture2D,
+    };
+    use windows::Win32::Graphics::Direct3D11on12::{
+        D3D11_RESOURCE_FLAGS, D3D11On12CreateDevice, ID3D11On12Device,
+    };
+    use windows::Win32::Graphics::Direct3D12::{ID3D12CommandQueue, ID3D12Resource};
     use windows::Win32::Media::MediaFoundation::{
         IMFAttributes, IMFMediaBuffer, IMFSample, IMFSourceReader,
+        MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, MF_SOURCE_READER_D3D_MANAGER,
         MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, MF_SOURCE_READER_FIRST_VIDEO_STREAM,
         MF_SOURCE_READERF_ENDOFSTREAM, MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED,
-        MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateMediaType,
-        MFCreateSourceReaderFromURL, MFMediaType_Video, MFNominalRange, MFNominalRange_0_255,
-        MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_RGB32, MFVideoPrimaries,
-        MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020, MFVideoPrimaries_DCI_P3,
+        MF_SOURCE_READERF_STREAMTICK, MF_VERSION, MFCreateAttributes, MFCreateDXGIDeviceManager,
+        MFCreateMediaType, MFCreateSourceReaderFromURL, MFMediaType_Video, MFNominalRange,
+        MFNominalRange_0_255, MFNominalRange_16_235, MFShutdown, MFStartup, MFVideoFormat_RGB32,
+        MFVideoPrimaries, MFVideoPrimaries_BT709, MFVideoPrimaries_BT2020, MFVideoPrimaries_DCI_P3,
         MFVideoTransFunc_709, MFVideoTransFunc_2084, MFVideoTransFunc_HLG,
         MFVideoTransFunc_Unknown, MFVideoTransFunc_sRGB, MFVideoTransferFunction,
         MFVideoTransferMatrix, MFVideoTransferMatrix_BT601, MFVideoTransferMatrix_BT709,
         MFVideoTransferMatrix_BT2020_10, MFVideoTransferMatrix_Unknown,
     };
+    use windows::Win32::Media::MediaFoundation::{IMFDXGIBuffer, IMFDXGIDeviceManager};
     use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
     use windows::core::HSTRING;
+    use windows::core::Interface as _;
 
     const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi"];
 
@@ -297,6 +319,241 @@ mod wmf {
         }
     }
 
+    pub struct Dx12Interop {
+        on12: ID3D11On12Device,
+        context: ID3D11DeviceContext,
+        mf_reader: IMFSourceReader,
+        size: (u32, u32),
+        color_encoding: RenderTargetColorEncoding,
+    }
+
+    impl Dx12Interop {
+        pub fn new(
+            d3d12_queue: &ID3D12CommandQueue,
+            d3d12_resource: &ID3D12Resource,
+            path: &str,
+        ) -> anyhow::Result<Self> {
+            unsafe {
+                // Best-effort: if COM is already initialized in another mode, keep going.
+                let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+                MFStartup(MF_VERSION, 0).context("MFStartup")?;
+            }
+
+            // Resolve the D3D12 device from the resource; the interop device must match.
+            let mut d3d12_device: Option<windows::Win32::Graphics::Direct3D12::ID3D12Device> = None;
+            unsafe {
+                d3d12_resource
+                    .GetDevice(&mut d3d12_device)
+                    .context("ID3D12Resource::GetDevice")?;
+            }
+            let d3d12_device = d3d12_device.context("ID3D12Resource::GetDevice returned None")?;
+
+            // Build a D3D11On12 device on top of the runner's D3D12 queue. We pass this D3D11
+            // device to Media Foundation so decoded frames arrive as DXGI-backed buffers.
+            let mut d3d11: Option<ID3D11Device> = None;
+            let mut context: Option<ID3D11DeviceContext> = None;
+            let queue_unk = d3d12_queue.cast::<windows::core::IUnknown>()?;
+            unsafe {
+                D3D11On12CreateDevice(
+                    &d3d12_device,
+                    (D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT).0,
+                    None,
+                    Some(&[Some(queue_unk)]),
+                    0,
+                    Some(&mut d3d11),
+                    Some(&mut context),
+                    None,
+                )
+                .context("D3D11On12CreateDevice")?;
+            }
+            let d3d11 = d3d11.context("D3D11On12CreateDevice returned None device")?;
+            let context = context.context("D3D11On12CreateDevice returned None context")?;
+            let on12: ID3D11On12Device = d3d11.cast().context("cast to ID3D11On12Device")?;
+
+            // Create an MF DXGI device manager backed by our D3D11On12 device.
+            let mut reset_token = 0u32;
+            let mut device_manager: Option<IMFDXGIDeviceManager> = None;
+            unsafe {
+                MFCreateDXGIDeviceManager(&mut reset_token, &mut device_manager)
+                    .context("MFCreateDXGIDeviceManager")?;
+            }
+            let device_manager =
+                device_manager.context("MFCreateDXGIDeviceManager returned None")?;
+            unsafe {
+                device_manager
+                    .ResetDevice(&d3d11, reset_token)
+                    .context("IMFDXGIDeviceManager::ResetDevice")?;
+            }
+
+            let resolved_path = resolve_source_reader_url(path)?;
+            let hpath = HSTRING::from(resolved_path.as_str());
+
+            let mut attributes: Option<IMFAttributes> = None;
+            unsafe {
+                MFCreateAttributes(&mut attributes, 2).context("MFCreateAttributes")?;
+            }
+            let attributes = attributes.context("MFCreateAttributes returned None")?;
+            unsafe {
+                attributes
+                    .SetUnknown(&MF_SOURCE_READER_D3D_MANAGER, &device_manager)
+                    .context("SetUnknown(MF_SOURCE_READER_D3D_MANAGER)")?;
+                attributes
+                    .SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1)
+                    .context("SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS)")?;
+                attributes
+                    .SetUINT32(&MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, 1)
+                    .context("SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING)")?;
+            }
+
+            let reader = unsafe {
+                MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
+                    .context("MFCreateSourceReaderFromURL")?
+            };
+
+            // Attempt to request RGB32 output. With a DXGI device manager configured, the source
+            // reader may still return DXGI-backed buffers for this format.
+            let media_type = unsafe { MFCreateMediaType().context("MFCreateMediaType")? };
+            unsafe {
+                media_type
+                    .SetGUID(
+                        &windows::Win32::Media::MediaFoundation::MF_MT_MAJOR_TYPE,
+                        &MFMediaType_Video,
+                    )
+                    .context("SetGUID major")?;
+                media_type
+                    .SetGUID(
+                        &windows::Win32::Media::MediaFoundation::MF_MT_SUBTYPE,
+                        &MFVideoFormat_RGB32,
+                    )
+                    .context("SetGUID subtype")?;
+                reader
+                    .SetCurrentMediaType(
+                        MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32,
+                        None,
+                        &media_type,
+                    )
+                    .context("SetCurrentMediaType")?;
+            }
+
+            let (size, _bytes_per_row) = MfVideoReader::query_video_layout(&reader)?;
+            let color_encoding = MfVideoReader::query_color_encoding(&reader)?;
+
+            Ok(Self {
+                on12,
+                context,
+                mf_reader: reader,
+                size,
+                color_encoding,
+            })
+        }
+
+        pub fn color_encoding(&self) -> RenderTargetColorEncoding {
+            self.color_encoding
+        }
+
+        pub fn size(&self) -> (u32, u32) {
+            self.size
+        }
+
+        pub fn read_next_dxgi_texture(&mut self) -> anyhow::Result<Option<ID3D11Texture2D>> {
+            loop {
+                let mut actual_stream_index = 0u32;
+                let mut flags = 0u32;
+                let mut timestamp = 0i64;
+                let mut sample: Option<IMFSample> = None;
+
+                unsafe {
+                    self.mf_reader
+                        .ReadSample(
+                            MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32,
+                            0,
+                            Some(&mut actual_stream_index),
+                            Some(&mut flags),
+                            Some(&mut timestamp),
+                            Some(&mut sample),
+                        )
+                        .context("ReadSample")?;
+                }
+
+                if (flags & (MF_SOURCE_READERF_STREAMTICK.0 as u32)) != 0 {
+                    continue;
+                }
+
+                if (flags & (MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED.0 as u32)) != 0 {
+                    let (size, _bytes_per_row) =
+                        MfVideoReader::query_video_layout(&self.mf_reader)?;
+                    self.size = size;
+                    self.color_encoding = MfVideoReader::query_color_encoding(&self.mf_reader)?;
+                }
+
+                if (flags & (MF_SOURCE_READERF_ENDOFSTREAM.0 as u32)) != 0 {
+                    // Deterministic reset: recreate the reader/interop state on next init.
+                    return Ok(None);
+                }
+
+                let Some(sample) = sample else {
+                    continue;
+                };
+
+                let buffer = unsafe { sample.GetBufferByIndex(0) }.context("GetBufferByIndex")?;
+
+                let dxgi: IMFDXGIBuffer = match buffer.cast() {
+                    Ok(v) => v,
+                    Err(_) => {
+                        anyhow::bail!("MF sample did not provide an IMFDXGIBuffer");
+                    }
+                };
+
+                let mut tex: Option<ID3D11Texture2D> = None;
+                unsafe {
+                    dxgi.GetResource(
+                        &<ID3D11Texture2D as windows::core::Interface>::IID,
+                        &mut tex as *mut _ as _,
+                    )
+                    .context("IMFDXGIBuffer::GetResource")?;
+                    let _subresource = dxgi
+                        .GetSubresourceIndex()
+                        .context("IMFDXGIBuffer::GetSubresourceIndex")?;
+                }
+                return Ok(tex);
+            }
+        }
+
+        pub fn copy_into_dx12_shared_allocation(
+            &mut self,
+            dst_resource: &ID3D12Resource,
+            src_texture: &ID3D11Texture2D,
+        ) -> anyhow::Result<()> {
+            // Wrap the destination D3D12 resource for D3D11On12 CopyResource.
+            let flags11 = D3D11_RESOURCE_FLAGS {
+                BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
+                ..Default::default()
+            };
+            let mut wrapped: Option<ID3D11Resource> = None;
+            unsafe {
+                self.on12
+                    .CreateWrappedResource(
+                        dst_resource,
+                        &flags11,
+                        windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_STATE_COPY_DEST,
+                        windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_STATE_COPY_DEST,
+                        &mut wrapped,
+                    )
+                    .context("CreateWrappedResource")?;
+            }
+            let wrapped = wrapped.context("CreateWrappedResource returned None")?;
+            let src: ID3D11Resource = src_texture.cast().context("cast src to ID3D11Resource")?;
+
+            unsafe {
+                self.on12.AcquireWrappedResources(&[Some(wrapped.clone())]);
+                self.context.CopyResource(&wrapped, &src);
+                self.on12.ReleaseWrappedResources(&[Some(wrapped)]);
+                self.context.Flush();
+            }
+            Ok(())
+        }
+    }
+
     impl Drop for MfVideoReader {
         fn drop(&mut self) {
             unsafe {
@@ -455,6 +712,8 @@ enum ExternalVideoImportsMode {
     CheckerGpu,
     #[cfg(target_os = "windows")]
     MfVideoCpuUpload,
+    #[cfg(target_os = "windows")]
+    MfVideoDx12GpuCopy,
 }
 
 struct ExternalVideoImportsState {
@@ -468,6 +727,8 @@ struct ExternalVideoImportsState {
 
     #[cfg(target_os = "windows")]
     mf: Option<wmf::MfVideoReader>,
+    #[cfg(target_os = "windows")]
+    mf_dx12: Option<wmf::Dx12Interop>,
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
@@ -484,6 +745,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState
         mode: ExternalVideoImportsMode::CheckerGpu,
         #[cfg(target_os = "windows")]
         mf: None,
+        #[cfg(target_os = "windows")]
+        mf_dx12: None,
     }
 }
 
@@ -517,7 +780,15 @@ fn on_event(
                 }
             }
             #[cfg(target_os = "windows")]
-            ExternalVideoImportsMode::MfVideoCpuUpload => ExternalVideoImportsMode::CheckerGpu,
+            ExternalVideoImportsMode::MfVideoCpuUpload => {
+                if env_flag_default_false("FRET_EXTV2_MF_DX12_GPU_COPY") {
+                    ExternalVideoImportsMode::MfVideoDx12GpuCopy
+                } else {
+                    ExternalVideoImportsMode::CheckerGpu
+                }
+            }
+            #[cfg(target_os = "windows")]
+            ExternalVideoImportsMode::MfVideoDx12GpuCopy => ExternalVideoImportsMode::CheckerGpu,
         };
         app.request_redraw(window);
     }
@@ -665,6 +936,12 @@ fn record_engine_frame(
                 st.desired_target_px_size
             }
         }
+        #[cfg(target_os = "windows")]
+        ExternalVideoImportsMode::MfVideoDx12GpuCopy => st
+            .mf_dx12
+            .as_ref()
+            .map(|v| v.size())
+            .unwrap_or(st.desired_target_px_size),
     };
 
     let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
@@ -774,6 +1051,103 @@ fn record_engine_frame(
                     bgra8,
                 );
             }
+        }
+        #[cfg(target_os = "windows")]
+        ExternalVideoImportsMode::MfVideoDx12GpuCopy => {
+            // Stage M2B (shared allocation / GPU copy): request v2's ceiling, but deterministically
+            // degrade to a GPU copy into a renderer-owned texture on capable backends.
+            let Some(path) = std::env::var("FRET_MF_VIDEO_PATH")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+            else {
+                tracing::info!("FRET_MF_VIDEO_PATH is not set; falling back to checker mode");
+                st.mode = ExternalVideoImportsMode::CheckerGpu;
+                return update;
+            };
+
+            if st.mf_dx12.is_none() {
+                let export =
+                    match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::export_raw(
+                        context, texture,
+                    ) {
+                        Ok(export) => export,
+                        Err(err) => {
+                            tracing::warn!(
+                                ?err,
+                                "MF DX12 GPU copy mode requested but backend is not DX12; falling back"
+                            );
+                            st.mode = ExternalVideoImportsMode::CheckerGpu;
+                            return update;
+                        }
+                    };
+
+                match wmf::Dx12Interop::new(&export.queue, &export.resource, &path)
+                    .context("init MF DX12 interop")
+                {
+                    Ok(v) => st.mf_dx12 = Some(v),
+                    Err(err) => {
+                        tracing::warn!(?err, "failed to init MF DX12 interop; falling back");
+                        st.mf_dx12 = None;
+                        st.mode = ExternalVideoImportsMode::CheckerGpu;
+                        return update;
+                    }
+                }
+            }
+
+            let Some(interop) = st.mf_dx12.as_mut() else {
+                st.mode = ExternalVideoImportsMode::CheckerGpu;
+                return update;
+            };
+            metadata.color_encoding = interop.color_encoding();
+
+            st.target.push_update_with_ingest_strategies(
+                &mut update,
+                view.clone(),
+                st.target_px_size,
+                metadata,
+                RenderTargetIngestStrategy::ExternalZeroCopy,
+                RenderTargetIngestStrategy::GpuCopy,
+            );
+
+            let src = match interop.read_next_dxgi_texture() {
+                Ok(Some(tex)) => tex,
+                Ok(None) => {
+                    // End-of-stream: drop state and restart on next frame.
+                    st.mf_dx12 = None;
+                    return update;
+                }
+                Err(err) => {
+                    tracing::warn!(?err, "MF DX12 GPU copy read failed; falling back");
+                    st.mf_dx12 = None;
+                    st.mode = ExternalVideoImportsMode::CheckerGpu;
+                    return update;
+                }
+            };
+
+            let guard = match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::begin(
+                context,
+                texture,
+                wgpu::wgt::TextureUses::COPY_DST,
+            ) {
+                Ok(guard) => guard,
+                Err(err) => {
+                    tracing::warn!(
+                        ?err,
+                        "MF DX12 GPU copy mode: shared allocation write unavailable; falling back"
+                    );
+                    st.mode = ExternalVideoImportsMode::CheckerGpu;
+                    return update;
+                }
+            };
+
+            if let Err(err) = interop.copy_into_dx12_shared_allocation(guard.resource(), &src) {
+                tracing::warn!(?err, "MF DX12 GPU copy mode: copy failed; falling back");
+                st.mf_dx12 = None;
+                st.mode = ExternalVideoImportsMode::CheckerGpu;
+                return update;
+            }
+            guard.finish();
         }
     }
 
