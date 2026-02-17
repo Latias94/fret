@@ -23,7 +23,8 @@ pub use dev_state::DevStateWindowKeyRegistry;
 pub use dev_state::{DevStateExport, DevStateHook, DevStateHooks};
 
 pub use runner::{
-    EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget,
+    EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks,
+    ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
     NativeExternalImportError, NativeExternalImportOutcome, NativeExternalImportedFrame,
     NativeExternalTextureFrame, RenderTargetUpdate, SharedAllocationExportError,
     ViewportOverlay3dHooks, ViewportOverlay3dHooksService, ViewportOverlay3dImmediateService,

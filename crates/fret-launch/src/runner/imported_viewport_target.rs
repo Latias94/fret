@@ -18,6 +18,33 @@ pub enum NativeExternalImportOutcome {
     },
 }
 
+pub struct ImportedViewportFallbackUpdate {
+    pub view: wgpu::TextureView,
+    pub size: (u32, u32),
+    pub metadata: RenderTargetMetadata,
+    pub keepalive: Option<EngineFrameKeepalive>,
+}
+
+impl ImportedViewportFallbackUpdate {
+    fn into_parts(
+        self,
+    ) -> (
+        wgpu::TextureView,
+        (u32, u32),
+        RenderTargetMetadata,
+        Option<EngineFrameKeepalive>,
+    ) {
+        (self.view, self.size, self.metadata, self.keepalive)
+    }
+}
+
+#[derive(Default)]
+pub struct ImportedViewportFallbacks {
+    pub owned: Option<ImportedViewportFallbackUpdate>,
+    pub gpu_copy: Option<ImportedViewportFallbackUpdate>,
+    pub cpu_upload: Option<ImportedViewportFallbackUpdate>,
+}
+
 /// Per-frame imported render target intended to be embedded into the UI via `SceneOp::ViewportSurface`.
 ///
 /// Unlike [`super::ViewportRenderTarget`], this helper does **not** call `renderer.update_render_target(...)`
@@ -364,6 +391,72 @@ impl ImportedViewportRenderTarget {
         NativeExternalImportOutcome::Imported { effective }
     }
 
+    /// Attempt a native external import, but deterministically fall back to a caller-provided
+    /// update when the import cannot be performed.
+    ///
+    /// Compared to `push_native_external_import_update_with_deterministic_fallback`, this helper
+    /// removes boilerplate at call sites by accepting an explicit set of fallback payloads rather
+    /// than requiring a separate `fallback_available` slice and a mapping closure.
+    ///
+    /// Callers MUST provide at least one fallback payload.
+    pub fn push_native_external_import_update_with_fallbacks(
+        &mut self,
+        renderer: &mut Renderer,
+        update: &mut EngineFrameUpdate,
+        ctx: &fret_render::WgpuContext,
+        caps: &fret_render::RendererCapabilities,
+        requested: RenderTargetIngestStrategy,
+        frame: Box<dyn NativeExternalTextureFrame>,
+        mut fallbacks: ImportedViewportFallbacks,
+    ) -> NativeExternalImportOutcome {
+        let mut fallback_available = Vec::with_capacity(3);
+        if fallbacks.owned.is_some() {
+            fallback_available.push(RenderTargetIngestStrategy::Owned);
+        }
+        if fallbacks.gpu_copy.is_some() {
+            fallback_available.push(RenderTargetIngestStrategy::GpuCopy);
+        }
+        if fallbacks.cpu_upload.is_some() {
+            fallback_available.push(RenderTargetIngestStrategy::CpuUpload);
+        }
+
+        assert!(
+            !fallback_available.is_empty(),
+            "ImportedViewportFallbacks must provide at least one strategy"
+        );
+
+        self.push_native_external_import_update_with_deterministic_fallback(
+            renderer,
+            update,
+            ctx,
+            caps,
+            requested,
+            frame,
+            &fallback_available,
+            move |fallback_effective| match fallback_effective {
+                RenderTargetIngestStrategy::Owned => fallbacks
+                    .owned
+                    .take()
+                    .expect("Owned fallback must be present when marked available")
+                    .into_parts(),
+                RenderTargetIngestStrategy::GpuCopy => fallbacks
+                    .gpu_copy
+                    .take()
+                    .expect("GpuCopy fallback must be present when marked available")
+                    .into_parts(),
+                RenderTargetIngestStrategy::CpuUpload => fallbacks
+                    .cpu_upload
+                    .take()
+                    .expect("CpuUpload fallback must be present when marked available")
+                    .into_parts(),
+                RenderTargetIngestStrategy::Unknown
+                | RenderTargetIngestStrategy::ExternalZeroCopy => {
+                    panic!("unexpected fallback strategy: {fallback_effective:?}")
+                }
+            },
+        )
+    }
+
     /// Attempt to import a platform-produced external frame and record a runner delta update,
     /// while enforcing v2 requested vs effective metadata semantics.
     ///
@@ -477,5 +570,45 @@ impl ImportedViewportRenderTarget {
         }
         update.unregister_render_target(self.id);
         self.id = RenderTargetId::default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deterministic_fallback_prefers_chain_order() {
+        let available = &[
+            RenderTargetIngestStrategy::CpuUpload,
+            RenderTargetIngestStrategy::GpuCopy,
+        ];
+        let effective = ImportedViewportRenderTarget::select_deterministic_fallback_effective(
+            RenderTargetIngestStrategy::Unknown,
+            available,
+        );
+        assert_eq!(effective, RenderTargetIngestStrategy::GpuCopy);
+    }
+
+    #[test]
+    fn deterministic_fallback_ignores_non_chain_strategies() {
+        let available = &[
+            RenderTargetIngestStrategy::Owned,
+            RenderTargetIngestStrategy::CpuUpload,
+        ];
+        let effective = ImportedViewportRenderTarget::select_deterministic_fallback_effective(
+            RenderTargetIngestStrategy::GpuCopy,
+            available,
+        );
+        assert_eq!(effective, RenderTargetIngestStrategy::CpuUpload);
+    }
+
+    #[test]
+    fn deterministic_fallback_handles_empty_available() {
+        let effective = ImportedViewportRenderTarget::select_deterministic_fallback_effective(
+            RenderTargetIngestStrategy::ExternalZeroCopy,
+            &[],
+        );
+        assert_eq!(effective, RenderTargetIngestStrategy::CpuUpload);
     }
 }

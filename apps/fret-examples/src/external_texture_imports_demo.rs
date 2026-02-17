@@ -767,26 +767,45 @@ fn record_engine_frame(
             size: st.target_px_size,
             ingest_strategy: effective_strategy,
         });
-        match st
-            .target
-            .push_native_external_import_update_with_deterministic_fallback(
-                renderer,
-                &mut update,
-                context,
-                &renderer_caps,
-                RenderTargetIngestStrategy::ExternalZeroCopy,
-                frame,
-                std::slice::from_ref(&effective_strategy),
-                |fallback_effective| {
-                    debug_assert_eq!(fallback_effective, effective_strategy);
-                    (
-                        view.clone(),
-                        st.target_px_size,
-                        RenderTargetMetadata::default(),
-                        None,
-                    )
-                },
-            ) {
+        let mut fallbacks = fret_launch::ImportedViewportFallbacks::default();
+        match effective_strategy {
+            RenderTargetIngestStrategy::Owned => {
+                fallbacks.owned = Some(fret_launch::ImportedViewportFallbackUpdate {
+                    view: view.clone(),
+                    size: st.target_px_size,
+                    metadata: RenderTargetMetadata::default(),
+                    keepalive: None,
+                });
+            }
+            RenderTargetIngestStrategy::GpuCopy => {
+                fallbacks.gpu_copy = Some(fret_launch::ImportedViewportFallbackUpdate {
+                    view: view.clone(),
+                    size: st.target_px_size,
+                    metadata: RenderTargetMetadata::default(),
+                    keepalive: None,
+                });
+            }
+            RenderTargetIngestStrategy::CpuUpload => {
+                fallbacks.cpu_upload = Some(fret_launch::ImportedViewportFallbackUpdate {
+                    view: view.clone(),
+                    size: st.target_px_size,
+                    metadata: RenderTargetMetadata::default(),
+                    keepalive: None,
+                });
+            }
+            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
+                unreachable!("contract-path fallback should never request {effective_strategy:?}")
+            }
+        }
+        match st.target.push_native_external_import_update_with_fallbacks(
+            renderer,
+            &mut update,
+            context,
+            &renderer_caps,
+            RenderTargetIngestStrategy::ExternalZeroCopy,
+            frame,
+            fallbacks,
+        ) {
             fret_launch::NativeExternalImportOutcome::Imported { .. } => {}
             fret_launch::NativeExternalImportOutcome::FellBack { err, .. } => {
                 tracing::warn!(
