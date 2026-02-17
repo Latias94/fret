@@ -42,6 +42,11 @@
       "timeout_frames": 240
     },
 
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 2 },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
@@ -82,17 +87,6 @@
       "timeout_frames": 60
     },
     { "type": "wait_frames", "n": 4 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
-      },
-      "timeout_frames": 60
-    },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 4 },
 
     { "type": "reset_diagnostics" },
 
@@ -114,38 +108,22 @@
       },
       "timeout_frames": 60
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
-    { "type": "wait_frames", "n": 10 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
-      },
-      "timeout_frames": 60
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dialog-close" }
-      },
-      "timeout_frames": 60
-    },
-    { "type": "press_key", "key": "tab" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "press_key", "key": "tab" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "n": 4 },
 
     { "type": "capture_bundle", "label": "ui-gallery-overlay-torture-steady" },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "barrier_roots",
+        "barrier_root": "none",
+        "focus_barrier_root": "none"
+      },
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": {
