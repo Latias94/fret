@@ -4170,6 +4170,140 @@ fn switch_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn switch_icons_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::Switch;
+
+    let schemes = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    let scenarios = [
+        ("icons_both.unselected", false, false),
+        ("icons_both.selected", true, false),
+        ("icons_selected_only.unselected", false, true),
+        ("icons_selected_only.selected", true, true),
+    ];
+
+    for (mode, variant, label) in schemes {
+        for (scenario, initial_selected, selected_only) in scenarios {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(320.0), Px(240.0)),
+            );
+
+            let selected = app.models_mut().insert(initial_selected);
+            let test_id = "switch-icons";
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let mut switch = Switch::new(selected.clone())
+                        .a11y_label("switch")
+                        .test_id(test_id);
+                    if selected_only {
+                        switch = switch.show_only_selected_icon(true);
+                    } else {
+                        switch = switch.icons(true);
+                    }
+
+                    let el = switch.into_element(cx);
+                    vec![with_padding(cx, Px(32.0), el)]
+                })
+            };
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let switch_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        if node.test_id.as_deref() == Some(test_id) {
+                            Some(node.id)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .unwrap_or_else(|| panic!("expected switch semantics node ({label}, {scenario})"));
+            let switch_bounds = ui
+                .debug_node_visual_bounds(switch_node)
+                .unwrap_or_else(|| panic!("expected switch visual bounds ({label}, {scenario})"));
+            let press_at = Point::new(
+                Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+                Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_down(PointerId(1), press_at),
+            );
+
+            let mut baseline_structure: Option<Vec<SceneSig>> = None;
+            let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+            for frame in 0..24 {
+                app.advance_frame();
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+                let mut scene = Scene::default();
+                ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+                if frame >= 2 && frame < 7 {
+                    let sig = scene_signature(&scene);
+                    if let Some(prev) = baseline_structure.as_ref() {
+                        assert_eq!(
+                            sig, *prev,
+                            "expected Switch icons scene structure to be stable while pressed ({label}, {scenario})"
+                        );
+                    } else {
+                        baseline_structure = Some(sig);
+                    }
+                }
+
+                if frame >= 16 {
+                    let sig = scene_quad_geometry_signature(&scene);
+                    if let Some(prev) = baseline_quads.as_ref() {
+                        assert_eq!(
+                            sig, *prev,
+                            "expected Switch icons quad geometry to be stable after animations settle ({label}, {scenario})"
+                        );
+                    } else {
+                        baseline_quads = Some(sig);
+                    }
+                }
+            }
+
+            ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+        }
+    }
+}
+
+#[test]
 fn checkbox_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Checkbox;
 
