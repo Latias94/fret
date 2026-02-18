@@ -17257,6 +17257,29 @@ fn eval_predicate(
             dock_drag_runtime
                 .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
         }
+        UiPredicateV1::DockDragMovingWindowIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            dock_drag_runtime
+                .is_some_and(|drag| drag.dragging && drag.moving_window == Some(target_window))
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.window_under_moving_window == Some(target_window)
+            })
+        }
         UiPredicateV1::DockDragActiveIs { active } => {
             let dragging = dock_drag_runtime.is_some_and(|drag| drag.dragging);
             dragging == *active
@@ -17267,12 +17290,28 @@ fn eval_predicate(
             }
             !*applied
         }
+        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => {
+            if let Some(drag) = dock_drag_runtime {
+                return drag.dragging
+                    && drag.transparent_payload_mouse_passthrough_applied == *applied;
+            }
+            !*applied
+        }
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
             let Some(drag) = dock_drag_runtime else {
                 return false;
             };
             dock_drag_window_under_cursor_source_is(
                 drag.window_under_cursor_source,
+                source.as_str(),
+            )
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { source } => {
+            let Some(drag) = dock_drag_runtime else {
+                return false;
+            };
+            dock_drag_window_under_cursor_source_is(
+                drag.window_under_moving_window_source,
                 source.as_str(),
             )
         }

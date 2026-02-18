@@ -16,15 +16,25 @@ This document is intentionally **behavior-first**: it records what we want users
 ## Non-goals (for v1)
 
 - Perfect parity with ImGui’s internal split/preview geometry (we gate shape signatures separately).
-- Full “peek-behind moving window” semantics (ImGui has both `HoveredWindow` and `HoveredWindowUnderMovingWindow`; Fret currently exposes a single `dock_drag.current_window`).
+- Full “peek-behind moving window” end-to-end parity (ImGui has both `HoveredWindow` and `HoveredWindowUnderMovingWindow` and uses them in multiple paths). Fret currently publishes both a “hovered window” and a best-effort “under moving window” snapshot during dock drags, but not every consumer path is wired to use the latter yet.
 
 ## Upstream reference points (Dear ImGui)
 
-Note: the in-tree `repo-ref/imgui/` snapshot currently does **not** include docking/multi-viewport APIs, so it is not a
-direct source reference for this workstream. When we need concrete upstream code pointers, use a pinned Dear ImGui
-snapshot that includes docking + multi-viewport (or update `repo-ref/` to mirror it).
+Note: `repo-ref/imgui/` is an **optional local snapshot** used for quick code-reading. It should be treated as
+non-normative and may drift from upstream. When a detail matters (API shape, exact behavior), prefer checking an
+upstream pinned SHA per `docs/repo-ref.md`.
 
 The key takeaway: ImGui’s “transparent payload” is primarily an **alpha/overlay** policy knob. Input “peek-behind” exists, but is not the only interpretation of the feature.
+
+Useful anchors in the snapshot:
+
+- Docking + multi-viewport config knobs:
+  - `repo-ref/imgui/imgui.h` (`ImGuiIO::ConfigDockingTransparentPayload`)
+- “Peek behind moving window” / click-through vocabulary:
+  - `repo-ref/imgui/imgui.h` (`ImGuiViewportFlags_NoInputs`)
+  - `repo-ref/imgui/backends/imgui_impl_win32.cpp` (`WM_NCHITTEST` → `HTTRANSPARENT` when `NoInputs`)
+- Hovered viewport reporting contract (backend-first, heuristic fallback):
+  - `repo-ref/imgui/imgui.h` (`ImGuiBackendFlags_HasMouseHoveredViewport`, `ImGuiIO::AddMouseViewportEvent`, `MouseHoveredViewport`)
 
 ## Gesture parity (ImGui vs Fret)
 
