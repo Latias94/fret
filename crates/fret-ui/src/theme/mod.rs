@@ -2221,6 +2221,46 @@ mod tests {
     }
 
     #[test]
+    fn theme_snapshot_matches_theme_for_common_semantic_tokens() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+        let snapshot = theme.snapshot();
+
+        for key in [
+            "background",
+            "foreground",
+            "border",
+            "card",
+            "card-foreground",
+            "muted",
+            "muted-foreground",
+            "accent",
+            "accent-foreground",
+            "primary",
+            "primary-foreground",
+            "popover",
+            "popover-foreground",
+            "chart-1",
+            "sidebar",
+            "sidebar-foreground",
+        ] {
+            assert_eq!(
+                theme.color_token(key),
+                snapshot.color_token(key),
+                "key={key}"
+            );
+        }
+
+        for key in ["metric.size.sm", "metric.size.md", "metric.size.lg"] {
+            assert_eq!(
+                theme.metric_token(key),
+                snapshot.metric_token(key),
+                "key={key}"
+            );
+        }
+    }
+
+    #[test]
     fn missing_theme_token_diagnostics_warn_once_per_key() {
         // Use a unique key to avoid cross-test coupling (the warn-once cache is process-global).
         let key = format!("color.__missing_theme_token_test__{}", line!());
