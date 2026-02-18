@@ -11,6 +11,13 @@ use super::{
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
 
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    state
+}
+
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
     target: super::PlanTarget,
@@ -745,6 +752,10 @@ fn compile_for_scene_inner(
                                 uniform_index,
                                 first_vertex: mask_draw.first_vertex,
                                 vertex_count: mask_draw.vertex_count,
+                                cache_key: mix_u64(
+                                    mask_draw.cache_key,
+                                    (u64::from(mask_size.0) << 32) | u64::from(mask_size.1),
+                                ),
                                 load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                             }));
 

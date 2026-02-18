@@ -752,7 +752,10 @@ impl Renderer {
             label: Some("fret renderer encoder"),
         });
 
-        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::COPY_DST;
         let mut frame_targets = FrameTargets::default();
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let mut scale_param_cursor: u32 = 0;
@@ -993,14 +996,29 @@ impl Renderer {
                         RenderPlanPass::PathClipMask(mask_pass) => {
                             let target_size = mask_pass.dst_size;
 
-                            let pass_target_view = frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                mask_pass.dst,
+                            let (pass_target_texture, pass_target_view) = frame_targets
+                                .ensure_target_with_texture(
+                                    &mut self.intermediate_pool,
+                                    device,
+                                    mask_pass.dst,
+                                    target_size,
+                                    wgpu::TextureFormat::R8Unorm,
+                                    usage,
+                                );
+
+                            if self.clip_path_mask_cache.try_copy_into(
+                                &mut encoder,
+                                mask_pass.cache_key,
                                 target_size,
-                                wgpu::TextureFormat::R8Unorm,
-                                usage,
-                            );
+                                pass_target_texture,
+                                frame_index,
+                            ) {
+                                if perf_enabled {
+                                    frame_perf.clip_path_mask_cache_hits =
+                                        frame_perf.clip_path_mask_cache_hits.saturating_add(1);
+                                }
+                                continue;
+                            }
 
                             let uniform_offset = (mask_pass.uniform_index as u64)
                                 .saturating_mul(self.uniform_stride);
@@ -1009,59 +1027,76 @@ impl Renderer {
                             let first = (mask_pass.first_vertex as u64).saturating_mul(vertex_size);
                             let size = (mask_pass.vertex_count as u64).saturating_mul(vertex_size);
 
-                            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: Some("fret path clip-mask pass"),
-                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: &pass_target_view,
-                                    depth_slice: None,
-                                    resolve_target: None,
-                                    ops: wgpu::Operations {
-                                        load: mask_pass.load,
-                                        store: wgpu::StoreOp::Store,
-                                    },
-                                })],
-                                depth_stencil_attachment: None,
-                                timestamp_writes: None,
-                                occlusion_query_set: None,
-                                multiview_mask: None,
-                            });
+                            {
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("fret path clip-mask pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: &pass_target_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: mask_pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
 
-                            let pipeline = self
-                                .path_clip_mask_pipeline
-                                .as_ref()
-                                .expect("path clip-mask pipeline must exist");
-                            rp.set_pipeline(pipeline);
-                            let mask_image = encoding
-                                .uniform_mask_images
-                                .get(mask_pass.uniform_index as usize)
-                                .copied()
-                                .flatten();
-                            let uniform_bind_group =
-                                self.pick_uniform_bind_group_for_mask_image(mask_image);
-                            rp.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset as u32, render_space_offset_u32],
-                            );
-
-                            if size != 0 {
-                                rp.set_vertex_buffer(
+                                let pipeline = self
+                                    .path_clip_mask_pipeline
+                                    .as_ref()
+                                    .expect("path clip-mask pipeline must exist");
+                                rp.set_pipeline(pipeline);
+                                let mask_image = encoding
+                                    .uniform_mask_images
+                                    .get(mask_pass.uniform_index as usize)
+                                    .copied()
+                                    .flatten();
+                                let uniform_bind_group =
+                                    self.pick_uniform_bind_group_for_mask_image(mask_image);
+                                rp.set_bind_group(
                                     0,
-                                    path_vertex_buffer.slice(first..first + size),
+                                    uniform_bind_group,
+                                    &[uniform_offset as u32, render_space_offset_u32],
                                 );
-                                let _ = set_scissor_rect_absolute(
-                                    &mut rp,
-                                    mask_pass.scissor,
-                                    mask_pass.dst_origin,
-                                    mask_pass.dst_size,
-                                );
-                                rp.draw(0..mask_pass.vertex_count, 0..1);
+
+                                if size != 0 {
+                                    rp.set_vertex_buffer(
+                                        0,
+                                        path_vertex_buffer.slice(first..first + size),
+                                    );
+                                    let _ = set_scissor_rect_absolute(
+                                        &mut rp,
+                                        mask_pass.scissor,
+                                        mask_pass.dst_origin,
+                                        mask_pass.dst_size,
+                                    );
+                                    rp.draw(0..mask_pass.vertex_count, 0..1);
+                                }
                             }
 
                             if perf_enabled {
                                 frame_perf.clip_mask_draw_calls =
                                     frame_perf.clip_mask_draw_calls.saturating_add(1);
+                                frame_perf.clip_path_mask_cache_misses =
+                                    frame_perf.clip_path_mask_cache_misses.saturating_add(1);
                             }
+
+                            self.clip_path_mask_cache.store_from(
+                                &mut self.intermediate_pool,
+                                device,
+                                &mut encoder,
+                                mask_pass.cache_key,
+                                target_size,
+                                pass_target_texture,
+                                frame_index,
+                            );
                         }
                         RenderPlanPass::SceneDrawRange(scene_pass) => {
                             debug_assert!(scene_pass.segment.0 < plan.segments.len());
@@ -4467,6 +4502,9 @@ impl Renderer {
             frame_perf.svg_mask_atlas_page_evictions = self.perf_svg_mask_atlas_page_evictions;
             frame_perf.svg_mask_atlas_entries_evicted = self.perf_svg_mask_atlas_entries_evicted;
 
+            frame_perf.clip_path_mask_cache_bytes_live = self.clip_path_mask_cache.bytes_live();
+            frame_perf.clip_path_mask_cache_entries_live = self.clip_path_mask_cache.entries_live();
+
             let pool_perf = self.intermediate_pool.take_perf_snapshot();
             frame_perf.intermediate_pool_allocations = pool_perf.allocations;
             frame_perf.intermediate_pool_reuses = pool_perf.reuses;
@@ -4705,6 +4743,23 @@ impl Renderer {
                 .perf
                 .render_plan_degradations_composite_group_blend_to_over
                 .saturating_add(frame_perf.render_plan_degradations_composite_group_blend_to_over);
+
+            self.perf.clip_path_mask_cache_bytes_live = self
+                .perf
+                .clip_path_mask_cache_bytes_live
+                .max(frame_perf.clip_path_mask_cache_bytes_live);
+            self.perf.clip_path_mask_cache_entries_live = self
+                .perf
+                .clip_path_mask_cache_entries_live
+                .max(frame_perf.clip_path_mask_cache_entries_live);
+            self.perf.clip_path_mask_cache_hits = self
+                .perf
+                .clip_path_mask_cache_hits
+                .saturating_add(frame_perf.clip_path_mask_cache_hits);
+            self.perf.clip_path_mask_cache_misses = self
+                .perf
+                .clip_path_mask_cache_misses
+                .saturating_add(frame_perf.clip_path_mask_cache_misses);
 
             self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
             self.perf.quad_draw_calls = self
@@ -4993,6 +5048,10 @@ impl Renderer {
                 material_distinct: frame_perf.material_distinct,
                 material_unknown_ids: frame_perf.material_unknown_ids,
                 material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
+                clip_path_mask_cache_bytes_live: frame_perf.clip_path_mask_cache_bytes_live,
+                clip_path_mask_cache_entries_live: frame_perf.clip_path_mask_cache_entries_live,
+                clip_path_mask_cache_hits: frame_perf.clip_path_mask_cache_hits,
+                clip_path_mask_cache_misses: frame_perf.clip_path_mask_cache_misses,
             });
         }
 

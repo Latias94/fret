@@ -137,6 +137,10 @@ impl Renderer {
             render_plan_degradations_composite_group_blend_to_over: self
                 .perf
                 .render_plan_degradations_composite_group_blend_to_over,
+            clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
+            clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
+            clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,
+            clip_path_mask_cache_misses: self.perf.clip_path_mask_cache_misses,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
@@ -376,6 +380,10 @@ impl Renderer {
         self.intermediate_budget_bytes = bytes.max(1024);
         self.intermediate_pool
             .enforce_budget(self.intermediate_budget_bytes);
+        self.clip_path_mask_cache.enforce_budget(
+            &mut self.intermediate_pool,
+            self.intermediate_budget_bytes / 8,
+        );
     }
 
     pub fn material_paint_budget_per_frame(&self) -> u64 {

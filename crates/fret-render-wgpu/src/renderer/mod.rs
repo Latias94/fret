@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // Split from the original single-file renderer for maintainability.
+mod clip_path_mask_cache;
 mod path;
 mod types;
 mod util;
@@ -34,6 +35,7 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use clip_path_mask_cache::*;
 use fullscreen::*;
 use intermediate_pool::*;
 use path::*;
@@ -212,6 +214,8 @@ pub struct Renderer {
     svg_raster_epoch: u64,
     svg_perf_enabled: bool,
     svg_perf: SvgPerfStats,
+
+    clip_path_mask_cache: ClipPathMaskCache,
 
     perf_enabled: bool,
     // Per-frame SVG cache stats (best-effort; populated only when `perf_enabled` is true).

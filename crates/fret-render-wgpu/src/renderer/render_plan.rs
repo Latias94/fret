@@ -122,6 +122,7 @@ pub(super) struct PathClipMaskPass {
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
+    pub(super) cache_key: u64,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 

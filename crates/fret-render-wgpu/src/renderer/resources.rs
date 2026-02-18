@@ -602,6 +602,7 @@ impl Renderer {
             svg_raster_epoch: 0,
             svg_perf_enabled: false,
             svg_perf: SvgPerfStats::default(),
+            clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
             perf_enabled: false,
             perf_svg_raster_cache_hits: 0,
             perf_svg_raster_cache_misses: 0,

@@ -20,6 +20,29 @@ struct FrameTarget {
 }
 
 impl FrameTargets {
+    pub(super) fn ensure_target_with_texture(
+        &mut self,
+        pool: &mut IntermediatePool,
+        device: &wgpu::Device,
+        target: PlanTarget,
+        size: (u32, u32),
+        format: wgpu::TextureFormat,
+        usage: wgpu::TextureUsages,
+    ) -> (&wgpu::Texture, wgpu::TextureView) {
+        let view = self.ensure_target(pool, device, target, size, format, usage);
+        let slot = match target {
+            PlanTarget::Intermediate0 => self.intermediate0.as_ref(),
+            PlanTarget::Intermediate1 => self.intermediate1.as_ref(),
+            PlanTarget::Intermediate2 => self.intermediate2.as_ref(),
+            PlanTarget::Mask0 => self.mask0.as_ref(),
+            PlanTarget::Mask1 => self.mask1.as_ref(),
+            PlanTarget::Mask2 => self.mask2.as_ref(),
+            PlanTarget::Output => unreachable!("Output is not an intermediate target"),
+        };
+        let existing = slot.expect("required intermediate target must exist");
+        (&existing.texture.texture, view)
+    }
+
     pub(super) fn ensure_target(
         &mut self,
         pool: &mut IntermediatePool,
