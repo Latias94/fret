@@ -2232,6 +2232,7 @@ impl UiDiagnosticsService {
                                 snapshot,
                                 window_bounds,
                                 window,
+                                app.global::<fret_runtime::PlatformCapabilities>(),
                                 element_runtime,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -2454,6 +2455,7 @@ impl UiDiagnosticsService {
                                 snapshot,
                                 window_bounds,
                                 window,
+                                app.global::<fret_runtime::PlatformCapabilities>(),
                                 element_runtime,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -4051,6 +4053,7 @@ impl UiDiagnosticsService {
                             snapshot,
                             window_bounds,
                             window,
+                            app.global::<fret_runtime::PlatformCapabilities>(),
                             element_runtime,
                             app.global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(window)),
@@ -4645,6 +4648,7 @@ impl UiDiagnosticsService {
                         snapshot,
                         window_bounds,
                         window,
+                        app.global::<fret_runtime::PlatformCapabilities>(),
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -4734,6 +4738,7 @@ impl UiDiagnosticsService {
                         snapshot,
                         window_bounds,
                         window,
+                        app.global::<fret_runtime::PlatformCapabilities>(),
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -16249,6 +16254,7 @@ fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
     window: AppWindowId,
+    platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     element_runtime: Option<&ElementRuntime>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
@@ -16646,10 +16652,9 @@ fn eval_predicate(
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
-        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => snapshot
-            .caps
-            .as_ref()
-            .is_some_and(|c| c.ui_window_hover_detection == *quality),
+        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
+            platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
+        }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
@@ -18404,6 +18409,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             &[],
             None,
             0,
@@ -18425,6 +18431,7 @@ mod tests {
                 &snapshot,
                 window_bounds,
                 window_id(1),
+                None,
                 None,
                 None,
                 None,
