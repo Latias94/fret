@@ -209,7 +209,10 @@ fn snap_color(c: fret_core::Color) -> SnapColor {
 fn snap_paint(p: Paint) -> SnapColor {
     match p {
         Paint::Solid(c) => snap_color(c),
-        Paint::LinearGradient(_) | Paint::RadialGradient(_) | Paint::Material { .. } => {
+        Paint::LinearGradient(_)
+        | Paint::RadialGradient(_)
+        | Paint::SweepGradient(_)
+        | Paint::Material { .. } => {
             snap_color(Color::TRANSPARENT)
         }
     }

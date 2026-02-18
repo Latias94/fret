@@ -214,8 +214,9 @@ fn tabs_shared_indicator<H: UiHost>(
                 states |= WidgetStates::SELECTED;
             }
 
-            // shadcn new-york-v4: inactive triggers inherit `text-muted-foreground` from the list.
-            let fg_inactive = ColorRef::Color(tabs_list_fg_muted(theme));
+            // shadcn new-york-v4: triggers default to `text-foreground` (even when the list uses
+            // `text-muted-foreground`), so inactive tabs should not appear muted.
+            let fg_inactive = ColorRef::Color(theme.color_token("foreground"));
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -1189,7 +1190,8 @@ impl Tabs {
             &theme,
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
-                .bg(ColorRef::Color(tabs_list_bg(&theme))),
+                .bg(ColorRef::Color(tabs_list_bg(&theme)))
+                .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
             LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
@@ -1322,9 +1324,10 @@ impl Tabs {
                                     }));
                                 }
 
-                                // shadcn new-york-v4: `TabsList` sets `text-muted-foreground`, so
-                                // inactive triggers inherit it in both themes.
-                                let fg_inactive = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                // shadcn new-york-v4: triggers default to `text-foreground` (even
+                                // when the list uses `text-muted-foreground`).
+                                let fg_inactive =
+                                    ColorRef::Color(theme.color_token("foreground"));
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));

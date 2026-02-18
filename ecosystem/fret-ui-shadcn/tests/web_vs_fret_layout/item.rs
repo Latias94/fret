@@ -890,7 +890,7 @@ fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let image = ui::container(cx, |_cx| Vec::new())
+                    let image = ui::container(cx, |_cx| Vec::<AnyElement>::new())
                         .w_full()
                         .aspect_ratio(1.0)
                         .into_element(cx);
@@ -993,7 +993,7 @@ fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let image = ui::container(cx, |_cx| Vec::new())
+                    let image = ui::container(cx, |_cx| Vec::<AnyElement>::new())
                         .w_px(MetricRef::Px(Px(32.0)))
                         .h_px(MetricRef::Px(Px(32.0)))
                         .into_element(cx);
