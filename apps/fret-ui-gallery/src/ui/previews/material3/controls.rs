@@ -6,6 +6,25 @@ pub(in crate::ui) fn preview_material3_icon_button(
     use fret_icons::ids;
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    #[derive(Default)]
+    struct IconButtonPageModels {
+        toggle_checked: Option<Model<bool>>,
+    }
+
+    let toggle_checked = cx.with_state(IconButtonPageModels::default, |st| {
+        st.toggle_checked.clone()
+    });
+    let toggle_checked = match toggle_checked {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(false);
+            cx.with_state(IconButtonPageModels::default, |st| {
+                st.toggle_checked = Some(m.clone());
+            });
+            m
+        }
+    };
+
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::IconButtonVariant,
                label: &'static str| {
@@ -55,32 +74,18 @@ pub(in crate::ui) fn preview_material3_icon_button(
     let toggles = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+        move |cx| {
+            let checked = cx
+                .get_model_copied(&toggle_checked, Invalidation::Layout)
+                .unwrap_or(false);
             vec![
-                material3::IconButton::new(ids::ui::CHECK)
+                material3::IconToggleButton::new(toggle_checked.clone(), ids::ui::CHECK)
                     .variant(material3::IconButtonVariant::Filled)
-                    .toggle(true)
-                    .selected(false)
-                    .a11y_label("Toggle off")
+                    .a11y_label("Material 3 Icon Toggle Button")
+                    .test_id("ui-gallery-material3-icon-toggle-button")
                     .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Filled)
-                    .toggle(true)
-                    .selected(true)
-                    .a11y_label("Toggle on")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Outlined)
-                    .toggle(true)
-                    .selected(false)
-                    .a11y_label("Outlined off")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Outlined)
-                    .toggle(true)
-                    .selected(true)
-                    .a11y_label("Outlined on")
-                    .into_element(cx),
+                cx.text(format!("checked={checked}"))
+                    .test_id("ui-gallery-material3-icon-toggle-button-checked"),
             ]
         },
     );
