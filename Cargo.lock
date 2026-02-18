@@ -1829,6 +1829,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-clip-mask-stress"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-core",
+ "fret-render",
+ "pollster",
+ "wgpu",
+]
+
+[[package]]
 name = "fret-code-editor"
 version = "0.1.0"
 dependencies = [
