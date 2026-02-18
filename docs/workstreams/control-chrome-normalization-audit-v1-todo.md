@@ -57,8 +57,9 @@ Legend:
 | `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `control_chrome_pressable_with_id_props` | `ControlChrome` | Yes | Yes | OK | N/A | Unit tests in-file | Canonical helper; expand matrix tests. |
 | `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `centered_fixed_chrome_pressable_with_id_props` | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Unit tests in-file | For icon/tool buttons: hit box may stretch; chrome stays token-sized + centered. |
 | `ecosystem/fret-ui-shadcn/src/button.rs` | shadcn Button | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Prefer keeping all shadcn controls on this path. |
-| `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (responsive drawer path) | `AdHocChrome` | Yes | Unknown | At risk | `ControlChrome` | N/A | Trigger chrome copies `trigger_layout.size` but does not normalize flex-grow/stretch -> Fill. |
-| `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (desktop path) | `AdHocChrome` | Yes | Unknown | At risk | `ControlChrome` | N/A | Same risk pattern as responsive trigger. |
+| `ecosystem/fret-ui-shadcn/src/item.rs` | Item (clickable) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (responsive drawer path) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (desktop path) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/tabs.rs` | Tabs triggers | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | Inner container sets `w/h = Fill`. |
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar items (overlay) | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill`. |
