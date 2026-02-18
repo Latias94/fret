@@ -61,6 +61,8 @@ It builds on v1’s contract-path closure:
   - Preferred call-site helper:
     - `ImportedViewportRenderTarget::push_update_with_fallbacks(...)`
       (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
+    - For “single available strategy” call sites, use:
+      - `ImportedViewportFallbacks::single_view(...)` (keeps demos thin; see `apps/fret-examples/src/external_texture_imports_demo.rs`)
   - Lower-level helpers remain available (but should not be duplicated at call sites):
     - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
     - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
