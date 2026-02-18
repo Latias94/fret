@@ -519,6 +519,7 @@ fn view(
 
     let filter_all = filter_chip(
         cx,
+        &theme,
         "全部",
         filter_all_cmd,
         filter_value == TodoFilter::All,
@@ -526,6 +527,7 @@ fn view(
     );
     let filter_active = filter_chip(
         cx,
+        &theme,
         "进行中",
         filter_active_cmd,
         filter_value == TodoFilter::Active,
@@ -533,6 +535,7 @@ fn view(
     );
     let filter_completed = filter_chip(
         cx,
+        &theme,
         "已完成",
         filter_completed_cmd,
         filter_value == TodoFilter::Completed,
@@ -786,13 +789,12 @@ fn view(
 
 fn filter_chip(
     cx: &mut ElementContext<'_, App>,
+    theme: &ThemeSnapshot,
     label: &'static str,
     cmd: CommandId,
     selected: bool,
     test_id: &'static str,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).snapshot();
-
     let selected_style = ChromeRefinement::default()
         .bg(ColorRef::Color(theme.color_token("background")))
         .shadow_sm();
@@ -815,7 +817,7 @@ fn filter_chip(
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
         .on_click(cmd)
-        .refine_layout(LayoutRefinement::default().flex_1().w_full())
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .style(shadcn::button::ButtonStyle::default().foreground(fg))
         .refine_style(if selected {
             selected_style
