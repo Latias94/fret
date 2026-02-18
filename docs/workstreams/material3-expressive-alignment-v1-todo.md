@@ -45,10 +45,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-material3/src/switch.rs`
     - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
 
-- [ ] M3X-switch-003 Decide the switch “overshoot” position motion source of truth (Material Web vs Compose).
+- [~] M3X-switch-003 Decide + implement the switch “overshoot” position motion source of truth (Material Web vs Compose).
   - Material Web: handle-container margin transition with overshoot bezier.
   - Compose: motion scheme + springy thumb offset/size.
-  - Output: pick one, document the decision, and gate with a fixed-timestep diag script.
+  - Decision (v1): match Material Web’s handle-container overshoot for position; keep size/pressed behavior iterative.
+  - Gate: fixed-timestep timeline screenshots (`fretboard diag run --fixed-frame-delta-ms 16`).
 
 - [ ] M3X-switch-004 Verify focus state-layer policy (focus ring only vs focus state-layer opacity).
   - If we diverge intentionally, document it here with rationale.
@@ -78,4 +79,3 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] M3X-overlay-002 Material3 menu surface: anchor, offset, collision/flip, keyboard navigation.
 - [ ] M3X-overlay-003 Dialog: focus trap + escape/outside click policy + scroll locking (as applicable).
 - [ ] M3X-overlay-004 Snackbar: queueing policy + action button semantics.
-

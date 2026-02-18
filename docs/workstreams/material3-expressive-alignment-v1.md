@@ -77,6 +77,8 @@ For each component we consider aligned when we have:
   - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
 - Switch focus chroming screenshots:
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+- Switch handle overshoot timeline:
+  - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 - Text field hover screenshots:
   - `tools/diag-scripts/ui-gallery-material3-text-field-outlined-hover-screenshots.json`
 
@@ -93,4 +95,3 @@ exercise token/state/motion layering boundaries:
 - Dialog + Snackbar (overlay behavior, focus trap/restore, dismiss policy)
 
 Detailed sequencing and ownership lives in the TODO + milestones docs.
-

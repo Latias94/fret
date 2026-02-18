@@ -36,6 +36,12 @@ use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::switch as switch_tokens;
 
+fn material_web_switch_handle_overshoot_ease(x: f32) -> f32 {
+    // Material Web (M3) switch handle-container overshoot:
+    // `transition: margin 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275)`.
+    fret_ui_kit::headless::easing::CubicBezier::new(0.175, 0.885, 0.32, 1.275).sample_unclamped(x)
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
     pub track_color: OverrideSlot<ColorRef>,
@@ -442,19 +448,39 @@ impl Switch {
                                 config,
                             )
                         };
-                        let (thumb_t, pressed_t, chrome_t, thumb_active) =
+                        let (thumb_t, pressed_t, chrome_t, position_t, thumb_active) =
                             cx.named("thumb_runtime", |cx| {
                                 let desired_selected = if selected { 1.0 } else { 0.0 };
                                 let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
 
                                 // Match Material Web's selected/unselected crossfade which is driven
                                 // via pseudo-element opacity transitions (67ms linear).
+                                let chrome_duration = if enabled {
+                                    Duration::from_millis(67)
+                                } else {
+                                    Duration::ZERO
+                                };
                                 let chrome = fret_ui_kit::declarative::motion::drive_tween_f32(
                                     cx,
                                     desired_selected,
-                                    Duration::from_millis(67),
+                                    chrome_duration,
                                     fret_ui_kit::headless::easing::linear,
                                 );
+
+                                // Match Material Web's handle-container "overshoot" position
+                                // transition (margin 300ms cubic-bezier).
+                                let position_duration = if enabled {
+                                    Duration::from_millis(300)
+                                } else {
+                                    Duration::ZERO
+                                };
+                                let position =
+                                    fret_ui_kit::declarative::motion::drive_tween_f32_unclamped(
+                                        cx,
+                                        desired_selected,
+                                        position_duration,
+                                        material_web_switch_handle_overshoot_ease,
+                                    );
 
                                 let thumb_state_id = cx.root_id();
                                 cx.with_state_for(
@@ -487,9 +513,11 @@ impl Switch {
                                             rt.selected.value(),
                                             rt.pressed.value(),
                                             chrome.value,
+                                            position.value,
                                             rt.selected.is_active()
                                                 || rt.pressed.is_active()
-                                                || chrome.animating,
+                                                || chrome.animating
+                                                || position.animating,
                                         )
                                     },
                                 )
@@ -503,6 +531,7 @@ impl Switch {
                         let geom = switch_geometry(
                             size,
                             thumb_t,
+                            position_t,
                             pressed_t,
                             icons_always,
                             icons_selected_only,
@@ -655,12 +684,15 @@ struct SwitchGeometry {
 
 fn switch_geometry(
     size: SwitchSizeTokens,
-    thumb_t: f32,
+    size_t: f32,
+    position_t: f32,
     pressed: f32,
     icons_always: bool,
     icons_selected_only: bool,
 ) -> SwitchGeometry {
-    let thumb_t = thumb_t.clamp(0.0, 1.0);
+    let size_t = size_t.clamp(0.0, 1.0);
+    // Allow a small overshoot to match Material Web's custom cubic-bezier position easing.
+    let position_t = position_t.clamp(-0.2, 1.2);
 
     let pressed_t = pressed.clamp(0.0, 1.0);
     let unselected_width = if icons_always {
@@ -684,8 +716,8 @@ fn switch_geometry(
         size.selected_handle_height
     };
 
-    let base_width = Px(unselected_width.0 + (selected_width.0 - unselected_width.0) * thumb_t);
-    let base_height = Px(unselected_height.0 + (selected_height.0 - unselected_height.0) * thumb_t);
+    let base_width = Px(unselected_width.0 + (selected_width.0 - unselected_width.0) * size_t);
+    let base_height = Px(unselected_height.0 + (selected_height.0 - unselected_height.0) * size_t);
 
     let handle_width = Px(base_width.0 + (size.pressed_handle_width.0 - base_width.0) * pressed_t);
     let handle_height =
@@ -698,7 +730,7 @@ fn switch_geometry(
 
     let on_x = Px(size.track_width.0 - handle_width.0 - padding_x.0);
     let off_x = padding_x;
-    let handle_x = Px(off_x.0 + (on_x.0 - off_x.0) * thumb_t);
+    let handle_x = Px(off_x.0 + (on_x.0 - off_x.0) * position_t);
     let handle_y = padding_y;
 
     let thumb_cx = Px(handle_x.0 + handle_width.0 * 0.5);
