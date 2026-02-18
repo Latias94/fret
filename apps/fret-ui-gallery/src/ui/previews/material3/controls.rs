@@ -6,6 +6,25 @@ pub(in crate::ui) fn preview_material3_icon_button(
     use fret_icons::ids;
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    #[derive(Default)]
+    struct IconButtonPageModels {
+        toggle_checked: Option<Model<bool>>,
+    }
+
+    let toggle_checked = cx.with_state(IconButtonPageModels::default, |st| {
+        st.toggle_checked.clone()
+    });
+    let toggle_checked = match toggle_checked {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(false);
+            cx.with_state(IconButtonPageModels::default, |st| {
+                st.toggle_checked = Some(m.clone());
+            });
+            m
+        }
+    };
+
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::IconButtonVariant,
                label: &'static str| {
@@ -55,38 +74,38 @@ pub(in crate::ui) fn preview_material3_icon_button(
     let toggles = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+        move |cx| {
+            let checked = cx
+                .get_model_copied(&toggle_checked, Invalidation::Layout)
+                .unwrap_or(false);
             vec![
-                material3::IconButton::new(ids::ui::CHECK)
+                material3::IconToggleButton::new(toggle_checked.clone(), ids::ui::CHECK)
                     .variant(material3::IconButtonVariant::Filled)
-                    .toggle(true)
-                    .selected(false)
-                    .a11y_label("Toggle off")
+                    .a11y_label("Material 3 Icon Toggle Button")
+                    .test_id("ui-gallery-material3-icon-toggle-button")
                     .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Filled)
-                    .toggle(true)
-                    .selected(true)
-                    .a11y_label("Toggle on")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Outlined)
-                    .toggle(true)
-                    .selected(false)
-                    .a11y_label("Outlined off")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Outlined)
-                    .toggle(true)
-                    .selected(true)
-                    .a11y_label("Outlined on")
-                    .into_element(cx),
+                cx.text(format!("checked={checked}"))
+                    .test_id("ui-gallery-material3-icon-toggle-button-checked"),
             ]
+        },
+    );
+
+    let centered_gate = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![material3::IconButton::new(ids::ui::CLOSE)
+                .variant(material3::IconButtonVariant::Filled)
+                .a11y_label("Material 3 icon button (centered chrome)")
+                .test_id("ui-gallery-material3-icon-button-centered")
+                .into_element(cx)]
         },
     );
 
     vec![
         cx.text("Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple."),
+        cx.text("Centered fixed chrome: hit box can exceed visual chrome (min touch target)."),
+        centered_gate,
         row(cx, material3::IconButtonVariant::Standard, "Standard"),
         row(cx, material3::IconButtonVariant::Filled, "Filled"),
         row(cx, material3::IconButtonVariant::Tonal, "Tonal"),
@@ -222,9 +241,29 @@ pub(in crate::ui) fn preview_material3_checkbox(
 ) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    #[derive(Default)]
+    struct CheckboxPageModels {
+        tristate: Option<Model<Option<bool>>>,
+    }
+
+    let tristate = cx.with_state(CheckboxPageModels::default, |st| st.tristate.clone());
+    let tristate = match tristate {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(None::<bool>);
+            cx.with_state(CheckboxPageModels::default, |st| {
+                st.tristate = Some(m.clone())
+            });
+            m
+        }
+    };
+
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)
         .unwrap_or(false);
+    let tristate_value = cx
+        .get_model_cloned(&tristate, Invalidation::Layout)
+        .unwrap_or(None);
 
     let row = stack::hstack(
         cx,
@@ -269,9 +308,31 @@ pub(in crate::ui) fn preview_material3_checkbox(
         },
     );
 
+    let tristate_row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            let label = match tristate_value {
+                Some(true) => "checked",
+                Some(false) => "unchecked",
+                None => "indeterminate",
+            };
+            vec![
+                material3::Checkbox::new_optional(tristate.clone())
+                    .a11y_label("Material 3 Checkbox (tri-state)")
+                    .test_id("ui-gallery-material3-checkbox-tristate")
+                    .into_element(cx),
+                cx.text(format!("state={label}"))
+                    .test_id("ui-gallery-material3-checkbox-tristate-state"),
+            ]
+        },
+    );
+
     vec![
         cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
         row,
+        cx.text("Material 3 Checkbox (tri-state): `checked: None` represents indeterminate/mixed."),
+        tristate_row,
     ]
 }
 
@@ -280,6 +341,38 @@ pub(in crate::ui) fn preview_material3_switch(
     selected: Model<bool>,
 ) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct SwitchPageModels {
+        icons_both: Option<Model<bool>>,
+        icons_selected_only: Option<Model<bool>>,
+    }
+
+    let icons_both = cx.with_state(SwitchPageModels::default, |st| st.icons_both.clone());
+    let icons_both = match icons_both {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SwitchPageModels::default, |st| {
+                st.icons_both = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let icons_selected_only = cx.with_state(SwitchPageModels::default, |st| {
+        st.icons_selected_only.clone()
+    });
+    let icons_selected_only = match icons_selected_only {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SwitchPageModels::default, |st| {
+                st.icons_selected_only = Some(model.clone())
+            });
+            model
+        }
+    };
 
     let value = cx
         .get_model_copied(&selected, Invalidation::Layout)
@@ -331,6 +424,97 @@ pub(in crate::ui) fn preview_material3_switch(
     vec![
         cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
         row,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                let icons_both_value = cx
+                    .get_model_copied(&icons_both, Invalidation::Layout)
+                    .unwrap_or(false);
+                let icons_selected_only_value = cx
+                    .get_model_copied(&icons_selected_only, Invalidation::Layout)
+                    .unwrap_or(false);
+                vec![
+                    material3::Switch::new(icons_both.clone())
+                        .icons(true)
+                        .a11y_label("Material 3 Switch (icons)")
+                        .test_id("ui-gallery-material3-switch-icons-both")
+                        .into_element(cx),
+                    cx.text(format!("icons_both={}", icons_both_value as u8)),
+                    material3::Switch::new(icons_both.clone())
+                        .icons(true)
+                        .disabled(true)
+                        .a11y_label("Disabled Material 3 Switch (icons)")
+                        .test_id("ui-gallery-material3-switch-icons-both-disabled")
+                        .into_element(cx),
+                    material3::Switch::new(icons_selected_only.clone())
+                        .show_only_selected_icon(true)
+                        .a11y_label("Material 3 Switch (selected icon only)")
+                        .test_id("ui-gallery-material3-switch-icons-selected-only")
+                        .into_element(cx),
+                    cx.text(format!(
+                        "icons_selected_only={}",
+                        icons_selected_only_value as u8
+                    )),
+                    material3::Switch::new(icons_selected_only.clone())
+                        .show_only_selected_icon(true)
+                        .disabled(true)
+                        .a11y_label("Disabled Material 3 Switch (selected icon only)")
+                        .test_id("ui-gallery-material3-switch-icons-selected-only-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+    ]
+}
+
+pub(in crate::ui) fn preview_material3_slider(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<f32>,
+) -> Vec<AnyElement> {
+    let value_now = cx
+        .get_model_copied(&value, Invalidation::Layout)
+        .unwrap_or(0.0)
+        .clamp(0.0, 1.0);
+    let value_for_main_row = value.clone();
+    let value_for_ticks_row = value.clone();
+
+    vec![
+        cx.text("Material 3 Slider: token-driven track + handle + state layer."),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |cx| {
+                vec![
+                    material3::Slider::new(value_for_main_row.clone())
+                        .a11y_label("Material 3 Slider")
+                        .test_id("ui-gallery-material3-slider")
+                        .into_element(cx),
+                    cx.text(format!("value={value_now:.3}"))
+                        .test_id("ui-gallery-material3-slider-value"),
+                    material3::Slider::new(value_for_main_row.clone())
+                        .disabled(true)
+                        .a11y_label("Disabled Material 3 Slider")
+                        .test_id("ui-gallery-material3-slider-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |cx| {
+                vec![
+                    material3::Slider::new(value_for_ticks_row.clone())
+                        .with_tick_marks(true)
+                        .tick_marks_count(5)
+                        .a11y_label("Material 3 Slider (tick marks)")
+                        .test_id("ui-gallery-material3-slider-tick-marks")
+                        .into_element(cx),
+                    cx.text("tick_marks=5"),
+                ]
+            },
+        ),
     ]
 }
 

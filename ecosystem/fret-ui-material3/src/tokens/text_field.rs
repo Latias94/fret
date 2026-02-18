@@ -92,7 +92,9 @@ pub(crate) fn label_color(
     focused: bool,
 ) -> Color {
     match variant {
-        TextFieldVariant::Outlined => outlined_label_color(theme, disabled, error, focused),
+        TextFieldVariant::Outlined => {
+            outlined_label_color(theme, hovered, disabled, error, focused)
+        }
         TextFieldVariant::Filled => filled_label_color(theme, hovered, disabled, error, focused),
     }
 }
@@ -107,7 +109,7 @@ pub(crate) fn supporting_text_color(
 ) -> Color {
     match variant {
         TextFieldVariant::Outlined => {
-            outlined_supporting_text_color(theme, disabled, error, focused)
+            outlined_supporting_text_color(theme, hovered, disabled, error, focused)
         }
         TextFieldVariant::Filled => {
             filled_supporting_text_color(theme, hovered, disabled, error, focused)
@@ -613,13 +615,23 @@ fn filled_active_indicator_color(
     c
 }
 
-fn outlined_label_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
+fn outlined_label_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
     let key = if error && focused {
         "md.comp.outlined-text-field.error.focus.label-text.color"
+    } else if error && hovered {
+        "md.comp.outlined-text-field.error.hover.label-text.color"
     } else if error {
         "md.comp.outlined-text-field.error.label-text.color"
     } else if focused {
         "md.comp.outlined-text-field.focus.label-text.color"
+    } else if hovered {
+        "md.comp.outlined-text-field.hover.label-text.color"
     } else if disabled {
         "md.comp.outlined-text-field.disabled.label-text.color"
     } else {
@@ -679,16 +691,21 @@ fn filled_label_color(
 
 fn outlined_supporting_text_color(
     theme: &Theme,
+    hovered: bool,
     disabled: bool,
     error: bool,
     focused: bool,
 ) -> Color {
     let key = if error && focused {
         "md.comp.outlined-text-field.error.focus.supporting-text.color"
+    } else if error && hovered {
+        "md.comp.outlined-text-field.error.hover.supporting-text.color"
     } else if error {
         "md.comp.outlined-text-field.error.supporting-text.color"
     } else if focused {
         "md.comp.outlined-text-field.focus.supporting-text.color"
+    } else if hovered {
+        "md.comp.outlined-text-field.hover.supporting-text.color"
     } else if disabled {
         "md.comp.outlined-text-field.disabled.supporting-text.color"
     } else {
@@ -707,6 +724,106 @@ fn outlined_supporting_text_color(
     }
 
     c
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{outlined_label_color, outlined_supporting_text_color};
+    use crate::tokens::v30::{TypographyOptions, theme_config};
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn apply_patch_color(cfg: &mut ThemeConfig, key: &str, hex: &str) {
+        cfg.colors.insert(key.to_string(), hex.to_string());
+    }
+
+    #[test]
+    fn outlined_hover_label_and_supporting_use_hover_tokens_when_present() {
+        let mut app = App::new();
+        let base = theme_config(TypographyOptions::default());
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&base));
+
+        let mut patch = ThemeConfig::default();
+        apply_patch_color(
+            &mut patch,
+            "md.comp.outlined-text-field.label-text.color",
+            "#00ff00",
+        );
+        apply_patch_color(
+            &mut patch,
+            "md.comp.outlined-text-field.hover.label-text.color",
+            "#ff0000",
+        );
+        apply_patch_color(
+            &mut patch,
+            "md.comp.outlined-text-field.supporting-text.color",
+            "#00ff00",
+        );
+        apply_patch_color(
+            &mut patch,
+            "md.comp.outlined-text-field.hover.supporting-text.color",
+            "#ff0000",
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+
+        let theme = Theme::global(&app);
+
+        let base_label = outlined_label_color(&theme, false, false, false, false);
+        let hover_label = outlined_label_color(&theme, true, false, false, false);
+        assert_ne!(base_label, hover_label);
+        assert_eq!(
+            base_label,
+            theme
+                .color_by_key("md.comp.outlined-text-field.label-text.color")
+                .expect("expected patched base label color"),
+        );
+        assert_eq!(
+            hover_label,
+            theme
+                .color_by_key("md.comp.outlined-text-field.hover.label-text.color")
+                .expect("expected patched hover label color"),
+        );
+
+        let base_supporting = outlined_supporting_text_color(&theme, false, false, false, false);
+        let hover_supporting = outlined_supporting_text_color(&theme, true, false, false, false);
+        assert_ne!(base_supporting, hover_supporting);
+        assert_eq!(
+            base_supporting,
+            theme
+                .color_by_key("md.comp.outlined-text-field.supporting-text.color")
+                .expect("expected patched base supporting color"),
+        );
+        assert_eq!(
+            hover_supporting,
+            theme
+                .color_by_key("md.comp.outlined-text-field.hover.supporting-text.color")
+                .expect("expected patched hover supporting color"),
+        );
+    }
+
+    #[test]
+    fn outlined_error_hover_label_prefers_error_hover_token() {
+        let mut app = App::new();
+        let base = theme_config(TypographyOptions::default());
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&base));
+
+        let mut patch = ThemeConfig::default();
+        apply_patch_color(
+            &mut patch,
+            "md.comp.outlined-text-field.error.hover.label-text.color",
+            "#112233",
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+
+        let theme = Theme::global(&app);
+        let c = outlined_label_color(&theme, true, false, true, false);
+        assert_eq!(
+            c,
+            theme
+                .color_by_key("md.comp.outlined-text-field.error.hover.label-text.color")
+                .expect("expected patched error hover label color"),
+        );
+    }
 }
 
 fn filled_supporting_text_color(

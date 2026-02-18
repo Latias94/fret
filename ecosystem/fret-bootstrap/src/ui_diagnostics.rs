@@ -2423,6 +2423,12 @@ impl UiDiagnosticsService {
                                 .and_then(|store| {
                                     store.docking_latest_for_window(predicate_window)
                                 });
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
+                            let text_input_snapshot = app
+                                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
                             let dock_drag_runtime = dock_drag_runtime_state(app);
                             let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
 
@@ -2435,13 +2441,11 @@ impl UiDiagnosticsService {
                                     step_index as u32,
                                     "wait_until",
                                 );
-                                let text_input_snapshot = app
-                                    .global::<fret_runtime::WindowTextInputSnapshotService>()
-                                    .and_then(|svc| svc.snapshot(predicate_window));
                                 eval_predicate(
                                     snapshot,
                                     window_bounds,
                                     predicate_window,
+                                    input_ctx,
                                     element_runtime,
                                     text_input_snapshot,
                                     app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -2665,6 +2669,12 @@ impl UiDiagnosticsService {
                                 .and_then(|store| {
                                     store.docking_latest_for_window(predicate_window)
                                 });
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
+                            let text_input_snapshot = app
+                                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
                             let dock_drag_runtime = dock_drag_runtime_state(app);
                             let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
 
@@ -2677,13 +2687,11 @@ impl UiDiagnosticsService {
                                     step_index as u32,
                                     "assert",
                                 );
-                                let text_input_snapshot = app
-                                    .global::<fret_runtime::WindowTextInputSnapshotService>()
-                                    .and_then(|svc| svc.snapshot(predicate_window));
                                 eval_predicate(
                                     snapshot,
                                     window_bounds,
                                     predicate_window,
+                                    input_ctx,
                                     element_runtime,
                                     text_input_snapshot,
                                     app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -4387,12 +4395,16 @@ impl UiDiagnosticsService {
                                 }),
                             _ => false,
                         };
+                        let input_ctx = app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(window));
                         let predicate_ok = if let Some(snapshot) = semantics_snapshot {
                             let dock_drag_runtime = dock_drag_runtime_state(app);
                             eval_predicate(
                                 snapshot,
                                 window_bounds,
                                 window,
+                                input_ctx,
                                 element_runtime,
                                 app.global::<fret_runtime::WindowTextInputSnapshotService>()
                                     .and_then(|svc| svc.snapshot(window)),
@@ -5037,11 +5049,15 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
                     let dock_drag_runtime = dock_drag_runtime_state(app);
                     if eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -5129,11 +5145,15 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
                     let dock_drag_runtime = dock_drag_runtime_state(app);
                     let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -16844,6 +16864,7 @@ fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
     window: AppWindowId,
+    input_ctx: Option<&fret_runtime::InputContext>,
     element_runtime: Option<&ElementRuntime>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
@@ -17153,6 +17174,57 @@ fn eval_predicate(
 
             w <= max_w + eps && h <= max_h + eps
         }
+        UiPredicateV1::BoundsApproxEqual { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax = a.bounds.origin.x.0;
+            let ay = a.bounds.origin.y.0;
+            let aw = a.bounds.size.width.0.max(0.0);
+            let ah = a.bounds.size.height.0.max(0.0);
+
+            let bx = b.bounds.origin.x.0;
+            let by = b.bounds.origin.y.0;
+            let bw = b.bounds.size.width.0.max(0.0);
+            let bh = b.bounds.size.height.0.max(0.0);
+
+            (ax - bx).abs() <= eps
+                && (ay - by).abs() <= eps
+                && (aw - bw).abs() <= eps
+                && (ah - bh).abs() <= eps
+        }
+        UiPredicateV1::BoundsCenterApproxEqual { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax = a.bounds.origin.x.0;
+            let ay = a.bounds.origin.y.0;
+            let aw = a.bounds.size.width.0.max(0.0);
+            let ah = a.bounds.size.height.0.max(0.0);
+            let acx = ax + aw * 0.5;
+            let acy = ay + ah * 0.5;
+
+            let bx = b.bounds.origin.x.0;
+            let by = b.bounds.origin.y.0;
+            let bw = b.bounds.size.width.0.max(0.0);
+            let bh = b.bounds.size.height.0.max(0.0);
+            let bcx = bx + bw * 0.5;
+            let bcy = by + bh * 0.5;
+
+            (acx - bcx).abs() <= eps && (acy - bcy).abs() <= eps
+        }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
                 return false;
@@ -17244,7 +17316,12 @@ fn eval_predicate(
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
-            platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
+            if let Some(input_ctx) = input_ctx {
+                input_ctx.caps.ui.window_hover_detection.as_str() == quality.as_str()
+            } else {
+                platform_caps
+                    .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
+            }
         }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,

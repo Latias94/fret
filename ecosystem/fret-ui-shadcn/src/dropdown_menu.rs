@@ -875,7 +875,11 @@ fn checkable_menu_row_children<H: UiHost>(
 
     vec![cx.container(
         ContainerProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
@@ -2353,14 +2357,18 @@ impl DropdownMenu {
                                                                     left: pad_left,
                                                                 });
 
-                                                                let children = vec![cx.container(
-                                                                        ContainerProps {
-                                                                            layout: LayoutStyle::default(),
-                                                                            padding: row_padding,
-                                                                            background: Some(row_bg),
-                                                                            corner_radii: fret_core::Corners::all(radius_sm),
-                                                                            ..Default::default()
-                                                                        },
+                                                                        let children = vec![cx.container(
+                                                                            ContainerProps {
+                                                                                layout: {
+                                                                                    let mut layout = LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout
+                                                                                },
+                                                                                padding: row_padding,
+                                                                                background: Some(row_bg),
+                                                                                corner_radii: fret_core::Corners::all(radius_sm),
+                                                                                ..Default::default()
+                                                                            },
                                                                     move |cx| {
                                                                         if let Some(custom) = content.clone() {
                                                                             return vec![custom];
@@ -3180,7 +3188,11 @@ impl DropdownMenu {
 
                                                                             let children = vec![cx.container(
                                                                                 ContainerProps {
-                                                                                    layout: LayoutStyle::default(),
+                                                                                    layout: {
+                                                                                        let mut layout = LayoutStyle::default();
+                                                                                        layout.size.width = Length::Fill;
+                                                                                        layout
+                                                                                    },
                                                                                     padding: Edges {
                                                                                         top: pad_y,
                                                                                         right: pad_x,

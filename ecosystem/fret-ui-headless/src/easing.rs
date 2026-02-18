@@ -37,6 +37,23 @@ impl CubicBezier {
         self.curve_y(t).clamp(0.0, 1.0)
     }
 
+    /// Sample the easing output `y` for an input progress `x` in `[0, 1]` without clamping.
+    ///
+    /// This is useful for "overshoot" curves like `cubic-bezier(..., y2 > 1.0)` where the
+    /// desired output intentionally goes outside `[0, 1]`.
+    pub fn sample_unclamped(self, x: f32) -> f32 {
+        let x = x.clamp(0.0, 1.0);
+        if x <= 0.0 {
+            return 0.0;
+        }
+        if x >= 1.0 {
+            return 1.0;
+        }
+
+        let t = self.solve_t_for_x(x);
+        self.curve_y(t)
+    }
+
     fn curve_x(self, t: f32) -> f32 {
         let t = t.clamp(0.0, 1.0);
         let u = 1.0 - t;
@@ -144,5 +161,20 @@ mod tests {
                 prev = y;
             }
         }
+    }
+
+    #[test]
+    fn cubic_bezier_sample_unclamped_allows_overshoot() {
+        let c = CubicBezier::new(0.175, 0.885, 0.32, 1.275);
+        let mut seen_overshoot = false;
+        for i in 0..=100 {
+            let x = i as f32 / 100.0;
+            let y = c.sample_unclamped(x);
+            if y > 1.0 {
+                seen_overshoot = true;
+                break;
+            }
+        }
+        assert!(seen_overshoot);
     }
 }

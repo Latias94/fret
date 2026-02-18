@@ -45,6 +45,7 @@ pub(in crate::ui) fn material3_variant_toggle_row(
             vec![
                 shadcn::Switch::new(material3_expressive.clone())
                     .a11y_label("Enable Material 3 Expressive variant")
+                    .test_id("ui-gallery-material3-design-variant-toggle")
                     .into_element(cx),
                 ui::label(
                     cx,

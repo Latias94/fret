@@ -9,6 +9,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::{MetricRef, Space};
 
 #[derive(Debug, Default)]
@@ -55,7 +56,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
     feedback: CopyFeedbackRef,
     code: Arc<str>,
 ) -> AnyElement {
-    cx.pressable_with_id_props(move |cx, st, id| {
+    control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         let copied = feedback.lock().copied;
         let label = if copied { "Copied" } else { "Copy" };
 
@@ -131,7 +132,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
         let pad_y = MetricRef::space(Space::N0p5).resolve(theme);
         let pad_x = MetricRef::space(Space::N1p5).resolve(theme);
 
-        let container = ContainerProps {
+        let chrome = ContainerProps {
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
@@ -144,30 +145,27 @@ pub(crate) fn render_copy_button<H: UiHost>(
             ..Default::default()
         };
 
-        (
-            props,
-            vec![cx.container(container, |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Auto;
-                        layout
-                    },
-                    text: Arc::<str>::from(label),
-                    style: Some(TextStyle {
-                        font: FontId::default(),
-                        size: font_size,
-                        weight: FontWeight::SEMIBOLD,
-                        slant: Default::default(),
-                        line_height: Some(line_height),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                })]
-            })],
-        )
+        (props, chrome, move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Auto;
+                    layout
+                },
+                text: Arc::<str>::from(label),
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    weight: FontWeight::SEMIBOLD,
+                    slant: Default::default(),
+                    line_height: Some(line_height),
+                    letter_spacing_em: None,
+                }),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+            })]
+        })
     })
 }

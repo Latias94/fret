@@ -12,6 +12,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
 use fret_ui_kit::declarative::motion_value::{
@@ -214,8 +215,14 @@ fn tabs_shared_indicator<H: UiHost>(
                 states |= WidgetStates::SELECTED;
             }
 
-            // shadcn new-york-v4: inactive triggers inherit `text-muted-foreground` from the list.
-            let fg_inactive = ColorRef::Color(tabs_list_fg_muted(theme));
+            // shadcn new-york-v4 `TabsTrigger` defaults:
+            // - light: `text-foreground`
+            // - dark: `text-muted-foreground`
+            let fg_inactive = if theme.name.contains("/dark") {
+                ColorRef::Color(tabs_list_fg_muted(theme))
+            } else {
+                ColorRef::Color(theme.color_token("foreground"))
+            };
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -1322,9 +1329,14 @@ impl Tabs {
                                     }));
                                 }
 
-                                // shadcn new-york-v4: `TabsList` sets `text-muted-foreground`, so
-                                // inactive triggers inherit it in both themes.
-                                let fg_inactive = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                // shadcn new-york-v4 `TabsTrigger` defaults:
+                                // - light: `text-foreground`
+                                // - dark: `text-muted-foreground`
+                                let fg_inactive = if theme.name.contains("/dark") {
+                                    ColorRef::Color(tabs_list_fg_muted(&theme))
+                                } else {
+                                    ColorRef::Color(theme.color_token("foreground"))
+                                };
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
@@ -1393,8 +1405,7 @@ impl Tabs {
                                     let text_style = text_style.clone();
 
                                     out.push(cx.keyed(value.clone(), move |cx| {
-                                        let mut trigger =
-                                            cx.pressable_with_id_props(move |cx, st, _id| {
+                                        control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
                                         let on_value_change_for_pointer = on_value_change.clone();
@@ -1452,12 +1463,12 @@ impl Tabs {
                                             },
                                         ));
                                         if active {
-                                            selected_tab_element.set(Some(_id.0));
+                                            selected_tab_element.set(Some(id.0));
                                         }
                                         if force_mount_content
                                             && let Some(cell) = tab_trigger_elements.get(idx)
                                         {
-                                            cell.set(Some(_id.0));
+                                            cell.set(Some(id.0));
                                         }
 
                                         cx.with_state_for(
@@ -1465,10 +1476,10 @@ impl Tabs {
                                             TabsListLayoutRuntime::default,
                                             |rt| {
                                                 if rt.triggers.len() != list_item_count {
-                                                    rt.triggers.resize(list_item_count, _id);
+                                                    rt.triggers.resize(list_item_count, id);
                                                 }
                                                 if let Some(slot) = rt.triggers.get_mut(idx) {
-                                                    *slot = _id;
+                                                    *slot = id;
                                                 }
                                             },
                                         );
@@ -1506,111 +1517,98 @@ impl Tabs {
                                             border
                                         };
 
+                                        let mut a11y =
+                                            fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
+                                                Some(label.clone()),
+                                                active,
+                                                u32::try_from(idx + 1).ok(),
+                                                tab_set_size,
+                                            );
+                                        if let Some(test_id) = trigger_test_id.as_ref() {
+                                            a11y.test_id = Some(test_id.clone());
+                                        }
+
                                         let props = PressableProps {
                                             layout: trigger_layout,
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
                                             focus_ring: Some(ring),
-                                            a11y: fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
-                                                Some(label.clone()),
-                                                active,
-                                                u32::try_from(idx + 1).ok(),
-                                                tab_set_size,
-                                            ),
+                                            a11y,
                                             ..Default::default()
                                         };
 
-                                        let children = vec![cx.container(
-                                            ContainerProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout.size.height = Length::Fill;
-                                                    layout
-                                                },
-                                                padding: Edges {
-                                                    top: pad_y,
-                                                    right: pad_x,
-                                                    bottom: pad_y,
-                                                    left: pad_x,
-                                                },
-                                                background: bg,
-                                                shadow,
-                                                border: Edges::all(border_w),
-                                                border_color: Some(border),
-                                                corner_radii: Corners::all(radius),
-                                                ..Default::default()
+                                        let chrome = ContainerProps {
+                                            padding: Edges {
+                                                top: pad_y,
+                                                right: pad_x,
+                                                bottom: pad_y,
+                                                left: pad_x,
                                             },
-                                            move |cx| {
-                                                let base =
-                                                    trigger_children.clone().unwrap_or_else(|| {
-                                                        let style = text_style.clone();
-                                                        let mut text = ui::label(cx, label.clone())
-                                                            .text_size_px(style.size)
-                                                            .font_weight(style.weight)
-                                                            .text_color(fg_ref.clone())
-                                                            .nowrap();
-                                                        if let Some(line_height) = style.line_height
-                                                        {
-                                                            // Match web baseline behavior by giving the label a fixed line box
-                                                            // height when a line-height is configured. This allows the text
-                                                            // host widget to apply CSS-like "half-leading" centering rather
-                                                            // than centering by the prepared glyph bounds, which can read as
-                                                            // slightly bottom-heavy in GPU-first layout.
-                                                            text = text
-                                                                .line_height_px(line_height)
-                                                                .h_px(line_height);
-                                                        }
-                                                        if let Some(letter_spacing_em) =
-                                                            style.letter_spacing_em
-                                                        {
-                                                            text =
-                                                                text.letter_spacing_em(letter_spacing_em);
-                                                        }
-                                                        vec![text.into_element(cx)]
-                                                    });
+                                            background: bg,
+                                            shadow,
+                                            border: Edges::all(border_w),
+                                            border_color: Some(border),
+                                            corner_radii: Corners::all(radius),
+                                            ..Default::default()
+                                        };
 
-                                                let styled: Vec<AnyElement> = base
-                                                    .into_iter()
-                                                    .map(|child| {
-                                                        apply_trigger_inherited_style(
-                                                            child,
-                                                            fg,
-                                                            &text_style,
-                                                        )
-                                                    })
-                                                    .collect();
+                                        let content = move |cx: &mut ElementContext<'_, H>| {
+                                            let base = trigger_children.clone().unwrap_or_else(|| {
+                                                let style = text_style.clone();
+                                                let mut text = ui::label(cx, label.clone())
+                                                    .text_size_px(style.size)
+                                                    .font_weight(style.weight)
+                                                    .text_color(fg_ref.clone())
+                                                    .nowrap();
+                                                if let Some(line_height) = style.line_height {
+                                                    // Match web baseline behavior by giving the label a fixed line box
+                                                    // height when a line-height is configured. This allows the text
+                                                    // host widget to apply CSS-like "half-leading" centering rather
+                                                    // than centering by the prepared glyph bounds, which can read as
+                                                    // slightly bottom-heavy in GPU-first layout.
+                                                    text =
+                                                        text.line_height_px(line_height).h_px(line_height);
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    style.letter_spacing_em
+                                                {
+                                                    text = text.letter_spacing_em(letter_spacing_em);
+                                                }
+                                                vec![text.into_element(cx)]
+                                            });
 
-                                                vec![cx.flex(
-                                                    FlexProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width = Length::Fill;
-                                                            layout.size.height = Length::Fill;
-                                                            layout
-                                                        },
-                                                        direction: fret_core::Axis::Horizontal,
-                                                        gap: Px(6.0),
-                                                        padding: Edges::all(Px(0.0)),
-                                                        justify: MainAlign::Center,
-                                                        align: CrossAlign::Center,
-                                                        wrap: false,
-                                                    },
-                                                    move |_cx| styled,
-                                                )]
-                                            },
-                                        )];
+                                            let styled: Vec<AnyElement> = base
+                                                .into_iter()
+                                                .map(|child| {
+                                                    apply_trigger_inherited_style(child, fg, &text_style)
+                                                })
+                                                .collect();
 
-                                        (props, children)
-                                        });
-                                        if let Some(test_id) = trigger_test_id.as_ref() {
-                                            trigger = trigger.test_id(test_id.clone());
-                                        }
-                                        trigger
+                                            vec![cx.flex(
+                                                FlexProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                     layout.size.width = Length::Fill;
+                                                     layout.size.height = Length::Fill;
+                                                     layout
+                                                 },
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(6.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Center,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |_cx| styled,
+                                            )]
+                                        };
+
+                                        (props, chrome, content)
+                                        })
                                      }));
-                                }
-                                out
-                            },
+                                 }
+                                 out
+                             },
                         ));
                         list_children
                     })]

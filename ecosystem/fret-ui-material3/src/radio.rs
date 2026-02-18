@@ -29,7 +29,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, minimum_interactive_size,
+};
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::radio as radio_tokens;
 use crate::tokens::radio::RadioSizeTokens;
@@ -905,7 +907,11 @@ impl Radio {
                         let icon = radio_icon(cx, size, checked, icon_color, dot_scale);
 
                         let chrome = material_radio_chrome(cx, size, vec![overlay, icon]);
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

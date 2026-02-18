@@ -116,7 +116,9 @@ impl SimpleTodoDriver {
                     let rows = ui::v_flex_build(cx, |cx, out| {
                         for t in &todos {
                             let remove_cmd = CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", t.id));
-                            out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd)));
+                            out.push(
+                                cx.keyed(t.id, |cx| todo_row(cx, theme.clone(), t, remove_cmd)),
+                            );
                         }
                     })
                     .gap(Space::N3)

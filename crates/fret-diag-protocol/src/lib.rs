@@ -1081,6 +1081,27 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when both targets exist and their bounds match within `eps_px`.
+    ///
+    /// This is primarily used to gate “hit box vs visual chrome” regressions where a pressable
+    /// can stretch but an inner chrome surface must continue to fill the same box.
+    BoundsApproxEqual {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their bounds centers match within `eps_px`.
+    ///
+    /// This is primarily used to gate “stretched hit box + centered fixed chrome” contracts where
+    /// the interactive surface can grow via flex/grid/min touch target, but the inner visual chrome
+    /// remains fixed-size and centered.
+    BoundsCenterApproxEqual {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsNonOverlapping {
         a: UiSelectorV1,
         b: UiSelectorV1,
@@ -2103,6 +2124,63 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::RunnerAccessibilityActivated
+        ));
+    }
+
+    #[test]
+    fn predicate_bounds_approx_equal_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsApproxEqual {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 1.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_approx_equal",
+                "a": { "kind": "test_id", "id": "a" },
+                "b": { "kind": "test_id", "id": "b" },
+                "eps_px": 1.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::BoundsApproxEqual { .. }));
+    }
+
+    #[test]
+    fn predicate_bounds_center_approx_equal_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsCenterApproxEqual {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 1.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_center_approx_equal",
+                "a": { "kind": "test_id", "id": "a" },
+                "b": { "kind": "test_id", "id": "b" },
+                "eps_px": 1.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::BoundsCenterApproxEqual { .. }
         ));
     }
 }

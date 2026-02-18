@@ -182,11 +182,23 @@ pub(super) fn preview_dialog(
         let content = shadcn::Dialog::new(open.clone()).into_element(
             cx,
             move |cx| {
-                shadcn::Button::new("Open Dialog")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-dialog-demo-trigger")
-                    .toggle_model(trigger_open.clone())
-                    .into_element(cx)
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
+                    |cx| {
+                        vec![
+                            shadcn::Button::new("Open Dialog")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .refine_layout(LayoutRefinement::default().flex_1())
+                                .test_id("ui-gallery-dialog-demo-trigger")
+                                .toggle_model(trigger_open.clone())
+                                .into_element(cx),
+                        ]
+                    },
+                )
             },
             move |cx| {
                 shadcn::DialogContent::new([

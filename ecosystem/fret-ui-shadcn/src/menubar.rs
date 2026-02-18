@@ -17,6 +17,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -577,7 +578,11 @@ fn menu_row_children<H: UiHost>(
 ) -> Elements {
     vec![cx.container(
         ContainerProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
@@ -1220,7 +1225,7 @@ impl MenubarMenuEntries {
             let label = self.menu.label.clone();
             let test_id = self.menu.test_id.clone();
 
-            cx.pressable_with_id_props(|cx, st, trigger_id| {
+            control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                 let (patient_click_sticky, patient_click_timer) =
                     menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
@@ -3367,22 +3372,25 @@ impl MenubarMenuEntries {
                     }
                 }
 
-                let content = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle::default(),
-                        padding: Edges {
-                            top: Px(4.0),
-                            right: Px(8.0),
-                            bottom: Px(4.0),
-                            left: Px(8.0),
-                        },
-                        background: trigger_bg,
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: Corners::all(radius),
-                        ..Default::default()
+                let chrome = ContainerProps {
+                    layout: LayoutStyle::default(),
+                    padding: Edges {
+                        top: Px(4.0),
+                        right: Px(8.0),
+                        bottom: Px(4.0),
+                        left: Px(8.0),
                     },
+                    background: trigger_bg,
+                    shadow: None,
+                    border: Edges::all(Px(0.0)),
+                    border_color: None,
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
+                };
+
+                (
+                    props,
+                    chrome,
                     move |cx| {
                         let mut label_text = ui::text(cx, label.clone())
                             .text_size_px(text_style.size)
@@ -3397,9 +3405,7 @@ impl MenubarMenuEntries {
                         }
                         vec![label_text.into_element(cx)]
                     },
-                );
-
-                (props, vec![content])
+                )
             })
         })
     }

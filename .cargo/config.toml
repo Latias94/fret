@@ -1,3 +1,8 @@
 [target.wasm32-unknown-unknown]
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
 
+[alias]
+# Faster Windows edit/compile iteration: see `[profile.dev-fast]` in `Cargo.toml`.
+demo-todo = "run -p fret-demo --bin todo_demo --profile dev-fast"
+build-todo = "build -p fret-demo --bin todo_demo --profile dev-fast"
+timings-todo = "build -p fret-demo --bin todo_demo --profile dev-fast --timings"
