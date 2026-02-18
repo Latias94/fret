@@ -845,7 +845,7 @@ fn render_menu_from_runtime<H: UiHost>(
             if overlay_presence.present && enabled {
                 request_menu_overlay(
                     cx,
-                    theme,
+                    theme.clone(),
                     trigger_id,
                     open.clone(),
                     overlay_root_name.clone(),
@@ -997,6 +997,8 @@ fn request_menu_overlay<H: UiHost>(
             let trigger_registry_for_panel_items = trigger_registry_for_overlay.clone();
             let submenu_for_panel_items = submenu_for_panel.clone();
             let item_text_for_panel_items = item_text_for_overlay.clone();
+            let theme_for_panel_items = theme.clone();
+            let theme_for_submenu_items = theme.clone();
 
             let panel = menu::content_panel::menu_panel_at(
                 cx,
@@ -1054,7 +1056,7 @@ fn request_menu_overlay<H: UiHost>(
                                     }
                                     render_menu_entries(
                                         cx,
-                                        theme,
+                                        theme_for_panel_items.clone(),
                                         entries,
                                         open_for_panel_items.clone(),
                                         group_active_for_panel_items.clone(),
@@ -1152,7 +1154,7 @@ fn request_menu_overlay<H: UiHost>(
                                         move |cx| {
                                             render_menu_entries(
                                                 cx,
-                                                theme,
+                                                theme_for_submenu_items.clone(),
                                                 &submenu_entries,
                                                 open_for_submenu_items.clone(),
                                                 group_active_for_submenu_items.clone(),
@@ -1251,7 +1253,7 @@ fn render_menu_entries<H: UiHost>(
             InWindowMenuEntry::Item(item) => {
                 out.push(render_menu_item(
                     cx,
-                    theme,
+                    theme.clone(),
                     item,
                     open.clone(),
                     group_active.clone(),
@@ -1270,7 +1272,7 @@ fn render_menu_entries<H: UiHost>(
             InWindowMenuEntry::Submenu(submenu_entry) => {
                 out.push(render_menu_item(
                     cx,
-                    theme,
+                    theme.clone(),
                     &submenu_entry.trigger,
                     open.clone(),
                     group_active.clone(),

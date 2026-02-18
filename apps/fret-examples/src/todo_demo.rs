@@ -879,13 +879,14 @@ fn todo_row(
             .into_element(cx)
             .test_id(todo_label_test_id(id));
 
+        let theme_for_remove_btn = theme.clone();
         let remove_btn = cx.hover_region(HoverRegionProps::default(), move |cx, btn_hovered| {
             let remove_icon_color = if !hovered {
                 Color::TRANSPARENT
             } else if btn_hovered {
-                theme.color_token("destructive")
+                theme_for_remove_btn.color_token("destructive")
             } else {
-                theme.color_token("muted-foreground")
+                theme_for_remove_btn.color_token("muted-foreground")
             };
 
             let remove_icon = icon::icon_with(
@@ -895,7 +896,7 @@ fn todo_row(
                 Some(ColorRef::Color(remove_icon_color)),
             );
 
-            let destructive_bg = with_alpha(theme.color_token("destructive"), 0.12);
+            let destructive_bg = with_alpha(theme_for_remove_btn.color_token("destructive"), 0.12);
             let btn_bg = if btn_hovered {
                 ColorRef::Color(destructive_bg)
             } else {

@@ -39,7 +39,7 @@ pub(super) fn tab_overflow_menu_rect(
 /// This should only be used when the tab bar actually overflows.
 pub(super) fn tab_strip_rect_with_overflow_button(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
     let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
-    let button = tab_overflow_button_rect(theme, tab_bar);
+    let button = tab_overflow_button_rect(theme.clone(), tab_bar);
     let end_x = (button.origin.x.0 - pad).max(tab_bar.origin.x.0);
     let w = (end_x - tab_bar.origin.x.0).max(0.0);
     Rect::new(tab_bar.origin, Size::new(Px(w), tab_bar.size.height))
@@ -87,8 +87,8 @@ mod tests {
     use fret_ui::theme::{ThemeColors, ThemeMetrics};
 
     fn test_theme() -> ThemeSnapshot {
-        ThemeSnapshot {
-            colors: ThemeColors {
+        ThemeSnapshot::from_baseline(
+            ThemeColors {
                 surface_background: Color::TRANSPARENT,
                 panel_background: Color::TRANSPARENT,
                 panel_border: Color::TRANSPARENT,
@@ -123,7 +123,7 @@ mod tests {
                 viewport_gizmo_handle_border: Color::TRANSPARENT,
                 viewport_rotate_gizmo: Color::TRANSPARENT,
             },
-            metrics: ThemeMetrics {
+            ThemeMetrics {
                 radius_sm: Px(6.0),
                 radius_md: Px(8.0),
                 radius_lg: Px(10.0),
@@ -135,8 +135,8 @@ mod tests {
                 font_line_height: Px(16.0),
                 mono_font_line_height: Px(16.0),
             },
-            revision: 0,
-        }
+            0,
+        )
     }
 
     #[test]

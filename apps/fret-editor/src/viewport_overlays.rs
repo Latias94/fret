@@ -126,13 +126,13 @@ pub fn paint_viewport_overlay(
         paint_viewport_selection_rect(content, sel, scene);
     }
     if let Some(gizmo) = overlay.translate_gizmo {
-        paint_viewport_translate_gizmo(theme, content, gizmo, scene);
+        paint_viewport_translate_gizmo(theme.clone(), content, gizmo, scene);
     }
     if let Some(gizmo) = overlay.rotate_gizmo {
-        paint_viewport_rotate_gizmo(theme, content, gizmo, scene);
+        paint_viewport_rotate_gizmo(theme.clone(), content, gizmo, scene);
     }
     if let Some(m) = overlay.marquee {
-        paint_viewport_marquee(theme, content, m, scene);
+        paint_viewport_marquee(theme.clone(), content, m, scene);
     }
     if let Some(line) = overlay.drag_line {
         paint_viewport_drag_line(content, line, scene);

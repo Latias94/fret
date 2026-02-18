@@ -173,7 +173,7 @@ impl WorkspaceShellDemoDriver {
                     let theme = cx.theme_snapshot();
                     let bg = Some(theme.color_token("background"));
 
-                    let theme_for_left = theme;
+                    let theme_for_left = theme.clone();
                     let left = cx.keyed("workspace_shell.left", move |cx| {
                         let mut props = FileTreeViewProps::default();
                         props.layout = fill_layout();
@@ -205,7 +205,7 @@ impl WorkspaceShellDemoDriver {
                         )
                     });
 
-                    let theme_for_center = theme;
+                    let theme_for_center = theme.clone();
                     let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
                             move |cx: &mut fret_ui::ElementContext<'_, App>,
