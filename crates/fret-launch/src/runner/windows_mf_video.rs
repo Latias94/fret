@@ -49,7 +49,49 @@ use windows::core::{BOOL, HSTRING, Interface as _};
 use super::SharedAllocationExportError;
 use super::dx12::Dx12SharedAllocationWriteGuard;
 
-const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi"];
+const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi", "mkv", "webm"];
+
+fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
+    let raw = raw.trim();
+    anyhow::ensure!(!raw.is_empty(), "empty Media Foundation source URL/path");
+
+    // Allow callers to pass a real URL (including `file://...`) without trying to normalize it.
+    if raw.contains("://") {
+        tracing::info!(raw, "using Media Foundation source URL");
+        return Ok(vec![raw.to_string()]);
+    }
+
+    let path = PathBuf::from(raw);
+    if path.is_dir() {
+        let mut entries: Vec<_> = std::fs::read_dir(&path)
+            .with_context(|| format!("read_dir({})", path.display()))?
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                p.extension()
+                    .and_then(OsStr::to_str)
+                    .map(|ext| VIDEO_FILE_EXTS.iter().any(|e| ext.eq_ignore_ascii_case(e)))
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        entries.sort();
+
+        let mut out = Vec::with_capacity(entries.len());
+        for picked in entries {
+            let picked = std::fs::canonicalize(&picked)
+                .with_context(|| format!("canonicalize({})", picked.display()))?;
+            out.push(picked.to_string_lossy().to_string());
+        }
+
+        return Ok(out);
+    }
+
+    let path = std::fs::canonicalize(&path)
+        .with_context(|| format!("canonicalize({})", path.display()))?;
+    tracing::info!(path = %path.display(), "using Media Foundation source file path");
+    Ok(vec![path.to_string_lossy().to_string()])
+}
 
 pub struct VideoFrame {
     pub size: (u32, u32),
@@ -68,7 +110,12 @@ pub struct MfVideoReader {
 impl MfVideoReader {
     pub fn new(path: impl Into<String>) -> anyhow::Result<Self> {
         let raw_path = path.into();
-        let path = resolve_source_reader_url(&raw_path)?;
+        let candidates = source_reader_candidates(&raw_path)?;
+        anyhow::ensure!(
+            !candidates.is_empty(),
+            "FRET_MF_VIDEO_PATH points to a directory but no candidate video files were found (extensions: {:?})",
+            VIDEO_FILE_EXTS
+        );
 
         unsafe {
             // Best-effort: if COM is already initialized in another mode, keep going.
@@ -87,11 +134,43 @@ impl MfVideoReader {
                 .context("SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING)")?;
         }
 
-        let hpath = HSTRING::from(path.as_str());
-        let reader = unsafe {
-            MFCreateSourceReaderFromURL(&hpath, Some(&attributes))
-                .with_context(|| format!("MFCreateSourceReaderFromURL({path})"))?
-        };
+        let mut reader: Option<IMFSourceReader> = None;
+        let mut resolved_path: Option<String> = None;
+        let mut last_err: Option<anyhow::Error> = None;
+        for candidate in &candidates {
+            let hpath = HSTRING::from(candidate.as_str());
+            match unsafe { MFCreateSourceReaderFromURL(&hpath, Some(&attributes)) } {
+                Ok(v) => {
+                    reader = Some(v);
+                    resolved_path = Some(candidate.clone());
+                    break;
+                }
+                Err(err) => {
+                    last_err = Some(
+                        anyhow::Error::new(err)
+                            .context(format!("MFCreateSourceReaderFromURL({candidate})")),
+                    );
+                }
+            }
+        }
+
+        let reader = reader.with_context(|| {
+            let last = last_err
+                .map(|e| format!("{e:?}"))
+                .unwrap_or_else(|| "unknown error".to_string());
+            format!(
+                "failed to initialize MF source reader from any candidate (count={}); last_error={last}",
+                candidates.len()
+            )
+        })?;
+        let resolved = resolved_path.unwrap_or_else(|| raw_path.clone());
+        if resolved != raw_path {
+            tracing::info!(
+                raw = raw_path,
+                resolved,
+                "resolved MF video source from candidates"
+            );
+        }
 
         // Request a predictable software-decoded output format first: RGB32 (little-endian BGRA).
         // This keeps stage M2A focused on contract/metadata/gates; a D3D12-only fast path is M2B.
@@ -393,8 +472,12 @@ impl Dx12Interop {
                 .context("IMFDXGIDeviceManager::ResetDevice")?;
         }
 
-        let resolved_path = resolve_source_reader_url(path)?;
-        let hpath = HSTRING::from(resolved_path.as_str());
+        let candidates = source_reader_candidates(path)?;
+        anyhow::ensure!(
+            !candidates.is_empty(),
+            "FRET_MF_VIDEO_PATH points to a directory but no candidate video files were found (extensions: {:?})",
+            VIDEO_FILE_EXTS
+        );
 
         let mut attributes: Option<IMFAttributes> = None;
         unsafe {
@@ -438,19 +521,57 @@ impl Dx12Interop {
             }
         }
 
-        // Prefer enabling video processing so MF can deliver RGB32 frames without forcing us to
-        // run an explicit NV12->BGRA conversion path in the demo. If this fails on a given
-        // machine/codec, fall back to the conservative configuration.
-        let reader = match try_create_source_reader(&hpath, &attributes, &resolved_path, 1, 1) {
-            Ok(v) => v,
-            Err(err) => {
-                tracing::warn!(
-                    ?err,
-                    "MF DX12 interop: SourceReader init failed with video processing enabled; retrying with conservative flags"
-                );
-                try_create_source_reader(&hpath, &attributes, &resolved_path, 0, 0)?
+        let mut reader: Option<IMFSourceReader> = None;
+        let mut resolved_path: Option<String> = None;
+        let mut last_err: Option<anyhow::Error> = None;
+        for candidate in &candidates {
+            let hpath = HSTRING::from(candidate.as_str());
+            // Prefer enabling video processing so MF can deliver RGB32 frames without forcing us to
+            // run an explicit NV12->BGRA conversion path in the demo. If this fails on a given
+            // machine/codec, fall back to the conservative configuration.
+            match try_create_source_reader(&hpath, &attributes, candidate, 1, 1) {
+                Ok(v) => {
+                    reader = Some(v);
+                    resolved_path = Some(candidate.clone());
+                    break;
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        ?err,
+                        candidate,
+                        "MF DX12 interop: SourceReader init failed with video processing enabled; retrying with conservative flags"
+                    );
+                    match try_create_source_reader(&hpath, &attributes, candidate, 0, 0) {
+                        Ok(v) => {
+                            reader = Some(v);
+                            resolved_path = Some(candidate.clone());
+                            break;
+                        }
+                        Err(err2) => {
+                            last_err = Some(err2);
+                        }
+                    }
+                }
             }
-        };
+        }
+
+        let reader = reader.with_context(|| {
+            let last = last_err
+                .map(|e| format!("{e:?}"))
+                .unwrap_or_else(|| "unknown error".to_string());
+            format!(
+                "MF DX12 interop: failed to initialize MF source reader from any candidate (count={}); last_error={last}",
+                candidates.len()
+            )
+        })?;
+        let resolved_path = resolved_path.unwrap_or_else(|| path.to_string());
+        if resolved_path != path {
+            tracing::info!(
+                raw = path,
+                resolved = resolved_path,
+                "MF DX12 interop: resolved video source from candidates"
+            );
+        }
 
         // Prefer RGB32 output so the `read_next_dxgi_texture` path can hand us a BGRA DXGI
         // texture without additional per-frame conversion work in this demo.
@@ -862,48 +983,10 @@ fn lock_and_copy(buffer: &IMFMediaBuffer) -> anyhow::Result<Vec<u8>> {
 /// - If `raw` looks like a URL (contains `://`), it is returned as-is.
 /// - Otherwise the path is canonicalized (and directories pick the first matching video file).
 pub fn resolve_source_reader_url(raw: &str) -> anyhow::Result<String> {
-    let raw = raw.trim();
-    anyhow::ensure!(!raw.is_empty(), "empty Media Foundation source URL/path");
-
-    // Allow callers to pass a real URL (including `file://...`) without trying to normalize it.
-    if raw.contains("://") {
-        tracing::info!(raw, "using Media Foundation source URL");
-        return Ok(raw.to_string());
-    }
-
-    let path = PathBuf::from(raw);
-    if path.is_dir() {
-        let mut entries: Vec<_> = std::fs::read_dir(&path)
-            .with_context(|| format!("read_dir({})", path.display()))?
-            .filter_map(|e| e.ok())
-            .map(|e| e.path())
-            .filter(|p| {
-                p.extension()
-                    .and_then(OsStr::to_str)
-                    .map(|ext| VIDEO_FILE_EXTS.iter().any(|e| ext.eq_ignore_ascii_case(e)))
-                    .unwrap_or(false)
-            })
-            .collect();
-
-        entries.sort();
-        let picked = entries
-            .first()
-            .cloned()
-            .context("FRET_MF_VIDEO_PATH points to a directory but no video files were found")?;
-        let picked = std::fs::canonicalize(&picked)
-            .with_context(|| format!("canonicalize({})", picked.display()))?;
-        tracing::info!(
-            dir = %path.display(),
-            file = %picked.display(),
-            "FRET_MF_VIDEO_PATH points to a directory; picked a video file"
-        );
-        return Ok(picked.to_string_lossy().to_string());
-    }
-
-    let path = std::fs::canonicalize(&path)
-        .with_context(|| format!("canonicalize({})", path.display()))?;
-    tracing::info!(path = %path.display(), "using Media Foundation source file path");
-    Ok(path.to_string_lossy().to_string())
+    source_reader_candidates(raw)?
+        .into_iter()
+        .next()
+        .context("no Media Foundation source URL/path candidates")
 }
 
 #[cfg(test)]
