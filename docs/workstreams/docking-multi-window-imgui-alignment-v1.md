@@ -64,9 +64,11 @@ Key multi-window gates:
 
 - Overlap + z-order switching (large preset):
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-overlap-zorder-switch.json`
-- Transparent payload still preserves z-order switching (large + small presets):
+- Transparent payload enables peek-behind under overlap (large + small presets):
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
+- Transparent payload drag-back restores canonical graph:
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-drag-tab-back-to-main.json`
 - Cross-window tear-off + drag-back / merge scenarios:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
@@ -104,7 +106,7 @@ These gates assert, at minimum:
 - ImGui-style “peek-behind” (finding a drop target under the moving window) may require:
   - explicit “under moving window” routing, and/or
   - a platform-level `NoInputs`/passthrough strategy during drag (best-effort, backend-dependent).
-- Once the mechanism is decided, add a dedicated gate:
-  - “transparent payload drag-back to main restores canonical signature”
+- Gate coverage:
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-drag-tab-back-to-main.json`
 
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.

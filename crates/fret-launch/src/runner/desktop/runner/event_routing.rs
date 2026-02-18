@@ -135,11 +135,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let moving_window = self
             .dock_tearoff_follow
             .filter(|follow| follow.source_window == drag_source_window)
             .map(|follow| follow.window);
+        let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
+            follow.source_window == drag_source_window && follow.transparent_payload_applied
+        });
+        let prefer_not = peek_behind_moving_window.then_some(moving_window).flatten();
+
+        let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
@@ -155,7 +160,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         let hovered = if reliable_window_under_cursor {
             if allow_window_under_cursor {
-                let hit = self.window_under_cursor_platform(screen_pos, None);
+                let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
+                window_under_cursor_source = hit.source;
+                hit.window
+            } else {
+                None
+            }
+        } else if peek_behind_moving_window {
+            // When the runner applies ImGui-style transparent payload (best-effort), prefer
+            // selecting the "window under moving window" for hover routing. This enables
+            // docking-back interactions when the moving window overlaps a potential target.
+            if allow_window_under_cursor {
+                let hit = self.window_under_cursor_best_effort(screen_pos, prefer_not);
                 window_under_cursor_source = hit.source;
                 hit.window
             } else {
@@ -295,11 +311,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let moving_window = self
             .dock_tearoff_follow
             .filter(|follow| follow.source_window == drag_source_window)
             .map(|follow| follow.window);
+        let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
+            follow.source_window == drag_source_window && follow.transparent_payload_applied
+        });
+        let prefer_not = peek_behind_moving_window.then_some(moving_window).flatten();
+
+        let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
@@ -316,7 +337,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let target = if reliable_window_under_cursor {
             let mut out = None;
             if allow_window_under_cursor {
-                let hit = self.window_under_cursor_platform(screen_pos, None);
+                let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
+                window_under_cursor_source = hit.source;
+                out = hit.window;
+            }
+            if out.is_none() {
+                if let Some(w) = self.internal_drag_hover_window {
+                    out = Some(w);
+                    if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown
+                    {
+                        window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
+                    }
+                }
+            }
+            out
+        } else if peek_behind_moving_window {
+            let mut out = None;
+            if allow_window_under_cursor {
+                let hit = self.window_under_cursor_best_effort(screen_pos, prefer_not);
                 window_under_cursor_source = hit.source;
                 out = hit.window;
             }

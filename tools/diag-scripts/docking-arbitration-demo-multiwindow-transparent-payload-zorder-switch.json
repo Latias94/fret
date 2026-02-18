@@ -1,17 +1,16 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: transparent payload preserves cross-window hover by z-order",
-    "tags": ["docking", "multiwindow", "hover", "zorder", "transparent_payload", "gate"],
+    "name": "Docking arbitration demo: transparent payload enables peek-behind under overlap",
+    "tags": ["docking", "multiwindow", "hover", "transparent_payload", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
       "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
       "FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD": "1"
     },
     "target_hints": [
-      "This gate runs the overlapped multi-window hover routing scenario with ImGui-style transparent payload (alpha) enabled.",
-      "While a dock-floating window follows the cursor, hover routing should still follow OS z-order even with the payload window rendered semi-transparent.",
-      "Expected: `dock_drag_current_window_is` still switches correctly according to OS z-order in the overlap region.",
+      "This gate overlaps two OS windows and starts a dock tab drag in the dock-floating window with ImGui-style transparent payload enabled.",
+      "Expected: the runner selects the window under the moving window (`dock_drag_window_under_moving_window_is`) for hover/drop routing so docking previews can appear even under overlap.",
       "Cursor overrides use window-client logical coordinates to stay stable under DPI scaling."
     ]
   },
@@ -76,7 +75,26 @@
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen" } },
+      "predicate": { "kind": "dock_drag_moving_window_is", "window": { "kind": "last_seen" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_window_under_moving_window_source_is", "source": "platform" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_window_under_moving_window_is", "window": { "kind": "first_seen" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
 
@@ -94,7 +112,7 @@
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen" } },
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
 
