@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use std::sync::Arc;
 
 pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -127,6 +128,44 @@ pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<Any
             },
         );
         section(cx, "Flex 1 (chrome fill)", body)
+    };
+
+    let flex_1_centered_fixed_chrome = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
+            |cx| {
+                let centered = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+                    fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props(
+                        cx,
+                        move |_cx, _st, _id| {
+                            let mut pressable = fret_ui::element::PressableProps::default();
+                            pressable.enabled = true;
+                            pressable.focusable = true;
+                            pressable.a11y.test_id = Some(Arc::<str>::from(id));
+                            pressable.layout.flex.grow = 1.0;
+                            pressable.layout.flex.shrink = 1.0;
+                            pressable.layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
+
+                            let mut chrome = fret_ui::element::ContainerProps::default();
+                            chrome.layout.size.width = fret_ui::element::Length::Px(Px(28.0));
+                            chrome.layout.size.height = fret_ui::element::Length::Px(Px(28.0));
+
+                            (pressable, chrome, |_cx| Vec::<AnyElement>::new())
+                        },
+                    )
+                };
+
+                vec![
+                    centered(cx, "ui-gallery-centered-fixed-chrome-flex1-left"),
+                    centered(cx, "ui-gallery-centered-fixed-chrome-flex1-right"),
+                ]
+            },
+        );
+        section(cx, "Flex 1 (centered fixed chrome)", body)
     };
 
     let outline_body = shadcn::Button::new("Outline")
@@ -275,6 +314,7 @@ pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 size,
                 default,
                 flex_1,
+                flex_1_centered_fixed_chrome,
                 outline,
                 secondary,
                 ghost,

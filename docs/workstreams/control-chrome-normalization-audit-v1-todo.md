@@ -21,6 +21,8 @@ Workstream overview:
   - [x] `min/max` shrink-by `(padding + border)` is correct for both axes
   - [x] `centered_fixed_chrome_*` enforces overflow + centering wrapper Fill
   - [x] icon-button: stretched hit box + fixed chrome stays centered (visual invariants)
+- [ ] Centered fixed chrome contracts:
+  - [x] Gate center alignment via `bounds_center_approx_equal` + `tools/diag-scripts/ui-gallery-centered-fixed-chrome-flex1-center-aligned.json`.
 
 ### Audit + migration (M1/M2)
 
@@ -34,6 +36,7 @@ Workstream overview:
 - [ ] Add `fretboard diag` scenarios that exercise stretch-sensitive chrome:
   - [x] Flex-1 Buttons (control chrome fill): `tools/diag-scripts/ui-gallery-control-chrome-flex1-button-fill.json`
   - [x] Dialog trigger in a stretched row: `tools/diag-scripts/ui-gallery-control-chrome-flex1-dialog-trigger-fill.json`
+  - [x] Centered fixed chrome in a stretched row (center aligned): `tools/diag-scripts/ui-gallery-centered-fixed-chrome-flex1-center-aligned.json`
   - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
   - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
   - [ ] ButtonGroup with stretched items
@@ -46,7 +49,7 @@ Legend:
 
 - **Pattern**
   - `ControlChrome`: uses `control_chrome_*` helper
-  - `CenteredFixedChrome`: uses `centered_fixed_chrome_*` helper
+  - `CenteredFixedChrome`: uses `centered_fixed_chrome_*` helper (chrome fixed-size, centered in stretched hit box)
   - `ManualFill`: child chrome explicitly sets `w/h = Fill`
   - `AdHocChrome`: pressable composes a “chrome” child but does not enforce Fill invariants
 - **Risk**
@@ -57,7 +60,7 @@ Legend:
 | Area | Component / Element | Pattern | Outer can stretch? | Chrome fills? | Risk | Migration target | Evidence | Notes |
 |---|---|---|---|---|---|---|---|---|
 | `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `control_chrome_pressable_with_id_props` | `ControlChrome` | Yes | Yes | OK | N/A | Unit tests in-file | Canonical helper; expand matrix tests. |
-| `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `centered_fixed_chrome_pressable_with_id_props` | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Unit tests in-file | For icon/tool buttons: hit box may stretch; chrome stays token-sized + centered. |
+| `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `centered_fixed_chrome_pressable_with_id_props` | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Unit tests in-file + diag gate | Canonical helper for Material-style centered fixed chrome. |
 | `ecosystem/fret-ui-shadcn/src/button.rs` | shadcn Button | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Prefer keeping all shadcn controls on this path. |
 | `ecosystem/fret-ui-shadcn/src/item.rs` | Item (clickable) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (responsive drawer path) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
@@ -73,12 +76,12 @@ Legend:
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar item | `ControlChrome` | Yes (`w = Fill`) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-code-view/src/copy_button.rs` | Copy button | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
-| `ecosystem/fret-ui-ai/src/elements/code_block.rs` | Code block copy button | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Avoids chrome stretching when embedded in flex/grid rows. |
-| `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Snippet copy button | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
-| `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Stack trace copy button | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
-| `ecosystem/fret-ui-ai/src/elements/commit.rs` | Commit copy button | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
-| `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Env vars copy button | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
-| `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Terminal copy/clear buttons | `CenteredFixedChrome` | Yes | No (fixed + centered) | OK | N/A | Uses helper | Keeps tool chrome centered when the row stretches. |
+| `ecosystem/fret-ui-ai/src/elements/code_block.rs` | Code block copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Avoids chrome stretching when embedded in flex/grid rows. |
+| `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Snippet copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
+| `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Stack trace copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
+| `ecosystem/fret-ui-ai/src/elements/commit.rs` | Commit copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
+| `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Env vars copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
+| `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Terminal copy/clear buttons | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Keeps tool chrome centered when the row stretches. |
 
 Add rows as audit progresses. The key question for each row is:
 
