@@ -41,6 +41,7 @@ pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
 pub mod drag_demo;
+pub mod drop_shadow_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_demo;
 #[cfg(not(target_arch = "wasm32"))]

@@ -1,4 +1,4 @@
-Status: In progress (ADR drafted; core + renderer implementation landed; perf baseline pending)
+Status: Done (ADR + contract + wgpu implementation + conformance + perf baseline)
 
 This workstream defines a bounded, portable **blur-based drop shadow** mechanism surface for
 general UI content (not just text). The goal is to support the common “elevation shadow” vocabulary
@@ -82,6 +82,9 @@ Deterministic degradation rules:
   - color is applied,
   - degradation is deterministic when disabled/budgeted.
 - Perf gate with a checked-in baseline for a shadow-heavy scene (cards/popovers).
+  - `tools/diag-scripts/drop-shadow-v1-steady.json`
+  - `docs/workstreams/perf-baselines/drop-shadow-v1-steady.windows-rtx4090.v1.json`
+  - `tools/perf/diag_drop_shadow_v1_gate.ps1`
 
 ## Tracking
 

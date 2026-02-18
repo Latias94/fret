@@ -40,7 +40,11 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Evidence anchors:
     - `crates/fret-render-wgpu/tests/effect_drop_shadow_v1_conformance.rs`
 
-- [ ] DSHADOW-perf-050 Add a perf gate + baseline for shadow-heavy scenes.
+- [x] DSHADOW-perf-050 Add a perf gate + baseline for shadow-heavy scenes.
   - Evidence anchors:
-    - `tools/perf/*` or `tools/diag-scripts/*`
-    - `docs/workstreams/perf-baselines/*`
+    - `tools/diag-scripts/drop-shadow-v1-steady.json`
+    - `apps/fret-examples/src/drop_shadow_demo.rs`
+    - `apps/fret-demo/src/bin/drop_shadow_demo.rs`
+    - `docs/workstreams/perf-baselines/policies/drop-shadow-v1-steady.v1.json`
+    - `docs/workstreams/perf-baselines/drop-shadow-v1-steady.windows-rtx4090.v1.json`
+    - `tools/perf/diag_drop_shadow_v1_gate.ps1`
