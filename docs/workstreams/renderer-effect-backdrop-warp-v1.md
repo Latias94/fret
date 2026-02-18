@@ -29,6 +29,8 @@ postprocess pipelines, which:
 - No open-ended texture graph / shader graph system.
 - No requirement that the warp field is texture-driven in v1.
   - We explicitly stage the most portable, bounded path first.
+  - Texture-driven warp fields are tracked as v2:
+    `docs/workstreams/renderer-effect-backdrop-warp-v2.md`.
 
 ## Proposed contract surface (v1)
 
