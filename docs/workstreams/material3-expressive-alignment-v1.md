@@ -81,6 +81,8 @@ For each component we consider aligned when we have:
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 - Switch handle overshoot timeline:
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
+- Switch icon motion timeline:
+  - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
 - Text field hover screenshots:
   - `tools/diag-scripts/ui-gallery-material3-text-field-outlined-hover-screenshots.json`
 

@@ -45,6 +45,24 @@ fn material_web_switch_handle_overshoot_ease(x: f32) -> f32 {
     fret_ui_kit::headless::easing::CubicBezier::new(0.175, 0.885, 0.32, 1.275).sample_unclamped(x)
 }
 
+fn material_web_switch_icon_opacity_duration(enabled: bool) -> Duration {
+    if enabled {
+        // Material Web uses 33ms linear. Use a tiny slack so 60Hz frame quantization still
+        // produces at least 2 visible frames in deterministic tests.
+        Duration::from_millis(34)
+    } else {
+        Duration::ZERO
+    }
+}
+
+fn material_web_switch_icon_transform_duration(enabled: bool) -> Duration {
+    if enabled {
+        Duration::from_millis(167)
+    } else {
+        Duration::ZERO
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
     pub track_color: OverrideSlot<ColorRef>,
@@ -447,13 +465,46 @@ impl Switch {
                                 config,
                             )
                         };
+
+                        #[derive(Default)]
+                        struct SwitchIconKeepAliveRuntime {
+                            initialized: bool,
+                            prev_selected: bool,
+                            until_frame_id: u64,
+                        }
+
+                        let switch_state_id = cx.root_id();
+                        let icon_keepalive = cx.with_state_for(
+                            switch_state_id,
+                            SwitchIconKeepAliveRuntime::default,
+                            |st| {
+                                if !st.initialized {
+                                    st.initialized = true;
+                                    st.prev_selected = selected;
+                                    st.until_frame_id = 0;
+                                }
+
+                                if st.prev_selected != selected {
+                                    st.prev_selected = selected;
+                                    // Keep the icon in-tree for the first couple frames after a
+                                    // toggle. This matches Material Web where the icon remains in
+                                    // the DOM and transitions even under reduced motion.
+                                    st.until_frame_id = now_frame.saturating_add(2);
+                                }
+
+                                now_frame <= st.until_frame_id
+                            },
+                        );
                         let (
                             thumb_t,
                             pressed_t,
                             chrome_t,
                             position_t,
+                            icon_on_opacity_t,
+                            icon_off_opacity_t,
+                            icon_selected_only_rotation_degrees,
                             thumb_active,
-                            thumb_active_for_icons,
+                            thumb_active_for_icons_from_motion,
                         ) = cx.named("thumb_runtime", |cx| {
                             let desired_selected = if selected { 1.0 } else { 0.0 };
                             let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
@@ -520,6 +571,39 @@ impl Switch {
                                     material_web_switch_handle_overshoot_ease,
                                 );
 
+                            // Material Web icon transitions:
+                            // - opacity 33ms linear
+                            // - transform 167ms easing-standard
+                            let icon_opacity_duration =
+                                material_web_switch_icon_opacity_duration(enabled);
+                            let icon_on_opacity = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                cx,
+                                desired_selected,
+                                icon_opacity_duration,
+                                fret_ui_kit::headless::easing::linear,
+                            );
+                            let icon_off_opacity =
+                                fret_ui_kit::declarative::motion::drive_tween_f32(
+                                    cx,
+                                    1.0 - desired_selected,
+                                    icon_opacity_duration,
+                                    fret_ui_kit::headless::easing::linear,
+                                );
+
+                            let icon_transform_duration =
+                                material_web_switch_icon_transform_duration(enabled);
+                            let icon_rotation_t = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                cx,
+                                desired_selected,
+                                icon_transform_duration,
+                                material_web_easing_standard,
+                            );
+                            let icon_selected_only_rotation_degrees =
+                                -45.0 * (1.0 - icon_rotation_t.value);
+
+                            let icons_active = icon_on_opacity.animating
+                                || icon_off_opacity.animating
+                                || icon_rotation_t.animating;
                             let selection_active =
                                 size.animating || chrome.animating || position.animating;
                             let any_active = selection_active || pressed.animating;
@@ -529,8 +613,11 @@ impl Switch {
                                 pressed.value,
                                 chrome.value,
                                 position.value,
+                                icon_on_opacity.value,
+                                icon_off_opacity.value,
+                                icon_selected_only_rotation_degrees,
                                 any_active,
-                                selection_active,
+                                selection_active || icons_active,
                             )
                         });
 
@@ -547,9 +634,13 @@ impl Switch {
                             icons_always,
                             icons_selected_only,
                         );
+                        let thumb_active_for_icons =
+                            thumb_active_for_icons_from_motion || icon_keepalive;
                         let handle_child = material_switch_handle_icon(
                             cx,
-                            thumb_t,
+                            icon_on_opacity_t,
+                            icon_off_opacity_t,
+                            icon_selected_only_rotation_degrees,
                             thumb_active_for_icons,
                             selected,
                             enabled,
@@ -858,7 +949,9 @@ fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
 
 fn material_switch_handle_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    thumb_t: f32,
+    icon_on_opacity_t: f32,
+    icon_off_opacity_t: f32,
+    icon_selected_only_rotation_degrees: f32,
     thumb_active: bool,
     selected: bool,
     enabled: bool,
@@ -868,8 +961,6 @@ fn material_switch_handle_icon<H: UiHost>(
     icon_on: Option<IconId>,
     icon_off: Option<IconId>,
 ) -> Option<AnyElement> {
-    let thumb_t = thumb_t.clamp(0.0, 1.0);
-
     if show_only_selected_icon {
         if !thumb_active && !selected {
             return None;
@@ -882,8 +973,8 @@ fn material_switch_handle_icon<H: UiHost>(
             let color = switch_tokens::icon_color(theme, true, enabled, interaction);
             (size, color)
         };
-        let opacity = thumb_t;
-        let rotation_degrees = -45.0 * (1.0 - thumb_t);
+        let opacity = icon_on_opacity_t;
+        let rotation_degrees = icon_selected_only_rotation_degrees;
 
         let layer =
             material_switch_icon_layer(cx, &on_icon, size, color, opacity, rotation_degrees);
@@ -905,8 +996,9 @@ fn material_switch_handle_icon<H: UiHost>(
         ((on_size, on_color), (off_size, off_color))
     };
 
-    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on.1, thumb_t, 0.0);
-    let off_layer = material_switch_icon_layer(cx, &off_icon, off.0, off.1, 1.0 - thumb_t, 0.0);
+    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on.1, icon_on_opacity_t, 0.0);
+    let off_layer =
+        material_switch_icon_layer(cx, &off_icon, off.0, off.1, icon_off_opacity_t, 0.0);
     Some(material_switch_icon_overlay(cx, vec![on_layer, off_layer]))
 }
 
@@ -939,10 +1031,13 @@ fn material_switch_icon_layer<H: UiHost>(
     props.color = color;
     props.opacity = opacity.clamp(0.0, 1.0);
 
-    let center = Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5));
-    let transform = Transform2D::rotation_about_degrees(rotation_degrees, center);
-
-    let icon = cx.visual_transform(transform, move |cx| vec![cx.svg_icon_props(props)]);
+    let icon = if rotation_degrees.abs() > 1e-3 {
+        let center = Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5));
+        let transform = Transform2D::rotation_about_degrees(rotation_degrees, center);
+        cx.visual_transform(transform, move |cx| vec![cx.svg_icon_props(props)])
+    } else {
+        cx.svg_icon_props(props)
+    };
 
     let mut layer = ContainerProps::default();
     layer.layout.position = fret_ui::element::PositionStyle::Absolute;

@@ -115,6 +115,8 @@ Fret aligns these as:
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 - Handle overshoot timeline evidence (captures frame-by-frame handle position transition):
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
+- Icon motion timeline evidence (opacity + rotation timing):
+  - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
 
 Next gates (once we add icon support):
 
