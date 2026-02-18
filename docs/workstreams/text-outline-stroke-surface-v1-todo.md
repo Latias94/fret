@@ -20,7 +20,7 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 
 ## M0 — Design lock (bounded + portable)
 
-- [ ] TOS-audit-010 Audit the current text pipeline and atlas format:
+- [~] TOS-audit-010 Audit the current text pipeline and atlas format:
   - Is the glyph atlas a coverage mask or distance field?
   - Are derivatives (`fwidth`) used in text shaders today?
   - What caches exist for glyph geometry/metrics?
@@ -28,6 +28,17 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs`
     - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` (text shaders)
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::new`, atlas formats)
+  - Findings (2026-02-18):
+    - The mask glyph atlas is `R8Unorm` (coverage mask), not an SDF/MSDF atlas.
+      - `TextSystem::new` creates:
+        - mask atlas: `R8Unorm`
+        - color atlas: `Rgba8UnormSrgb`
+        - subpixel atlas: `Rgba8Unorm`
+    - Text shaders sample `glyph_atlas` via `textureSample(...)` and do not rely on derivatives for
+      coverage (no SDF edge evaluation in the text path today).
+    - Implication: a “GPU SDF stroke” strategy would require an atlas format change and a new
+      rasterization path; treat as v2+ unless evidence demands it.
 
 - [ ] TOS-contract-020 Decide the contract shape for `TextOutlineV1`:
   - Extend `SceneOp::Text` vs introduce a dedicated `SceneOp::TextOutline`.

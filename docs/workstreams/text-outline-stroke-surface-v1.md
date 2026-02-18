@@ -66,6 +66,13 @@ format:
 The workstream’s M0 milestone chooses one strategy as the v1 landing path (with explicit fallback
 policy for other backends).
 
+Audit note (2026-02-18):
+
+- The current mask glyph atlas is `R8Unorm` coverage (not an SDF/MSDF atlas), so a shader-evaluated
+  stroke would require an atlas format + rasterization change. Treat SDF/MSDF as v2+ unless
+  evidence demands it.
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::new` atlas formats).
+
 ## Gates (required)
 
 - `python3 tools/check_layering.py`
