@@ -28,6 +28,7 @@ Exit criteria:
 
 - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu` is green.
 - Existing clip/mask conformance tests are green.
+- Web demo shaders validate (no WGSL uniformity violations in masked paths).
 
 Evidence anchors:
 
@@ -44,4 +45,3 @@ Exit criteria:
 Evidence anchors:
 
 - `docs/workstreams/perf-baselines/*`
-

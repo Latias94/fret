@@ -69,8 +69,9 @@ Key policy constraints:
 Two recurring hazards to keep explicitly gated:
 
 1. **Texture sampling uniformity**
-   - `textureSample` must not occur under divergent control flow in WGSL.
-   - Implement mask sampling with clamp/select instead of early-out `if` branches.
+   - `textureSample*` must not occur under divergent control flow in WGSL.
+   - Prefer `textureLoad` + manual filtering for mask image sampling to avoid uniformity rules.
+   - Implement mask bounds as branchless clamp/select instead of early-out `if` branches.
 
 2. **Derivatives uniformity**
    - `fwidth` and friends must also be in uniform control flow.
@@ -85,6 +86,8 @@ Two recurring hazards to keep explicitly gated:
   - `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
+- Perf gate (clip/mask stacks; stable counters):
+  - `python tools/perf/headless_clip_mask_stress_gate.py`
 - Add at least one new stress/regression test focused on:
   - cache hit stability (no per-frame realloc churn),
   - and deterministic degradation under quality/budget pressure.
@@ -93,4 +96,3 @@ Two recurring hazards to keep explicitly gated:
 
 - TODOs: `docs/workstreams/renderer-clip-mask-closure-v1-todo.md`
 - Milestones: `docs/workstreams/renderer-clip-mask-closure-v1-milestones.md`
-

@@ -21,11 +21,13 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Renderer implementation (wgpu)
 
-- [ ] CLIPMASK-wgpu-020 Ensure mask/clip sampling is WGSL-uniformity-safe:
+- [x] CLIPMASK-wgpu-020 Ensure mask/clip sampling is WGSL-uniformity-safe:
       remove divergent sampling branches and derivative hazards.
   - Evidence anchors:
-    - `crates/fret-render-wgpu/src/renderer/shaders/*` (mask/clip eval)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (mask_image_sample_bilinear_clamp)
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - Implementation note:
+    - For image masks, avoid `textureSample*` in `mask_eval` and use `textureLoad` + manual bilinear.
 
 - [ ] CLIPMASK-cache-030 Add caching for slow-path clip/mask intermediates where applicable:
       avoid per-frame re-rasterization of identical clip paths.
@@ -43,8 +45,9 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Evidence anchors:
     - `crates/fret-render-wgpu/tests/*_conformance.rs` (new test)
 
-- [ ] CLIPMASK-perf-050 Add a perf gate for clip/mask heavy scenes:
+- [x] CLIPMASK-perf-050 Add a perf gate for clip/mask heavy scenes:
       keep worst-frame stability and intermediate allocations bounded.
   - Evidence anchors:
-    - `tools/perf/*` or `tools/diag-scripts/*`
-    - `docs/workstreams/perf-baselines/*`
+    - `apps/fret-clip-mask-stress/src/main.rs`
+    - `tools/perf/headless_clip_mask_stress_gate.py`
+    - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
