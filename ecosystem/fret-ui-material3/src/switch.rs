@@ -364,8 +364,9 @@ impl Switch {
                                 config,
                             )
                         };
-                        let (thumb_t, pressed_t, thumb_active) =
-                            cx.with_state_for(pressable_id, SwitchThumbRuntime::default, |rt| {
+                        let (thumb_t, pressed_t, thumb_active) = cx.named("thumb_runtime", |cx| {
+                            let thumb_state_id = cx.root_id();
+                            cx.with_state_for(thumb_state_id, SwitchThumbRuntime::default, |rt| {
                                 let desired_selected = if selected { 1.0 } else { 0.0 };
                                 let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
 
@@ -396,7 +397,8 @@ impl Switch {
                                     rt.pressed.value(),
                                     rt.selected.is_active() || rt.pressed.is_active(),
                                 )
-                            });
+                            })
+                        });
 
                         let icons_always = icons_enabled && !show_only_selected_icon;
                         let icons_selected_only = show_only_selected_icon;
