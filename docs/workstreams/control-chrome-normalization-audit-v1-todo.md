@@ -64,7 +64,7 @@ Legend:
 | `ecosystem/fret-ui-material3/src/card.rs` | Material card | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar item | `ControlChrome` | Yes (`w = Fill`) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
-| `ecosystem/fret-code-view/src/copy_button.rs` | Copy button | `AdHocChrome` | Possible (caller-dependent) | No | At risk | Adopt helper | N/A | Chrome container does not set `w/h = Fill`; safe today but fragile in flex/grid. |
+| `ecosystem/fret-code-view/src/copy_button.rs` | Copy button | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 
 Add rows as audit progresses. The key question for each row is:
 
