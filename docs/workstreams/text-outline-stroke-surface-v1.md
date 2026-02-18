@@ -28,30 +28,47 @@ What’s missing for many UI systems is a first-class, deterministic way to rend
 - No promise of 1:1 parity with browser text-stroke across all fonts/hinting edge cases.
 - No multi-layer outline stacks in core (recipes remain ecosystem policy).
 
-## Proposed contract surface (draft)
+## Contract surface (v1)
 
 Extend `SceneOp::Text` with an optional outline descriptor:
 
 - `outline: Option<TextOutlineV1>`
 
-Where `TextOutlineV1` is bounded and portable:
+Where `TextOutlineV1` is intentionally small (bounded + portable):
 
 - `paint: Paint` (same paint vocabulary as fills; materials remain capability-gated)
 - `width_px: Px` (logical px; sanitized/clamped)
-- `join/cap/miter`: either a small enum set, or reuse `StrokeStyleV2` fields where appropriate
-  (decision pending; keep vocabulary small)
+
+Bounds/sanitization:
+
+- Invalid outlines sanitize to `None` (non-finite or non-positive widths).
+- `width_px` is clamped to a small max (`TextOutlineV1::MAX_WIDTH_PX`) to keep work bounded and
+  deterministic across backends.
 
 Deterministic degradation (ordered):
 
-1. If unsupported on a backend (capabilities), render fill only (no outline).
-2. Under tight budgets, reduce outline quality (e.g. clamp width / disable AA), then drop outline.
-3. Never introduce unbounded intermediate allocations; outlines must not force a save-layer unless
-   the contract explicitly opts into it.
+1. If the outline is `None` after sanitization, render fill only.
+2. If the glyph run is a color/emoji atlas run, render fill only for v1 (deterministic degrade).
+3. If the outline paint is not representable on the backend, deterministically degrade it using the
+   existing paint/material policy.
+4. Never introduce unbounded intermediate allocations; v1 must not force a save-layer.
 
-## Implementation strategy candidates (draft)
+## Implementation strategy (wgpu v1)
 
-We intentionally keep two strategies open until we audit the current text pipeline and atlas
-format:
+v1 renders outlines using a **bounded morphology-based ring** on the existing text atlases:
+
+- Approximate `dilate(fill, radius)` as a bounded `max` over a small neighborhood of samples.
+- Emit the outline ring as `ring = dilated - fill` and apply `outline.paint` to that alpha.
+- Keep the base text path zero-cost when `outline` is `None` by using a separate pipeline variant
+  (no per-fragment branching in the hot path).
+
+Portability constraints:
+
+- WGSL remains uniform-control-flow safe for WebGPU (no divergent derivatives/sampling).
+- The outline radius is quantized and bounded (small integer tap set) to avoid unbounded work and
+  pipeline key space explosion.
+
+Future candidates (v2+):
 
 1. **Vector outline path**
    - Convert glyph outlines to vector paths and render strokes via the existing path pipeline.
@@ -63,14 +80,11 @@ format:
    - Pros: very fast on GPU, predictable draw count.
    - Cons: requires atlas format changes and careful WGSL uniformity/derivative behavior.
 
-The workstream’s M0 milestone chooses one strategy as the v1 landing path (with explicit fallback
-policy for other backends).
-
 Audit note (2026-02-18):
 
-- The current mask glyph atlas is `R8Unorm` coverage (not an SDF/MSDF atlas), so a shader-evaluated
-  stroke would require an atlas format + rasterization change. Treat SDF/MSDF as v2+ unless
-  evidence demands it.
+- The current mask glyph atlas is `R8Unorm` coverage (not an SDF/MSDF atlas), so an SDF/MSDF
+  outline strategy would require an atlas format + rasterization change. v1 instead uses a bounded
+  morphology-based ring on the existing coverage atlas.
   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::new` atlas formats).
 
 ## Gates (required)

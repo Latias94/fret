@@ -259,8 +259,8 @@ milestones) when implementation begins.
     - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
     - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
       (text/path still deterministically degrade materials to a solid base color).
-    - Deferred (v2+): text outline/stroke and blurred/multi-layer text shadows as first-class contract surfaces.
-    - Follow-up workstream (outline/stroke):
+    - In progress (v1): `TextOutlineV1` contract + wgpu (mask+subpixel) implementation + conformance landed; adoption pending.
+    - Tracking workstream (outline/stroke):
       - `docs/workstreams/text-outline-stroke-surface-v1.md`
       - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
       - `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
@@ -273,6 +273,9 @@ milestones) when implementation begins.
     - `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text.shadow`, `TextShadowV1`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`encode_text` renders shadow layer; material still degrades)
+    - `crates/fret-core/src/scene/mod.rs` (`TextOutlineV1`, `SceneOp::Text { outline }`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (outline pipeline variant)
+    - `crates/fret-render-wgpu/tests/text_outline_conformance.rs` (`gpu_text_outline_v1_renders_a_visible_ring_for_mask_glyphs`)
     - `crates/fret-render-wgpu/tests/text_paint_conformance.rs` (`gpu_text_shadow_v1_renders_a_separate_layer`)
   - Gates:
     - `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`

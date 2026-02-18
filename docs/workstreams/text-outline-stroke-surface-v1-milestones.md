@@ -8,6 +8,19 @@ Tracking files:
 - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
 - `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
 
+## Progress (2026-02-18)
+
+- M0: Completed (contract shape + deterministic degradation + v1 strategy chosen).
+- M1: Completed (core contract plumbing landed).
+- M2: Completed (wgpu implementation landed).
+- M3: Completed (GPU readback conformance landed).
+- M4: Pending (adoption).
+  - Evidence anchors:
+    - `crates/fret-core/src/scene/mod.rs` (`TextOutlineV1`, `SceneOp::Text { outline }`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (outline pipeline variant)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`FRET_TEXT_OUTLINE_PRESENT`)
+    - `crates/fret-render-wgpu/tests/text_outline_conformance.rs`
+
 ## M0 — Design lock (bounded + portable)
 
 Exit criteria:
