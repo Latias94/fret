@@ -2306,3 +2306,23 @@ pub trait Render {
 pub trait RenderOnce {
     fn render_once<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
+
+#[cfg(test)]
+mod default_semantics_tests {
+    use super::*;
+
+    #[test]
+    fn flex_props_default_width_is_auto() {
+        assert_eq!(FlexProps::default().layout.size.width, Length::Auto);
+    }
+
+    #[test]
+    fn length_default_is_auto() {
+        assert_eq!(Length::default(), Length::Auto);
+    }
+
+    #[test]
+    fn scroll_props_default_probe_unbounded_is_true() {
+        assert!(ScrollProps::default().probe_unbounded);
+    }
+}

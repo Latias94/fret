@@ -44,7 +44,7 @@ pub(super) fn hit_test_tab(
             continue;
         }
         let scroll = tab_scroll_for_node(tab_scroll, node);
-        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
         let geom_candidate = tab_widths
             .get(&node)
             .filter(|w| w.len() == tabs.len())
@@ -52,7 +52,7 @@ pub(super) fn hit_test_tab(
             .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tabs.len()));
         let overflow = geom_candidate.max_scroll().0 > 0.0;
         if overflow {
-            if tab_overflow_button_rect(theme, tab_bar).contains(position) {
+            if tab_overflow_button_rect(theme.clone(), tab_bar).contains(position) {
                 return None;
             }
             if !strip_candidate.contains(position) {
@@ -71,7 +71,7 @@ pub(super) fn hit_test_tab(
         let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
         let tab_rect = geom.tab_rect(idx, scroll);
-        let close = tab_close_rect(theme, tab_rect).contains(position);
+        let close = tab_close_rect(theme.clone(), tab_rect).contains(position);
         return Some((node, idx, panel, close));
     }
     None

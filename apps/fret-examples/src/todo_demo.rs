@@ -519,6 +519,7 @@ fn view(
 
     let filter_all = filter_chip(
         cx,
+        &theme,
         "全部",
         filter_all_cmd,
         filter_value == TodoFilter::All,
@@ -526,6 +527,7 @@ fn view(
     );
     let filter_active = filter_chip(
         cx,
+        &theme,
         "进行中",
         filter_active_cmd,
         filter_value == TodoFilter::Active,
@@ -533,6 +535,7 @@ fn view(
     );
     let filter_completed = filter_chip(
         cx,
+        &theme,
         "已完成",
         filter_completed_cmd,
         filter_value == TodoFilter::Completed,
@@ -540,9 +543,7 @@ fn view(
     );
 
     // Match shadcn tabs: list track `bg-muted`, trigger `data-[state=active]:bg-background`.
-    // `ThemeSnapshot` only includes the typed baseline palette; use the full `Theme` for shadcn
-    // semantic tokens like `muted`.
-    let filter_track_bg = Theme::global(&*cx.app).color_token("muted");
+    let filter_track_bg = theme.color_token("muted");
     let filter_row = ui::container(cx, |cx| {
         [
             ui::h_flex(cx, |_cx| [filter_all, filter_active, filter_completed])
@@ -766,7 +767,7 @@ fn view(
     // (We can't express Tailwind's `slate-50` directly as a theme token today.)
     let page_bg = mix_colors(
         theme.color_token("background"),
-        Theme::global(&*cx.app).color_token("muted"),
+        theme.color_token("muted"),
         0.5,
     );
     let page = ui::container(cx, |cx| {
@@ -788,13 +789,12 @@ fn view(
 
 fn filter_chip(
     cx: &mut ElementContext<'_, App>,
+    theme: &ThemeSnapshot,
     label: &'static str,
     cmd: CommandId,
     selected: bool,
     test_id: &'static str,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).snapshot();
-
     let selected_style = ChromeRefinement::default()
         .bg(ColorRef::Color(theme.color_token("background")))
         .shadow_sm();
@@ -817,7 +817,7 @@ fn filter_chip(
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
         .on_click(cmd)
-        .refine_layout(LayoutRefinement::default().flex_1().w_full())
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .style(shadcn::button::ButtonStyle::default().foreground(fg))
         .refine_style(if selected {
             selected_style
@@ -835,7 +835,7 @@ fn todo_row(
     row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {
-    let muted_bg = Theme::global(&*cx.app).color_token("muted");
+    let muted_bg = theme.color_token("muted");
     let theme = theme.clone();
     let done_model = row.done_model.clone();
     let done = row.done;
@@ -879,13 +879,14 @@ fn todo_row(
             .into_element(cx)
             .test_id(todo_label_test_id(id));
 
+        let theme_for_remove_btn = theme.clone();
         let remove_btn = cx.hover_region(HoverRegionProps::default(), move |cx, btn_hovered| {
             let remove_icon_color = if !hovered {
                 Color::TRANSPARENT
             } else if btn_hovered {
-                theme.color_token("destructive")
+                theme_for_remove_btn.color_token("destructive")
             } else {
-                theme.color_token("muted-foreground")
+                theme_for_remove_btn.color_token("muted-foreground")
             };
 
             let remove_icon = icon::icon_with(
@@ -895,7 +896,7 @@ fn todo_row(
                 Some(ColorRef::Color(remove_icon_color)),
             );
 
-            let destructive_bg = with_alpha(theme.color_token("destructive"), 0.12);
+            let destructive_bg = with_alpha(theme_for_remove_btn.color_token("destructive"), 0.12);
             let btn_bg = if btn_hovered {
                 ColorRef::Color(destructive_bg)
             } else {

@@ -17,6 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -168,7 +169,7 @@ impl Button {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            cx.pressable_with_id_props(|cx, st, pressable_id| {
+            control_chrome_pressable_with_id_props(cx, |cx, st, pressable_id| {
                 let enabled = !self.disabled;
 
                 if let Some(handler) = self.on_activate.clone() {
@@ -230,105 +231,102 @@ impl Button {
                     focus_ring_bounds: None,
                 };
 
+                let focus_visible =
+                    fret_ui::focus_visible::is_focus_visible(&mut *cx.app, Some(cx.window));
+                let is_pressed = enabled && st.pressed;
+                let is_hovered = enabled && st.hovered;
+                let is_focused = enabled && st.focused && focus_visible;
+
+                let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
+                let token_interaction = interaction.map(|s| match s {
+                    PressableInteraction::Hovered => button_tokens::ButtonInteraction::Hovered,
+                    PressableInteraction::Focused => button_tokens::ButtonInteraction::Focused,
+                    PressableInteraction::Pressed => button_tokens::ButtonInteraction::Pressed,
+                });
+                let states = WidgetStates::from_pressable(cx, st, enabled);
+
+                let (
+                    label_color,
+                    container_bg,
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                    outline,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+
+                    let label_color = resolve_override_slot_with(
+                        self.style.label_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || button_tokens::label_color(theme, self.variant, enabled),
+                    );
+                    let container_bg = button_tokens::container_background(
+                        theme,
+                        self.variant,
+                        enabled,
+                        label_color,
+                    );
+                    let container_bg = resolve_override_slot_opt_with(
+                        self.style.container_background.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || container_bg,
+                    );
+                    let state_layer_color = button_tokens::state_layer_color(
+                        theme,
+                        self.variant,
+                        label_color,
+                        token_interaction,
+                    );
+                    let state_layer_color = resolve_override_slot_with(
+                        self.style.state_layer_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || state_layer_color,
+                    );
+                    let state_layer_target = token_interaction
+                        .map(|i| button_tokens::state_layer_opacity(theme, self.variant, i))
+                        .unwrap_or(0.0);
+                    let ripple_base_opacity =
+                        button_tokens::pressed_state_layer_opacity(theme, self.variant);
+                    let config = material_pressable_indication_config(theme, None);
+
+                    let outline = button_outline(theme, self.variant, enabled);
+                    let outline = outline.map(|mut outline| {
+                        outline.color = resolve_override_slot_with(
+                            self.style.outline_color.as_ref(),
+                            states,
+                            |color| color.resolve(theme),
+                            || outline.color,
+                        );
+                        outline
+                    });
+
+                    (
+                        label_color,
+                        container_bg,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                        outline,
+                    )
+                };
+
+                let chrome =
+                    material_button_chrome_props(container_bg, corner_radii, outline, size_tokens);
+
                 let pointer_region = cx.named("pointer_region", |cx| {
                     let mut props = PointerRegionProps::default();
                     props.enabled = enabled;
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
                     // PointerRegion is used to record `PointerRegionState.last_down` so ripple
                     // origins can align to pointer position without custom hook plumbing.
-                    cx.pointer_region(props, |cx| {
+                    cx.pointer_region(props, move |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
-
-                        let focus_visible =
-                            fret_ui::focus_visible::is_focus_visible(&mut *cx.app, Some(cx.window));
-
-                        let is_pressed = enabled && st.pressed;
-                        let is_hovered = enabled && st.hovered;
-                        let is_focused = enabled && st.focused && focus_visible;
-
-                        let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
-                        let token_interaction = interaction.map(|s| match s {
-                            PressableInteraction::Hovered => {
-                                button_tokens::ButtonInteraction::Hovered
-                            }
-                            PressableInteraction::Focused => {
-                                button_tokens::ButtonInteraction::Focused
-                            }
-                            PressableInteraction::Pressed => {
-                                button_tokens::ButtonInteraction::Pressed
-                            }
-                        });
-
-                        let states = WidgetStates::from_pressable(cx, st, enabled);
-
-                        let (
-                            label_color,
-                            container_bg,
-                            state_layer_color,
-                            state_layer_target,
-                            ripple_base_opacity,
-                            config,
-                            outline,
-                        ) = {
-                            let theme = Theme::global(&*cx.app);
-
-                            let label_color = resolve_override_slot_with(
-                                self.style.label_color.as_ref(),
-                                states,
-                                |color| color.resolve(theme),
-                                || button_tokens::label_color(theme, self.variant, enabled),
-                            );
-                            let container_bg = button_tokens::container_background(
-                                theme,
-                                self.variant,
-                                enabled,
-                                label_color,
-                            );
-                            let container_bg = resolve_override_slot_opt_with(
-                                self.style.container_background.as_ref(),
-                                states,
-                                |color| color.resolve(theme),
-                                || container_bg,
-                            );
-                            let state_layer_color = button_tokens::state_layer_color(
-                                theme,
-                                self.variant,
-                                label_color,
-                                token_interaction,
-                            );
-                            let state_layer_color = resolve_override_slot_with(
-                                self.style.state_layer_color.as_ref(),
-                                states,
-                                |color| color.resolve(theme),
-                                || state_layer_color,
-                            );
-                            let state_layer_target = token_interaction
-                                .map(|i| button_tokens::state_layer_opacity(theme, self.variant, i))
-                                .unwrap_or(0.0);
-                            let ripple_base_opacity =
-                                button_tokens::pressed_state_layer_opacity(theme, self.variant);
-                            let config = material_pressable_indication_config(theme, None);
-
-                            let outline = button_outline(theme, self.variant, enabled);
-                            let outline = outline.map(|mut outline| {
-                                outline.color = resolve_override_slot_with(
-                                    self.style.outline_color.as_ref(),
-                                    states,
-                                    |color| color.resolve(theme),
-                                    || outline.color,
-                                );
-                                outline
-                            });
-
-                            (
-                                label_color,
-                                container_bg,
-                                state_layer_color,
-                                state_layer_target,
-                                ripple_base_opacity,
-                                config,
-                                outline,
-                            )
-                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -347,36 +345,23 @@ impl Button {
                         let label =
                             material_button_label(cx, label_style, &self.label, label_color);
                         let content = material_button_content(cx, size_tokens, label);
-
-                        let chrome = material_button_chrome(
-                            cx,
-                            container_bg,
-                            corner_radii,
-                            outline,
-                            size_tokens,
-                            vec![overlay, content],
-                        );
-
-                        vec![chrome]
+                        vec![overlay, content]
                     })
                 });
 
-                (pressable_props, vec![pointer_region])
+                (pressable_props, chrome, move |_cx| vec![pointer_region])
             })
         })
     }
 }
 
-fn material_button_chrome<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn material_button_chrome_props(
     background: Option<Color>,
     corner_radii: Corners,
     outline: Option<ButtonOutline>,
     size: ButtonSizeTokens,
-    children: Vec<AnyElement>,
-) -> AnyElement {
+) -> ContainerProps {
     let mut props = ContainerProps::default();
-    props.layout.overflow = Overflow::Clip;
     props.background = background;
     props.corner_radii = corner_radii;
     props.layout.size.min_height = Some(size.container_height);
@@ -384,8 +369,7 @@ fn material_button_chrome<H: UiHost>(
         props.border = Edges::all(outline.width);
         props.border_color = Some(outline.color);
     }
-
-    cx.container(props, move |_cx| children)
+    props
 }
 
 fn material_button_label<H: UiHost>(

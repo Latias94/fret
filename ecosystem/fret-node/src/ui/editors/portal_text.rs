@@ -38,7 +38,7 @@ impl PortalTextEditorUi {
         Self {
             max_width: 180.0,
             gap: 6.0,
-            stepper_button: PortalSmallButtonUi::from_theme(theme),
+            stepper_button: PortalSmallButtonUi::from_theme(theme.clone()),
 
             error_color: theme.color_token("destructive"),
             error_text_style: TextStyle {
