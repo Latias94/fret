@@ -803,9 +803,12 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::KnownWindowCountIs { .. }
                 | UiPredicateV1::PlatformUiWindowHoverDetectionIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                | UiPredicateV1::DockDragMovingWindowIs { .. }
+                | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
                 | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
+                | UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { .. }
                 | UiPredicateV1::DockFloatingDragActiveIs { .. }
                 | UiPredicateV1::DockDropPreviewKindIs { .. }
                 | UiPredicateV1::DockDropResolveSourceIs { .. }
@@ -16640,6 +16643,9 @@ fn pick_best_match<'a>(
 struct DockDragRuntimeState {
     dragging: bool,
     current_window: AppWindowId,
+    moving_window: Option<AppWindowId>,
+    window_under_moving_window: Option<AppWindowId>,
+    window_under_moving_window_source: fret_runtime::WindowUnderCursorSource,
     transparent_payload_applied: bool,
     window_under_cursor_source: fret_runtime::WindowUnderCursorSource,
 }
@@ -16654,6 +16660,9 @@ fn dock_drag_runtime_state(app: &fret_app::App) -> Option<DockDragRuntimeState> 
     Some(DockDragRuntimeState {
         dragging: drag.dragging,
         current_window: drag.current_window,
+        moving_window: drag.moving_window,
+        window_under_moving_window: drag.window_under_moving_window,
+        window_under_moving_window_source: drag.window_under_moving_window_source,
         transparent_payload_applied: drag.transparent_payload_applied,
         window_under_cursor_source: drag.window_under_cursor_source,
     })
@@ -16701,6 +16710,25 @@ fn eval_predicate_without_semantics(
                     .is_some_and(|drag| drag.dragging && drag.current_window == target_window),
             )
         }
+        UiPredicateV1::DockDragMovingWindowIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            Some(
+                dock_drag_runtime
+                    .is_some_and(|drag| drag.dragging && drag.moving_window == Some(target_window)),
+            )
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            Some(dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.window_under_moving_window == Some(target_window)
+            }))
+        }
         UiPredicateV1::DockDragActiveIs { active } => {
             Some(dock_drag_runtime.is_some_and(|drag| drag.dragging) == *active)
         }
@@ -16712,6 +16740,14 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
             Some(dock_drag_runtime.is_some_and(|drag| {
                 dock_drag_window_under_cursor_source_is(drag.window_under_cursor_source, source)
+            }))
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { source } => {
+            Some(dock_drag_runtime.is_some_and(|drag| {
+                dock_drag_window_under_cursor_source_is(
+                    drag.window_under_moving_window_source,
+                    source,
+                )
             }))
         }
         UiPredicateV1::DockFloatingDragActiveIs { active } => {

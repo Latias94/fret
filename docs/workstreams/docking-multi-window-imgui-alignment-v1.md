@@ -18,13 +18,11 @@ This document is intentionally **behavior-first**: it records what we want users
 - Perfect parity with ImGui’s internal split/preview geometry (we gate shape signatures separately).
 - Full “peek-behind moving window” semantics (ImGui has both `HoveredWindow` and `HoveredWindowUnderMovingWindow`; Fret currently exposes a single `dock_drag.current_window`).
 
-## Upstream reference points (repo-ref/imgui)
+## Upstream reference points (Dear ImGui)
 
-- `imgui.h`
-  - `io.ConfigDockingTransparentPayload` docs: transparency is about *rendering* the payload while docking and showing previews on target viewport.
-- `imgui.cpp`
-  - `DockNodePreviewDockRender(...)`: “transparent payload” affects where overlay is drawn and alpha factors.
-  - `UpdateHoveredWindowAndCaptureFlags(...)`: mentions toggling `NoInputs` on a moved window after moving starts to detect windows below (useful for docking).
+Note: the in-tree `repo-ref/imgui/` snapshot currently does **not** include docking/multi-viewport APIs, so it is not a
+direct source reference for this workstream. When we need concrete upstream code pointers, use a pinned Dear ImGui
+snapshot that includes docking + multi-viewport (or update `repo-ref/` to mirror it).
 
 The key takeaway: ImGui’s “transparent payload” is primarily an **alpha/overlay** policy knob. Input “peek-behind” exists, but is not the only interpretation of the feature.
 
@@ -73,6 +71,8 @@ Key multi-window gates:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+- Separate `HoveredWindow` vs `WindowUnderMovingWindow` contract (ImGui terminology):
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
 - Structural “no leak / no growth” loops:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-tearoff-merge-loop-no-leak.json`
@@ -90,10 +90,11 @@ These gates assert, at minimum:
 
 1) **Separate “hovered window” vs “window under moving window”**
 - ImGui tracks both `HoveredWindow` and `HoveredWindowUnderMovingWindow`.
-- Fret currently has one `dock_drag.current_window`.
-- If we want true “peek-behind” without losing z-order switching gates, we likely need:
-  - a second diagnostic (and possibly routing concept) for “under moving window”
-  - and to make docking previews consume that, while the drag session remains owned by the source window.
+- Fret now publishes a best-effort “under moving window” snapshot during dock drags:
+  - `dock_drag_moving_window_is`
+  - `dock_drag_window_under_moving_window_is`
+  - `dock_drag_window_under_moving_window_source_is`
+- Remaining work: decide how docking previews/resolve should consume this (without breaking existing z-order gates).
 
 2) **Diagnostics completeness for tab drags**
 - Ensure docking diagnostics cover both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS` consistently, so scripts can assert either form of tear-off/re-dock.

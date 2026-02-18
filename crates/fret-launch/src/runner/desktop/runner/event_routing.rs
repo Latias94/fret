@@ -136,6 +136,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
+        let moving_window = self
+            .dock_tearoff_follow
+            .filter(|follow| follow.source_window == drag_source_window)
+            .map(|follow| follow.window);
+        let mut window_under_moving_window = None;
+        let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
+        if let Some(moving_window) = moving_window {
+            if allow_window_under_cursor {
+                let hit = if reliable_window_under_cursor {
+                    self.window_under_cursor_platform(screen_pos, Some(moving_window))
+                } else {
+                    self.window_under_cursor_best_effort(screen_pos, Some(moving_window))
+                };
+                window_under_moving_window_source = hit.source;
+                window_under_moving_window = hit.window.filter(|w| *w != moving_window);
+            }
+        }
         let hovered = if reliable_window_under_cursor {
             if allow_window_under_cursor {
                 let hit = self.window_under_cursor_platform(screen_pos, None);
@@ -233,6 +250,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.current_window = current;
             d.position = pos;
             d.window_under_cursor_source = window_under_cursor_source;
+            d.moving_window = moving_window;
+            d.window_under_moving_window = window_under_moving_window;
+            d.window_under_moving_window_source = window_under_moving_window_source;
         }
 
         self.internal_drag_hover_pos = Some(pos);
@@ -276,6 +296,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
+        let moving_window = self
+            .dock_tearoff_follow
+            .filter(|follow| follow.source_window == drag_source_window)
+            .map(|follow| follow.window);
+        let mut window_under_moving_window = None;
+        let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
+        if let Some(moving_window) = moving_window {
+            if allow_window_under_cursor {
+                let hit = if reliable_window_under_cursor {
+                    self.window_under_cursor_platform(screen_pos, Some(moving_window))
+                } else {
+                    self.window_under_cursor_best_effort(screen_pos, Some(moving_window))
+                };
+                window_under_moving_window_source = hit.source;
+                window_under_moving_window = hit.window.filter(|w| *w != moving_window);
+            }
+        }
         let target = if reliable_window_under_cursor {
             let mut out = None;
             if allow_window_under_cursor {
@@ -354,6 +391,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.current_window = target;
             d.position = pos;
             d.window_under_cursor_source = window_under_cursor_source;
+            d.moving_window = moving_window;
+            d.window_under_moving_window = window_under_moving_window;
+            d.window_under_moving_window_source = window_under_moving_window_source;
         }
 
         self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);

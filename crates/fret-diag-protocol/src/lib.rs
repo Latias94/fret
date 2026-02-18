@@ -1140,12 +1140,29 @@ pub enum UiPredicateV1 {
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
     },
+    /// True when the latest docking diagnostics report an active dock drag whose runner-owned
+    /// moving window matches `window`.
+    ///
+    /// This is intended for ImGui-style multi-window docking where a torn-off window follows the
+    /// cursor while dragging.
+    DockDragMovingWindowIs {
+        window: UiWindowTargetV1,
+    },
+    /// True when the latest docking diagnostics report an active dock drag whose
+    /// "window under moving window" matches `window`.
+    ///
+    /// This allows scripts to gate "peek-behind" selection paths without reinterpreting
+    /// `dock_drag_current_window_is` (which remains the runner's primary hover/drop routing
+    /// target).
+    DockDragWindowUnderMovingWindowIs {
+        window: UiWindowTargetV1,
+    },
     /// True when the latest docking diagnostics report an active dock drag session.
     DockDragActiveIs {
         active: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
-    /// "transparent payload" applied to the moving window (e.g. click-through/NoInputs while the
+    /// "transparent payload" applied to the moving window (e.g. reduced opacity while the
     /// dock-floating window follows the cursor).
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
@@ -1167,6 +1184,21 @@ pub enum UiPredicateV1 {
     /// - `heuristic_rects`
     /// - `unknown`
     DockDragWindowUnderCursorSourceIs {
+        source: String,
+    },
+    /// True when the latest docking diagnostics report a dock drag session whose
+    /// "window under moving window" selection source matches `source`.
+    ///
+    /// Supported sources:
+    /// - `platform`: any OS-backed platform hover provider
+    /// - `platform_win32`
+    /// - `platform_macos`
+    /// - `latched`
+    /// - `heuristic`: any heuristic fallback
+    /// - `heuristic_z_order`
+    /// - `heuristic_rects`
+    /// - `unknown`
+    DockDragWindowUnderMovingWindowSourceIs {
         source: String,
     },
     /// True when the latest docking diagnostics report an active in-window floating drag session.
