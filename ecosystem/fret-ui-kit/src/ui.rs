@@ -142,7 +142,7 @@ where
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
         let gap = self.gap.resolve(theme);
-        let flex_props = FlexProps {
+        let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
             padding: Edges::all(Px(0.0)),
@@ -151,6 +151,7 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
+        flex_props.layout.size.width = Length::Fill;
 
         let children = self.children.expect("expected flex children closure");
         cx.container(container, move |cx| {
@@ -173,7 +174,7 @@ where
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
         let gap = self.gap.resolve(theme);
-        let flex_props = FlexProps {
+        let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
             padding: Edges::all(Px(0.0)),
@@ -182,6 +183,7 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
+        flex_props.layout.size.width = Length::Fill;
 
         let build = self.build.expect("expected flex build closure");
         cx.container(container, move |cx| {

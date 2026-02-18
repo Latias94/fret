@@ -1813,7 +1813,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch = Some(launch_args);
                 break;
             }
-            other if other.starts_with('-') => return Err(format!("unknown diag flag: {other}")),
+            other if other.starts_with('-') => {
+                // Once we have the subcommand, allow subcommand-specific flags to pass through.
+                if positionals.is_empty() {
+                    return Err(format!("unknown diag flag: {other}"));
+                }
+                positionals.push(arg.clone());
+                i += 1;
+            }
             _ => {
                 positionals.push(arg.clone());
                 i += 1;
