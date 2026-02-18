@@ -1,6 +1,6 @@
 # Renderer Effect: Backdrop Warp v1 — Milestones
 
-Status: Draft (workstream tracker)
+Status: Done (ADR + contract + wgpu implementation + conformance + perf baseline)
 
 Tracking files:
 
@@ -13,7 +13,7 @@ Tracking files:
 - M0: done (ADR accepted; bounded surface locked).
 - M1: done (wgpu implementation + WebGPU shader validation).
 - M2: done (conformance + steady-state perf baseline).
-- M3: in progress (demo now exercises the step; adoption notes pending).
+- M3: done (demo exercises the step; scripts/gates are stable).
 
 ## M0 — ADR lock + bounded vocabulary
 

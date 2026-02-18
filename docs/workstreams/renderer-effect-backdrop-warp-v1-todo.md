@@ -1,6 +1,6 @@
 # Renderer Effect: Backdrop Warp v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Done (ADR + contract + wgpu implementation + conformance + perf baseline)
 
 Tracking format:
 

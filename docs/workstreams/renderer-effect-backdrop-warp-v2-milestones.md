@@ -18,7 +18,7 @@ Tracking files:
 Progress record (M0/M1):
 
 - Date: 2026-02-18
-- Status: Implemented (local branch); conformance landed; perf + demo toggles pending
+- Status: Landed (conformance + perf + demo validated)
 - Evidence anchors:
   - `docs/adr/0285-backdrop-warp-effect-step-v2-texture-field.md`
   - `crates/fret-core/src/scene/mod.rs` (`EffectStep::BackdropWarpV2`, `BackdropWarpV2`)

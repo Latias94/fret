@@ -1,4 +1,4 @@
-Status: Draft (workstream tracker)
+Status: In progress (implementation landed; docs note pending)
 
 This workstream closes the renderer-side implementation details for **clip-path and mask stacks**
 so they remain:

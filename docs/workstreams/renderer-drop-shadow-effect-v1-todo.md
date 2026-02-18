@@ -1,6 +1,6 @@
 # Renderer Effect: Drop Shadow v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Done (ADR + contract + wgpu implementation + conformance + perf baseline)
 
 Tracking format:
 

@@ -1,6 +1,6 @@
 # Renderer Clip/Mask Closure v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: In progress (implementation landed; docs note pending)
 
 Tracking format:
 

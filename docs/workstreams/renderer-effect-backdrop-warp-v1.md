@@ -1,4 +1,4 @@
-Status: Draft (workstream tracker)
+Status: Done (ADR + contract + wgpu implementation + conformance + perf baseline)
 
 This workstream defines and lands a **bounded, portable “backdrop warp”** effect step that enables
 true liquid-glass style visuals (refraction-like background displacement + optional chromatic
