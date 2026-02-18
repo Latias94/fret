@@ -6739,6 +6739,113 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
 }
 
 #[test]
+fn segmented_button_semantics_roles_match_compose_baseline() {
+    use std::collections::BTreeSet;
+
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+
+    let single_value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("alpha"));
+    let multi_value: Model<BTreeSet<Arc<str>>> = app
+        .models_mut()
+        .insert([Arc::<str>::from("alpha")].into_iter().collect());
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let single = SegmentedButtonSet::single(single_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha").test_id("segmented-single-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta").test_id("segmented-single-beta"),
+                    SegmentedButtonItem::new("gamma", "Gamma")
+                        .disabled(true)
+                        .test_id("segmented-single-gamma-disabled"),
+                ])
+                .a11y_label("single segmented")
+                .test_id("segmented-single")
+                .into_element(cx);
+
+            let multi = SegmentedButtonSet::multi(multi_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha").test_id("segmented-multi-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta").test_id("segmented-multi-beta"),
+                ])
+                .a11y_label("multi segmented")
+                .test_id("segmented-multi")
+                .into_element(cx);
+
+            let mut props = FlexProps::default();
+            props.direction = fret_core::Axis::Vertical;
+            props.gap = Px(16.0);
+            let content = cx.flex(props, |_cx| vec![single, multi]);
+            vec![with_padding(cx, Px(24.0), content)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let find = |id: &str| -> &fret_core::SemanticsNode {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("expected semantics node {id}"))
+    };
+
+    let group_single = find("segmented-single");
+    assert_eq!(group_single.role, fret_core::SemanticsRole::RadioGroup);
+
+    let alpha = find("segmented-single-alpha");
+    assert_eq!(alpha.role, fret_core::SemanticsRole::RadioButton);
+    assert_eq!(alpha.flags.checked, Some(true));
+    assert!(
+        !alpha.flags.selected,
+        "radio buttons should not set selected"
+    );
+
+    let beta = find("segmented-single-beta");
+    assert_eq!(beta.role, fret_core::SemanticsRole::RadioButton);
+    assert_eq!(beta.flags.checked, Some(false));
+    assert!(
+        !beta.flags.selected,
+        "radio buttons should not set selected"
+    );
+
+    let multi_alpha = find("segmented-multi-alpha");
+    assert_eq!(multi_alpha.role, fret_core::SemanticsRole::Checkbox);
+    assert_eq!(multi_alpha.flags.checked, Some(true));
+    assert!(
+        !multi_alpha.flags.selected,
+        "checkboxes should not set selected"
+    );
+
+    let multi_beta = find("segmented-multi-beta");
+    assert_eq!(multi_beta.role, fret_core::SemanticsRole::Checkbox);
+    assert_eq!(multi_beta.flags.checked, Some(false));
+    assert!(
+        !multi_beta.flags.selected,
+        "checkboxes should not set selected"
+    );
+}
+
+#[test]
 fn material3_headless_badge_suite_goldens_v1() {
     use fret_core::Corners;
     use fret_ui::element::{ContainerProps, FlexProps, Length};

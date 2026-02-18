@@ -191,8 +191,12 @@ impl SegmentedButtonSet {
             }
         };
 
+        let role = match &selection {
+            SegmentedSelection::Single(_) => SemanticsRole::RadioGroup,
+            SegmentedSelection::Multi(_) => SemanticsRole::Group,
+        };
         let sem = fret_ui::element::SemanticsProps {
-            role: SemanticsRole::Group,
+            role,
             label: a11y_label.clone(),
             test_id: test_id.clone(),
             disabled,
@@ -305,6 +309,11 @@ impl SegmentedButtonSet {
                         let handler =
                             on_activate_for_item(&selection, item.value.clone(), selected, enabled);
 
+                        let role = match &selection {
+                            SegmentedSelection::Single(_) => SemanticsRole::RadioButton,
+                            SegmentedSelection::Multi(_) => SemanticsRole::Checkbox,
+                        };
+
                         SegmentedButtonSegment {
                             item,
                             len,
@@ -313,6 +322,7 @@ impl SegmentedButtonSet {
                             enabled,
                             on_activate: handler,
                             roving_tab_stop: tab_stop.is_some_and(|t| t == idx),
+                            role,
                         }
                         .into_element(cx)
                     })
@@ -367,6 +377,7 @@ struct SegmentedButtonSegment {
     enabled: bool,
     on_activate: Option<OnActivate>,
     roving_tab_stop: bool,
+    role: SemanticsRole,
 }
 
 impl SegmentedButtonSegment {
@@ -418,14 +429,14 @@ impl SegmentedButtonSegment {
                     focusable,
                     key_activation: Default::default(),
                     a11y: PressableA11y {
-                        role: Some(SemanticsRole::Button),
+                        role: Some(self.role),
                         label: self
                             .item
                             .a11y_label
                             .clone()
                             .or_else(|| Some(self.item.label.clone())),
                         test_id: self.item.test_id.clone(),
-                        selected: self.selected,
+                        selected: false,
                         checked: Some(self.selected),
                         pos_in_set: Some((self.idx + 1) as u32),
                         set_size: Some(self.len as u32),
@@ -540,7 +551,6 @@ impl SegmentedButtonSegment {
                             false,
                         );
 
-                        let has_icon = self.item.icon.is_some();
                         let leading = if self.selected {
                             Some(material_icon(
                                 cx,
@@ -548,11 +558,13 @@ impl SegmentedButtonSegment {
                                 icon_size,
                                 icon_color,
                             ))
-                        } else if let Some(icon) = self.item.icon.as_ref() {
-                            Some(material_icon(cx, icon, icon_size, icon_color))
                         } else {
-                            None
+                            self.item
+                                .icon
+                                .as_ref()
+                                .map(|icon| material_icon(cx, icon, icon_size, icon_color))
                         };
+                        let icon_visible = leading.is_some();
 
                         let content = material_segment_content(
                             cx,
@@ -560,7 +572,8 @@ impl SegmentedButtonSegment {
                             self.item.label.clone(),
                             leading,
                             label_color,
-                            has_icon,
+                            icon_size,
+                            icon_visible,
                         );
 
                         let chrome = material_segment_chrome(
@@ -643,11 +656,14 @@ fn material_segment_content<H: UiHost>(
     label: Arc<str>,
     leading: Option<AnyElement>,
     label_color: Color,
-    has_icon: bool,
+    icon_size: Px,
+    icon_visible: bool,
 ) -> AnyElement {
+    let icon_gap = Px(8.0);
+
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
-    props.gap = if has_icon { Px(8.0) } else { Px(0.0) };
+    props.gap = icon_gap;
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;
@@ -658,14 +674,21 @@ fn material_segment_content<H: UiHost>(
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Clip;
 
-    cx.flex(props, move |cx| {
-        let mut out: Vec<AnyElement> = Vec::new();
-        if let Some(leading) = leading.clone() {
-            out.push(leading);
-        }
-        out.push(cx.text_props(text));
-        out
-    })
+    if !icon_visible {
+        text.layout.position = fret_ui::element::PositionStyle::Relative;
+        text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0)));
+    }
+
+    let icon_slot = {
+        let mut icon_props = ContainerProps::default();
+        icon_props.layout.size.width = Length::Px(icon_size);
+        icon_props.layout.size.height = Length::Px(icon_size);
+        cx.container(icon_props, move |_cx| {
+            leading.into_iter().collect::<Vec<_>>()
+        })
+    };
+
+    cx.flex(props, move |cx| vec![icon_slot, cx.text_props(text)])
 }
 
 fn material_icon<H: UiHost>(
