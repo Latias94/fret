@@ -9269,3 +9269,32 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
 - top_total_time_us: `8580`
 - bundle: `target/fret-diag/1770680645547-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-18 09:37 (commit `5a488c8df`)
+
+Change:
+- fix(diag): perf threshold failures now pick **metric-specific evidence** (total/layout/solve) instead of reusing the “worst total” run.
+
+Command:
+```bash
+cargo run -p fretboard --release -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-perf-local/20260218-093718-evidence-fix-baseline-v2 \
+  --repeat 3 --warmup-frames 5 \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json \
+  --reuse-launch \
+  --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json \
+  --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate failed (failures=3): `top_layout_engine_solve_time_us`
+  - `tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json`: actual=`183` (thr=`116`), evidence run=`1`, bundle=`target/fret-diag-perf-local/20260218-093718-evidence-fix-baseline-v2/1771378675161-ui-gallery-dropdown-apple-steady/bundle.json`
+  - `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json`: actual=`192` (thr=`104`), evidence run=`2`, bundle=`target/fret-diag-perf-local/20260218-093718-evidence-fix-baseline-v2/1771378687677-ui-gallery-dialog-escape-steady/bundle.json`
+  - `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json`: actual=`1020` (thr=`988`), evidence run=`0`, bundle=`target/fret-diag-perf-local/20260218-093718-evidence-fix-baseline-v2/1771378694881-ui-gallery-virtual-list-bottom-steady/bundle.json`
+
+Notes:
+- Verified evidence correctness: for each failing script, `evidence_run_index` matches the run with max `top_layout_engine_solve_time_us` in `.rows[].runs[]`.
+- Next: use `FRET_LAYOUT_NODE_PROFILE=1` to turn the virtual list and overlay solve spikes into actionable per-node constraints/hotspots.
