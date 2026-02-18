@@ -58,6 +58,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 - [x] BWARP-perf-050 Add a steady-state perf gate + baseline:
       worst-frame stability under bounded warp + blur chain.
   - Evidence anchors:
+    - `tools/perf/diag_liquid_glass_backdrop_warp_gate.py`
     - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
     - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-steady.v1.json`
     - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-steady.windows-rtx4090.v1.json`

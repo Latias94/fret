@@ -12,12 +12,6 @@
       "scope": "liquid-glass-backdrop-warp-steady",
       "metric": "top_layout_time_us",
       "seed": "p90"
-    },
-    {
-      "scope": "tools/diag-scripts/liquid-glass-backdrop-warp-steady.json",
-      "metric": "top_layout_engine_solve_time_us",
-      "seed": "p95"
     }
   ]
 }
-
