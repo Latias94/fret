@@ -90,8 +90,22 @@ pub(in crate::ui) fn preview_material3_icon_button(
         },
     );
 
+    let centered_gate = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![material3::IconButton::new(ids::ui::CLOSE)
+                .variant(material3::IconButtonVariant::Filled)
+                .a11y_label("Material 3 icon button (centered chrome)")
+                .test_id("ui-gallery-material3-icon-button-centered")
+                .into_element(cx)]
+        },
+    );
+
     vec![
         cx.text("Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple."),
+        cx.text("Centered fixed chrome: hit box can exceed visual chrome (min touch target)."),
+        centered_gate,
         row(cx, material3::IconButtonVariant::Standard, "Standard"),
         row(cx, material3::IconButtonVariant::Filled, "Filled"),
         row(cx, material3::IconButtonVariant::Tonal, "Tonal"),

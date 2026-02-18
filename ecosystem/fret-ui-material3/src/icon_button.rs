@@ -347,6 +347,16 @@ impl IconButton {
                             colors.outline,
                             vec![overlay, content],
                         );
+                        let chrome_test_id = pressable_props
+                            .a11y
+                            .test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let chrome = if let Some(test_id) = chrome_test_id {
+                            chrome.test_id(test_id)
+                        } else {
+                            chrome
+                        };
 
                         vec![centered_fill(cx, chrome)]
                     })
@@ -643,6 +653,16 @@ impl IconToggleButton {
                             colors.outline,
                             vec![overlay, content],
                         );
+                        let chrome_test_id = pressable_props
+                            .a11y
+                            .test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let chrome = if let Some(test_id) = chrome_test_id {
+                            chrome.test_id(test_id)
+                        } else {
+                            chrome
+                        };
 
                         vec![centered_fill(cx, chrome)]
                     })
