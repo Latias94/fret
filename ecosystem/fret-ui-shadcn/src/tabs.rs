@@ -1401,7 +1401,6 @@ impl Tabs {
                                     let label = item.label.clone();
                                     let trigger_children = item.trigger.clone();
                                     let trigger_test_id = item.trigger_test_id.clone();
-                                    let trigger_test_id_for_chrome = trigger_test_id.clone();
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
