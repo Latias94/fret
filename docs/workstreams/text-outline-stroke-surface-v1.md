@@ -1,4 +1,4 @@
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 This workstream defines a bounded, portable **text outline/stroke** mechanism surface.
 

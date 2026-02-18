@@ -1,6 +1,6 @@
 # Renderer vNext Fearless Refactor v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 This document tracks TODOs for:
 
@@ -252,7 +252,7 @@ milestones) when implementation begins.
     - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
 - [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
-  - Status (2026-02-17): v1 landed for painted text fills (solid + gradients) and a bounded text shadow surface.
+  - Status (2026-02-18): v1 landed for painted text fills (solid + gradients) and a bounded text shadow surface.
     - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
     - Landed (v1): GPU readback conformance gate for text gradient paint.
     - Landed (v1): `SceneOp::Text.shadow: Option<TextShadowV1>` (single layer, no blur) for portable text shadows.
@@ -264,6 +264,7 @@ milestones) when implementation begins.
       - `docs/workstreams/text-outline-stroke-surface-v1.md`
       - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
       - `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
+      - Audit is recorded (atlas is coverage, not SDF/MSDF): `docs/workstreams/text-outline-stroke-surface-v1-todo.md` (`TOS-audit-010`)
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
   - ADRs:
     - `docs/adr/0279-text-paint-surface-v1.md`

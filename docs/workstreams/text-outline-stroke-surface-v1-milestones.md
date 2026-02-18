@@ -1,6 +1,6 @@
 # Text Outline/Stroke Surface v1 — Milestones
 
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 Tracking files:
 

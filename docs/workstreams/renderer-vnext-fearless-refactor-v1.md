@@ -1,6 +1,6 @@
 # Renderer vNext Fearless Refactor v1
 
-Status: Draft (workstream notes only; ADRs remain the source of truth)
+Status: Active (living workstream notes; ADRs remain the source of truth)
 
 Tracking files:
 
@@ -49,6 +49,13 @@ Current status (as of 2026-02-18):
   - clip-path mask intermediates are cached and reused via GPU copy (budgeted + deterministic eviction),
   - headless perf gate asserts cache stability invariants (hits present, misses bounded, entries bounded).
   - Tracking: `docs/workstreams/renderer-clip-mask-closure-v1.md`
+
+Remaining (next):
+
+- Outlined/stroked text as a bounded contract surface:
+  - Tracking: `docs/workstreams/text-outline-stroke-surface-v1.md`
+- Evidence-driven (optional): add bounded WebGPU material pipeline variants only if perf evidence warrants it:
+  - Tracking: `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (`REN-VNEXT-webgpu-004`)
 
 ## 0) Why this workstream exists
 

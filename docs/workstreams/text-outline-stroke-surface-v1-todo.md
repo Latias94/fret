@@ -1,12 +1,12 @@
 ---
 title: Text Outline/Stroke Surface v1 — TODO
-status: draft
+status: in_progress
 date: 2026-02-18
 ---
 
 # Text Outline/Stroke Surface v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 Workstream narrative: `docs/workstreams/text-outline-stroke-surface-v1.md`  
 Milestone board: `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
@@ -20,7 +20,7 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 
 ## M0 — Design lock (bounded + portable)
 
-- [~] TOS-audit-010 Audit the current text pipeline and atlas format:
+- [x] TOS-audit-010 Audit the current text pipeline and atlas format:
   - Is the glyph atlas a coverage mask or distance field?
   - Are derivatives (`fwidth`) used in text shaders today?
   - What caches exist for glyph geometry/metrics?
