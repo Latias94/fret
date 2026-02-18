@@ -55,12 +55,13 @@ Legend:
 | `ecosystem/fret-ui-kit/src/declarative/chrome.rs` | `control_chrome_pressable_with_id_props` | `ControlChrome` | Yes | Yes | OK | N/A | Unit tests in-file | Canonical helper; expand matrix tests. |
 | `ecosystem/fret-ui-shadcn/src/button.rs` | shadcn Button | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Prefer keeping all shadcn “controls” on this path. |
 | `ecosystem/fret-ui-shadcn/src/tabs.rs` | Tabs triggers | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | Inner container sets `w/h = Fill`. |
+| `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/segmented_button.rs` | Segmented button segments | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | `material_segment_chrome` sets `w = Fill`. |
 | `ecosystem/fret-ui-material3/src/button.rs` | Material button | `AdHocChrome` | Unknown | Unknown | Unknown | Likely adopt helper | N/A | Inner chrome enforces `min_height`; verify stretch scenarios. |
-| `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `AdHocChrome` | Possible (caller-dependent) | No (currently) | At risk | Adopt helper or copy normalization | N/A | Pressable wraps a padded/radius container without `Fill`. |
+| `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret/src/workspace_menu.rs` | Menubar item | `ControlChrome` | Yes (`w = Fill`) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 
 Add rows as audit progresses. The key question for each row is:
 
 1) Can the outer pressable receive a definite box from layout (now or in future composition)?
 2) If yes, does the chrome child fill both axes?
-

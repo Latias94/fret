@@ -20,6 +20,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -767,7 +768,7 @@ fn render_menu_from_runtime<H: UiHost>(
             letter_spacing_em: None,
         };
 
-        cx.pressable_with_id_props(|cx, st, trigger_id| {
+        control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
             let (patient_click_sticky, patient_click_timer) =
                 menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
@@ -886,26 +887,23 @@ fn render_menu_from_runtime<H: UiHost>(
                 })
             };
 
-            let content = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle::default(),
-                    padding: Edges {
-                        top: Px(4.0),
-                        right: pad,
-                        bottom: Px(4.0),
-                        left: pad,
-                    },
-                    background: trigger_bg,
-                    shadow: None,
-                    border: Edges::all(Px(0.0)),
-                    border_color: None,
-                    corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
-                    ..Default::default()
+            let chrome = ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges {
+                    top: Px(4.0),
+                    right: pad,
+                    bottom: Px(4.0),
+                    left: pad,
                 },
-                |_cx| vec![content],
-            );
+                background: trigger_bg,
+                shadow: None,
+                border: Edges::all(Px(0.0)),
+                border_color: None,
+                corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
+                ..Default::default()
+            };
 
-            (props, vec![content])
+            (props, chrome, move |_cx| vec![content])
         })
     })
 }
@@ -1313,7 +1311,7 @@ fn render_menu_item<H: UiHost>(
 ) -> AnyElement {
     let disabled = item.disabled;
 
-    cx.pressable_with_id_props(|cx, st, item_id| {
+    control_chrome_pressable_with_id_props(cx, |cx, st, item_id| {
         if !disabled && first_item_focus_id.get().is_none() {
             first_item_focus_id.set(Some(item_id));
         }
@@ -1508,65 +1506,62 @@ fn render_menu_item<H: UiHost>(
             None
         };
 
-        let row = cx.container(
-            ContainerProps {
-                layout: LayoutStyle::default(),
-                padding: Edges {
-                    top: Px(4.0),
-                    right: pad,
-                    bottom: Px(4.0),
-                    left: pad,
+        let chrome = ContainerProps {
+            layout: LayoutStyle::default(),
+            padding: Edges {
+                top: Px(4.0),
+                right: pad,
+                bottom: Px(4.0),
+                left: pad,
+            },
+            background: bg,
+            shadow: None,
+            border: Edges::all(Px(0.0)),
+            border_color: None,
+            corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
+            ..Default::default()
+        };
+
+        (props, chrome, move |cx| {
+            let mut inner_layout = LayoutStyle::default();
+            inner_layout.size.width = Length::Fill;
+            vec![cx.flex(
+                FlexProps {
+                    layout: inner_layout,
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(8.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::SpaceBetween,
+                    align: CrossAlign::Center,
+                    wrap: false,
                 },
-                background: bg,
-                shadow: None,
-                border: Edges::all(Px(0.0)),
-                border_color: None,
-                corner_radii: Corners::all(theme.metric_token("metric.radius.sm")),
-                ..Default::default()
-            },
-            move |cx| {
-                let mut inner_layout = LayoutStyle::default();
-                inner_layout.size.width = Length::Fill;
-                vec![cx.flex(
-                    FlexProps {
-                        layout: inner_layout,
-                        direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::SpaceBetween,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |cx| {
-                        let mut left_children: Vec<AnyElement> = Vec::new();
-                        if let Some(leading) = leading {
-                            left_children.push(leading);
-                        }
-                        left_children.push(label);
-                        let left = cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle::default(),
-                                direction: fret_core::Axis::Horizontal,
-                                gap: Px(8.0),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |_cx| left_children,
-                        );
+                move |cx| {
+                    let mut left_children: Vec<AnyElement> = Vec::new();
+                    if let Some(leading) = leading {
+                        left_children.push(leading);
+                    }
+                    left_children.push(label);
+                    let left = cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(8.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| left_children,
+                    );
 
-                        let mut out = vec![left];
-                        if let Some(trailing) = trailing {
-                            out.push(trailing);
-                        }
-                        out
-                    },
-                )]
-            },
-        );
-
-        (props, vec![row])
+                    let mut out = vec![left];
+                    if let Some(trailing) = trailing {
+                        out.push(trailing);
+                    }
+                    out
+                },
+            )]
+        })
     })
 }
 
