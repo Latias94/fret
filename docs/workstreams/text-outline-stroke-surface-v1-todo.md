@@ -86,4 +86,8 @@ Leave 1–3 evidence anchors when completing an item (paths + key functions/test
 
 ## M4 — Adoption (optional)
 
-- [ ] TOS-adopt-400 Wire one real consumer (ui-gallery/editor) to exercise outlined text.
+- [x] TOS-adopt-400 Wire one real consumer (ui-gallery/editor) to exercise outlined text.
+  - Evidence anchors:
+    - `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs`
+    - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TEXT_OUTLINE_STROKE`, `CMD_NAV_TEXT_OUTLINE_STROKE`)
+    - `apps/fret-ui-gallery/src/ui/content.rs` (page routing)

@@ -14,12 +14,15 @@ Tracking files:
 - M1: Completed (core contract plumbing landed).
 - M2: Completed (wgpu implementation landed).
 - M3: Completed (GPU readback conformance landed).
-- M4: Pending (adoption).
+- M4: Completed (adoption).
   - Evidence anchors:
     - `crates/fret-core/src/scene/mod.rs` (`TextOutlineV1`, `SceneOp::Text { outline }`)
     - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (outline pipeline variant)
     - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`FRET_TEXT_OUTLINE_PRESENT`)
     - `crates/fret-render-wgpu/tests/text_outline_conformance.rs`
+    - `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs`
+    - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TEXT_OUTLINE_STROKE`, `CMD_NAV_TEXT_OUTLINE_STROKE`)
+    - `apps/fret-ui-gallery/src/ui/content.rs` (page routing)
 
 ## M0 — Design lock (bounded + portable)
 
@@ -80,3 +83,7 @@ Evidence anchors:
 Exit criteria:
 
 - One real consumer uses outlined text (to validate ergonomics and discover missing semantics).
+
+Evidence anchors:
+
+- `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs`
