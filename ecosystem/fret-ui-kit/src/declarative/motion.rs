@@ -1,7 +1,7 @@
 use std::panic::Location;
 use std::time::Duration;
 
-use fret_core::{WindowFrameClockService, WindowMetricsService};
+use fret_core::{Color, WindowFrameClockService, WindowMetricsService};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
@@ -14,6 +14,12 @@ use crate::declarative::scheduling::set_continuous_frames;
 pub struct DrivenMotionF32 {
     pub value: f32,
     pub velocity: f32,
+    pub animating: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DrivenMotionColor {
+    pub value: Color,
     pub animating: bool,
 }
 
@@ -52,6 +58,50 @@ impl Default for TweenF32State {
             target: 0.0,
             value: 0.0,
             velocity: 0.0,
+            elapsed: Duration::ZERO,
+            duration: Duration::from_millis(200),
+            ease: crate::headless::easing::smoothstep,
+            animating: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TweenColorState {
+    initialized: bool,
+    last_frame_id: u64,
+    start: Color,
+    target: Color,
+    value: Color,
+    elapsed: Duration,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+    animating: bool,
+}
+
+impl Default for TweenColorState {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            last_frame_id: 0,
+            start: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+            target: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
+            value: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            },
             elapsed: Duration::ZERO,
             duration: Duration::from_millis(200),
             ease: crate::headless::easing::smoothstep,
@@ -107,6 +157,26 @@ pub(crate) fn tween_value_at(
     let t = (elapsed.as_secs_f64() / duration.as_secs_f64()).clamp(0.0, 1.0) as f32;
     let eased = ease(t).clamp(0.0, 1.0);
     start + (end - start) * eased
+}
+
+fn tween_color_at(
+    start: Color,
+    end: Color,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+    elapsed: Duration,
+) -> Color {
+    if duration == Duration::ZERO {
+        return end;
+    }
+    let t = (elapsed.as_secs_f64() / duration.as_secs_f64()).clamp(0.0, 1.0) as f32;
+    let eased = ease(t).clamp(0.0, 1.0);
+    Color {
+        r: start.r + (end.r - start.r) * eased,
+        g: start.g + (end.g - start.g) * eased,
+        b: start.b + (end.b - start.b) * eased,
+        a: start.a + (end.a - start.a) * eased,
+    }
 }
 
 pub(crate) fn tween_value_at_unclamped(
@@ -238,6 +308,85 @@ pub fn drive_tween_f32<H: UiHost>(
                 DrivenMotionF32 {
                     value: st.value,
                     velocity: st.velocity,
+                    animating: st.animating,
+                }
+            });
+
+            set_continuous_frames(cx, out.animating);
+            if out.animating {
+                cx.notify_for_animation_frame();
+            }
+            out
+        },
+    )
+}
+
+#[track_caller]
+pub fn drive_tween_color<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    target: Color,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+) -> DrivenMotionColor {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion {
+        set_continuous_frames(cx, false);
+        return DrivenMotionColor {
+            value: target,
+            animating: false,
+        };
+    }
+
+    let loc = Location::caller();
+    cx.keyed(
+        (loc.file(), loc.line(), loc.column(), "drive_tween_color"),
+        |cx| {
+            let frame_id = cx.frame_id.0;
+            let dt = effective_frame_delta_for_cx(cx);
+
+            let out = cx.with_state(TweenColorState::default, |st| {
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_frame_id = frame_id;
+                    st.start = target;
+                    st.target = target;
+                    st.value = target;
+                    st.elapsed = Duration::ZERO;
+                    st.duration = duration;
+                    st.ease = ease;
+                    st.animating = false;
+                }
+
+                // Retarget.
+                if target != st.target
+                    || st.duration != duration
+                    || st.ease as usize != ease as usize
+                {
+                    st.start = st.value;
+                    st.target = target;
+                    st.duration = duration;
+                    st.ease = ease;
+                    st.elapsed = Duration::ZERO;
+                    st.animating = true;
+                }
+
+                // Advance at most once per frame.
+                if st.animating && st.last_frame_id != frame_id {
+                    st.last_frame_id = frame_id;
+                    st.elapsed = st.elapsed.saturating_add(dt);
+
+                    st.value =
+                        tween_color_at(st.start, st.target, st.duration, st.ease, st.elapsed);
+                    if st.elapsed >= st.duration {
+                        st.value = st.target;
+                        st.animating = false;
+                    }
+                } else if st.last_frame_id == 0 {
+                    st.last_frame_id = frame_id;
+                }
+
+                DrivenMotionColor {
+                    value: st.value,
                     animating: st.animating,
                 }
             });
