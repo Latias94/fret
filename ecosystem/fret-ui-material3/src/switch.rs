@@ -2,7 +2,7 @@
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing/colors via `md.comp.switch.*`.
-//! - State layer (hover/pressed/focus) + unbounded ripple using `fret_ui::paint`.
+//! - State layer (hover/pressed/focus) + ripple driven by `fret_ui::paint`.
 
 use std::sync::Arc;
 
@@ -281,6 +281,7 @@ impl Switch {
                         struct SwitchThumbRuntime {
                             selected: SpringAnimator,
                             pressed: SpringAnimator,
+                            prev_pressed: bool,
                         }
 
                         let (
@@ -376,7 +377,18 @@ impl Switch {
                                 rt.selected.set_target(now_frame, desired_selected, spring);
                                 rt.pressed.set_target(now_frame, desired_pressed, spring);
                                 rt.selected.advance(now_frame);
-                                rt.pressed.advance(now_frame);
+
+                                // Match Compose's `SnapSpec` for the "pressed" transition:
+                                // - snap to the pressed state on pointer down
+                                // - animate back to rest on release
+                                if is_pressed {
+                                    if !rt.prev_pressed {
+                                        rt.pressed.reset(now_frame, 1.0);
+                                    }
+                                } else {
+                                    rt.pressed.advance(now_frame);
+                                }
+                                rt.prev_pressed = is_pressed;
                                 (
                                     rt.selected.value(),
                                     rt.pressed.value(),
