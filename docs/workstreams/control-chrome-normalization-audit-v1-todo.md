@@ -34,8 +34,9 @@ Workstream overview:
 - [ ] Add `fretboard diag` scenarios that exercise stretch-sensitive chrome:
   - [x] Flex-1 Buttons (control chrome fill): `tools/diag-scripts/ui-gallery-control-chrome-flex1-button-fill.json`
   - [x] Dialog trigger in a stretched row: `tools/diag-scripts/ui-gallery-control-chrome-flex1-dialog-trigger-fill.json`
-  - [ ] Tabs triggers with `flex-1`
-  - [ ] ButtonGroup/ToggleGroup with stretched items
+  - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
+  - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
+  - [ ] ButtonGroup with stretched items
 
 ---
 

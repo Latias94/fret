@@ -83,6 +83,7 @@ pub struct ToggleGroupItem {
     children: Vec<AnyElement>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ToggleGroupItem {
@@ -92,6 +93,7 @@ impl std::fmt::Debug for ToggleGroupItem {
             .field("children_len", &self.children.len())
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .finish()
     }
 }
@@ -103,6 +105,7 @@ impl ToggleGroupItem {
             children: children.into_iter().collect(),
             disabled: false,
             a11y_label: None,
+            test_id: None,
         }
     }
 
@@ -113,6 +116,11 @@ impl ToggleGroupItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 }
@@ -159,6 +167,7 @@ pub struct ToggleGroup {
     roving_focus: bool,
     orientation: ToggleGroupOrientation,
     loop_navigation: bool,
+    items_full_width: bool,
     variant: ToggleVariant,
     size: ToggleSize,
     spacing: Space,
@@ -180,6 +189,7 @@ impl std::fmt::Debug for ToggleGroup {
             .field("roving_focus", &self.roving_focus)
             .field("orientation", &self.orientation)
             .field("loop_navigation", &self.loop_navigation)
+            .field("items_full_width", &self.items_full_width)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("spacing", &self.spacing)
@@ -201,6 +211,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_full_width: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -223,6 +234,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_full_width: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -243,6 +255,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_full_width: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -270,6 +283,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_full_width: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -316,6 +330,13 @@ impl ToggleGroup {
         self
     }
 
+    /// When enabled, items in a horizontal group use `flex-1` so their pressable bounds stretch to
+    /// fill the available width.
+    pub fn items_full_width(mut self, full_width: bool) -> Self {
+        self.items_full_width = full_width;
+        self
+    }
+
     pub fn item(mut self, item: ToggleGroupItem) -> Self {
         self.items.push(item);
         self
@@ -349,6 +370,7 @@ impl ToggleGroup {
         let roving_focus = self.roving_focus;
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
+        let items_full_width = self.items_full_width;
         let variant = self.variant;
         let size_token = self.size;
         let spacing = self.spacing;
@@ -568,7 +590,7 @@ impl ToggleGroup {
 
                     let value = item.value.clone();
                     let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
-                    let a11y = if model_single.is_some() {
+                    let mut a11y = if model_single.is_some() {
                         fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
                             a11y_label.clone(),
                             on,
@@ -579,22 +601,32 @@ impl ToggleGroup {
                             on,
                         )
                     };
+                    let item_test_id = item.test_id.clone();
+                    a11y.test_id = item_test_id.clone();
+                    let item_chrome_test_id = item_test_id
+                        .as_ref()
+                        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                     let children = item.children;
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
-                    let pressable_layout = decl_style::layout_style(
-                        &theme,
+                    let item_refinement = if items_full_width
+                        && matches!(orientation, ToggleGroupOrientation::Horizontal)
+                    {
+                        LayoutRefinement::default().min_h(item_h).min_w_0().flex_1()
+                    } else {
                         LayoutRefinement::default()
                             .min_h(item_h)
                             .min_w_0()
-                            .flex_none(),
-                    );
+                            .flex_none()
+                    };
+                    let pressable_layout = decl_style::layout_style(&theme, item_refinement);
 
                     let item_theme = theme.clone();
                     let item_background_override = item_background_override.clone();
                     let item_border_color_override = item_border_color_override.clone();
                     let default_item_background = default_item_background.clone();
                     let default_item_border_color = default_item_border_color.clone();
+                    let item_chrome_test_id = item_chrome_test_id.clone();
 
                     out.push(cx.keyed(value.clone(), move |cx| {
                         cx.pressable(
@@ -651,12 +683,16 @@ impl ToggleGroup {
                                 }
                                 props.layout.size = pressable_layout.size;
 
-                                vec![shadcn_layout::container_hstack_centered(
+                                let mut chrome = shadcn_layout::container_hstack_centered(
                                     cx,
                                     props,
                                     Space::N1,
                                     children,
-                                )]
+                                );
+                                if let Some(test_id) = item_chrome_test_id.as_ref() {
+                                    chrome = chrome.test_id(test_id.clone());
+                                }
+                                vec![chrome]
                             },
                         )
                     }));

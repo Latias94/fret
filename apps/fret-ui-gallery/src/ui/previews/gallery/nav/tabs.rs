@@ -121,6 +121,53 @@ pub(in crate::ui) fn preview_tabs(
         section(cx, "Demo", body)
     };
 
+    let flex_1_triggers = {
+        let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
+            .list_full_width(true)
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
+            .items([
+                shadcn::TabsItem::new(
+                    "overview",
+                    "Overview",
+                    [card_panel(
+                        cx,
+                        "Overview",
+                        "Full-width triggers should keep chrome aligned with stretched hit boxes.",
+                        "This section exists to support a control-chrome regression gate.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-overview"),
+                shadcn::TabsItem::new(
+                    "analytics",
+                    "Analytics",
+                    [card_panel(
+                        cx,
+                        "Analytics",
+                        "Each trigger uses flex-1 inside the TabsList container.",
+                        "Trigger bounds should match the inner chrome bounds.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-analytics"),
+                shadcn::TabsItem::new(
+                    "reports",
+                    "Reports",
+                    [card_panel(
+                        cx,
+                        "Reports",
+                        "Use diag gates to catch hit/visual separation regressions.",
+                        "This is most likely to regress under layout refactors.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-reports"),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-tabs-flex1");
+
+        let flex_shell = shell(cx, tabs);
+        let body = centered(cx, flex_shell);
+        section(cx, "Full Width (flex-1 triggers)", body)
+    };
+
     let line = {
         let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
             .style(line_style.clone())
@@ -338,7 +385,7 @@ pub(in crate::ui) fn preview_tabs(
                 .gap(Space::N6)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![demo, line, vertical, disabled, icons, rtl],
+            |_cx| vec![demo, flex_1_triggers, line, vertical, disabled, icons, rtl],
         ),
     ]
 }

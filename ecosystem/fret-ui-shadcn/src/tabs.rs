@@ -1400,6 +1400,7 @@ impl Tabs {
                                     let label = item.label.clone();
                                     let trigger_children = item.trigger.clone();
                                     let trigger_test_id = item.trigger_test_id.clone();
+                                    let trigger_test_id_for_chrome = trigger_test_id.clone();
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
@@ -1531,7 +1532,11 @@ impl Tabs {
                                             ..Default::default()
                                         };
 
-                                        let children = vec![cx.container(
+                                        let chrome_test_id = trigger_test_id_for_chrome
+                                            .as_ref()
+                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut layout = LayoutStyle::default();
@@ -1610,7 +1615,12 @@ impl Tabs {
                                                     move |_cx| styled,
                                                 )]
                                             },
-                                        )];
+                                        );
+                                        if let Some(test_id) = chrome_test_id {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+
+                                        let children = vec![chrome];
 
                                         (props, children)
                                         });
