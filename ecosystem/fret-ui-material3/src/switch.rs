@@ -6,7 +6,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size, SvgFit};
+use fret_core::{
+    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit, Transform2D,
+};
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
@@ -407,6 +409,8 @@ impl Switch {
                         );
                         let handle_child = material_switch_handle_icon(
                             cx,
+                            thumb_t,
+                            thumb_active,
                             selected,
                             enabled,
                             tokens_interaction,
@@ -675,6 +679,8 @@ fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
 
 fn material_switch_handle_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    thumb_t: f32,
+    thumb_active: bool,
     selected: bool,
     enabled: bool,
     interaction: switch_tokens::SwitchInteraction,
@@ -683,34 +689,67 @@ fn material_switch_handle_icon<H: UiHost>(
     icon_on: Option<IconId>,
     icon_off: Option<IconId>,
 ) -> Option<AnyElement> {
-    let show_icons = icons || show_only_selected_icon;
-    if !show_icons {
+    let thumb_t = thumb_t.clamp(0.0, 1.0);
+
+    if show_only_selected_icon {
+        if !thumb_active && !selected {
+            return None;
+        }
+
+        let on_icon = icon_on?;
+        let (size, color) = {
+            let theme = Theme::global(&*cx.app);
+            let size = switch_tokens::icon_size(theme, true);
+            let color = switch_tokens::icon_color(theme, true, enabled, interaction);
+            (size, color)
+        };
+        let opacity = thumb_t;
+        let rotation_degrees = -45.0 * (1.0 - thumb_t);
+
+        let layer =
+            material_switch_icon_layer(cx, &on_icon, size, color, opacity, rotation_degrees);
+        return Some(material_switch_icon_overlay(cx, vec![layer]));
+    }
+
+    if !icons {
         return None;
     }
 
-    let icon = if selected {
-        icon_on
-    } else if icons && !show_only_selected_icon {
-        icon_off
-    } else {
-        None
-    }?;
-
-    let (size, color) = {
+    let on_icon = icon_on?;
+    let off_icon = icon_off?;
+    let (on, off) = {
         let theme = Theme::global(&*cx.app);
-        let size = switch_tokens::icon_size(theme, selected);
-        let color = switch_tokens::icon_color(theme, selected, enabled, interaction);
-        (size, color)
+        let on_size = switch_tokens::icon_size(theme, true);
+        let off_size = switch_tokens::icon_size(theme, false);
+        let on_color = switch_tokens::icon_color(theme, true, enabled, interaction);
+        let off_color = switch_tokens::icon_color(theme, false, enabled, interaction);
+        ((on_size, on_color), (off_size, off_color))
     };
 
-    Some(material_icon(cx, &icon, size, color))
+    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on.1, thumb_t, 0.0);
+    let off_layer = material_switch_icon_layer(cx, &off_icon, off.0, off.1, 1.0 - thumb_t, 0.0);
+    Some(material_switch_icon_overlay(cx, vec![on_layer, off_layer]))
 }
 
-fn material_icon<H: UiHost>(
+fn material_switch_icon_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layers: Vec<AnyElement>,
+) -> AnyElement {
+    let mut wrapper = ContainerProps::default();
+    wrapper.layout.size.width = Length::Fill;
+    wrapper.layout.size.height = Length::Fill;
+    wrapper.layout.position = fret_ui::element::PositionStyle::Relative;
+    wrapper.layout.overflow = Overflow::Visible;
+    cx.container(wrapper, move |_cx| layers)
+}
+
+fn material_switch_icon_layer<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     icon: &IconId,
     size: Px,
     color: Color,
+    opacity: f32,
+    rotation_degrees: f32,
 ) -> AnyElement {
     let svg = svg_source_for_icon(cx, icon);
 
@@ -719,5 +758,37 @@ fn material_icon<H: UiHost>(
     props.layout.size.width = Length::Px(size);
     props.layout.size.height = Length::Px(size);
     props.color = color;
-    cx.svg_icon_props(props)
+    props.opacity = opacity.clamp(0.0, 1.0);
+
+    let center = Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5));
+    let transform = Transform2D::rotation_about_degrees(rotation_degrees, center);
+
+    let icon = cx.visual_transform(transform, move |cx| vec![cx.svg_icon_props(props)]);
+
+    let mut layer = ContainerProps::default();
+    layer.layout.position = fret_ui::element::PositionStyle::Absolute;
+    layer.layout.inset.top = Some(Px(0.0));
+    layer.layout.inset.right = Some(Px(0.0));
+    layer.layout.inset.bottom = Some(Px(0.0));
+    layer.layout.inset.left = Some(Px(0.0));
+    layer.layout.size.width = Length::Fill;
+    layer.layout.size.height = Length::Fill;
+    layer.layout.overflow = Overflow::Visible;
+    cx.container(layer, move |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        vec![cx.flex(
+            FlexProps {
+                layout,
+                direction: Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| vec![icon],
+        )]
+    })
 }
