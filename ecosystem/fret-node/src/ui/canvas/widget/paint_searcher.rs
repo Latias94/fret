@@ -80,6 +80,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             origin: Point::new(text_x, text_y),
             text: blob,
             paint: (query_color).into(),
+            outline: None,
             shadow: None,
         });
 
@@ -130,6 +131,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 origin: Point::new(text_x, text_y),
                 text: blob,
                 paint: (color).into(),
+                outline: None,
                 shadow: None,
             });
         }

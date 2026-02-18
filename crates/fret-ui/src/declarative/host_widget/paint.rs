@@ -607,6 +607,7 @@ impl ElementHostWidget {
                     origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(color),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -802,6 +803,7 @@ impl ElementHostWidget {
                     origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(color),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -1157,6 +1159,7 @@ impl ElementHostWidget {
                     origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(color),
+                    outline: None,
                     shadow: None,
                 });
 

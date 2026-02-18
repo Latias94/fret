@@ -5389,6 +5389,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             origin,
                             text: t.blob,
                             paint: (text_color).into(),
+                            outline: None,
                             shadow: None,
                         });
                     }
@@ -5402,6 +5403,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             origin,
                             text: t.blob,
                             paint: (text_color).into(),
+                            outline: None,
                             shadow: None,
                         });
                     }
@@ -6264,6 +6266,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     origin,
                                     text: text.blob,
                                     paint: (annotation_text).into(),
+                                    outline: None,
                                     shadow: None,
                                 });
 
@@ -6332,6 +6335,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     origin,
                                     text: text.blob,
                                     paint: (annotation_text).into(),
+                                    outline: None,
                                     shadow: None,
                                 });
 
@@ -6409,6 +6413,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     origin: text_origin,
                                     text: text.blob,
                                     paint: (*color).into(),
+                                    outline: None,
                                     shadow: None,
                                 });
                             }
@@ -6973,6 +6978,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             a: 1.0,
                         })
                         .into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7087,6 +7093,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: entry.text.blob,
                     paint: (text_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7214,6 +7221,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: label.blob,
                     paint: (label_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7244,6 +7252,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: label.blob,
                     paint: (label_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7272,6 +7281,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: label.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7301,6 +7311,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: label.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7330,6 +7341,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: label.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7433,6 +7445,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: t.blob,
                     paint: (label_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7451,6 +7464,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: t.blob,
                     paint: (label_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7473,6 +7487,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: t.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7496,6 +7511,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: t.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7519,6 +7535,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: t.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -7706,6 +7723,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: tt.blob,
                     paint: (tooltip_text_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -7776,6 +7794,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         origin,
                         text: tt.blob,
                         paint: (label_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -8184,6 +8203,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     origin,
                     text: tt.blob,
                     paint: (tooltip_text_color).into(),
+                    outline: None,
                     shadow: None,
                 });
             }

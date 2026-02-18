@@ -1545,6 +1545,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         origin: base_origin,
                         text: blob,
                         paint: fret_core::scene::Paint::Solid(self.chrome_style.placeholder_color),
+                        outline: None,
                         shadow: None,
                     });
                 }
@@ -1554,6 +1555,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: base_origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -1573,6 +1575,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: base_origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -1584,6 +1587,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: pre_origin,
                     text: pre_blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.preedit_color),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -1597,6 +1601,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: suffix_origin,
                     text: suffix_blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
                     shadow: None,
                 });
             }

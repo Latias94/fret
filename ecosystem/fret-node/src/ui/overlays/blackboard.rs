@@ -656,6 +656,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
                 paint: (text_color).into(),
+                outline: None,
                 shadow: None,
             });
         }
@@ -695,6 +696,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
                 paint: (text_color).into(),
+                outline: None,
                 shadow: None,
             });
         }
@@ -738,6 +740,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                         text: id,
                         origin: Point::new(Px(tx), Px(ty)),
                         paint: (text_color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 };
@@ -773,6 +776,7 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
                 paint: (text_color).into(),
+                outline: None,
                 shadow: None,
             });
         }

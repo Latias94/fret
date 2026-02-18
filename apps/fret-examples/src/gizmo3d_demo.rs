@@ -4308,6 +4308,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         a: 0.95,
                     })
                     .into(),
+                    outline: None,
                     shadow: None,
                 });
             }
@@ -4413,6 +4414,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     a: label.color.a,
                 })
                 .into(),
+                outline: None,
                 shadow: None,
             });
         }
@@ -4502,6 +4504,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         a: 0.95,
                     })
                     .into(),
+                    outline: None,
                     shadow: None,
                 });
             }

@@ -441,6 +441,7 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                 origin: text_origin,
                                 text: blob,
                                 paint: (fg).into(),
+                                outline: None,
                                 shadow: None,
                             });
 

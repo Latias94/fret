@@ -1509,6 +1509,7 @@ impl DockSpace {
             origin: text_origin,
             text: tooltip.blob,
             paint: (theme.color_token("muted-foreground")).into(),
+            outline: None,
             shadow: None,
         });
     }
@@ -1660,6 +1661,7 @@ impl DockSpace {
                 origin: Point::new(Px(rect.origin.x.0 + pad), Px(text_y)),
                 text: title.blob,
                 paint: (if item.enabled { fg } else { fg_muted }).into(),
+                outline: None,
                 shadow: None,
             });
         }
@@ -1712,6 +1714,7 @@ impl DockSpace {
             origin: Point::new(Px(x), Px(y)),
             text: glyph.blob,
             paint: (fg).into(),
+            outline: None,
             shadow: None,
         });
 
@@ -1767,6 +1770,7 @@ impl DockSpace {
             origin: text_origin,
             text: tooltip.blob,
             paint: (theme.color_token("popover-foreground")).into(),
+            outline: None,
             shadow: None,
         });
     }
@@ -1934,6 +1938,7 @@ impl DockSpace {
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
             paint: (theme.color_token("muted-foreground")).into(),
+            outline: None,
             shadow: None,
         });
     }
@@ -6455,6 +6460,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
                         paint: (color).into(),
+                        outline: None,
                         shadow: None,
                     });
                 }

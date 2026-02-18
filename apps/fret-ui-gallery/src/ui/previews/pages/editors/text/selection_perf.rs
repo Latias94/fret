@@ -227,6 +227,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             origin: text_origin,
                             text: blob,
                             paint: (fg).into(),
+                            outline: None,
                             shadow: None,
                         });
                         scene.push(SceneOp::PopClip);
@@ -277,6 +278,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                                 origin,
                                 text: gblob,
                                 paint: fret_core::Paint::LinearGradient(gradient),
+                                outline: None,
                                 shadow: None,
                             });
                         }

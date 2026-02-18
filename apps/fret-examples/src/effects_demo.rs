@@ -750,6 +750,7 @@ impl WinitAppDriver for EffectsDemoDriver {
                         a: 0.95,
                     })
                     .into(),
+                    outline: None,
                     shadow: None,
                 });
             }
