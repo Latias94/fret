@@ -204,6 +204,23 @@ Progress record (Image masks v1):
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
 
+Progress record (Clip/Mask cache stability closure):
+
+- Date: 2026-02-18
+- Commits:
+  - `e16392d7` (clip-path mask cache: GPU copy reuse + deterministic eviction)
+  - `92dcb8e8` (headless gate invariants for clip-path cache stability)
+- Summary:
+  - Clip-path slow-path intermediates are cached as R8 textures and reused via GPU copy.
+  - Cache is budgeted and evicted deterministically (LRU by last-used frame).
+  - Gate asserts cache stability (hits present, misses bounded, entries bounded) on a deterministic workload.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`RenderPlanPass::PathClipMask`)
+  - `apps/fret-clip-mask-stress/src/main.rs`
+  - `tools/perf/headless_clip_mask_stress_gate.py`
+  - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

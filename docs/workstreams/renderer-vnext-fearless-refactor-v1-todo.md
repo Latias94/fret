@@ -296,13 +296,18 @@ milestones) when implementation begins.
     - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
-- [~] REN-VNEXT-sem-090 Backdrop warp/refraction (bounded): add a “backdrop warp” effect step to enable
+- [x] REN-VNEXT-sem-090 Backdrop warp/refraction (bounded): add a “backdrop warp” effect step to enable
       true liquid-glass style distortion (displacement + optional chromatic aberration), with deterministic
       degradation on wasm/mobile.
   - Tracking:
     - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
     - `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
     - `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`
+  - Evidence:
+    - `docs/adr/0284-backdrop-warp-effect-step-v1.md`
+    - `crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs`
+    - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
+    - `apps/fret-examples/src/liquid_glass_demo.rs`
 
 - [~] REN-VNEXT-sem-100 Drop shadow (blur-based, bounded): add a general drop shadow effect step for
       non-text content (cards/popovers), with deterministic degradation and perf gates.
@@ -311,12 +316,16 @@ milestones) when implementation begins.
     - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
     - `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
 
-- [~] REN-VNEXT-sem-110 Clip-path + mask closure: keep rect scissor fast paths hot, and make slow-path
+- [x] REN-VNEXT-sem-110 Clip-path + mask closure: keep rect scissor fast paths hot, and make slow-path
       clip/mask intermediates cacheable and WebGPU-uniformity-safe (no divergent sampling hazards).
   - Tracking:
     - `docs/workstreams/renderer-clip-mask-closure-v1.md`
     - `docs/workstreams/renderer-clip-mask-closure-v1-todo.md`
     - `docs/workstreams/renderer-clip-mask-closure-v1-milestones.md`
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+    - `tools/perf/headless_clip_mask_stress_gate.py`
+    - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 
 ## Always-run guardrails (before/after each milestone)
 
