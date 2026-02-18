@@ -70,7 +70,9 @@ pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
 pub use exposed_dropdown::ExposedDropdown;
 pub use fab::{Fab, FabSize, FabStyle, FabVariant};
 pub use filter_chip::{FilterChip, FilterChipStyle, FilterChipVariant};
-pub use icon_button::{IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant};
+pub use icon_button::{
+    IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant, IconToggleButton,
+};
 pub use input_chip::{InputChip, InputChipStyle};
 pub use list::{List, ListItem};
 pub use menu::{Menu, MenuEntry, MenuItem, MenuStyle};

@@ -3800,6 +3800,122 @@ fn icon_button_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
+    use fret_icons::ids;
+    use fret_ui_material3::IconToggleButton;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked_model = app.models.insert(false);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let button = IconToggleButton::new(checked_model.clone(), ids::ui::CHECK)
+                .a11y_label("icon toggle button")
+                .test_id("icon-toggle-button")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), button)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let (button_node, button_bounds, initial_checked) = {
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        let node = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("icon-toggle-button"))
+            .expect("expected icon-toggle-button in semantics snapshot");
+        assert_eq!(
+            node.role,
+            fret_core::SemanticsRole::Checkbox,
+            "expected IconToggleButton semantics role=Checkbox"
+        );
+        assert_eq!(
+            node.flags.selected, false,
+            "expected IconToggleButton not to set `selected`"
+        );
+        assert_eq!(
+            node.flags.checked,
+            Some(false),
+            "expected IconToggleButton checked=false initially"
+        );
+        let bounds = ui
+            .debug_node_visual_bounds(node.id)
+            .expect("expected icon-toggle-button visual bounds");
+        (node.id, bounds, node.flags.checked)
+    };
+
+    let press_at = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    app.advance_frame();
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("icon-toggle-button"))
+        .expect("expected icon-toggle-button in semantics snapshot");
+    assert_eq!(
+        node.role,
+        fret_core::SemanticsRole::Checkbox,
+        "expected IconToggleButton semantics role=Checkbox after toggle"
+    );
+    assert_eq!(
+        node.flags.selected, false,
+        "expected IconToggleButton not to set `selected` after toggle"
+    );
+    assert_eq!(
+        initial_checked,
+        Some(false),
+        "expected initial checked state to be false"
+    );
+    assert_eq!(
+        node.flags.checked,
+        Some(true),
+        "expected IconToggleButton checked=true after click"
+    );
+
+    // Sanity: the visual node should still be queryable.
+    ui.debug_node_visual_bounds(button_node)
+        .expect("expected icon-toggle-button visual bounds after click");
+}
+
+#[test]
 fn switch_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Switch;
 
