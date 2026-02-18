@@ -1304,7 +1304,7 @@ impl DropdownMenu {
             let theme = Theme::global(&*cx.app).clone();
             let model_open = cx
                 .watch_model(&self.open)
-                .layout()
+                .paint()
                 .copied()
                 .unwrap_or(false);
             let is_open = model_open && !self.disabled;

@@ -173,11 +173,7 @@ impl AlertDialog {
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx
-                .watch_model(&self.open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
             let open_id = self.open.id();
 
             #[derive(Default)]

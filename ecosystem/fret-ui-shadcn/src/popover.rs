@@ -676,11 +676,7 @@ impl Popover {
                 trigger
             };
 
-            let is_open = cx
-                .watch_model(&self.open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
 
             let auto_focus = self
                 .auto_focus
