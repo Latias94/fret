@@ -277,7 +277,7 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
     if let Some(snap) = renderer.take_perf_snapshot() {
         let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
         println!(
-            "headless_renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+            "headless_renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={} clip_path_mask_cache_entries_live={} clip_path_mask_cache_bytes_live={} clip_path_mask_cache_hits={} clip_path_mask_cache_misses={}",
             snap.frames,
             snap.encode_scene_us as f64 / 1000.0,
             snap.prepare_svg_us as f64 / 1000.0,
@@ -300,7 +300,11 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
             snap.instance_bytes / 1024,
             snap.vertex_bytes / 1024,
             snap.scene_encoding_cache_hits,
-            snap.scene_encoding_cache_misses
+            snap.scene_encoding_cache_misses,
+            snap.clip_path_mask_cache_entries_live,
+            snap.clip_path_mask_cache_bytes_live,
+            snap.clip_path_mask_cache_hits,
+            snap.clip_path_mask_cache_misses,
         );
         if pipeline_breakdown {
             println!(

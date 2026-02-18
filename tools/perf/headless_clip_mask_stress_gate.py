@@ -70,7 +70,11 @@ _PERF_RE = re.compile(
     r"instance=(?P<instance_kb>\d+)KB\s+"
     r"vertex=(?P<vertex_kb>\d+)KB\s+"
     r"cache_hits=(?P<cache_hits>\d+)\s+"
-    r"cache_misses=(?P<cache_misses>\d+)"
+    r"cache_misses=(?P<cache_misses>\d+)\s+"
+    r"clip_path_mask_cache_entries_live=(?P<clip_path_mask_cache_entries_live>\d+)\s+"
+    r"clip_path_mask_cache_bytes_live=(?P<clip_path_mask_cache_bytes_live>\d+)\s+"
+    r"clip_path_mask_cache_hits=(?P<clip_path_mask_cache_hits>\d+)\s+"
+    r"clip_path_mask_cache_misses=(?P<clip_path_mask_cache_misses>\d+)"
 )
 
 _PIPELINES_RE = re.compile(
@@ -237,6 +241,41 @@ def main() -> int:
                 ok = False
                 violations.append(f"{k}: got={metrics[k]} limit={limit}")
 
+        # Invariants (not baseline-tuned; designed to catch cache churn regressions).
+        if ok:
+            required = [
+                "clip_path_mask_cache_hits",
+                "clip_path_mask_cache_misses",
+                "clip_path_mask_cache_entries_live",
+                "clip_path_mask_cache_bytes_live",
+            ]
+            missing_required = [k for k in required if k not in metrics]
+            if missing_required:
+                ok = False
+                violations.append(f"missing required metrics: {', '.join(missing_required)}")
+
+        if ok and int(args.frames) >= 2:
+            # For this workload, clip-path mask generation should be a 1st-frame cost only.
+            # A broken cache typically yields misses ~= frames * group_n.
+            group_n = max(1, int(args.group_n))
+            misses = int(metrics["clip_path_mask_cache_misses"])
+            hits = int(metrics["clip_path_mask_cache_hits"])
+            entries_live = int(metrics["clip_path_mask_cache_entries_live"])
+
+            if hits < group_n:
+                ok = False
+                violations.append(f"clip-path cache: hits too low: got={hits} expected>={group_n}")
+            if misses > group_n * 4:
+                ok = False
+                violations.append(
+                    f"clip-path cache: misses too high: got={misses} limit={group_n * 4}"
+                )
+            if entries_live > group_n * 2:
+                ok = False
+                violations.append(
+                    f"clip-path cache: entries too high: got={entries_live} limit={group_n * 2}"
+                )
+
         if ok:
             passes += 1
             selected_attempt_dir = attempt_dir
@@ -279,4 +318,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
