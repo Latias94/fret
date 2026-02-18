@@ -2010,7 +2010,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -2044,14 +2045,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -5174,6 +5177,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     invalidate_paint = true;
                                 }
                             }
+
+                            // Robustness: always end an active dock drag on pointer release, even
+                            // if we don't have a hover target (cancel drop) or the release is
+                            // delivered to a different window than the hover window.
+                            if *button == fret_core::MouseButton::Left
+                                && app.drag(pointer_id).is_some_and(|d| {
+                                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                                        || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                                })
+                            {
+                                dock.hover = None;
+                                end_dock_drag = true;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                            }
                         }
                     },
                     fret_core::Event::InternalDrag(e) => {
@@ -5804,7 +5822,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -5838,14 +5857,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -6077,14 +6098,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,

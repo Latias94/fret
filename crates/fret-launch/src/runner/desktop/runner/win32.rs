@@ -42,6 +42,16 @@ unsafe extern "system" {
     fn GetWindowLongW(hwnd: isize, index: i32) -> i32;
     fn SetWindowLongW(hwnd: isize, index: i32, new_long: i32) -> i32;
     fn SetLayeredWindowAttributes(hwnd: isize, cr_key: u32, alpha: u8, flags: u32) -> i32;
+    fn SetForegroundWindow(hwnd: isize) -> i32;
+    fn SetWindowPos(
+        hwnd: isize,
+        hwnd_insert_after: isize,
+        x: i32,
+        y: i32,
+        cx: i32,
+        cy: i32,
+        flags: u32,
+    ) -> i32;
 }
 
 const VK_LBUTTON: i32 = 0x01;
@@ -51,6 +61,10 @@ const GWL_EXSTYLE: i32 = -20;
 const WS_EX_LAYERED: i32 = 0x0008_0000;
 const WS_EX_TRANSPARENT: i32 = 0x0000_0020;
 const LWA_ALPHA: u32 = 0x0000_0002;
+const HWND_TOP: isize = 0;
+const SWP_NOMOVE: u32 = 0x0002;
+const SWP_NOSIZE: u32 = 0x0001;
+const SWP_SHOWWINDOW: u32 = 0x0040;
 
 pub(super) fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
     let mut p = Point::default();
@@ -149,6 +163,29 @@ pub(super) fn set_window_alpha(hwnd: isize, alpha: f32) {
             ex_style &= !WS_EX_LAYERED;
             let _ = SetWindowLongW(hwnd, GWL_EXSTYLE, ex_style);
         }
+    }
+}
+
+pub(super) fn raise_hwnd_to_front(hwnd: isize) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+
+    unsafe {
+        // Best-effort: `SetWindowPos(HWND_TOP)` updates z-order without needing an activation
+        // token. `SetForegroundWindow` is opportunistic; it may fail under focus-stealing rules,
+        // but z-order is still expected to reflect the `SetWindowPos` call for in-process windows.
+        let ok = SetWindowPos(
+            hwnd,
+            HWND_TOP,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
+        ) != 0;
+        let _ = SetForegroundWindow(hwnd);
+        ok
     }
 }
 

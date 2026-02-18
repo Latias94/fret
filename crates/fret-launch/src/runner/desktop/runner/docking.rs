@@ -15,6 +15,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
+        if self.diag_mouse_buttons_override_active {
+            return false;
+        }
+        // Scripted diagnostics inject pointer events without a real OS mouse button state.
+        // When a cursor/button override was observed recently, avoid using OS polling heuristics
+        // to terminate the drag; scripts will deliver an explicit `PointerUp`.
+        if self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
+            || self
+                .diag_last_mouse_buttons_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
+        {
+            return false;
+        }
 
         let (source_window, current_window, dragging) = {
             let Some(drag) = self.app.drag(pointer_id) else {
@@ -69,6 +84,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
+        if self.diag_mouse_buttons_override_active {
+            return false;
+        }
+        // Scripted diagnostics inject pointer events without a real OS mouse button state.
+        // When a cursor/button override was observed recently, avoid using OS polling heuristics
+        // to terminate the drag; scripts will deliver an explicit `PointerUp`.
+        if self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
+            || self
+                .diag_last_mouse_buttons_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
+        {
+            return false;
+        }
 
         let (source_window, current_window, dragging) = {
             let Some(drag) = self.app.drag(pointer_id) else {
@@ -150,14 +180,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if self.dock_tearoff_follow.is_none()
             && let Some(pointer_id) = pointer_id
             && let Some(drag) = self.app.drag(pointer_id)
-            && let Some(grab_offset) = drag.cursor_grab_offset
         {
-            let follow_window = if drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                && self.dock_floating_windows.contains(&drag.source_window)
-            {
-                Some(drag.source_window)
-            } else {
-                drag.follow_window
+            let grab_offset = drag
+                .cursor_grab_offset
+                .unwrap_or(Point::new(Px(40.0), Px(20.0)));
+            let settings = self
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let want_transparent_payload = settings.transparent_payload_during_follow
+                || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some();
+
+            let follow_window = match drag.kind {
+                // ImGui-style multi-viewport docking:
+                // - dragging a tab in a dock-floating OS window should move that OS window
+                // - if transparent payload is enabled, force follow so hover selection can
+                //   "peek behind" the moving window during overlap
+                fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+                    if self.dock_floating_windows.contains(&drag.source_window)
+                        || want_transparent_payload =>
+                {
+                    Some(drag.source_window)
+                }
+                _ => drag.follow_window,
             };
 
             if let Some(window) = follow_window {
@@ -173,24 +219,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        let (
-            window,
-            grab_offset,
-            manual_follow,
-            last_outer_pos,
-            transparent_payload_applied,
-            always_on_top_applied,
-        ) = match self.dock_tearoff_follow {
-            Some(follow) => (
-                follow.window,
-                follow.grab_offset,
-                follow.manual_follow,
-                follow.last_outer_pos,
-                follow.transparent_payload_applied,
-                follow.always_on_top_applied,
-            ),
-            None => return false,
-        };
+        let (window, grab_offset, manual_follow, last_outer_pos, transparent_payload_applied) =
+            match self.dock_tearoff_follow {
+                Some(follow) => (
+                    follow.window,
+                    follow.grab_offset,
+                    follow.manual_follow,
+                    follow.last_outer_pos,
+                    follow.transparent_payload_applied,
+                ),
+                None => return false,
+            };
 
         if !manual_follow {
             return false;
@@ -212,29 +251,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         }
 
-        // Keep the moving window visible while docking back into another window (ImGui-style).
-        //
-        // We use `WindowRequest::SetStyle` rather than calling platform window methods directly so
-        // style changes remain centralized and debuggable.
-        let want_always_on_top = caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None;
-        if want_always_on_top && !always_on_top_applied {
-            self.app.push_effect(fret_app::Effect::Window(
-                fret_app::WindowRequest::SetStyle {
-                    window,
-                    style: fret_runtime::WindowStyleRequest {
-                        z_level: Some(fret_runtime::WindowZLevel::AlwaysOnTop),
-                        ..Default::default()
-                    },
-                },
-            ));
-            if let Some(follow) = self.dock_tearoff_follow.as_mut() {
-                follow.always_on_top_applied = true;
-            }
-        }
-
         // Optional ImGui-style "transparent payload" behavior while following the cursor:
         // - make the dock-floating window semi-transparent
-        // - ignore mouse events so the backend can "peek behind" to resolve the hovered window
         //
         // This is conservatively disabled by default (see `DockingInteractionSettings`), and can
         // be forced on via env var for quick experimentation.
@@ -243,25 +261,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
-        let want_transparent_payload = (settings.transparent_payload_during_follow
-            || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some())
-            && self.dock_floating_windows.contains(&window);
+        let want_transparent_payload = settings.transparent_payload_during_follow
+            || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some();
+
         if want_transparent_payload != transparent_payload_applied {
             let opacity = if want_transparent_payload {
                 fret_runtime::WindowOpacity::from_f32(settings.transparent_payload_alpha)
             } else {
                 fret_runtime::WindowOpacity(255)
             };
-            let mouse = if want_transparent_payload {
-                fret_runtime::MousePolicy::Passthrough
-            } else {
-                fret_runtime::MousePolicy::Normal
-            };
             self.app.push_effect(fret_app::Effect::Window(
                 fret_app::WindowRequest::SetStyle {
                     window,
                     style: fret_runtime::WindowStyleRequest {
-                        mouse: Some(mouse),
                         opacity: Some(opacity),
                         ..Default::default()
                     },
@@ -337,7 +349,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_app::WindowRequest::SetStyle {
                     window: follow.window,
                     style: fret_runtime::WindowStyleRequest {
-                        mouse: Some(fret_runtime::MousePolicy::Normal),
                         opacity: Some(fret_runtime::WindowOpacity(255)),
                         ..Default::default()
                     },

@@ -170,6 +170,9 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
         };
         let updated = svc.poll(self);
         self.diag_cursor_screen_pos_override = Some(svc);
+        if updated {
+            self.diag_last_cursor_override_tick = Some(self.tick_id);
+        }
         updated
     }
 }

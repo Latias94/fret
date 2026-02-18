@@ -7,6 +7,7 @@ use fret_core::{
 use fret_ui::UiHost;
 
 mod consts;
+mod diagnostics;
 mod hit_test;
 mod layout;
 mod paint;
@@ -24,6 +25,7 @@ mod manager;
 mod space;
 
 pub use manager::{ActivatePanelOptions, DockManager};
+pub use diagnostics::{dock_graph_signature_for_window, dock_graph_stats_for_window};
 pub use panel_registry::{
     DockPanelRegistry, DockPanelRegistryService, render_and_bind_dock_panels,
     render_cached_panel_root,

@@ -229,7 +229,10 @@ pub struct WinitRunner<D: WinitAppDriver> {
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     diag_window_insets_overrides: HashMap<fret_core::AppWindowId, DiagWindowInsetsOverride>,
     diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
+    diag_last_cursor_override_tick: Option<TickId>,
     diag_mouse_buttons_override: Option<diag_mouse_buttons_override::DiagMouseButtonsOverride>,
+    diag_last_mouse_buttons_override_tick: Option<TickId>,
+    diag_mouse_buttons_override_active: bool,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,

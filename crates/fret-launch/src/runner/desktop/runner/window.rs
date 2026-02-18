@@ -215,7 +215,26 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
+    let hwnd = window
+        .window_handle()
+        .ok()
+        .and_then(|h| match h.as_raw() {
+            RawWindowHandle::Win32(handle) => Some(handle.hwnd.get()),
+            _ => None,
+        })
+        .unwrap_or(0);
+
+    if super::win32::raise_hwnd_to_front(hwnd) {
+        return true;
+    }
+
+    window.focus_window();
+    true
+}
+
+#[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
 pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
     window.focus_window();
     true

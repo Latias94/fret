@@ -110,15 +110,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        let Some((drag_kind, drag_source_window, cross_window_hover, drag_follow_window)) =
-            self.app.drag(pointer_id).map(|d| {
-                (
-                    d.kind,
-                    d.source_window,
-                    d.cross_window_hover,
-                    d.follow_window,
-                )
-            })
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
         else {
             return self.clear_internal_drag_hover_if_needed();
         };
@@ -140,28 +135,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        // When a dock drag uses a "moving payload" surface (ImGui-style multi-viewport docking),
-        // the cursor is often "inside" that payload window even when the intended hover target is
-        // behind it (e.g. docking back into the main window). Prefer another window under the
-        // cursor when possible.
-        //
-        // NOTE: `dock_tearoff_follow` is the runner-managed follow state. `drag.follow_window` is
-        // the UI-provided hint. For tab drags originating from an already-floating window, we
-        // treat the source window itself as the moving payload.
-        let prefer_not = self
-            .dock_tearoff_follow
-            .map(|f| f.window)
-            .or(drag_follow_window)
-            .or_else(|| {
-                (drag_kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                    && self.dock_floating_windows.contains(&drag_source_window))
-                .then_some(drag_source_window)
-            });
-
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let hovered = if reliable_window_under_cursor {
             if allow_window_under_cursor {
-                let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
+                let hit = self.window_under_cursor_platform(screen_pos, None);
                 window_under_cursor_source = hit.source;
                 hit.window
             } else {
@@ -173,7 +150,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // reliable z-order.
             self.internal_drag_hover_window
                 .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-                .filter(|w| Some(*w) != prefer_not)
                 .inspect(|_| {
                     window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
                 })
@@ -181,7 +157,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     if !allow_window_under_cursor {
                         return None;
                     }
-                    let hit = self.window_under_cursor_best_effort(screen_pos, prefer_not);
+                    let hit = self.window_under_cursor_best_effort(screen_pos, None);
                     window_under_cursor_source = hit.source;
                     hit.window
                 })
@@ -271,15 +247,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        let Some((drag_kind, drag_source_window, cross_window_hover, drag_follow_window)) =
-            self.app.drag(pointer_id).map(|d| {
-                (
-                    d.kind,
-                    d.source_window,
-                    d.cross_window_hover,
-                    d.follow_window,
-                )
-            })
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
         else {
             return false;
         };
@@ -304,29 +275,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let prefer_not = self
-            .dock_tearoff_follow
-            .map(|f| f.window)
-            .or(drag_follow_window)
-            .or_else(|| {
-                (drag_kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                    && self.dock_floating_windows.contains(&drag_source_window))
-                .then_some(drag_source_window)
-            });
-
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
         let target = if reliable_window_under_cursor {
             let mut out = None;
             if allow_window_under_cursor {
-                let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
+                let hit = self.window_under_cursor_platform(screen_pos, None);
                 window_under_cursor_source = hit.source;
                 out = hit.window;
             }
             if out.is_none() {
-                if let Some(w) = self
-                    .internal_drag_hover_window
-                    .filter(|w| Some(*w) != prefer_not)
-                {
+                if let Some(w) = self.internal_drag_hover_window {
                     out = Some(w);
                     if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown
                     {
@@ -340,26 +298,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // ambiguous when we don't have reliable z-order.
             let mut out = self
                 .internal_drag_hover_window
-                .filter(|w| self.screen_pos_in_window(*w, screen_pos))
-                .filter(|w| Some(*w) != prefer_not);
+                .filter(|w| self.screen_pos_in_window(*w, screen_pos));
             if out.is_some() {
                 window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
             } else if allow_window_under_cursor {
-                let hit = self.window_under_cursor_best_effort(screen_pos, prefer_not);
+                let hit = self.window_under_cursor_best_effort(screen_pos, None);
                 window_under_cursor_source = hit.source;
                 out = hit.window;
             }
             out.or_else(|| {
-                self.internal_drag_hover_window
-                    .filter(|w| Some(*w) != prefer_not)
-                    .inspect(|_| {
-                        if window_under_cursor_source
-                            == fret_runtime::WindowUnderCursorSource::Unknown
-                        {
-                            window_under_cursor_source =
-                                fret_runtime::WindowUnderCursorSource::Latched;
-                        }
-                    })
+                self.internal_drag_hover_window.inspect(|_| {
+                    if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown
+                    {
+                        window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
+                    }
+                })
             })
         };
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
