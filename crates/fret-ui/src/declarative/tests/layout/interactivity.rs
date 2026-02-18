@@ -248,6 +248,113 @@ fn attach_semantics_is_layout_transparent_for_flex_items() {
 }
 
 #[test]
+fn overflow_clip_allows_flex_item_to_shrink_without_min_w_0() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_row(cx: &mut ElementContext<'_, TestHost>, clip: bool) -> Vec<AnyElement> {
+        let mut row = crate::element::FlexProps::default();
+        row.layout.size.width = crate::element::Length::Fill;
+        row.layout.size.height = crate::element::Length::Fill;
+        row.direction = fret_core::Axis::Horizontal;
+
+        vec![cx.flex(row, |cx| {
+            let left = cx.text("x");
+
+            let mut right_props =
+                crate::element::TextProps::new("a much longer title that should overflow");
+            right_props.wrap = fret_core::TextWrap::None;
+            right_props.overflow = fret_core::TextOverflow::Ellipsis;
+            right_props.layout.flex.grow = 1.0;
+            right_props.layout.flex.shrink = 1.0;
+            if clip {
+                right_props.layout.overflow = crate::element::Overflow::Clip;
+            }
+
+            let right = cx.text_props(right_props);
+            vec![left, right]
+        })]
+    }
+
+    let root_visible = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "overflow-visible-shrink",
+        |cx| build_row(cx, false),
+    );
+    let root_clip = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "overflow-clip-shrink",
+        |cx| build_row(cx, true),
+    );
+
+    let viewport_visible = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(220.0), Px(40.0)));
+    let viewport_clip = Rect::new(
+        Point::new(Px(260.0), Px(0.0)),
+        Size::new(Px(220.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_visible, viewport_clip));
+    ui.set_children(parent, vec![root_visible, root_clip]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_visible = ui.children(root_visible)[0];
+    let right_visible = ui.children(flex_visible)[1];
+    let _bounds_visible = ui
+        .debug_node_bounds(right_visible)
+        .expect("overflow-visible right text bounds");
+
+    let flex_clip = ui.children(root_clip)[0];
+    let right_clip = ui.children(flex_clip)[1];
+    let bounds_clip = ui
+        .debug_node_bounds(right_clip)
+        .expect("overflow-clip right text bounds");
+
+    assert!(
+        bounds_clip.size.width.0 <= viewport_clip.size.width.0 + 0.01,
+        "expected the right item to lay out within the viewport. clip={:?}",
+        bounds_clip
+    );
+
+    let engine = ui.take_layout_engine();
+    let style_visible = engine
+        .debug_style_for_node(right_visible)
+        .expect("overflow-visible style");
+    let style_clip = engine
+        .debug_style_for_node(right_clip)
+        .expect("overflow-clip style");
+
+    assert_eq!(
+        style_visible.overflow.x,
+        taffy::style::Overflow::Visible,
+        "expected overflow-visible to be forwarded into taffy style"
+    );
+    assert_eq!(
+        style_clip.overflow.x,
+        taffy::style::Overflow::Hidden,
+        "expected overflow-clip to be forwarded into taffy style"
+    );
+    assert_eq!(style_clip.overflow.y, taffy::style::Overflow::Hidden);
+}
+
+#[test]
 fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
         viewport: Rect,
