@@ -222,6 +222,7 @@ fn gpu_text_linear_gradient_paint_varies_across_x() {
         origin,
         text: blob,
         paint: Paint::LinearGradient(gradient),
+        outline: None,
         shadow: None,
     });
 
@@ -351,6 +352,7 @@ fn gpu_text_shadow_v1_renders_a_separate_layer() {
             b: 0.0,
             a: 1.0,
         }),
+        outline: None,
         shadow: Some(TextShadowV1::new(
             shadow_offset,
             Color {

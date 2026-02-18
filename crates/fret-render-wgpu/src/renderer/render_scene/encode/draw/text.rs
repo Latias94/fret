@@ -11,6 +11,7 @@ pub(in super::super) fn encode_text(
     origin: Point,
     blob_id: fret_core::TextBlobId,
     paint: fret_core::scene::Paint,
+    outline: Option<fret_core::scene::TextOutlineV1>,
     shadow: Option<fret_core::scene::TextShadowV1>,
 ) {
     state.flush_quad_batch();
@@ -30,11 +31,12 @@ pub(in super::super) fn encode_text(
             shadow_origin,
             blob,
             fret_core::scene::Paint::Solid(shadow.color),
+            None,
             false,
         );
     }
 
-    encode_text_blob(renderer, state, origin, blob, paint, true);
+    encode_text_blob(renderer, state, origin, blob, paint, outline, true);
 }
 
 fn encode_text_blob(
@@ -43,6 +45,7 @@ fn encode_text_blob(
     origin: Point,
     blob: &crate::text::TextBlob,
     paint: fret_core::scene::Paint,
+    outline: Option<fret_core::scene::TextOutlineV1>,
     draw_decorations: bool,
 ) {
     state.flush_quad_batch();
@@ -170,6 +173,27 @@ fn encode_text_blob(
     let text_paint_index = state.text_paints.len() as u32;
     state.text_paints.push(text_paint);
 
+    let mut outline_params_mask: u32 = 0;
+    if let Some(outline) = outline.and_then(|o| o.sanitize()) {
+        let outline_width_px = outline.width_px.0 * state.scale_factor;
+        let outline_radius_px = outline_width_px.round().clamp(0.0, 3.0) as u32;
+        if outline_radius_px > 0 {
+            let outline_paint = paint_to_gpu(
+                renderer,
+                state,
+                outline.paint,
+                group_opacity,
+                state.scale_factor,
+                PaintMaterialPolicy::DegradeToSolidBase,
+            );
+            if paint_is_visible(&outline_paint) {
+                let outline_paint_index = state.text_paints.len() as u32;
+                state.text_paints.push(outline_paint);
+                outline_params_mask = (outline_paint_index << 2) | (outline_radius_px & 3);
+            }
+        }
+    }
+
     let white_paint_index = state.text_white_paint_index.unwrap_or_else(|| {
         let idx = state.text_paints.len() as u32;
         state.text_paints.push(PaintGpu {
@@ -248,9 +272,21 @@ fn encode_text_blob(
 
     for g in blob.shape.glyphs.as_ref() {
         let kind = match g.kind() {
-            GlyphQuadKind::Mask => TextDrawKind::Mask,
+            GlyphQuadKind::Mask => {
+                if outline_params_mask != 0 {
+                    TextDrawKind::MaskOutline
+                } else {
+                    TextDrawKind::Mask
+                }
+            }
             GlyphQuadKind::Color => TextDrawKind::Color,
-            GlyphQuadKind::Subpixel => TextDrawKind::Subpixel,
+            GlyphQuadKind::Subpixel => {
+                if outline_params_mask != 0 {
+                    TextDrawKind::SubpixelOutline
+                } else {
+                    TextDrawKind::Subpixel
+                }
+            }
         };
 
         let Some((atlas_page, uv)) = renderer.text_system.glyph_uv_for_instance(g) else {
@@ -304,14 +340,18 @@ fn encode_text_blob(
             let premul = color_to_linear_rgba_premul(c);
             match kind {
                 TextDrawKind::Mask => premul,
+                TextDrawKind::MaskOutline => premul,
                 TextDrawKind::Color => [1.0, 1.0, 1.0, premul[3]],
                 TextDrawKind::Subpixel => premul,
+                TextDrawKind::SubpixelOutline => premul,
             }
         } else {
             match kind {
                 TextDrawKind::Mask => [1.0, 1.0, 1.0, 1.0],
+                TextDrawKind::MaskOutline => [1.0, 1.0, 1.0, 1.0],
                 TextDrawKind::Color => [1.0, 1.0, 1.0, 1.0],
                 TextDrawKind::Subpixel => [1.0, 1.0, 1.0, 1.0],
+                TextDrawKind::SubpixelOutline => [1.0, 1.0, 1.0, 1.0],
             }
         };
 
@@ -345,36 +385,84 @@ fn encode_text_blob(
                 local_pos_px: [lx0, ly0],
                 uv: [u0, v0],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
             TextVertex {
                 pos_px: [quad[1].0, quad[1].1],
                 local_pos_px: [lx1, ly0],
                 uv: [u1, v0],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
             TextVertex {
                 pos_px: [quad[2].0, quad[2].1],
                 local_pos_px: [lx1, ly1],
                 uv: [u1, v1],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
             TextVertex {
                 pos_px: [quad[0].0, quad[0].1],
                 local_pos_px: [lx0, ly0],
                 uv: [u0, v0],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
             TextVertex {
                 pos_px: [quad[2].0, quad[2].1],
                 local_pos_px: [lx1, ly1],
                 uv: [u1, v1],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
             TextVertex {
                 pos_px: [quad[3].0, quad[3].1],
                 local_pos_px: [lx0, ly1],
                 uv: [u0, v1],
                 color: vertex_color,
+                outline_params: if matches!(
+                    kind,
+                    TextDrawKind::MaskOutline | TextDrawKind::SubpixelOutline
+                ) {
+                    outline_params_mask
+                } else {
+                    0
+                },
             },
         ]);
     }

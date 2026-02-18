@@ -1155,8 +1155,10 @@ impl Renderer {
                                     Quad,
                                     Viewport,
                                     TextMask,
+                                    TextMaskOutline,
                                     TextColor,
                                     TextSubpixel,
+                                    TextSubpixelOutline,
                                     Mask,
                                     Path,
                                 }
@@ -1176,6 +1178,10 @@ impl Renderer {
                                     .text_pipeline
                                     .as_ref()
                                     .expect("text pipeline must exist");
+                                let text_outline_pipeline = self
+                                    .text_outline_pipeline
+                                    .as_ref()
+                                    .expect("text outline pipeline must exist");
                                 let text_color_pipeline = self
                                     .text_color_pipeline
                                     .as_ref()
@@ -1184,6 +1190,10 @@ impl Renderer {
                                     .text_subpixel_pipeline
                                     .as_ref()
                                     .expect("text subpixel pipeline must exist");
+                                let text_subpixel_outline_pipeline = self
+                                    .text_subpixel_outline_pipeline
+                                    .as_ref()
+                                    .expect("text subpixel outline pipeline must exist");
                                 let mask_pipeline = self
                                     .mask_pipeline
                                     .as_ref()
@@ -1731,6 +1741,77 @@ impl Renderer {
                                                         active_text_page = Some(draw.atlas_page);
                                                     }
                                                 }
+                                                TextDrawKind::MaskOutline => {
+                                                    if !matches!(
+                                                        active_pipeline,
+                                                        ActivePipeline::TextMaskOutline
+                                                    ) {
+                                                        pass.set_pipeline(text_outline_pipeline);
+                                                        if perf_enabled {
+                                                            frame_perf.pipeline_switches =
+                                                                frame_perf
+                                                                    .pipeline_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .pipeline_switches_text_mask =
+                                                                frame_perf
+                                                                    .pipeline_switches_text_mask
+                                                                    .saturating_add(1);
+                                                        }
+                                                        pass.set_vertex_buffer(
+                                                            0,
+                                                            text_vertex_buffer.slice(..),
+                                                        );
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system.mask_atlas_bind_group(
+                                                                draw.atlas_page,
+                                                            ),
+                                                            &[],
+                                                        );
+                                                        pass.set_bind_group(
+                                                            2,
+                                                            &text_paint_bind_group,
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_pipeline =
+                                                            ActivePipeline::TextMaskOutline;
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    } else if active_text_page
+                                                        != Some(draw.atlas_page)
+                                                    {
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system.mask_atlas_bind_group(
+                                                                draw.atlas_page,
+                                                            ),
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    }
+                                                }
                                                 TextDrawKind::Color => {
                                                     if !matches!(
                                                         active_pipeline,
@@ -1850,6 +1931,81 @@ impl Renderer {
                                                         }
                                                         active_pipeline =
                                                             ActivePipeline::TextSubpixel;
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    } else if active_text_page
+                                                        != Some(draw.atlas_page)
+                                                    {
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system
+                                                                .subpixel_atlas_bind_group(
+                                                                    draw.atlas_page,
+                                                                ),
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    }
+                                                }
+                                                TextDrawKind::SubpixelOutline => {
+                                                    if !matches!(
+                                                        active_pipeline,
+                                                        ActivePipeline::TextSubpixelOutline
+                                                    ) {
+                                                        pass.set_pipeline(
+                                                            text_subpixel_outline_pipeline,
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.pipeline_switches =
+                                                                frame_perf
+                                                                    .pipeline_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .pipeline_switches_text_subpixel =
+                                                                frame_perf
+                                                                    .pipeline_switches_text_subpixel
+                                                                    .saturating_add(1);
+                                                        }
+                                                        pass.set_vertex_buffer(
+                                                            0,
+                                                            text_vertex_buffer.slice(..),
+                                                        );
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system
+                                                                .subpixel_atlas_bind_group(
+                                                                    draw.atlas_page,
+                                                                ),
+                                                            &[],
+                                                        );
+                                                        pass.set_bind_group(
+                                                            2,
+                                                            &text_paint_bind_group,
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_pipeline =
+                                                            ActivePipeline::TextSubpixelOutline;
                                                         active_text_page = Some(draw.atlas_page);
                                                     } else if active_text_page
                                                         != Some(draw.atlas_page)

@@ -5792,6 +5792,8 @@ struct MaskStack {
 
 const MAX_STOPS: u32 = 8u;
 
+const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;
+
 struct Paint {
   kind: u32,
   tile_mode: u32,
@@ -5817,6 +5819,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -5826,6 +5829,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -6218,7 +6222,84 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
+}
+
+fn glyph_sample_r(uv: vec2<f32>) -> f32 {
+  return textureSample(glyph_atlas, glyph_sampler, uv).r;
+}
+
+fn glyph_dilate_r(uv: vec2<f32>, radius: u32) -> f32 {
+  let dims_u = textureDimensions(glyph_atlas);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let texel = vec2<f32>(1.0, 1.0) / dims;
+
+  let s0 = glyph_sample_r(uv);
+
+  let dx = vec2<f32>(texel.x, 0.0);
+  let dy = vec2<f32>(0.0, texel.y);
+  let d11 = vec2<f32>(texel.x, texel.y);
+  let d1m1 = vec2<f32>(texel.x, -texel.y);
+
+  let d1x = 1.0 * dx;
+  let d1y = 1.0 * dy;
+  let d1d0 = 1.0 * d11;
+  let d1d1 = 1.0 * d1m1;
+  let max1 = max(
+    s0,
+    max(
+      max(
+        max(glyph_sample_r(uv + d1x), glyph_sample_r(uv - d1x)),
+        max(glyph_sample_r(uv + d1y), glyph_sample_r(uv - d1y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d1d0), glyph_sample_r(uv - d1d0)),
+        max(glyph_sample_r(uv + d1d1), glyph_sample_r(uv - d1d1))
+      )
+    )
+  );
+
+  let d2x = 2.0 * dx;
+  let d2y = 2.0 * dy;
+  let d2d0 = 2.0 * d11;
+  let d2d1 = 2.0 * d1m1;
+  let max2 = max(
+    max1,
+    max(
+      max(
+        max(glyph_sample_r(uv + d2x), glyph_sample_r(uv - d2x)),
+        max(glyph_sample_r(uv + d2y), glyph_sample_r(uv - d2y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d2d0), glyph_sample_r(uv - d2d0)),
+        max(glyph_sample_r(uv + d2d1), glyph_sample_r(uv - d2d1))
+      )
+    )
+  );
+
+  let d3x = 3.0 * dx;
+  let d3y = 3.0 * dy;
+  let d3d0 = 3.0 * d11;
+  let d3d1 = 3.0 * d1m1;
+  let max3 = max(
+    max2,
+    max(
+      max(
+        max(glyph_sample_r(uv + d3x), glyph_sample_r(uv - d3x)),
+        max(glyph_sample_r(uv + d3y), glyph_sample_r(uv - d3y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d3d0), glyph_sample_r(uv - d3d0)),
+        max(glyph_sample_r(uv + d3d1), glyph_sample_r(uv - d3d1))
+      )
+    )
+  );
+
+  let m1 = select(0.0, 1.0, radius >= 1u);
+  let m2 = select(0.0, 1.0, radius >= 2u);
+  let m3 = select(0.0, 1.0, radius >= 3u);
+  return max(s0, max(max1 * m1, max(max2 * m2, max3 * m3)));
 }
 
 @fragment
@@ -6226,11 +6307,33 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
+  let fill_sample = tex.r;
   let p = text_paints.paints[input.paint_index];
   let base = paint_eval(p, input.local_pos_px) * input.color;
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
-  let coverage = apply_contrast_and_gamma_correction(tex.r, base_un);
-  let out = vec4<f32>(base.rgb * coverage, base.a * coverage) * clip * mask;
+  let fill_cov = apply_contrast_and_gamma_correction(fill_sample, base_un);
+  var out = vec4<f32>(base.rgb * fill_cov, base.a * fill_cov);
+
+  if (FRET_TEXT_OUTLINE_PRESENT != 0u) {
+    let outline_params = input.outline_params;
+    let outline_radius = min(outline_params & 3u, 3u);
+    let outline_enabled = select(0.0, 1.0, outline_radius != 0u);
+    let outline_max_sample = glyph_dilate_r(input.uv, outline_radius);
+    let ring_sample = saturate(outline_max_sample - fill_sample) * outline_enabled;
+    let outline_paint_index = outline_params >> 2u;
+    let op = text_paints.paints[outline_paint_index];
+    let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
+    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_un = select(
+      vec3<f32>(0.0),
+      outline_base.rgb / outline_base.a,
+      outline_base.a > 1e-6
+    );
+    let ring_cov = apply_contrast_and_gamma_correction(ring_sample, outline_un);
+    out = out + vec4<f32>(outline_base.rgb * ring_cov, outline_base.a * ring_cov);
+  }
+
+  out = out * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -6330,6 +6433,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -6339,6 +6443,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -6701,6 +6806,7 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
 }
 
@@ -6812,6 +6918,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -6821,6 +6928,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -7187,6 +7295,85 @@ fn apply_contrast_and_gamma_correction3(sample: vec3<f32>, color: vec3<f32>) -> 
   return apply_alpha_correction3(contrasted, color, viewport.text_gamma_ratios);
 }
 
+const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;
+
+fn glyph_sample_max_rgb(uv: vec2<f32>) -> f32 {
+  let tex = textureSample(glyph_atlas, glyph_sampler, uv);
+  return max(max(tex.r, tex.g), tex.b);
+}
+
+fn glyph_dilate_max_rgb(uv: vec2<f32>, radius: u32) -> f32 {
+  let dims_u = textureDimensions(glyph_atlas);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let texel = vec2<f32>(1.0, 1.0) / dims;
+
+  let s0 = glyph_sample_max_rgb(uv);
+
+  let dx = vec2<f32>(texel.x, 0.0);
+  let dy = vec2<f32>(0.0, texel.y);
+  let d11 = vec2<f32>(texel.x, texel.y);
+  let d1m1 = vec2<f32>(texel.x, -texel.y);
+
+  let d1x = 1.0 * dx;
+  let d1y = 1.0 * dy;
+  let d1d0 = 1.0 * d11;
+  let d1d1 = 1.0 * d1m1;
+  let max1 = max(
+    s0,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d1x), glyph_sample_max_rgb(uv - d1x)),
+        max(glyph_sample_max_rgb(uv + d1y), glyph_sample_max_rgb(uv - d1y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d1d0), glyph_sample_max_rgb(uv - d1d0)),
+        max(glyph_sample_max_rgb(uv + d1d1), glyph_sample_max_rgb(uv - d1d1))
+      )
+    )
+  );
+
+  let d2x = 2.0 * dx;
+  let d2y = 2.0 * dy;
+  let d2d0 = 2.0 * d11;
+  let d2d1 = 2.0 * d1m1;
+  let max2 = max(
+    max1,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d2x), glyph_sample_max_rgb(uv - d2x)),
+        max(glyph_sample_max_rgb(uv + d2y), glyph_sample_max_rgb(uv - d2y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d2d0), glyph_sample_max_rgb(uv - d2d0)),
+        max(glyph_sample_max_rgb(uv + d2d1), glyph_sample_max_rgb(uv - d2d1))
+      )
+    )
+  );
+
+  let d3x = 3.0 * dx;
+  let d3y = 3.0 * dy;
+  let d3d0 = 3.0 * d11;
+  let d3d1 = 3.0 * d1m1;
+  let max3 = max(
+    max2,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d3x), glyph_sample_max_rgb(uv - d3x)),
+        max(glyph_sample_max_rgb(uv + d3y), glyph_sample_max_rgb(uv - d3y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d3d0), glyph_sample_max_rgb(uv - d3d0)),
+        max(glyph_sample_max_rgb(uv + d3d1), glyph_sample_max_rgb(uv - d3d1))
+      )
+    )
+  );
+
+  let m1 = select(0.0, 1.0, radius >= 1u);
+  let m2 = select(0.0, 1.0, radius >= 2u);
+  let m3 = select(0.0, 1.0, radius >= 3u);
+  return max(s0, max(max1 * m1, max(max2 * m2, max3 * m3)));
+}
+
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   if (viewport.output_is_srgb != 0u) {
     return c;
@@ -7209,6 +7396,7 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
 }
 
@@ -7222,7 +7410,33 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
   let coverage = apply_contrast_and_gamma_correction3(tex.rgb, base_un);
   let a = max(max(coverage.r, coverage.g), coverage.b);
-  let out = vec4<f32>(base.rgb * coverage, base.a * a) * clip * mask;
+  var out = vec4<f32>(base.rgb * coverage, base.a * a);
+
+  if (FRET_TEXT_OUTLINE_PRESENT != 0u) {
+    let outline_params = input.outline_params;
+    let outline_radius = min(outline_params & 3u, 3u);
+    let outline_enabled = select(0.0, 1.0, outline_radius != 0u);
+    let fill_sample = max(max(tex.r, tex.g), tex.b);
+    let outline_max_sample = glyph_dilate_max_rgb(input.uv, outline_radius);
+    let ring_sample = saturate(outline_max_sample - fill_sample) * outline_enabled;
+    let outline_paint_index = outline_params >> 2u;
+    let op = text_paints.paints[outline_paint_index];
+    let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
+    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_un = select(
+      vec3<f32>(0.0),
+      outline_base.rgb / outline_base.a,
+      outline_base.a > 1e-6
+    );
+    let ring_cov3 = apply_contrast_and_gamma_correction3(
+      vec3<f32>(ring_sample, ring_sample, ring_sample),
+      outline_un
+    );
+    let ring_a = max(max(ring_cov3.r, ring_cov3.g), ring_cov3.b);
+    out = out + vec4<f32>(outline_base.rgb * ring_cov3, outline_base.a * ring_a);
+  }
+
+  out = out * clip * mask;
   return encode_output_premul(out);
 }
 "#;

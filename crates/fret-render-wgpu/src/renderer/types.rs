@@ -133,6 +133,7 @@ pub(super) struct TextVertex {
     pub(super) local_pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
+    pub(super) outline_params: u32,
 }
 
 #[repr(C)]
@@ -631,8 +632,10 @@ pub(super) struct TextDraw {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum TextDrawKind {
     Mask,
+    MaskOutline,
     Color,
     Subpixel,
+    SubpixelOutline,
 }
 
 #[derive(Clone, Copy)]

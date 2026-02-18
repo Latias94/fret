@@ -7,7 +7,10 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.text_pipeline_format == Some(format) && self.text_pipeline.is_some() {
+        if self.text_pipeline_format == Some(format)
+            && self.text_pipeline.is_some()
+            && self.text_outline_pipeline.is_some()
+        {
             return;
         }
 
@@ -27,6 +30,14 @@ impl Renderer {
             label: Some("fret text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
         });
+        let outline_shader_src = TEXT_SHADER.replace(
+            "const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;",
+            "const FRET_TEXT_OUTLINE_PRESENT: u32 = 1u;",
+        );
+        let outline_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret text outline shader"),
+            source: wgpu::ShaderSource::Wgsl(outline_shader_src.into()),
+        });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret text pipeline layout"),
@@ -39,6 +50,7 @@ impl Renderer {
         });
 
         let vertex_stride = std::mem::size_of::<TextVertex>() as wgpu::BufferAddress;
+
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret text pipeline"),
             layout: Some(&pipeline_layout),
@@ -60,14 +72,19 @@ impl Renderer {
                             shader_location: 1,
                         },
                         wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                        wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
                             offset: 24,
                             shader_location: 3,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
+                            format: wgpu::VertexFormat::Uint32,
+                            offset: 40,
+                            shader_location: 4,
                         },
                     ],
                 }],
@@ -98,8 +115,73 @@ impl Renderer {
             cache: None,
         });
 
+        let outline_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret text outline pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &outline_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Uint32,
+                            offset: 40,
+                            shader_location: 4,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &outline_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
         self.text_pipeline_format = Some(format);
         self.text_pipeline = Some(pipeline);
+        self.text_outline_pipeline = Some(outline_pipeline);
     }
 
     pub(in crate::renderer) fn ensure_text_color_pipeline(
@@ -164,14 +246,19 @@ impl Renderer {
                             shader_location: 1,
                         },
                         wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                        wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
                             offset: 24,
                             shader_location: 3,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
+                            format: wgpu::VertexFormat::Uint32,
+                            offset: 40,
+                            shader_location: 4,
                         },
                     ],
                 }],
@@ -213,6 +300,7 @@ impl Renderer {
     ) {
         if self.text_subpixel_pipeline_format == Some(format)
             && self.text_subpixel_pipeline.is_some()
+            && self.text_subpixel_outline_pipeline.is_some()
         {
             return;
         }
@@ -236,6 +324,14 @@ impl Renderer {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret subpixel text shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SUBPIXEL_SHADER.into()),
+        });
+        let outline_shader_src = TEXT_SUBPIXEL_SHADER.replace(
+            "const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;",
+            "const FRET_TEXT_OUTLINE_PRESENT: u32 = 1u;",
+        );
+        let outline_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret subpixel text outline shader"),
+            source: wgpu::ShaderSource::Wgsl(outline_shader_src.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -270,14 +366,19 @@ impl Renderer {
                             shader_location: 1,
                         },
                         wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                        wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x4,
                             offset: 24,
                             shader_location: 3,
                         },
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 2,
+                            format: wgpu::VertexFormat::Uint32,
+                            offset: 40,
+                            shader_location: 4,
                         },
                     ],
                 }],
@@ -308,7 +409,72 @@ impl Renderer {
             cache: None,
         });
 
+        let outline_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret subpixel text outline pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &outline_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: vertex_stride,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 8,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 16,
+                            shader_location: 2,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x4,
+                            offset: 24,
+                            shader_location: 3,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Uint32,
+                            offset: 40,
+                            shader_location: 4,
+                        },
+                    ],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &outline_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
         self.text_subpixel_pipeline_format = Some(format);
         self.text_subpixel_pipeline = Some(pipeline);
+        self.text_subpixel_outline_pipeline = Some(outline_pipeline);
     }
 }
