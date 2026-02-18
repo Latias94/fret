@@ -59,6 +59,11 @@ Key policy constraints:
     feasible,
   - keep strict scissor to `bounds`,
   - allow deterministic downsample under budgets.
+  - Implementation note (current wgpu renderer):
+    - Slow-path clip-path masks are cached as R8 intermediates and reused via GPU copy.
+    - Cache key mixes `PathId`, transform, scale factor, scissor/bounds, and relevant stack heads to
+      avoid cross-scope reuse bugs.
+    - Cache budget is enforced deterministically (LRU eviction by `last_used_frame`).
 
 - Image/gradient masks:
   - keep rect mask bounds cheap,
@@ -88,9 +93,12 @@ Two recurring hazards to keep explicitly gated:
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
 - Perf gate (clip/mask stacks; stable counters):
   - `python tools/perf/headless_clip_mask_stress_gate.py`
-- Add at least one new stress/regression test focused on:
-  - cache hit stability (no per-frame realloc churn),
-  - and deterministic degradation under quality/budget pressure.
+- Stress/regression coverage (cache stability):
+  - The headless perf gate enforces clip-path cache invariants (hits present; misses bounded; entry
+    count bounded) to catch “per-frame re-rasterization” regressions.
+  - Cache implementation anchors:
+    - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (PathClipMask pass)
 
 ## Tracking
 

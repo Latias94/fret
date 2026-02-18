@@ -29,21 +29,24 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Implementation note:
     - For image masks, avoid `textureSample*` in `mask_eval` and use `textureLoad` + manual bilinear.
 
-- [ ] CLIPMASK-cache-030 Add caching for slow-path clip/mask intermediates where applicable:
+- [x] CLIPMASK-cache-030 Add caching for slow-path clip/mask intermediates where applicable:
       avoid per-frame re-rasterization of identical clip paths.
   - Notes:
     - Cache key must include transform/bounds/quality downsample.
     - Cache size must be budgeted and deterministic (eviction policy).
   - Evidence anchors:
-    - `crates/fret-render-wgpu/src/renderer/resources.rs` (cache plumbing)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (clip/mask plan execution)
+    - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs` (GPU-copy cache + LRU budget eviction)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (PathClipMask hit/copy + store)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (cache key composition)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (mix mask target size into key)
 
 ## Conformance + regression
 
-- [ ] CLIPMASK-test-040 Add a regression test for “clip path cache stability”:
+- [x] CLIPMASK-test-040 Add a regression test for “clip path cache stability”:
       same scene across frames must not churn intermediates.
   - Evidence anchors:
-    - `crates/fret-render-wgpu/tests/*_conformance.rs` (new test)
+    - `apps/fret-clip-mask-stress/src/main.rs` (prints clip-path cache counters)
+    - `tools/perf/headless_clip_mask_stress_gate.py` (enforces invariants: hits>0, misses bounded, entries bounded)
 
 - [x] CLIPMASK-perf-050 Add a perf gate for clip/mask heavy scenes:
       keep worst-frame stability and intermediate allocations bounded.

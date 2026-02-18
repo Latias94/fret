@@ -44,4 +44,6 @@ Exit criteria:
 
 Evidence anchors:
 
-- `docs/workstreams/perf-baselines/*`
+- `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+- `tools/perf/headless_clip_mask_stress_gate.py`
+- `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
