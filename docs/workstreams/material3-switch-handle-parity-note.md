@@ -31,36 +31,32 @@ incrementally with evidence and gates.
 
 ## Observed gaps / likely drift sources
 
-### 1) No thumb content / icon support
+### 1) Thumb icons: motion/visibility parity is not locked
 
 Material Web and Compose both support icons/content inside the thumb:
 
 - Material Web: `icons` + `show-only-selected-icon` and a `.handle.with-icon` sizing variant.
 - Compose: `thumbContent` (and thumb size chooses the larger diameter when content exists).
 
-Fret switch currently renders an empty thumb container and does not expose a policy surface to
-provide thumb content or show-only-selected icon behavior.
+Fret already supports `icons` and `show_only_selected_icon` at the recipe layer (see anchors below),
+but we have not yet locked the **transition outcomes** (e.g. icon fade/rotate details) against the
+upstream references.
 
 **Practical impact**
 
-- We cannot match Material Web “icons” demos or token behavior (`md.comp.switch.*.icon.*`).
-- Handle sizing cannot follow the `with-icon` token path (`md.comp.switch.with-icon.handle.*`).
+- Visual drift is most likely to show up during state transitions (unchecked ↔ checked, pressed ↔ released),
+  especially in `show-only-selected-icon` mode where Material Web keeps the "on" icon in the DOM to animate it
+  even when unchecked.
 
-### 2) With-icon handle sizing is not modeled
+### 2) With-icon handle sizing parity needs evidence
 
 Material Web has an explicit handle size variant when icons are present:
 
 - `md.comp.switch.with-icon.handle.width`
 - `md.comp.switch.with-icon.handle.height`
 
-Fret currently only models:
-
-- selected handle size,
-- unselected handle size,
-- pressed handle size.
-
-This means even if we add icons later, the handle geometry will remain incorrect until we thread
-the “has thumb content” state into the geometry rules.
+Fret models this variant and threads it into geometry, but we should keep a small gate that prevents
+future refactors from regressing the `with-icon` sizing rules.
 
 ### 3) Ripple/state-layer geometry needs explicit evidence
 
@@ -90,4 +86,3 @@ Next gates (once we add icon support):
 - Add a headless test that asserts handle geometry matches token expectations for:
   - unchecked/checked/pressed,
   - with-icon size overrides.
-

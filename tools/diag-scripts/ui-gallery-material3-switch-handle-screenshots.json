@@ -49,6 +49,10 @@
     { "type": "wait_frames", "n": 6 },
     { "type": "capture_bundle", "label": "m3-switch-20-pressed" },
     { "type": "capture_screenshot", "label": "m3-switch-20-pressed" },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" }
+    },
     { "type": "pointer_up" },
     { "type": "wait_frames", "n": 6 },
     { "type": "capture_bundle", "label": "m3-switch-21-released" },
