@@ -54,6 +54,9 @@ pub struct TaffyLayoutEngine {
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
     measure_cache_scratch: FxHashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
+    batch_root_scratch: Option<TaffyNodeId>,
+    batch_root_children_scratch: Vec<TaffyNodeId>,
+    batch_root_style_size_bits: Option<(u32, u32)>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
@@ -118,6 +121,9 @@ impl Default for TaffyLayoutEngine {
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
             measure_cache_scratch: FxHashMap::default(),
+            batch_root_scratch: None,
+            batch_root_children_scratch: Vec::new(),
+            batch_root_style_size_bits: None,
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -173,6 +179,28 @@ impl TaffyLayoutEngine {
             self.root_solve_stamp.remove(parent);
             node = parent;
         }
+    }
+
+    fn ensure_batch_root_scratch(&mut self) -> Option<TaffyNodeId> {
+        if let Some(id) = self.batch_root_scratch {
+            return Some(id);
+        }
+        let id = match self.tree.new_leaf_with_context(
+            Default::default(),
+            NodeContext {
+                node: NodeId::default(),
+                measured: false,
+                min_content_width_as_max: false,
+            },
+        ) {
+            Ok(id) => id,
+            Err(err) => {
+                Self::warn_taffy_error_once("new_leaf_with_context(batch_root)", err);
+                return None;
+            }
+        };
+        self.batch_root_scratch = Some(id);
+        Some(id)
     }
 
     pub fn begin_frame(&mut self, frame_id: FrameId) {
@@ -455,39 +483,24 @@ impl TaffyLayoutEngine {
         scratch_w_dp = scratch_w_dp.max(1.0);
         scratch_h_dp = scratch_h_dp.max(1.0);
 
-        let scratch_id = match self.tree.new_leaf_with_context(
-            Default::default(),
-            NodeContext {
-                node: NodeId::default(),
-                measured: false,
-                min_content_width_as_max: false,
-            },
-        ) {
-            Ok(id) => id,
-            Err(err) => {
-                Self::warn_taffy_error_once("new_leaf_with_context(batch_root)", err);
-                // Fall back to per-root compute on allocation failure.
-                for (root, _layout_id, available) in pending {
-                    let _ = self.compute_root_for_node_with_measure_if_needed(
-                        root,
-                        available,
-                        sf,
-                        &mut measure,
-                    );
-                }
-                return;
+        let Some(scratch_id) = self.ensure_batch_root_scratch() else {
+            for (root, _layout_id, available) in pending {
+                let _ = self.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    &mut measure,
+                );
             }
-        };
-
-        let cleanup_scratch = |engine: &mut Self| {
-            let _ = engine.tree.set_children(scratch_id, &[]);
-            let _ = engine.tree.remove(scratch_id);
+            return;
         };
 
         let scratch_style = taffy::Style {
-            display: taffy::style::Display::Flex,
-            flex_direction: taffy::style::FlexDirection::Column,
-            flex_wrap: taffy::style::FlexWrap::NoWrap,
+            // A minimal, definite-sized containing block for batching independent root solves.
+            //
+            // `Display::Block` avoids flex layout machinery on the synthetic parent while still
+            // allowing children to resolve percent-based sizes against a stable containing block.
+            display: taffy::style::Display::Block,
             size: taffy::geometry::Size {
                 width: taffy::style::Dimension::length(scratch_w_dp),
                 height: taffy::style::Dimension::length(scratch_h_dp),
@@ -498,9 +511,12 @@ impl TaffyLayoutEngine {
             },
             ..Default::default()
         };
-        if let Err(err) = self.tree.set_style(scratch_id, scratch_style) {
+        let scratch_bits = (scratch_w_dp.to_bits(), scratch_h_dp.to_bits());
+        if self.batch_root_style_size_bits != Some(scratch_bits)
+            && let Err(err) = self.tree.set_style(scratch_id, scratch_style)
+        {
             Self::warn_taffy_error_once("set_style(batch_root)", err);
-            cleanup_scratch(self);
+            let _ = self.tree.set_children(scratch_id, &[]);
             for (root, _layout_id, available) in pending {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
@@ -511,11 +527,19 @@ impl TaffyLayoutEngine {
             }
             return;
         }
+        self.batch_root_style_size_bits = Some(scratch_bits);
 
-        let mut child_ids: Vec<TaffyNodeId> = pending.iter().map(|(_, id, _)| id.0).collect();
-        if let Err(err) = self.tree.set_children(scratch_id, &child_ids) {
+        self.batch_root_children_scratch.clear();
+        self.batch_root_children_scratch.reserve(pending.len());
+        for (_root, id, _available) in &pending {
+            self.batch_root_children_scratch.push(id.0);
+        }
+        if let Err(err) = self
+            .tree
+            .set_children(scratch_id, &self.batch_root_children_scratch)
+        {
             Self::warn_taffy_error_once("set_children(batch_root)", err);
-            cleanup_scratch(self);
+            let _ = self.tree.set_children(scratch_id, &[]);
             for (root, _layout_id, available) in pending {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
@@ -714,7 +738,7 @@ impl TaffyLayoutEngine {
 
         if let Err(err) = result {
             Self::warn_taffy_error_once("compute_layout_with_measure(batch_root)", err);
-            cleanup_scratch(self);
+            let _ = self.tree.set_children(scratch_id, &[]);
             self.last_solve_root = None;
             self.last_solve_elapsed = started.elapsed();
             span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
@@ -761,10 +785,8 @@ impl TaffyLayoutEngine {
         span.record("measure_us", measure_time.as_micros() as u64);
         self.last_solve_time += self.last_solve_elapsed;
 
-        cleanup_scratch(self);
-        // Keep `child_ids` alive until after cleanup so we don't accidentally shrink and reallocate
-        // in tight loops when barriers repeatedly batch-solve.
-        child_ids.clear();
+        // Detach roots from the synthetic parent so they remain independent roots in the engine.
+        let _ = self.tree.set_children(scratch_id, &[]);
     }
 
     pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
