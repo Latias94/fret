@@ -294,7 +294,7 @@ impl MvuProgram for LiquidGlassProgram {
         Self::State {
             show_fake: app.models_mut().insert(true),
             show_warp: app.models_mut().insert(true),
-            show_warp_v2: app.models_mut().insert(false),
+            show_warp_v2: app.models_mut().insert(true),
             show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
@@ -308,7 +308,8 @@ impl MvuProgram for LiquidGlassProgram {
             warp_phase: app.models_mut().insert(vec![0.0]),
             warp_chroma_px: app.models_mut().insert(vec![2.0]),
 
-            blur_radius_px: app.models_mut().insert(vec![16.0]),
+            // Default to "true refraction / displacement" rather than frosted blur.
+            blur_radius_px: app.models_mut().insert(vec![0.0]),
             blur_downsample: app.models_mut().insert(vec![2.0]),
             saturation: app.models_mut().insert(vec![1.10]),
             brightness: app.models_mut().insert(vec![1.02]),
@@ -323,7 +324,7 @@ impl MvuProgram for LiquidGlassProgram {
         if matches!(message, Msg::Reset) {
             let _ = app.models_mut().update(&st.show_fake, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp, |v| *v = true);
-            let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
+            let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = true);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -341,7 +342,7 @@ impl MvuProgram for LiquidGlassProgram {
                 .update(&st.warp_chroma_px, |v| *v = vec![2.0]);
             let _ = app
                 .models_mut()
-                .update(&st.blur_radius_px, |v| *v = vec![16.0]);
+                .update(&st.blur_radius_px, |v| *v = vec![0.0]);
             let _ = app
                 .models_mut()
                 .update(&st.blur_downsample, |v| *v = vec![2.0]);
@@ -584,7 +585,7 @@ fn view(
                                 },
                             );
 
-                            // Moving blob (helps make displacement obvious).
+                            // Moving blobs (helps make displacement obvious).
                             let mut blob_layout = LayoutStyle::default();
                             blob_layout.position = PositionStyle::Absolute;
                             blob_layout.size.width = Length::Px(Px(140.0));
@@ -601,6 +602,96 @@ fn view(
                                     ..Default::default()
                                 },
                                 |_cx| Vec::<AnyElement>::new(),
+                            );
+
+                            let mut blob2_layout = LayoutStyle::default();
+                            blob2_layout.position = PositionStyle::Absolute;
+                            blob2_layout.size.width = Length::Px(Px(220.0));
+                            blob2_layout.size.height = Length::Px(Px(180.0));
+                            blob2_layout.inset.right = Some(Px(140.0 + (t * 0.55).sin() * 90.0));
+                            blob2_layout.inset.top = Some(Px(140.0 + (t * 0.65).cos() * 70.0));
+                            let blob2 = cx.container(
+                                ContainerProps {
+                                    layout: blob2_layout,
+                                    background: Some(srgb(255, 140, 80, 0.16)),
+                                    border: Edges::all(Px(1.0)),
+                                    border_color: Some(srgb(255, 200, 160, 0.24)),
+                                    corner_radii: Corners::all(Px(999.0)),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::<AnyElement>::new(),
+                            );
+
+                            // A few sharp, high-contrast cards (helps differentiate refraction from blur).
+                            let mut cards_layout = LayoutStyle::default();
+                            cards_layout.position = PositionStyle::Absolute;
+                            cards_layout.inset.left = Some(Px(240.0));
+                            cards_layout.inset.top = Some(Px(420.0));
+                            cards_layout.size.width = Length::Px(Px(760.0));
+                            cards_layout.size.height = Length::Px(Px(120.0));
+
+                            let cards = cx.row(
+                                RowProps {
+                                    layout: cards_layout,
+                                    gap: Px(12.0),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Stretch,
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let mk_card = |cx: &mut ElementContext<'_, App>,
+                                                   title: &'static str,
+                                                   bg: Color,
+                                                   border: Color| {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Fill;
+
+                                        let title = cx.text_props(TextProps {
+                                            layout: Default::default(),
+                                            text: Arc::from(title),
+                                            style: None,
+                                            color: Some(srgb(255, 255, 255, 0.92)),
+                                            align: fret_core::TextAlign::Start,
+                                            wrap: fret_core::TextWrap::None,
+                                            overflow: fret_core::TextOverflow::Clip,
+                                        });
+
+                                        cx.container(
+                                            ContainerProps {
+                                                layout,
+                                                padding: Edges::all(Px(14.0)),
+                                                background: Some(bg),
+                                                border: Edges::all(Px(1.0)),
+                                                border_color: Some(border),
+                                                corner_radii: Corners::all(Px(16.0)),
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![title],
+                                        )
+                                    };
+
+                                    vec![
+                                        mk_card(
+                                            cx,
+                                            "RGB bars + sharp edges",
+                                            srgb(220, 80, 92, 0.22),
+                                            srgb(255, 200, 205, 0.24),
+                                        ),
+                                        mk_card(
+                                            cx,
+                                            "Text / glyphs behind lens",
+                                            srgb(80, 210, 170, 0.18),
+                                            srgb(180, 255, 235, 0.22),
+                                        ),
+                                        mk_card(
+                                            cx,
+                                            "Motion makes refraction obvious",
+                                            srgb(90, 130, 255, 0.18),
+                                            srgb(190, 210, 255, 0.22),
+                                        ),
+                                    ]
+                                },
                             );
 
                             // Stage HUD (always present so perf scripts can target stable `test_id`s
@@ -802,7 +893,7 @@ fn view(
                                 },
                             );
 
-                            vec![stripes, blob, hud, lenses]
+                            vec![stripes, blob, blob2, cards, hud, lenses]
                         },
                     )
                 });
