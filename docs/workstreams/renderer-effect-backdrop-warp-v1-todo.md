@@ -12,7 +12,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Design lock
 
-- [~] BWARP-adr-010 Add an ADR for the bounded backdrop warp surface (v1):
+- [x] BWARP-adr-010 Add an ADR for the bounded backdrop warp surface (v1):
       contract shape, deterministic degradation rules, and wasm/mobile constraints.
   - Exit criteria:
     - step parameters are bounded (no open-ended shader sources),

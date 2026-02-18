@@ -1,6 +1,6 @@
 ---
 title: Backdrop Warp Effect Step v1
-status: Draft
+status: Accepted
 date: 2026-02-17
 ---
 
@@ -151,4 +151,3 @@ Implementations of this step MUST avoid divergent branches around sampling. Pref
 - Ecosystem can express “true liquid glass” style distortion using a stable contract surface.
 - The renderer retains a bounded, testable, portable effect vocabulary without opening arbitrary
   shader injection.
-
