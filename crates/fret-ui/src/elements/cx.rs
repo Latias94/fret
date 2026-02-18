@@ -3112,11 +3112,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     fret_core::Axis::Horizontal => (state.viewport_w, state.offset_x),
                 };
 
-                // For scroll-to-item jumps, rendering the full overscan window can produce a
+                // For large scroll jumps, rendering the full overscan window can produce a
                 // one-frame layout spike (we're attaching and solving many item roots at once).
+                //
                 // Prefer rendering the true visible window for the jump frame and let overscan
                 // catch up on subsequent frames.
-                let overscan_for_range = if scroll_handle.deferred_scroll_to_item().is_some() {
+                let mut overscan_for_range = if scroll_handle.deferred_scroll_to_item().is_some() {
                     0
                 } else {
                     options.overscan
@@ -3263,6 +3264,35 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     };
                     let handle_axis = state.metrics.clamp_offset(handle_axis, viewport);
                     if (handle_axis.0 - offset.0).abs() > 0.01 {
+                        // If the handle jumps far outside the previously committed visible range,
+                        // skip overscan for this render so we don't attach/solve a large window of
+                        // off-screen items in a single frame.
+                        if overscan_for_range > 0 {
+                            let prev_visible = state.metrics.visible_range(offset, viewport, 0);
+                            let next_visible =
+                                state.metrics.visible_range(handle_axis, viewport, 0);
+                            let large_jump = match (prev_visible, next_visible) {
+                                (Some(prev), Some(next)) => {
+                                    let prev_len = prev
+                                        .end_index
+                                        .saturating_sub(prev.start_index)
+                                        .saturating_add(1);
+                                    let threshold = prev_len
+                                        .saturating_mul(4)
+                                        .max(options.overscan.saturating_mul(8));
+                                    next.start_index.abs_diff(prev.start_index) > threshold
+                                }
+                                _ => {
+                                    let delta_px = (handle_axis.0 - offset.0).abs();
+                                    delta_px > (viewport.0 * 3.0)
+                                }
+                            };
+
+                            if large_jump {
+                                overscan_for_range = 0;
+                                range = None;
+                            }
+                        }
                         preview_offset = handle_axis;
                     }
                 }

@@ -447,9 +447,21 @@ impl TaffyLayoutEngine {
 
             // Only batch truly-independent roots. If the engine already knows about a parent,
             // computing under a synthetic wrapper could interfere with the parent solve stamp.
-            if self.parent.get(root).is_some() {
-                fallback.push((root, available));
-                continue;
+            //
+            // Note: `self.parent` may contain stale entries when a node was previously attached
+            // under a parent but has since been detached without an explicit `set_children` update
+            // (e.g. sweep/retention edge cases). Treat "parent points to a node that doesn't list
+            // us as a child" as stale and clear it so independent-root batching can proceed.
+            if let Some(parent) = self.parent.get(root).copied() {
+                let linked = self
+                    .children
+                    .get(parent)
+                    .is_some_and(|children| children.as_slice().contains(&root));
+                if linked {
+                    fallback.push((root, available));
+                    continue;
+                }
+                self.parent.remove(root);
             }
 
             // Batching relies on roots being sized via `build_viewport_flow_subtree`'s

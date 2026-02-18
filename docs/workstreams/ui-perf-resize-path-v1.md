@@ -199,6 +199,37 @@ Local repro command (release):
 
 - `target/release/fretboard diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json --dir target/fret-diag-perf-local/20260217-suite12 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
 
+### Finding (2026-02-18): macOS M4 resize-stress worst frames are paint-dominated
+
+On macOS (Apple M4 / Metal), `ui-gallery-window-resize-stress-steady` does not reproduce the “layout solve explodes”
+profile observed on Windows. The worst frames in the script are dominated by paint (and in particular the per-node
+element-bounds walk), with `layout.engine_solve` staying around ~1.1ms.
+
+Evidence (single-script perf run, repeat=3):
+
+- Bundle: `target/fret-diag/1771410780171-ui-gallery-window-resize-stress-steady/bundle.json`
+- `fretboard diag stats ... --sort time --top 1` (same bundle) reports:
+  - worst frame total ≈ `8.9ms`
+  - `layout.solve_us ≈ 1159us`
+  - `paint.elem_bounds_calls ≈ 2172` (dominant share of paint time)
+
+This suggests the “primary” macOS optimization target for resize-stress is paint-side traversal/caching rather than
+layout solving.
+
+### Note (2026-02-18): VirtualList offset/viewport state should reflect the Final pass only
+
+For VirtualList, the element-local `VirtualListState.offset_*` / `viewport_*` values are used as the “last committed”
+anchor for render-time range computation and other cross-frame heuristics.
+
+Writing these fields during probe layout passes can:
+
+- hide large-jump detection (probe sees the new offset first),
+- make render-time “handle leads state” logic harder to reason about,
+- and increase the risk of cross-pass oscillation under intrinsic measurement.
+
+Fix direction: update committed offset/viewport only during `LayoutPassKind::Final`, while still allowing probe passes
+to use the latest scroll handle offset for correctness within the pass.
+
 Observed failures (suite12):
 
 - dropdown: `top_layout_engine_solve_time_us` max `199us` (threshold `116us`)

@@ -172,12 +172,12 @@ impl ElementHostWidget {
             },
         });
 
-        let prev_offset = props.scroll_handle.offset();
-        let prev_offset_axis = match axis {
-            fret_core::Axis::Vertical => prev_offset.y,
-            fret_core::Axis::Horizontal => prev_offset.x,
+        let handle_offset = props.scroll_handle.offset();
+        let handle_offset_axis = match axis {
+            fret_core::Axis::Vertical => handle_offset.y,
+            fret_core::Axis::Horizontal => handle_offset.x,
         };
-        let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
+        let mut offset = metrics.clamp_offset(handle_offset_axis, viewport);
         let deferred_scroll_to_item = props.scroll_handle.deferred_scroll_to_item().is_some();
         let mut deferred_scroll_consumed = false;
 
@@ -201,7 +201,7 @@ impl ElementHostWidget {
 
         offset = metrics.clamp_offset(offset, viewport);
 
-        if (prev_offset_axis.0 - offset.0).abs() > 0.01 {
+        if (handle_offset_axis.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
 
@@ -372,11 +372,54 @@ impl ElementHostWidget {
 
         let mut barrier_roots: Vec<(NodeId, Rect)> = Vec::new();
         let mut should_defer_overscan_layout = false;
-        if !is_probe_layout && deferred_scroll_consumed && props.overscan > 0 {
-            // On large scroll-to-item jumps (e.g. "jump to bottom"), laying out the full overscan
-            // window in a single frame can create tail spikes. Prioritize the true visible window
-            // and let overscanned rows catch up on subsequent frames.
-            should_defer_overscan_layout = true;
+        if !is_probe_layout && props.overscan > 0 && viewport.0 > 0.0 {
+            if deferred_scroll_consumed {
+                // On large scroll-to-item jumps, laying out the full overscan window in a single
+                // frame can create tail spikes. Prioritize the true visible window and let
+                // overscanned rows catch up on subsequent frames.
+                should_defer_overscan_layout = true;
+            } else {
+                // `scroll_to_bottom()` / `scroll_to_item()` may update the handle immediately
+                // (without a deferred-scroll marker). Detect large jumps by comparing against the
+                // last committed offset from the element state.
+                let prev_state_viewport_axis = match axis {
+                    fret_core::Axis::Vertical => prev_viewport_h,
+                    fret_core::Axis::Horizontal => prev_viewport_w,
+                };
+                let prev_state_offset_axis = match axis {
+                    fret_core::Axis::Vertical => prev_offset_y,
+                    fret_core::Axis::Horizontal => prev_offset_x,
+                };
+
+                let viewport_unchanged = (prev_state_viewport_axis.0 - viewport.0).abs() <= 0.01
+                    && prev_state_viewport_axis.0 > 0.0;
+
+                if viewport_unchanged {
+                    let prev_clamped = metrics.clamp_offset(prev_state_offset_axis, viewport);
+                    let prev_visible = metrics.visible_range(prev_clamped, viewport, 0);
+
+                    let large_index_jump = match (prev_visible, visible_range) {
+                        (Some(prev), Some(now)) => {
+                            let prev_len = prev
+                                .end_index
+                                .saturating_sub(prev.start_index)
+                                .saturating_add(1);
+                            let threshold = prev_len
+                                .saturating_mul(4)
+                                .max(props.overscan.saturating_mul(8));
+                            now.start_index.abs_diff(prev.start_index) > threshold
+                        }
+                        _ => {
+                            let delta_px = (offset.0 - prev_clamped.0).abs();
+                            delta_px > (viewport.0 * 3.0)
+                        }
+                    };
+
+                    if large_index_jump {
+                        should_defer_overscan_layout = true;
+                    }
+                }
+            }
         }
 
         if should_defer_overscan_layout {
@@ -415,26 +458,27 @@ impl ElementHostWidget {
             self.element,
             crate::element::VirtualListState::default,
             |state| {
-                match axis {
-                    fret_core::Axis::Vertical => {
-                        state.offset_y = offset;
-                        if state.viewport_h != viewport {
-                            state.viewport_h = viewport;
-                            needs_redraw = true;
-                        }
-                    }
-                    fret_core::Axis::Horizontal => {
-                        state.offset_x = offset;
-                        if state.viewport_w != viewport {
-                            state.viewport_w = viewport;
-                            needs_redraw = true;
-                        }
-                    }
-                }
-                if !is_probe_layout && viewport.0 > 0.0 {
-                    state.has_final_viewport = true;
-                }
                 if !is_probe_layout {
+                    match axis {
+                        fret_core::Axis::Vertical => {
+                            state.offset_y = offset;
+                            if state.viewport_h != viewport {
+                                state.viewport_h = viewport;
+                                needs_redraw = true;
+                            }
+                        }
+                        fret_core::Axis::Horizontal => {
+                            state.offset_x = offset;
+                            if state.viewport_w != viewport {
+                                state.viewport_w = viewport;
+                                needs_redraw = true;
+                            }
+                        }
+                    }
+                    if viewport.0 > 0.0 {
+                        state.has_final_viewport = true;
+                    }
+
                     state.window_range = window_range;
                     state.deferred_scroll_offset_hint = None;
                 }
