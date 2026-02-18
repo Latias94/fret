@@ -1300,6 +1300,11 @@ impl<H: UiHost> UiTree<H> {
 
         let phase2_started = profile_layout.then(Instant::now);
         // Phase 2: compute/apply only when layout is needed.
+        //
+        // When multiple independent viewport roots need layout in the same frame (window root +
+        // overlays + other detached flow roots), solving them one-by-one can amplify fixed per-solve
+        // overhead into tail spikes. Prefer batching via the layout engine's synthetic-root path.
+        let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
         for &root in roots {
             let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
                 Some(node) => {
@@ -1318,12 +1323,16 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            pending_solves.push((root, available));
+        }
+
+        if !pending_solves.is_empty() {
             let solves_before = engine.solve_count();
             let solve_time_before = engine.last_solve_time();
-            let _ =
-                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
-                    self.measure_in(app, services, n, c, sf)
-                });
+            engine.compute_independent_roots_with_measure_if_needed(&pending_solves, sf, |n, c| {
+                self.measure_in(app, services, n, c, sf)
+            });
+
             if self.debug_enabled && engine.solve_count() > solves_before {
                 let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
                 let top_measures = engine
@@ -1372,7 +1381,9 @@ impl<H: UiHost> UiTree<H> {
                         }
                     })
                     .collect();
-                let solve_root = engine.last_solve_root().unwrap_or(root);
+                let solve_root = engine
+                    .last_solve_root()
+                    .unwrap_or_else(|| pending_solves[0].0);
                 let (root_element, root_element_kind, root_element_path) =
                     self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
@@ -1390,7 +1401,9 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_measure_children.clear();
             }
 
-            self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
+            for &(root, _available) in &pending_solves {
+                self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
+            }
         }
         let phase2_elapsed = phase2_started.map(|s| s.elapsed());
 
@@ -1503,24 +1516,29 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 // Phase 2: compute/apply only for roots that need layout and are not translation-only.
+                let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
                 for item in &batch {
                     if !item.needs_layout || item.is_translation_only {
                         continue;
                     }
+                    pending_solves.push((
+                        item.root,
+                        LayoutSize::new(
+                            AvailableSpace::Definite(item.bounds.size.width),
+                            AvailableSpace::Definite(item.bounds.size.height),
+                        ),
+                    ));
+                }
 
-                    let available = LayoutSize::new(
-                        AvailableSpace::Definite(item.bounds.size.width),
-                        AvailableSpace::Definite(item.bounds.size.height),
-                    );
-
+                if !pending_solves.is_empty() {
                     let solves_before = engine.solve_count();
                     let solve_time_before = engine.last_solve_time();
-                    let _ = engine.compute_root_for_node_with_measure_if_needed(
-                        item.root,
-                        available,
+                    engine.compute_independent_roots_with_measure_if_needed(
+                        &pending_solves,
                         sf,
                         |n, c| self.measure_in(app, services, n, c, sf),
                     );
+
                     if self.debug_enabled && engine.solve_count() > solves_before {
                         let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
                         let top_measures = engine
@@ -1571,7 +1589,9 @@ impl<H: UiHost> UiTree<H> {
                                 }
                             })
                             .collect();
-                        let solve_root = engine.last_solve_root().unwrap_or(item.root);
+                        let solve_root = engine
+                            .last_solve_root()
+                            .unwrap_or_else(|| pending_solves[0].0);
                         let (root_element, root_element_kind, root_element_path) =
                             self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
@@ -1589,7 +1609,19 @@ impl<H: UiHost> UiTree<H> {
                         self.debug_measure_children.clear();
                     }
 
-                    self.maybe_dump_taffy_subtree(app, window, &engine, item.root, item.bounds, sf);
+                    for item in &batch {
+                        if !item.needs_layout || item.is_translation_only {
+                            continue;
+                        }
+                        self.maybe_dump_taffy_subtree(
+                            app,
+                            window,
+                            &engine,
+                            item.root,
+                            item.bounds,
+                            sf,
+                        );
+                    }
                 }
 
                 self.put_layout_engine(engine);
