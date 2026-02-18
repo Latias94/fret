@@ -68,6 +68,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
     - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
     - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
+    - `tools/perf/diag_liquid_glass_backdrop_warp_v2_gate.py`
 
 ## Demo validation (optional but recommended)
 

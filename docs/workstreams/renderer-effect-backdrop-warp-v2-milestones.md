@@ -94,3 +94,5 @@ Evidence anchors:
 - `apps/fret-examples/src/liquid_glass_demo.rs`
   - Stage HUD layout: ensures toggles remain visible while preserving backdrop visibility.
   - Script anchors: `liquid-glass-switch-show-{fake,warp-v1,warp-v2}`.
+- Perf gate:
+  - `tools/perf/diag_liquid_glass_backdrop_warp_v2_gate.py`
