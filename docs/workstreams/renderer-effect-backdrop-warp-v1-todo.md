@@ -55,11 +55,12 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
-- [ ] BWARP-perf-050 Add a steady-state perf gate + baseline:
+- [x] BWARP-perf-050 Add a steady-state perf gate + baseline:
       worst-frame stability under bounded warp + blur chain.
   - Evidence anchors:
-    - `tools/perf/*` or `tools/diag-scripts/*` (new gate/script)
-    - `docs/workstreams/perf-baselines/*` (baseline JSON)
+    - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
+    - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-steady.v1.json`
+    - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-steady.windows-rtx4090.v1.json`
 
 ## Demo validation (optional but recommended)
 

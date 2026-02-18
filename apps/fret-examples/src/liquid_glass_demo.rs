@@ -403,481 +403,494 @@ fn view(
 
     let reset = msg.cmd(Msg::Reset);
 
-    let root = cx.container(
-        ContainerProps {
-            layout: root_layout,
-            background_paint: Some(bg),
-            ..Default::default()
-        },
-        move |cx| {
-            let stage = cx.keyed("liquid_glass.stage", |cx| {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.height = Length::Fill;
-                layout.position = PositionStyle::Relative;
-                layout.overflow = Overflow::Clip;
+    let root = cx
+        .container(
+            ContainerProps {
+                layout: root_layout,
+                background_paint: Some(bg),
+                ..Default::default()
+            },
+            move |cx| {
+                let stage = cx.keyed("liquid_glass.stage", |cx| {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout.position = PositionStyle::Relative;
+                    layout.overflow = Overflow::Clip;
 
-                cx.container(
-                    ContainerProps {
-                        layout,
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        // Stage stripes.
-                        let mut stripes_layout = LayoutStyle::default();
-                        stripes_layout.size.width = Length::Fill;
-                        stripes_layout.size.height = Length::Fill;
-                        stripes_layout.position = PositionStyle::Absolute;
-                        stripes_layout.inset = InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        };
-
-                        let stripe_w = Px(18.0);
-                        let stripe_count =
-                            ((viewport.size.width.0 / stripe_w.0).ceil() as usize).max(1) + 1;
-                        let stripes = cx.row(
-                            RowProps {
-                                layout: stripes_layout,
-                                gap: Px(0.0),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let mut out = Vec::with_capacity(stripe_count);
-                                for i in 0..stripe_count {
-                                    let tt = if stripe_count > 1 {
-                                        (i as f32) / ((stripe_count - 1) as f32)
-                                    } else {
-                                        0.0
-                                    };
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Px(stripe_w);
-                                    layout.size.height = Length::Fill;
-                                    out.push(cx.container(
-                                        ContainerProps {
-                                            layout,
-                                            background: Some(rainbow_stripe(tt, 0.10)),
-                                            ..Default::default()
-                                        },
-                                        |_cx| Vec::<AnyElement>::new(),
-                                    ));
-                                }
-                                out
-                            },
-                        );
-
-                        // Moving blob (helps make displacement obvious).
-                        let mut blob_layout = LayoutStyle::default();
-                        blob_layout.position = PositionStyle::Absolute;
-                        blob_layout.size.width = Length::Px(Px(140.0));
-                        blob_layout.size.height = Length::Px(Px(140.0));
-                        blob_layout.inset.left = Some(Px(110.0 + (t * 0.9).cos() * 120.0));
-                        blob_layout.inset.top = Some(Px(110.0 + (t * 0.7).sin() * 90.0));
-                        let blob = cx.container(
-                            ContainerProps {
-                                layout: blob_layout,
-                                background: Some(srgb(120, 220, 255, 0.22)),
-                                border: Edges::all(Px(1.0)),
-                                border_color: Some(srgb(200, 240, 255, 0.35)),
-                                corner_radii: Corners::all(Px(999.0)),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::<AnyElement>::new(),
-                        );
-
-                        // Lenses (bottom-left).
-                        let mut lenses_layout = LayoutStyle::default();
-                        lenses_layout.position = PositionStyle::Absolute;
-                        lenses_layout.inset.left = Some(Px(24.0));
-                        lenses_layout.inset.bottom = Some(Px(24.0));
-                        let lenses = cx.row(
-                            RowProps {
-                                layout: lenses_layout,
-                                gap: Px(14.0),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Start,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let mut out: Vec<AnyElement> = Vec::new();
-                                if show_fake {
-                                    out.push(lens_panel(
-                                        cx,
-                                        Arc::from("Fake glass (blur + adjust)"),
-                                        mode,
-                                        fake_chain,
-                                    ));
-                                }
-                                if show_warp {
-                                    out.push(lens_panel(
-                                        cx,
-                                        Arc::from("True warp (BackdropWarpV1 + blur)"),
-                                        mode,
-                                        warp_chain,
-                                    ));
-                                }
-                                out
-                            },
-                        );
-
-                        vec![stripes, blob, lenses]
-                    },
-                )
-            });
-
-            let inspector = cx.keyed("liquid_glass.inspector", |cx| {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(Px(380.0));
-                layout.size.height = Length::Fill;
-                layout.flex.shrink = 0.0;
-                layout.overflow = Overflow::Clip;
-
-                cx.container(
-                    ContainerProps {
-                        layout,
-                        padding: Edges::all(Px(16.0)),
-                        background: Some(theme.color_token("card")),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(theme.color_token("border")),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let header = shadcn::CardHeader::new([
-                            shadcn::CardTitle::new("Inspector").into_element(cx),
-                            shadcn::CardDescription::new(format!(
-                                "mode={:?} steps(fake={}, warp={})",
-                                mode,
-                                fake_chain.iter().count(),
-                                warp_chain.iter().count()
-                            ))
-                            .into_element(cx),
-                        ]);
-
-                        let label_row =
-                            |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                                shadcn::stack::hstack(
-                                    cx,
-                                    shadcn::stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_center(),
-                                    move |cx| {
-                                        vec![
-                                            shadcn::Label::new(label).into_element(cx),
-                                            cx.spacer(SpacerProps::default()),
-                                            shadcn::Badge::new(value)
-                                                .variant(shadcn::BadgeVariant::Secondary)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                )
+                    cx.container(
+                        ContainerProps {
+                            layout,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            // Stage stripes.
+                            let mut stripes_layout = LayoutStyle::default();
+                            stripes_layout.size.width = Length::Fill;
+                            stripes_layout.size.height = Length::Fill;
+                            stripes_layout.position = PositionStyle::Absolute;
+                            stripes_layout.inset = InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: Some(Px(0.0)),
+                                bottom: Some(Px(0.0)),
+                                left: Some(Px(0.0)),
                             };
 
-                        let toggles = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .items_stretch(),
-                            |cx| {
-                                vec![
+                            let stripe_w = Px(18.0);
+                            let stripe_count =
+                                ((viewport.size.width.0 / stripe_w.0).ceil() as usize).max(1) + 1;
+                            let stripes = cx.row(
+                                RowProps {
+                                    layout: stripes_layout,
+                                    gap: Px(0.0),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Stretch,
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let mut out = Vec::with_capacity(stripe_count);
+                                    for i in 0..stripe_count {
+                                        let tt = if stripe_count > 1 {
+                                            (i as f32) / ((stripe_count - 1) as f32)
+                                        } else {
+                                            0.0
+                                        };
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(stripe_w);
+                                        layout.size.height = Length::Fill;
+                                        out.push(cx.container(
+                                            ContainerProps {
+                                                layout,
+                                                background: Some(rainbow_stripe(tt, 0.10)),
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::<AnyElement>::new(),
+                                        ));
+                                    }
+                                    out
+                                },
+                            );
+
+                            // Moving blob (helps make displacement obvious).
+                            let mut blob_layout = LayoutStyle::default();
+                            blob_layout.position = PositionStyle::Absolute;
+                            blob_layout.size.width = Length::Px(Px(140.0));
+                            blob_layout.size.height = Length::Px(Px(140.0));
+                            blob_layout.inset.left = Some(Px(110.0 + (t * 0.9).cos() * 120.0));
+                            blob_layout.inset.top = Some(Px(110.0 + (t * 0.7).sin() * 90.0));
+                            let blob = cx.container(
+                                ContainerProps {
+                                    layout: blob_layout,
+                                    background: Some(srgb(120, 220, 255, 0.22)),
+                                    border: Edges::all(Px(1.0)),
+                                    border_color: Some(srgb(200, 240, 255, 0.35)),
+                                    corner_radii: Corners::all(Px(999.0)),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::<AnyElement>::new(),
+                            );
+
+                            // Lenses (bottom-left).
+                            let mut lenses_layout = LayoutStyle::default();
+                            lenses_layout.position = PositionStyle::Absolute;
+                            lenses_layout.inset.left = Some(Px(24.0));
+                            lenses_layout.inset.bottom = Some(Px(24.0));
+                            let lenses = cx.row(
+                                RowProps {
+                                    layout: lenses_layout,
+                                    gap: Px(14.0),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Start,
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let mut out: Vec<AnyElement> = Vec::new();
+                                    if show_fake {
+                                        out.push(lens_panel(
+                                            cx,
+                                            Arc::from("Fake glass (blur + adjust)"),
+                                            mode,
+                                            fake_chain,
+                                        ));
+                                    }
+                                    if show_warp {
+                                        out.push(lens_panel(
+                                            cx,
+                                            Arc::from("True warp (BackdropWarpV1 + blur)"),
+                                            mode,
+                                            warp_chain,
+                                        ));
+                                    }
+                                    out
+                                },
+                            );
+
+                            vec![stripes, blob, lenses]
+                        },
+                    )
+                });
+
+                let inspector = cx.keyed("liquid_glass.inspector", |cx| {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(380.0));
+                    layout.size.height = Length::Fill;
+                    layout.flex.shrink = 0.0;
+                    layout.overflow = Overflow::Clip;
+
+                    cx.container(
+                        ContainerProps {
+                            layout,
+                            padding: Edges::all(Px(16.0)),
+                            background: Some(theme.color_token("card")),
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(theme.color_token("border")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let header = shadcn::CardHeader::new([
+                                shadcn::CardTitle::new("Inspector").into_element(cx),
+                                shadcn::CardDescription::new(format!(
+                                    "mode={:?} steps(fake={}, warp={})",
+                                    mode,
+                                    fake_chain.iter().count(),
+                                    warp_chain.iter().count()
+                                ))
+                                .into_element(cx),
+                            ]);
+
+                            let label_row =
+                                |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
                                     shadcn::stack::hstack(
                                         cx,
                                         shadcn::stack::HStackProps::default()
                                             .gap(Space::N2)
                                             .items_center(),
-                                        |cx| {
+                                        move |cx| {
                                             vec![
-                                                shadcn::Switch::new(show_fake_model.clone())
-                                                    .a11y_label("Show fake lens")
-                                                    .into_element(cx),
-                                                shadcn::Label::new("Show fake lens")
+                                                shadcn::Label::new(label).into_element(cx),
+                                                cx.spacer(SpacerProps::default()),
+                                                shadcn::Badge::new(value)
+                                                    .variant(shadcn::BadgeVariant::Secondary)
                                                     .into_element(cx),
                                             ]
                                         },
-                                    ),
-                                    shadcn::stack::hstack(
-                                        cx,
-                                        shadcn::stack::HStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_center(),
-                                        |cx| {
-                                            vec![
-                                                shadcn::Switch::new(show_warp_model.clone())
-                                                    .a11y_label("Show warp lens")
-                                                    .into_element(cx),
-                                                shadcn::Label::new("Show warp lens")
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                    shadcn::stack::hstack(
-                                        cx,
-                                        shadcn::stack::HStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_center(),
-                                        |cx| {
-                                            vec![
-                                                shadcn::Switch::new(use_backdrop_model.clone())
-                                                    .a11y_label("Backdrop mode")
-                                                    .into_element(cx),
-                                                shadcn::Label::new("Backdrop mode")
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                    shadcn::stack::hstack(
-                                        cx,
-                                        shadcn::stack::HStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_center(),
-                                        |cx| {
-                                            vec![
-                                                shadcn::Switch::new(use_dither_model.clone())
-                                                    .a11y_label("Dither")
-                                                    .into_element(cx),
-                                                shadcn::Label::new("Dither").into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                    shadcn::stack::hstack(
-                                        cx,
-                                        shadcn::stack::HStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_center(),
-                                        |cx| {
-                                            vec![
-                                                shadcn::Switch::new(animate_model.clone())
-                                                    .a11y_label("Animate phase")
-                                                    .into_element(cx),
-                                                shadcn::Label::new("Animate phase")
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                ]
-                            },
-                        );
+                                    )
+                                };
 
-                        let warp_strength_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(
-                                        cx,
-                                        "Warp strength (px)",
-                                        format!("{warp_strength_px:.1}"),
-                                    ),
-                                    shadcn::Slider::new(warp_strength_model.clone())
-                                        .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
-                                        .step(0.25)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let toggles = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default()
+                                    .gap(Space::N2)
+                                    .items_stretch(),
+                                |cx| {
+                                    vec![
+                                        shadcn::stack::hstack(
+                                            cx,
+                                            shadcn::stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_center(),
+                                            |cx| {
+                                                vec![
+                                                    shadcn::Switch::new(show_fake_model.clone())
+                                                        .a11y_label("Show fake lens")
+                                                        .into_element(cx),
+                                                    shadcn::Label::new("Show fake lens")
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        ),
+                                        shadcn::stack::hstack(
+                                            cx,
+                                            shadcn::stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_center(),
+                                            |cx| {
+                                                vec![
+                                                    shadcn::Switch::new(show_warp_model.clone())
+                                                        .a11y_label("Show warp lens")
+                                                        .into_element(cx),
+                                                    shadcn::Label::new("Show warp lens")
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        ),
+                                        shadcn::stack::hstack(
+                                            cx,
+                                            shadcn::stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_center(),
+                                            |cx| {
+                                                vec![
+                                                    shadcn::Switch::new(use_backdrop_model.clone())
+                                                        .a11y_label("Backdrop mode")
+                                                        .into_element(cx),
+                                                    shadcn::Label::new("Backdrop mode")
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        ),
+                                        shadcn::stack::hstack(
+                                            cx,
+                                            shadcn::stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_center(),
+                                            |cx| {
+                                                vec![
+                                                    shadcn::Switch::new(use_dither_model.clone())
+                                                        .a11y_label("Dither")
+                                                        .into_element(cx),
+                                                    shadcn::Label::new("Dither").into_element(cx),
+                                                ]
+                                            },
+                                        ),
+                                        shadcn::stack::hstack(
+                                            cx,
+                                            shadcn::stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_center(),
+                                            |cx| {
+                                                vec![
+                                                    shadcn::Switch::new(animate_model.clone())
+                                                        .a11y_label("Animate phase")
+                                                        .into_element(cx),
+                                                    shadcn::Label::new("Animate phase")
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        ),
+                                    ]
+                                },
+                            );
 
-                        let warp_scale_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Warp scale (px)", format!("{warp_scale_px:.0}")),
-                                    shadcn::Slider::new(warp_scale_model.clone())
-                                        .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
-                                        .step(1.0)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let warp_strength_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Warp strength (px)",
+                                            format!("{warp_strength_px:.1}"),
+                                        ),
+                                        shadcn::Slider::new(warp_strength_model.clone())
+                                            .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
+                                            .step(0.25)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let chroma_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(
-                                        cx,
-                                        "Chromatic aberration (px)",
-                                        format!("{warp_chroma_px:.2}"),
-                                    ),
-                                    shadcn::Slider::new(warp_chroma_model.clone())
-                                        .range(0.0, BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0)
-                                        .step(0.05)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let warp_scale_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Warp scale (px)",
+                                            format!("{warp_scale_px:.0}"),
+                                        ),
+                                        shadcn::Slider::new(warp_scale_model.clone())
+                                            .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
+                                            .step(1.0)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let phase_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Phase", format!("{phase:.2}")),
-                                    shadcn::Slider::new(warp_phase_model.clone())
-                                        .range(0.0, 12.0)
-                                        .step(0.01)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let chroma_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Chromatic aberration (px)",
+                                            format!("{warp_chroma_px:.2}"),
+                                        ),
+                                        shadcn::Slider::new(warp_chroma_model.clone())
+                                            .range(
+                                                0.0,
+                                                BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
+                                            )
+                                            .step(0.05)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let speed_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Phase speed", format!("{phase_speed:.2}")),
-                                    shadcn::Slider::new(phase_speed_model.clone())
-                                        .range(0.0, 2.0)
-                                        .step(0.01)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let phase_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(cx, "Phase", format!("{phase:.2}")),
+                                        shadcn::Slider::new(warp_phase_model.clone())
+                                            .range(0.0, 12.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let blur_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(
-                                        cx,
-                                        "Blur radius (px)",
-                                        format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
-                                    ),
-                                    shadcn::Slider::new(blur_radius_model.clone())
-                                        .range(0.0, 48.0)
-                                        .step(0.5)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let speed_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(cx, "Phase speed", format!("{phase_speed:.2}")),
+                                        shadcn::Slider::new(phase_speed_model.clone())
+                                            .range(0.0, 2.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let downsample_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
-                                    shadcn::Slider::new(blur_downsample_model.clone())
-                                        .range(1.0, 4.0)
-                                        .step(1.0)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let blur_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Blur radius (px)",
+                                            format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
+                                        ),
+                                        shadcn::Slider::new(blur_radius_model.clone())
+                                            .range(0.0, 48.0)
+                                            .step(0.5)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let sat_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Saturation", format!("{saturation:.2}")),
-                                    shadcn::Slider::new(saturation_model.clone())
-                                        .range(0.6, 1.8)
-                                        .step(0.01)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let downsample_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Blur downsample",
+                                            format!("{blur_downsample}x"),
+                                        ),
+                                        shadcn::Slider::new(blur_downsample_model.clone())
+                                            .range(1.0, 4.0)
+                                            .step(1.0)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let bright_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Brightness", format!("{brightness:.2}")),
-                                    shadcn::Slider::new(brightness_model.clone())
-                                        .range(0.8, 1.3)
-                                        .step(0.01)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let sat_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(cx, "Saturation", format!("{saturation:.2}")),
+                                        shadcn::Slider::new(saturation_model.clone())
+                                            .range(0.6, 1.8)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let contrast_row = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                vec![
-                                    label_row(cx, "Contrast", format!("{contrast:.2}")),
-                                    shadcn::Slider::new(contrast_model.clone())
-                                        .range(0.8, 1.3)
-                                        .step(0.01)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let bright_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(cx, "Brightness", format!("{brightness:.2}")),
+                                        shadcn::Slider::new(brightness_model.clone())
+                                            .range(0.8, 1.3)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let footer = shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    cx.spacer(SpacerProps::default()),
-                                    shadcn::Button::new("Reset")
-                                        .variant(shadcn::ButtonVariant::Secondary)
-                                        .size(shadcn::ButtonSize::Sm)
-                                        .on_click(reset)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            let contrast_row = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default().gap(Space::N2),
+                                |cx| {
+                                    vec![
+                                        label_row(cx, "Contrast", format!("{contrast:.2}")),
+                                        shadcn::Slider::new(contrast_model.clone())
+                                            .range(0.8, 1.3)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        let body = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default()
-                                .gap(Space::N4)
-                                .items_stretch(),
-                            |cx| {
-                                vec![
-                                    header.into_element(cx),
-                                    shadcn::Separator::new().into_element(cx),
-                                    toggles,
-                                    shadcn::Separator::new().into_element(cx),
-                                    warp_strength_row,
-                                    warp_scale_row,
-                                    chroma_row,
-                                    phase_row,
-                                    speed_row,
-                                    shadcn::Separator::new().into_element(cx),
-                                    blur_row,
-                                    downsample_row,
-                                    sat_row,
-                                    bright_row,
-                                    contrast_row,
-                                    shadcn::Separator::new().into_element(cx),
-                                    footer,
-                                ]
-                            },
-                        );
+                            let footer = shadcn::stack::hstack(
+                                cx,
+                                shadcn::stack::HStackProps::default()
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |cx| {
+                                    vec![
+                                        cx.spacer(SpacerProps::default()),
+                                        shadcn::Button::new("Reset")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .size(shadcn::ButtonSize::Sm)
+                                            .on_click(reset)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
 
-                        vec![body]
+                            let body = shadcn::stack::vstack(
+                                cx,
+                                shadcn::stack::VStackProps::default()
+                                    .gap(Space::N4)
+                                    .items_stretch(),
+                                |cx| {
+                                    vec![
+                                        header.into_element(cx),
+                                        shadcn::Separator::new().into_element(cx),
+                                        toggles,
+                                        shadcn::Separator::new().into_element(cx),
+                                        warp_strength_row,
+                                        warp_scale_row,
+                                        chroma_row,
+                                        phase_row,
+                                        speed_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        blur_row,
+                                        downsample_row,
+                                        sat_row,
+                                        bright_row,
+                                        contrast_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        footer,
+                                    ]
+                                },
+                            );
+
+                            vec![body]
+                        },
+                    )
+                });
+
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+                row_layout.size.height = Length::Fill;
+                vec![cx.row(
+                    RowProps {
+                        layout: row_layout,
+                        gap: Px(0.0),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        ..Default::default()
                     },
-                )
-            });
-
-            let mut row_layout = LayoutStyle::default();
-            row_layout.size.width = Length::Fill;
-            row_layout.size.height = Length::Fill;
-            vec![cx.row(
-                RowProps {
-                    layout: row_layout,
-                    gap: Px(0.0),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    ..Default::default()
-                },
-                move |_cx| vec![stage, inspector],
-            )]
-        },
-    );
+                    move |_cx| vec![stage, inspector],
+                )]
+            },
+        )
+        .test_id("liquid-glass-root");
 
     vec![root].into()
 }
