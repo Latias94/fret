@@ -540,9 +540,7 @@ fn view(
     );
 
     // Match shadcn tabs: list track `bg-muted`, trigger `data-[state=active]:bg-background`.
-    // `ThemeSnapshot` only includes the typed baseline palette; use the full `Theme` for shadcn
-    // semantic tokens like `muted`.
-    let filter_track_bg = Theme::global(&*cx.app).color_token("muted");
+    let filter_track_bg = theme.color_token("muted");
     let filter_row = ui::container(cx, |cx| {
         [
             ui::h_flex(cx, |_cx| [filter_all, filter_active, filter_completed])
@@ -766,7 +764,7 @@ fn view(
     // (We can't express Tailwind's `slate-50` directly as a theme token today.)
     let page_bg = mix_colors(
         theme.color_token("background"),
-        Theme::global(&*cx.app).color_token("muted"),
+        theme.color_token("muted"),
         0.5,
     );
     let page = ui::container(cx, |cx| {
@@ -835,7 +833,7 @@ fn todo_row(
     row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {
-    let muted_bg = Theme::global(&*cx.app).color_token("muted");
+    let muted_bg = theme.color_token("muted");
     let theme = theme.clone();
     let done_model = row.done_model.clone();
     let done = row.done;
