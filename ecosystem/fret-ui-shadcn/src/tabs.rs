@@ -214,8 +214,14 @@ fn tabs_shared_indicator<H: UiHost>(
                 states |= WidgetStates::SELECTED;
             }
 
-            // shadcn new-york-v4: inactive triggers inherit `text-muted-foreground` from the list.
-            let fg_inactive = ColorRef::Color(tabs_list_fg_muted(theme));
+            // shadcn new-york-v4 `TabsTrigger` defaults:
+            // - light: `text-foreground`
+            // - dark: `text-muted-foreground`
+            let fg_inactive = if theme.name.contains("/dark") {
+                ColorRef::Color(tabs_list_fg_muted(theme))
+            } else {
+                ColorRef::Color(theme.color_token("foreground"))
+            };
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -1322,9 +1328,14 @@ impl Tabs {
                                     }));
                                 }
 
-                                // shadcn new-york-v4: `TabsList` sets `text-muted-foreground`, so
-                                // inactive triggers inherit it in both themes.
-                                let fg_inactive = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                // shadcn new-york-v4 `TabsTrigger` defaults:
+                                // - light: `text-foreground`
+                                // - dark: `text-muted-foreground`
+                                let fg_inactive = if theme.name.contains("/dark") {
+                                    ColorRef::Color(tabs_list_fg_muted(&theme))
+                                } else {
+                                    ColorRef::Color(theme.color_token("foreground"))
+                                };
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));

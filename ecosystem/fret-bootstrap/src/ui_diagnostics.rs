@@ -2225,6 +2225,9 @@ impl UiDiagnosticsService {
                             let docking_diag = app
                                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                                 .and_then(|store| store.docking_latest_for_window(window));
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(window));
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(window));
@@ -2232,6 +2235,7 @@ impl UiDiagnosticsService {
                                 snapshot,
                                 window_bounds,
                                 window,
+                                input_ctx,
                                 element_runtime,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -2447,6 +2451,9 @@ impl UiDiagnosticsService {
                             let docking_diag = app
                                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                                 .and_then(|store| store.docking_latest_for_window(window));
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(window));
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(window));
@@ -2454,6 +2461,7 @@ impl UiDiagnosticsService {
                                 snapshot,
                                 window_bounds,
                                 window,
+                                input_ctx,
                                 element_runtime,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -4046,11 +4054,15 @@ impl UiDiagnosticsService {
 
                     // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
                     // previous frame), release immediately.
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
                     if let Some(snapshot) = semantics_snapshot
                         && eval_predicate(
                             snapshot,
                             window_bounds,
                             window,
+                            input_ctx,
                             element_runtime,
                             app.global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(window)),
@@ -4641,10 +4653,14 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
                     if eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -4730,10 +4746,14 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
                     let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
@@ -16240,6 +16260,7 @@ fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
     window: AppWindowId,
+    input_ctx: Option<&fret_runtime::InputContext>,
     element_runtime: Option<&ElementRuntime>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
@@ -16637,10 +16658,9 @@ fn eval_predicate(
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
-        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => snapshot
-            .caps
-            .as_ref()
-            .is_some_and(|c| c.ui_window_hover_detection == *quality),
+        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
+            input_ctx.is_some_and(|c| c.caps.ui.window_hover_detection.as_str() == quality.as_str())
+        }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
