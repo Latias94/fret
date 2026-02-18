@@ -226,6 +226,14 @@ Next step (directional, not yet implemented):
 - Use `FRET_LAYOUT_PROFILE=1` (and optionally `FRET_LAYOUT_NODE_PROFILE=1`, `FRET_MEASURE_NODE_PROFILE=1`) on a single
   script repro to capture measure hotspots for the worst frame before attempting mechanism changes.
 
+Node-level attribution snapshot (2026-02-18, macOS M4):
+
+- Repro (single script; note this is for attribution, not baseline numbers):
+  - `target/release/fretboard diag perf tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=200 --env FRET_MEASURE_NODE_PROFILE=1 --env FRET_MEASURE_NODE_PROFILE_TOP=20 --env FRET_MEASURE_NODE_PROFILE_MIN_US=200 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+- In the worst frame for the script (frame id `124` in this run), `layout_node profile` points at the popover menu
+  scroll subtree (dropdown menu content) as the top self-time layout node, consistent with the “overlay roots dominate
+  solve time” model. Evidence: `target/fret-diag-layout-node-profile2-1771399625/fretboard.stdout.json`.
+
 ## GPUI/Zed resize notes (transferable vs not)
 
 GPUI is a strong reference for “Zed feel”, but it is not a complete template for Fret:
