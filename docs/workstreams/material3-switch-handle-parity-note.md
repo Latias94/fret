@@ -74,6 +74,8 @@ We should validate:
 
 - Baseline diag capture script (screenshots + bundle):
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
+- Crossfade timeline evidence (captures frame-by-frame switch chrome transition):
+  - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
 
 Next gates (once we add icon support):
 
