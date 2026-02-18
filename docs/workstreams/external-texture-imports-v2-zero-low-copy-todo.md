@@ -206,19 +206,23 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Web zero-copy (explicitly blocked)
 
-- [!] EXTV2-web-120 WebCodecs `VideoFrame` → WebGPU `ExternalTexture` zero-copy sampling:
+- [!] EXTV2-web-120 WebCodecs `VideoFrame` -> WebGPU `ExternalTexture` zero-copy sampling:
       land only when the backend supports `ExternalTexture` end-to-end.
   - Blocker: upstream backend support (wgpu WebGPU backend).
 
 ## Perf gates
 
-- [~] EXTV2-perf-200 Add v2 steady-state perf scripts + baselines for any landed v2 strategy.
+- [x] EXTV2-perf-200 Add v2 steady-state perf scripts + baselines for any landed v2 strategy.
   - Keep v1 copy-path baselines green:
     - `tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json`
     - `docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
     - Evidence (2026-02-16): web DevTools WS perf gate run is runnable end-to-end again:
       - `fix(web): wake redraw on DevTools WS inbox`
       - `fretboard diag perf tools/diag-scripts/external-texture-imports-web-copy-perf-steady.json ... --perf-baseline docs/workstreams/perf-baselines/external-texture-imports-web-copy.web-local.v1.json`
+    - Note: this is still DevTools-WS-attached (not `--launch`) because it requires the browser.
+  - Launch-transport perf gate driver (no DevTools WS required):
+    - `tools/perf/diag_external_texture_imports_gate.py`
+    - Evidence (2026-02-18): runnable end-to-end on Windows via `--launch` transport (smoke run).
   - Native adapter-path gate (requested vs effective attribution in perf bundles):
     - Script: `tools/diag-scripts/external-texture-imports-contract-path-native-adapter-perf-steady.json`
     - Baseline: `docs/workstreams/perf-baselines/external-texture-imports-contract-path-native-adapter.windows-local.v1.json`

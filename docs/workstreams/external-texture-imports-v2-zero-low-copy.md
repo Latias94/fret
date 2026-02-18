@@ -32,6 +32,9 @@ It builds on v1’s contract-path closure:
    - v1 copy-path baselines remain non-regression anchors.
    - v2 adds steady-state baselines for each landed zero/low-copy strategy, especially on
      wasm/mobile.
+   - Native/launch transport perf gates can be run without DevTools WS:
+     - `python3 tools/perf/diag_external_texture_imports_gate.py`
+     - (selects baselines by `--baseline-platform-tag`, defaulting to `windows-local` on Windows).
 
 ## Tracking
 
@@ -55,10 +58,12 @@ It builds on v1’s contract-path closure:
   - A runner-facing DX12 shared allocation export helper exists (queue/resource + wgpu transitions), and the path has a
     steady-state perf baseline.
 - Deterministic fallback is centralized (to prevent demo/caller drift):
-  - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
-    (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
-  - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
-    (wrapper that removes `fallback_available` + closure boilerplate at call sites).
+  - Preferred call-site helper:
+    - `ImportedViewportRenderTarget::push_update_with_fallbacks(...)`
+      (see `crates/fret-launch/src/runner/imported_viewport_target.rs`).
+  - Lower-level helpers remain available (but should not be duplicated at call sites):
+    - `ImportedViewportRenderTarget::push_native_external_import_update_with_deterministic_fallback(...)`
+    - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
 - Windows MF → DX12 GPU-copy into a shared allocation is wired end-to-end (capability-gated),
   and has steady-state perf + correctness scripts/baselines.
 - Next up (native uplift, practical):
