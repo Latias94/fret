@@ -119,15 +119,11 @@ Fret aligns these as:
   - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
 - Icon color crossfade evidence (fill 67ms linear):
   - `tools/diag-scripts/ui-gallery-material3-switch-icon-color-crossfade-timeline-screenshots.json`
+- Icon state matrix screenshots (both-icons + selected-only + disabled + focus-visible):
+  - `tools/diag-scripts/ui-gallery-material3-switch-icons-state-matrix-screenshots.json`
 
-Next gates (once we add icon support):
+Next gates (tightening):
 
-- Add a UI gallery demo that toggles `icons` / `show-only-selected-icon` (or an equivalent Fret surface).
-- Add a diag script that captures:
-  - unchecked (no icons),
-  - checked (selected icon),
-  - both-icons mode,
-  - pressed state for each mode.
 - Add a headless test that asserts handle geometry matches token expectations for:
   - unchecked/checked/pressed,
   - with-icon size overrides.

@@ -85,6 +85,8 @@ For each component we consider aligned when we have:
   - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
 - Switch icon color crossfade timeline:
   - `tools/diag-scripts/ui-gallery-material3-switch-icon-color-crossfade-timeline-screenshots.json`
+- Switch icon state matrix screenshots:
+  - `tools/diag-scripts/ui-gallery-material3-switch-icons-state-matrix-screenshots.json`
 - Text field hover screenshots:
   - `tools/diag-scripts/ui-gallery-material3-text-field-outlined-hover-screenshots.json`
 
