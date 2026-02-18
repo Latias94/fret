@@ -1,9 +1,11 @@
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::element::{
-    AnyElement, ContainerProps, Length, Overflow, PressableProps, PressableState,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableProps,
+    PressableState,
 };
 use fret_ui::elements::GlobalElementId;
+use fret_core::Axis;
 
 fn normalize_control_chrome_sizing(
     pressable_props: &PressableProps,
@@ -99,9 +101,54 @@ where
     })
 }
 
+/// Composes a centered "fixed chrome" structure:
+///
+/// - outer `Pressable` remains `Overflow::Visible` so focus rings can extend outward
+/// - chrome `Container` is forced to `Overflow::Clip` so rounded corners/borders mask content
+/// - chrome is centered inside a `Flex` wrapper that fills the pressable box
+///
+/// This is useful when the interactive hit box may stretch (flex/grid/min touch target), but the
+/// visual chrome should remain token-sized and centered (Material-style).
+#[track_caller]
+pub fn centered_fixed_chrome_pressable_with_id_props<'a, H, F, C, I>(
+    cx: &mut ElementContext<'a, H>,
+    f: F,
+) -> AnyElement
+where
+    H: UiHost + 'a,
+    F: FnOnce(
+        &mut ElementContext<'a, H>,
+        PressableState,
+        GlobalElementId,
+    ) -> (PressableProps, ContainerProps, C),
+    C: for<'b> FnOnce(&'b mut ElementContext<'a, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    cx.pressable_with_id_props(|cx, st, id| {
+        let (mut pressable_props, mut chrome_props, children) = f(cx, st, id);
+
+        pressable_props.layout.overflow = Overflow::Visible;
+        chrome_props.layout.overflow = Overflow::Clip;
+
+        let chrome = cx.container(chrome_props, children);
+
+        let mut center = FlexProps::default();
+        center.direction = Axis::Horizontal;
+        center.layout.size.width = Length::Fill;
+        center.layout.size.height = Length::Fill;
+        center.justify = MainAlign::Center;
+        center.align = CrossAlign::Center;
+        let centered = cx.flex(center, move |_cx| vec![chrome]);
+
+        (pressable_props, vec![centered])
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use fret_ui::element::ElementKind;
 
     #[test]
     fn control_chrome_fills_when_pressable_flex_grows() {
@@ -178,5 +225,56 @@ mod tests {
         assert_eq!(chrome.layout.size.max_width, Some(fret_core::Px(44.0)));
         assert_eq!(chrome.layout.size.min_height, Some(fret_core::Px(14.0)));
         assert_eq!(chrome.layout.size.max_height, Some(fret_core::Px(24.0)));
+    }
+
+    #[test]
+    fn centered_fixed_chrome_enforces_overflow_and_center_wrapper_fill() {
+        use fret_ui::element::SizeStyle;
+
+        let mut app = fret_app::App::new();
+        let window = fret_core::AppWindowId::default();
+        let bounds = fret_core::Rect::new(
+            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            fret_core::Size::new(fret_core::Px(200.0), fret_core::Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = centered_fixed_chrome_pressable_with_id_props(cx, |cx, _st, _id| {
+                let mut pressable = PressableProps::default();
+                pressable.enabled = true;
+                pressable.focusable = true;
+                pressable.layout.size.width = Length::Fill;
+                pressable.layout.size.height = Length::Fill;
+
+                let mut chrome = ContainerProps::default();
+                chrome.layout.size = SizeStyle {
+                    width: Length::Px(fret_core::Px(28.0)),
+                    height: Length::Px(fret_core::Px(28.0)),
+                    ..Default::default()
+                };
+
+                (pressable, chrome, |_cx| Vec::<AnyElement>::new())
+            });
+
+            let ElementKind::Pressable(PressableProps { layout, .. }) = &el.kind else {
+                panic!("expected pressable root");
+            };
+            assert_eq!(layout.overflow, Overflow::Visible);
+
+            let child = el.children.first().expect("pressable child");
+            let ElementKind::Flex(FlexProps { layout, justify, align, .. }) = &child.kind else {
+                panic!("expected centering flex wrapper");
+            };
+            assert_eq!(layout.size.width, Length::Fill);
+            assert_eq!(layout.size.height, Length::Fill);
+            assert_eq!(*justify, MainAlign::Center);
+            assert_eq!(*align, CrossAlign::Center);
+
+            let chrome = child.children.first().expect("chrome child");
+            let ElementKind::Container(ContainerProps { layout, .. }) = &chrome.kind else {
+                panic!("expected chrome container");
+            };
+            assert_eq!(layout.overflow, Overflow::Clip);
+        });
     }
 }
