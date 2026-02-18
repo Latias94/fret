@@ -436,6 +436,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -470,8 +502,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -1098,6 +1129,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -1135,8 +1198,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3803,6 +3865,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -3837,8 +3931,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4038,6 +4131,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -4072,8 +4197,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4525,6 +4649,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -4559,8 +4715,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4972,6 +5127,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -5006,8 +5193,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -5454,6 +5640,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -5488,8 +5706,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -5905,6 +6122,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -5939,8 +6188,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -6236,6 +6484,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -6270,8 +6550,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
