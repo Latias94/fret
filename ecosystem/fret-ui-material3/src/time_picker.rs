@@ -1508,6 +1508,8 @@ fn time_selector_field<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -1915,6 +1917,8 @@ fn dial_label<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -2114,6 +2118,8 @@ fn time_input_period_item<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -2342,6 +2348,8 @@ fn period_item<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
