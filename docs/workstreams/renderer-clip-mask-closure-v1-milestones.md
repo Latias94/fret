@@ -1,6 +1,6 @@
 # Renderer Clip/Mask Closure v1 — Milestones
 
-Status: In progress (implementation landed; docs note pending)
+Status: Done (implementation note + gates aligned)
 
 Tracking files:
 

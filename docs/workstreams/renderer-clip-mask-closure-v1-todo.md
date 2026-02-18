@@ -1,6 +1,6 @@
 # Renderer Clip/Mask Closure v1 — TODO Tracker
 
-Status: In progress (implementation landed; docs note pending)
+Status: Done (implementation note + gates aligned)
 
 Tracking format:
 
@@ -12,12 +12,17 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Design lock
 
-- [ ] CLIPMASK-design-010 Publish an “executable” implementation note for clip/mask stacks:
+- [x] CLIPMASK-design-010 Publish an “executable” implementation note for clip/mask stacks:
       fast paths, slow paths, cache keys, and WebGPU uniformity constraints.
   - Evidence anchors:
     - `docs/workstreams/renderer-clip-mask-closure-v1.md`
     - `docs/adr/0239-mask-layers-and-alpha-masks-v1.md` (mask semantics constraints)
     - `docs/adr/0273-clip-path-and-image-mask-sources-v1.md` (clip-path + mask sources)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/clip.rs` (`push_clip_rect`, `push_clip_rrect`, `pop_clip`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/mask.rs` (`push_mask`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` (`clip_path_mask_cache_key`)
+    - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs` (LRU budget eviction; GPU copy reuse)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`RenderPlanPass::PathClipMask` cache hit/miss path)
 
 ## Renderer implementation (wgpu)
 
