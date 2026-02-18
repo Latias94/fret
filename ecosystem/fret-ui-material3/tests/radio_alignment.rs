@@ -4287,6 +4287,98 @@ fn checkbox_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn checkbox_tristate_semantics_and_toggle_outcomes() {
+    use fret_ui_material3::Checkbox;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let checked = app.models_mut().insert(None::<bool>);
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let checkbox = Checkbox::new_optional(checked.clone())
+                .a11y_label("checkbox")
+                .test_id("checkbox-tristate")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), checkbox)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("checkbox-tristate"))
+        .expect("expected tristate checkbox in semantics snapshot");
+    assert_eq!(
+        node.flags.checked, None,
+        "expected indeterminate checkbox to map to checked: None"
+    );
+
+    let checkbox_bounds = ui
+        .debug_node_visual_bounds(node.id)
+        .expect("expected checkbox visual bounds");
+    let press_at = Point::new(
+        Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+        Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    assert_eq!(
+        app.models().get_cloned(&checked),
+        Some(Some(true)),
+        "expected tristate checkbox to toggle indeterminate -> checked"
+    );
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("checkbox-tristate"))
+        .expect("expected tristate checkbox in semantics snapshot");
+    assert_eq!(node.flags.checked, Some(true));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    assert_eq!(
+        app.models().get_cloned(&checked),
+        Some(Some(false)),
+        "expected tristate checkbox to toggle checked -> unchecked"
+    );
+}
+
+#[test]
 fn menu_pressed_scene_structure_is_stable() {
     use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
 

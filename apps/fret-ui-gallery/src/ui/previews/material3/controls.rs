@@ -227,9 +227,29 @@ pub(in crate::ui) fn preview_material3_checkbox(
 ) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    #[derive(Default)]
+    struct CheckboxPageModels {
+        tristate: Option<Model<Option<bool>>>,
+    }
+
+    let tristate = cx.with_state(CheckboxPageModels::default, |st| st.tristate.clone());
+    let tristate = match tristate {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(None::<bool>);
+            cx.with_state(CheckboxPageModels::default, |st| {
+                st.tristate = Some(m.clone())
+            });
+            m
+        }
+    };
+
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)
         .unwrap_or(false);
+    let tristate_value = cx
+        .get_model_cloned(&tristate, Invalidation::Layout)
+        .unwrap_or(None);
 
     let row = stack::hstack(
         cx,
@@ -274,9 +294,31 @@ pub(in crate::ui) fn preview_material3_checkbox(
         },
     );
 
+    let tristate_row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            let label = match tristate_value {
+                Some(true) => "checked",
+                Some(false) => "unchecked",
+                None => "indeterminate",
+            };
+            vec![
+                material3::Checkbox::new_optional(tristate.clone())
+                    .a11y_label("Material 3 Checkbox (tri-state)")
+                    .test_id("ui-gallery-material3-checkbox-tristate")
+                    .into_element(cx),
+                cx.text(format!("state={label}"))
+                    .test_id("ui-gallery-material3-checkbox-tristate-state"),
+            ]
+        },
+    );
+
     vec![
         cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
         row,
+        cx.text("Material 3 Checkbox (tri-state): `checked: None` represents indeterminate/mixed."),
+        tristate_row,
     ]
 }
 
