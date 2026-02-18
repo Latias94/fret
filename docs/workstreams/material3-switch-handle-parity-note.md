@@ -117,6 +117,8 @@ Fret aligns these as:
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 - Icon motion timeline evidence (opacity + rotation timing):
   - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
+- Icon color crossfade evidence (fill 67ms linear):
+  - `tools/diag-scripts/ui-gallery-material3-switch-icon-color-crossfade-timeline-screenshots.json`
 
 Next gates (once we add icon support):
 

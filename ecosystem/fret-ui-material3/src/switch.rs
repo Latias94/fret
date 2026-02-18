@@ -63,6 +63,14 @@ fn material_web_switch_icon_transform_duration(enabled: bool) -> Duration {
     }
 }
 
+fn material_web_switch_icon_color_duration(enabled: bool) -> Duration {
+    if enabled {
+        Duration::from_millis(67)
+    } else {
+        Duration::ZERO
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
     pub track_color: OverrideSlot<ColorRef>,
@@ -973,6 +981,13 @@ fn material_switch_handle_icon<H: UiHost>(
             let color = switch_tokens::icon_color(theme, true, enabled, interaction);
             (size, color)
         };
+        let color = fret_ui_kit::declarative::motion::drive_tween_color(
+            cx,
+            color,
+            material_web_switch_icon_color_duration(enabled),
+            fret_ui_kit::headless::easing::linear,
+        )
+        .value;
         let opacity = icon_on_opacity_t;
         let rotation_degrees = icon_selected_only_rotation_degrees;
 
@@ -996,9 +1011,25 @@ fn material_switch_handle_icon<H: UiHost>(
         ((on_size, on_color), (off_size, off_color))
     };
 
-    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on.1, icon_on_opacity_t, 0.0);
+    let color_duration = material_web_switch_icon_color_duration(enabled);
+    let on_color = fret_ui_kit::declarative::motion::drive_tween_color(
+        cx,
+        on.1,
+        color_duration,
+        fret_ui_kit::headless::easing::linear,
+    )
+    .value;
+    let off_color = fret_ui_kit::declarative::motion::drive_tween_color(
+        cx,
+        off.1,
+        color_duration,
+        fret_ui_kit::headless::easing::linear,
+    )
+    .value;
+
+    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on_color, icon_on_opacity_t, 0.0);
     let off_layer =
-        material_switch_icon_layer(cx, &off_icon, off.0, off.1, icon_off_opacity_t, 0.0);
+        material_switch_icon_layer(cx, &off_icon, off.0, off_color, icon_off_opacity_t, 0.0);
     Some(material_switch_icon_overlay(cx, vec![on_layer, off_layer]))
 }
 
