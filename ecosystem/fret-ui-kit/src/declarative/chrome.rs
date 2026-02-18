@@ -31,15 +31,15 @@ fn normalize_control_chrome_sizing(
     let parent_size = pressable_props.layout.size;
     let child_size = &mut chrome_props.layout.size;
 
-    // If the pressable has an explicit outer box size, the chrome should fill that box.
+    // If the pressable is expected to resolve to a definite box in an axis, the chrome should
+    // opt into percent fill sizing for that same axis.
     //
-    // This keeps border-box alignment intuitive for fixed-size controls (e.g. Checkbox,
-    // Switch) and matches the browser mental model where border/padding live inside the same
-    // border-box dimensions.
+    // Note: Setting `Fill` on an otherwise shrink-wrapped node can promote wrapper chains into
+    // percent-sized containing blocks (see `build_flow_subtree_impl`), so keep this constrained to
+    // cases where the pressable is already intended to fill a parent-provided box.
     let chrome_fill_w = matches!(parent_size.width, Length::Px(_) | Length::Fill)
         || pressable_props.layout.flex.grow > 0.0;
-    let chrome_fill_h = matches!(parent_size.height, Length::Px(_) | Length::Fill)
-        || pressable_props.layout.flex.grow > 0.0;
+    let chrome_fill_h = matches!(parent_size.height, Length::Px(_) | Length::Fill);
     if chrome_fill_w {
         child_size.width = Length::Fill;
     }
@@ -53,18 +53,12 @@ fn normalize_control_chrome_sizing(
     if let Some(max_h) = parent_size.max_height {
         child_size.max_height = Some(shrink_px(max_h, inset_y));
     }
-    if !chrome_fill_h && let Length::Px(h) = parent_size.height {
-        child_size.height = Length::Px(shrink_px(h, inset_y));
-    }
 
     if let Some(min_w) = parent_size.min_width {
         child_size.min_width = Some(shrink_px(min_w, inset_x));
     }
     if let Some(max_w) = parent_size.max_width {
         child_size.max_width = Some(shrink_px(max_w, inset_x));
-    }
-    if !chrome_fill_w && let Length::Px(w) = parent_size.width {
-        child_size.width = Length::Px(shrink_px(w, inset_x));
     }
 }
 
@@ -181,7 +175,16 @@ mod tests {
 
         normalize_control_chrome_sizing(&pressable, &mut chrome);
         assert_eq!(chrome.layout.size.width, Length::Fill);
-        assert_eq!(chrome.layout.size.height, Length::Fill);
+        assert_eq!(chrome.layout.size.height, Length::Auto);
+    }
+
+    #[test]
+    fn control_chrome_does_not_force_fill_by_default() {
+        let pressable = PressableProps::default();
+        let mut chrome = ContainerProps::default();
+        normalize_control_chrome_sizing(&pressable, &mut chrome);
+        assert_eq!(chrome.layout.size.width, Length::Auto);
+        assert_eq!(chrome.layout.size.height, Length::Auto);
     }
 
     #[test]
