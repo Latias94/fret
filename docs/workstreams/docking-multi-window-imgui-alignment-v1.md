@@ -28,6 +28,15 @@ This document is intentionally **behavior-first**: it records what we want users
 
 The key takeaway: ImGui’s “transparent payload” is primarily an **alpha/overlay** policy knob. Input “peek-behind” exists, but is not the only interpretation of the feature.
 
+## Gesture parity (ImGui vs Fret)
+
+ImGui docking typically supports both:
+
+- **Drag a tab** (when a window is docked in a tab bar) to tear off / re-dock.
+- **Drag a title bar** (when a window is floating) to move it and drop it onto docking hints.
+
+Current Fret docking arbitration demos primarily gate **tab drag** flows via explicit drag anchors (stable `test_id`s). Title-bar-style docking is not a first-class parity goal for v1 (it is a policy/UX decision and may interact with custom window chrome).
+
 ## Current Fret behavior (mechanism notes)
 
 ### Runner responsibilities (native desktop)
@@ -60,6 +69,15 @@ Key multi-window gates:
 - Transparent payload still preserves z-order switching (large + small presets):
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-transparent-payload-zorder-switch.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
+- Cross-window tear-off + drag-back / merge scenarios:
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+- Structural “no leak / no growth” loops:
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json`
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-tearoff-merge-loop-no-leak.json`
+- Edge cases:
+  - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
 
 These gates assert, at minimum:
 
@@ -80,10 +98,12 @@ These gates assert, at minimum:
 2) **Diagnostics completeness for tab drags**
 - Ensure docking diagnostics cover both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS` consistently, so scripts can assert either form of tear-off/re-dock.
 
-3) **More complex scenario gates**
-- chained tear-offs and merge loops
-- nested split + tab insertion
-- “dock back” loops across multiple windows
+3) **Transparent payload + re-dock semantics**
+- Today, `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` is treated as an **opacity** policy for the moving window during follow.
+- ImGui-style “peek-behind” (finding a drop target under the moving window) may require:
+  - explicit “under moving window” routing, and/or
+  - a platform-level `NoInputs`/passthrough strategy during drag (best-effort, backend-dependent).
+- Once the mechanism is decided, add a dedicated gate:
+  - “transparent payload drag-back to main restores canonical signature”
 
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
-
