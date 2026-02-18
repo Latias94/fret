@@ -5,6 +5,7 @@
 //! - State layer (hover/pressed/focus) + ripple driven by `fret_ui::paint`.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit, Transform2D,
@@ -264,6 +265,10 @@ impl Switch {
                         if selected {
                             states |= WidgetStates::SELECTED;
                         }
+                        let mut states_unselected = states;
+                        states_unselected.remove(fret_ui_kit::WidgetState::Selected);
+                        let mut states_selected = states;
+                        states_selected.insert(fret_ui_kit::WidgetState::Selected);
 
                         let tokens_interaction =
                             match pressable_interaction(is_pressed, is_hovered, is_focused) {
@@ -290,7 +295,8 @@ impl Switch {
                             state_layer_target,
                             state_layer_color,
                             spring,
-                            chrome,
+                            chrome_unselected,
+                            chrome_selected,
                             track_corner_radii,
                             handle_corner_radii,
                             ripple_base_opacity,
@@ -319,26 +325,50 @@ impl Switch {
                             let spring =
                                 sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
 
-                            let mut chrome =
-                                switch_tokens::chrome(theme, selected, enabled, tokens_interaction);
-                            let token_track_color = chrome.track_color;
-                            chrome.track_color = resolve_override_slot_with(
+                            let mut chrome_unselected =
+                                switch_tokens::chrome(theme, false, enabled, tokens_interaction);
+                            let token_track_color = chrome_unselected.track_color;
+                            chrome_unselected.track_color = resolve_override_slot_with(
                                 self.style.track_color.as_ref(),
-                                states,
+                                states_unselected,
                                 |color| color.resolve(theme),
                                 || token_track_color,
                             );
-                            let token_handle_color = chrome.handle_color;
-                            chrome.handle_color = resolve_override_slot_with(
+                            let token_handle_color = chrome_unselected.handle_color;
+                            chrome_unselected.handle_color = resolve_override_slot_with(
                                 self.style.handle_color.as_ref(),
-                                states,
+                                states_unselected,
                                 |color| color.resolve(theme),
                                 || token_handle_color,
                             );
-                            let token_outline_color = chrome.outline_color;
-                            chrome.outline_color = resolve_override_slot_opt_with(
+                            let token_outline_color = chrome_unselected.outline_color;
+                            chrome_unselected.outline_color = resolve_override_slot_opt_with(
                                 self.style.outline_color.as_ref(),
-                                states,
+                                states_unselected,
+                                |color| color.resolve(theme),
+                                || token_outline_color,
+                            );
+
+                            let mut chrome_selected =
+                                switch_tokens::chrome(theme, true, enabled, tokens_interaction);
+                            let token_track_color = chrome_selected.track_color;
+                            chrome_selected.track_color = resolve_override_slot_with(
+                                self.style.track_color.as_ref(),
+                                states_selected,
+                                |color| color.resolve(theme),
+                                || token_track_color,
+                            );
+                            let token_handle_color = chrome_selected.handle_color;
+                            chrome_selected.handle_color = resolve_override_slot_with(
+                                self.style.handle_color.as_ref(),
+                                states_selected,
+                                |color| color.resolve(theme),
+                                || token_handle_color,
+                            );
+                            let token_outline_color = chrome_selected.outline_color;
+                            chrome_selected.outline_color = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states_selected,
                                 |color| color.resolve(theme),
                                 || token_outline_color,
                             );
@@ -357,48 +387,69 @@ impl Switch {
                                 state_layer_target,
                                 state_layer_color,
                                 spring,
-                                chrome,
+                                chrome_unselected,
+                                chrome_selected,
                                 track_corner_radii,
                                 handle_corner_radii,
                                 ripple_base_opacity,
                                 config,
                             )
                         };
-                        let (thumb_t, pressed_t, thumb_active) = cx.named("thumb_runtime", |cx| {
-                            let thumb_state_id = cx.root_id();
-                            cx.with_state_for(thumb_state_id, SwitchThumbRuntime::default, |rt| {
+                        let (thumb_t, pressed_t, chrome_t, thumb_active) =
+                            cx.named("thumb_runtime", |cx| {
                                 let desired_selected = if selected { 1.0 } else { 0.0 };
                                 let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
 
-                                if !rt.selected.is_initialized() {
-                                    rt.selected.reset(now_frame, desired_selected);
-                                }
-                                if !rt.pressed.is_initialized() {
-                                    rt.pressed.reset(now_frame, desired_pressed);
-                                }
+                                // Match Material Web's selected/unselected crossfade which is driven
+                                // via pseudo-element opacity transitions (67ms linear).
+                                let chrome = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                    cx,
+                                    desired_selected,
+                                    Duration::from_millis(67),
+                                    fret_ui_kit::headless::easing::linear,
+                                );
 
-                                rt.selected.set_target(now_frame, desired_selected, spring);
-                                rt.pressed.set_target(now_frame, desired_pressed, spring);
-                                rt.selected.advance(now_frame);
+                                let thumb_state_id = cx.root_id();
+                                cx.with_state_for(
+                                    thumb_state_id,
+                                    SwitchThumbRuntime::default,
+                                    |rt| {
+                                        if !rt.selected.is_initialized() {
+                                            rt.selected.reset(now_frame, desired_selected);
+                                        }
+                                        if !rt.pressed.is_initialized() {
+                                            rt.pressed.reset(now_frame, desired_pressed);
+                                        }
 
-                                // Match Compose's `SnapSpec` for the "pressed" transition:
-                                // - snap to the pressed state on pointer down
-                                // - animate back to rest on release
-                                if is_pressed {
-                                    if !rt.prev_pressed {
-                                        rt.pressed.reset(now_frame, 1.0);
-                                    }
-                                } else {
-                                    rt.pressed.advance(now_frame);
-                                }
-                                rt.prev_pressed = is_pressed;
-                                (
-                                    rt.selected.value(),
-                                    rt.pressed.value(),
-                                    rt.selected.is_active() || rt.pressed.is_active(),
+                                        rt.selected.set_target(now_frame, desired_selected, spring);
+                                        rt.pressed.set_target(now_frame, desired_pressed, spring);
+                                        rt.selected.advance(now_frame);
+
+                                        // Match Compose's `SnapSpec` for the "pressed" transition:
+                                        // - snap to the pressed state on pointer down
+                                        // - animate back to rest on release
+                                        if is_pressed {
+                                            if !rt.prev_pressed {
+                                                rt.pressed.reset(now_frame, 1.0);
+                                            }
+                                        } else {
+                                            rt.pressed.advance(now_frame);
+                                        }
+                                        rt.prev_pressed = is_pressed;
+                                        (
+                                            rt.selected.value(),
+                                            rt.pressed.value(),
+                                            chrome.value,
+                                            rt.selected.is_active()
+                                                || rt.pressed.is_active()
+                                                || chrome.animating,
+                                        )
+                                    },
                                 )
-                            })
-                        });
+                            });
+
+                        let chrome =
+                            mix_switch_chrome(chrome_unselected, chrome_selected, chrome_t);
 
                         let icons_always = icons_enabled && !show_only_selected_icon;
                         let icons_selected_only = show_only_selected_icon;
@@ -673,6 +724,42 @@ fn switch_track<H: UiHost>(
             )]
         })]
     })
+}
+
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
+fn lerp_color(a: Color, b: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: a.r + (b.r - a.r) * t,
+        g: a.g + (b.g - a.g) * t,
+        b: a.b + (b.b - a.b) * t,
+        a: a.a + (b.a - a.a) * t,
+    }
+}
+
+fn mix_switch_chrome(
+    unselected: switch_tokens::SwitchChrome,
+    selected: switch_tokens::SwitchChrome,
+    t: f32,
+) -> switch_tokens::SwitchChrome {
+    let t = t.clamp(0.0, 1.0);
+
+    let outline_color = match (unselected.outline_color, selected.outline_color) {
+        (Some(a), Some(b)) => Some(lerp_color(a, b, t)),
+        (Some(a), None) => Some(alpha_mul(a, 1.0 - t)),
+        (None, Some(b)) => Some(alpha_mul(b, t)),
+        (None, None) => None,
+    };
+
+    switch_tokens::SwitchChrome {
+        track_color: lerp_color(unselected.track_color, selected.track_color, t),
+        outline_color,
+        handle_color: lerp_color(unselected.handle_color, selected.handle_color, t),
+    }
 }
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
