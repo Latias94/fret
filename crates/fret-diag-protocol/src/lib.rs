@@ -1162,8 +1162,8 @@ pub enum UiPredicateV1 {
         active: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
-    /// "transparent payload" applied to the moving window (e.g. reduced opacity while the
-    /// dock-floating window follows the cursor).
+    /// "transparent payload" applied to the moving window (e.g. reduced opacity and/or
+    /// click-through mouse passthrough while the dock-floating window follows the cursor).
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
     },

@@ -253,6 +253,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Optional ImGui-style "transparent payload" behavior while following the cursor:
         // - make the dock-floating window semi-transparent
+        // - (best-effort) make the dock-floating window ignore mouse events (click-through)
         //
         // This is conservatively disabled by default (see `DockingInteractionSettings`), and can
         // be forced on via env var for quick experimentation.
@@ -274,6 +275,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_app::WindowRequest::SetStyle {
                     window,
                     style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(if want_transparent_payload {
+                            fret_runtime::MousePolicy::Passthrough
+                        } else {
+                            fret_runtime::MousePolicy::Normal
+                        }),
                         opacity: Some(opacity),
                         ..Default::default()
                     },
@@ -349,6 +355,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_app::WindowRequest::SetStyle {
                     window: follow.window,
                     style: fret_runtime::WindowStyleRequest {
+                        mouse: Some(fret_runtime::MousePolicy::Normal),
                         opacity: Some(fret_runtime::WindowOpacity(255)),
                         ..Default::default()
                     },

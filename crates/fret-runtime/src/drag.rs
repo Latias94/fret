@@ -78,8 +78,8 @@ pub struct DragSession {
     /// [`Self::window_under_moving_window`].
     pub window_under_moving_window_source: WindowUnderCursorSource,
     /// Best-effort diagnostics hint: true when the runner has applied an ImGui-style "transparent
-    /// payload" treatment to the moving dock window (e.g. reduced opacity while following the
-    /// cursor).
+    /// payload" treatment to the moving dock window (e.g. reduced opacity and/or click-through
+    /// mouse passthrough while following the cursor).
     pub transparent_payload_applied: bool,
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
