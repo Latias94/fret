@@ -103,6 +103,7 @@ pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conforman
 pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_TEXT_FEATURE_TOGGLES: &str = "text_feature_toggles";
+pub(crate) const PAGE_TEXT_OUTLINE_STROKE: &str = "text_outline_stroke";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
@@ -298,6 +299,7 @@ pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
     "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
 pub(crate) const CMD_NAV_TEXT_FEATURE_TOGGLES: &str = "ui_gallery.nav.select.text_feature_toggles";
+pub(crate) const CMD_NAV_TEXT_OUTLINE_STROKE: &str = "ui_gallery.nav.select.text_outline_stroke";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
@@ -768,6 +770,14 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "Text integration workstream",
                 CMD_NAV_TEXT_MEASURE_OVERLAY,
                 &["text", "layout", "measure", "diagnostics", "tli1"],
+            ),
+            PageSpec::new(
+                PAGE_TEXT_OUTLINE_STROKE,
+                "Text Outline/Stroke",
+                "Text / Outline (v1) Surface Probe",
+                "Text outline/stroke surface v1",
+                CMD_NAV_TEXT_OUTLINE_STROKE,
+                &["text", "outline", "stroke", "renderer", "wgpu", "tOSv1"],
             ),
             PageSpec::new(
                 PAGE_TEXT_FEATURE_TOGGLES,
