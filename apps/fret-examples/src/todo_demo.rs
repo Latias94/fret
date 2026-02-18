@@ -77,32 +77,32 @@ fn mix_colors(a: Color, b: Color, t: f32) -> Color {
     }
 }
 
-fn cn_weekday(weekday: time::Weekday) -> &'static str {
+fn en_weekday(weekday: time::Weekday) -> &'static str {
     match weekday {
-        time::Weekday::Monday => "星期一",
-        time::Weekday::Tuesday => "星期二",
-        time::Weekday::Wednesday => "星期三",
-        time::Weekday::Thursday => "星期四",
-        time::Weekday::Friday => "星期五",
-        time::Weekday::Saturday => "星期六",
-        time::Weekday::Sunday => "星期日",
+        time::Weekday::Monday => "Monday",
+        time::Weekday::Tuesday => "Tuesday",
+        time::Weekday::Wednesday => "Wednesday",
+        time::Weekday::Thursday => "Thursday",
+        time::Weekday::Friday => "Friday",
+        time::Weekday::Saturday => "Saturday",
+        time::Weekday::Sunday => "Sunday",
     }
 }
 
-fn month_number(month: time::Month) -> u8 {
+fn en_month(month: time::Month) -> &'static str {
     match month {
-        time::Month::January => 1,
-        time::Month::February => 2,
-        time::Month::March => 3,
-        time::Month::April => 4,
-        time::Month::May => 5,
-        time::Month::June => 6,
-        time::Month::July => 7,
-        time::Month::August => 8,
-        time::Month::September => 9,
-        time::Month::October => 10,
-        time::Month::November => 11,
-        time::Month::December => 12,
+        time::Month::January => "January",
+        time::Month::February => "February",
+        time::Month::March => "March",
+        time::Month::April => "April",
+        time::Month::May => "May",
+        time::Month::June => "June",
+        time::Month::July => "July",
+        time::Month::August => "August",
+        time::Month::September => "September",
+        time::Month::October => "October",
+        time::Month::November => "November",
+        time::Month::December => "December",
     }
 }
 
@@ -110,11 +110,11 @@ fn today_label() -> Arc<str> {
     let now = time::OffsetDateTime::now_utc();
     let date = now.date();
     Arc::from(format!(
-        "{}年{}月{}日 {}",
-        date.year(),
-        month_number(date.month()),
+        "{}, {} {}, {}",
+        en_weekday(date.weekday()),
+        en_month(date.month()),
         date.day(),
-        cn_weekday(date.weekday())
+        date.year()
     ))
 }
 
@@ -268,12 +268,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
             TodoItem {
                 id: 1,
                 done: done_1,
-                text: Arc::from("学习 React 和 Tailwind"),
+                text: Arc::from("Learn React and Tailwind"),
             },
             TodoItem {
                 id: 2,
                 done: done_2,
-                text: Arc::from("创建一个漂亮的 Todo 应用"),
+                text: Arc::from("Build a polished Todo app"),
             },
         ]);
 
@@ -505,7 +505,7 @@ fn view(
         .test_id(TEST_ID_ADD);
 
     let input = shadcn::Input::new(st.draft.clone())
-        .placeholder("添加一个新的任务…")
+        .placeholder("Add a new task…")
         .submit_command(add_cmd.clone())
         .into_element(cx)
         .a11y_role(SemanticsRole::TextField)
@@ -520,7 +520,7 @@ fn view(
     let filter_all = filter_chip(
         cx,
         &theme,
-        "全部",
+        "All",
         filter_all_cmd,
         filter_value == TodoFilter::All,
         TEST_ID_FILTER_ALL,
@@ -528,7 +528,7 @@ fn view(
     let filter_active = filter_chip(
         cx,
         &theme,
-        "进行中",
+        "Active",
         filter_active_cmd,
         filter_value == TodoFilter::Active,
         TEST_ID_FILTER_ACTIVE,
@@ -536,7 +536,7 @@ fn view(
     let filter_completed = filter_chip(
         cx,
         &theme,
-        "已完成",
+        "Completed",
         filter_completed_cmd,
         filter_value == TodoFilter::Completed,
         TEST_ID_FILTER_COMPLETED,
@@ -567,7 +567,7 @@ fn view(
                 Some(Px(40.0)),
                 Some(ColorRef::Color(theme.color_token("muted-foreground"))),
             );
-            let label = ui::text(cx, "没有找到任务")
+            let label = ui::text(cx, "No tasks found")
                 .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                 .into_element(cx);
             let body = ui::v_flex(cx, |_cx| [icon, label])
@@ -681,7 +681,7 @@ fn view(
         .test_id(TEST_ID_HEADER_DATE);
 
         let title = ui::v_flex(_cx, |_cx| {
-            [shadcn::CardTitle::new("我的任务").into_element(_cx), date]
+            [shadcn::CardTitle::new("My Tasks").into_element(_cx), date]
         })
         .gap(Space::N1)
         .flex_1()
@@ -696,7 +696,7 @@ fn view(
             .min_w_0()
             .into_element(_cx);
 
-        let badge = shadcn::Badge::new(format!("{} 待办", derived.active))
+        let badge = shadcn::Badge::new(format!("{} remaining", derived.active))
             .variant(shadcn::BadgeVariant::Secondary)
             .into_element(_cx);
 
@@ -714,8 +714,8 @@ fn view(
 
     let footer_actions = (derived.completed > 0).then(|| {
         let clear_icon = icon::icon_with(cx, lucide::X, Some(Px(12.0)), None);
-        let clear_label = ui::label(cx, "清除已完成").nowrap().into_element(cx);
-        let clear_done = shadcn::Button::new("清除已完成")
+        let clear_label = ui::label(cx, "Clear completed").nowrap().into_element(cx);
+        let clear_done = shadcn::Button::new("Clear completed")
             .variant(shadcn::ButtonVariant::Ghost)
             .size(shadcn::ButtonSize::Sm)
             .on_click(clear_done_cmd)
