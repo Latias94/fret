@@ -46,6 +46,9 @@ It builds on v1’s contract-path closure:
 - M0 complete (ADR 0282 locked to executable detail).
 - M1 complete (portable metadata closure: bounded color encoding hints + deterministic degradation counters).
 - M2A complete (Windows MF real source wired end-to-end as `CpuUpload`, with steady perf + correctness gates).
+  - Robustness: MF source resolution supports directory paths (stable first match) and retries `file://` URL
+    variants for canonical paths to reduce environment-specific `MFCreateSourceReaderFromURL` failures.
+    - Evidence: `crates/fret-launch/src/runner/windows_mf_video.rs` (`source_reader_candidates`, `MF_E_UNSUPPORTED_BYTESTREAM_TYPE`)
 - M2B feasibility spike concluded:
   - “Wrap/import a foreign platform texture handle into `wgpu::Texture`” is currently blocked by upstream APIs
     (wgpu 28). The workstream records this explicitly and treats it as capability-gated + revisit-later.

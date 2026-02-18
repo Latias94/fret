@@ -51,6 +51,26 @@ use super::dx12::Dx12SharedAllocationWriteGuard;
 
 const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi", "mkv", "webm"];
 
+const MF_E_UNSUPPORTED_BYTESTREAM_TYPE: u32 = 0xC00D_36C4;
+
+fn file_url_from_canonical_path(path: &PathBuf) -> String {
+    let mut s = path.to_string_lossy().replace('\\', "/");
+    if s.len() >= 2 && s.as_bytes()[1] == b':' {
+        s.insert(0, '/');
+    }
+    s = s.replace(' ', "%20");
+    format!("file://{s}")
+}
+
+fn mf_open_hint_for_hresult(hr: u32) -> Option<&'static str> {
+    match hr {
+        MF_E_UNSUPPORTED_BYTESTREAM_TYPE => Some(
+            "MF_E_UNSUPPORTED_BYTESTREAM_TYPE: this file type/codec may not be supported on this machine (common on Windows N without the Media Feature Pack). Try a different file or install missing codecs.",
+        ),
+        _ => None,
+    }
+}
+
 fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
     let raw = raw.trim();
     anyhow::ensure!(!raw.is_empty(), "empty Media Foundation source URL/path");
@@ -82,6 +102,7 @@ fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
             let picked = std::fs::canonicalize(&picked)
                 .with_context(|| format!("canonicalize({})", picked.display()))?;
             out.push(picked.to_string_lossy().to_string());
+            out.push(file_url_from_canonical_path(&picked));
         }
 
         return Ok(out);
@@ -90,7 +111,10 @@ fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
     let path = std::fs::canonicalize(&path)
         .with_context(|| format!("canonicalize({})", path.display()))?;
     tracing::info!(path = %path.display(), "using Media Foundation source file path");
-    Ok(vec![path.to_string_lossy().to_string()])
+    Ok(vec![
+        path.to_string_lossy().to_string(),
+        file_url_from_canonical_path(&path),
+    ])
 }
 
 pub struct VideoFrame {
@@ -146,10 +170,18 @@ impl MfVideoReader {
                     break;
                 }
                 Err(err) => {
-                    last_err = Some(
-                        anyhow::Error::new(err)
-                            .context(format!("MFCreateSourceReaderFromURL({candidate})")),
-                    );
+                    let hr = err.code().0 as u32;
+                    if let Some(hint) = mf_open_hint_for_hresult(hr) {
+                        tracing::warn!(
+                            hr = format_args!("0x{hr:08X}"),
+                            candidate,
+                            hint,
+                            "MF source reader init failed"
+                        );
+                    }
+                    last_err = Some(anyhow::Error::new(err).context(format!(
+                        "MFCreateSourceReaderFromURL({candidate}) hr=0x{hr:08X}"
+                    )));
                 }
             }
         }
@@ -536,6 +568,17 @@ impl Dx12Interop {
                     break;
                 }
                 Err(err) => {
+                    if let Some(werr) = err.downcast_ref::<windows::core::Error>() {
+                        let hr = werr.code().0 as u32;
+                        if let Some(hint) = mf_open_hint_for_hresult(hr) {
+                            tracing::warn!(
+                                hr = format_args!("0x{hr:08X}"),
+                                candidate,
+                                hint,
+                                "MF DX12 interop: source reader init failed"
+                            );
+                        }
+                    }
                     tracing::warn!(
                         ?err,
                         candidate,
@@ -548,6 +591,17 @@ impl Dx12Interop {
                             break;
                         }
                         Err(err2) => {
+                            if let Some(werr) = err2.downcast_ref::<windows::core::Error>() {
+                                let hr = werr.code().0 as u32;
+                                if let Some(hint) = mf_open_hint_for_hresult(hr) {
+                                    tracing::warn!(
+                                        hr = format_args!("0x{hr:08X}"),
+                                        candidate,
+                                        hint,
+                                        "MF DX12 interop: source reader init failed (conservative flags)"
+                                    );
+                                }
+                            }
                             last_err = Some(err2);
                         }
                     }
@@ -1018,6 +1072,41 @@ mod tests {
         assert!(
             resolved.ends_with("/a.mp4"),
             "expected a.mp4, got: {resolved}"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn source_reader_candidates_includes_file_url_variant_for_file() {
+        let root = std::env::temp_dir().join(format!(
+            "fret_mf_video_candidates_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+
+        let path = root.join("a.mp4");
+        std::fs::write(&path, b"dummy").unwrap();
+
+        let candidates = source_reader_candidates(path.to_str().unwrap()).unwrap();
+        assert!(
+            candidates.len() >= 2,
+            "expected at least 2 candidates (path + file:// url), got {:?}",
+            candidates
+        );
+        assert!(
+            candidates[0].to_ascii_lowercase().ends_with("a.mp4"),
+            "expected a file path first, got {}",
+            candidates[0]
+        );
+        assert!(
+            candidates[1].to_ascii_lowercase().starts_with("file://"),
+            "expected a file:// url second, got {}",
+            candidates[1]
         );
 
         let _ = std::fs::remove_dir_all(&root);
