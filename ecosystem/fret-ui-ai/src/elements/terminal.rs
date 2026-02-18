@@ -712,15 +712,14 @@ impl TerminalCopyButton {
             chrome_props.padding = Edges::all(Px(0.0));
 
             (pressable, chrome_props, move |cx| {
-                vec![stack::hstack(
+                let row = stack::hstack(
                     cx,
                     stack::HStackProps::default()
                         .items_center()
                         .justify_center()
                         .layout(LayoutRefinement::default().w_full().h_full()),
                     move |_cx| vec![icon],
-                )]
-                )]
+                );
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -748,14 +747,7 @@ impl TerminalCopyButton {
                     })
                 });
 
-                let mut children = vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                )];
+                let mut children = vec![row];
                 if let Some(marker) = marker {
                     children.push(marker);
                 }

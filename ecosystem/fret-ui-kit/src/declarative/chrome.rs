@@ -1,3 +1,4 @@
+use fret_core::Axis;
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::element::{
@@ -5,7 +6,6 @@ use fret_ui::element::{
     PressableState,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_core::Axis;
 
 fn normalize_control_chrome_sizing(
     pressable_props: &PressableProps,
@@ -239,7 +239,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let el = centered_fixed_chrome_pressable_with_id_props(cx, |cx, _st, _id| {
+            let el = centered_fixed_chrome_pressable_with_id_props(cx, |_cx, _st, _id| {
                 let mut pressable = PressableProps::default();
                 pressable.enabled = true;
                 pressable.focusable = true;
@@ -262,7 +262,13 @@ mod tests {
             assert_eq!(layout.overflow, Overflow::Visible);
 
             let child = el.children.first().expect("pressable child");
-            let ElementKind::Flex(FlexProps { layout, justify, align, .. }) = &child.kind else {
+            let ElementKind::Flex(FlexProps {
+                layout,
+                justify,
+                align,
+                ..
+            }) = &child.kind
+            else {
                 panic!("expected centering flex wrapper");
             };
             assert_eq!(layout.size.width, Length::Fill);

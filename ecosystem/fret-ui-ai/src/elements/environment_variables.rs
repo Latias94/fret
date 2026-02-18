@@ -14,8 +14,8 @@ use fret_ui::element::{
     SemanticsDecoration, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
