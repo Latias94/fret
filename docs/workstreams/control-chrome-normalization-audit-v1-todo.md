@@ -56,9 +56,9 @@ Legend:
 | `ecosystem/fret-ui-shadcn/src/button.rs` | shadcn Button | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Prefer keeping all shadcn controls on this path. |
 | `ecosystem/fret-ui-shadcn/src/tabs.rs` | Tabs triggers | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | Inner container sets `w/h = Fill`. |
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
-| `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar items (overlay) | `AdHocChrome` | Yes (`w = Fill`) | No | At risk | Adopt helper | N/A | `menu_row_children` uses `layout: LayoutStyle::default()` so chrome shrink-wraps. |
-| `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | Dropdown menu items | `AdHocChrome` | Yes (`w = Fill`) | No | At risk | Adopt helper | N/A | Item row background container uses `layout: LayoutStyle::default()` so chrome shrink-wraps. |
-| `ecosystem/fret-ui-shadcn/src/context_menu.rs` | Context menu items | `AdHocChrome` | Yes (`w = Fill`) | No | At risk | Adopt helper | N/A | `menu_row_children` uses `layout: LayoutStyle::default()` so chrome shrink-wraps. |
+| `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar items (overlay) | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill`. |
+| `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | Dropdown menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | Item row background container sets `w = Fill`. |
+| `ecosystem/fret-ui-shadcn/src/context_menu.rs` | Context menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill`. |
 | `ecosystem/fret-ui-material3/src/segmented_button.rs` | Segmented button segments | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | `material_segment_chrome` sets `w = Fill`. |
 | `ecosystem/fret-ui-material3/src/button.rs` | Material button | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/card.rs` | Material card | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |

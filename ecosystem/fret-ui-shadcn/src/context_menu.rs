@@ -1848,7 +1848,11 @@ fn menu_row_children<H: UiHost>(
 ) -> Elements {
     vec![cx.container(
         ContainerProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
