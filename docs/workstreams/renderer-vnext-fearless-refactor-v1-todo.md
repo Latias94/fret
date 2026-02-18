@@ -260,6 +260,10 @@ milestones) when implementation begins.
     - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
       (text/path still deterministically degrade materials to a solid base color).
     - Deferred (v2+): text outline/stroke and blurred/multi-layer text shadows as first-class contract surfaces.
+    - Follow-up workstream (outline/stroke):
+      - `docs/workstreams/text-outline-stroke-surface-v1.md`
+      - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
+      - `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
   - ADRs:
     - `docs/adr/0279-text-paint-surface-v1.md`

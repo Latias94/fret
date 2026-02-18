@@ -43,6 +43,10 @@ batch and harder to keep deterministic across wasm/mobile backends.
 - Blurred or multi-layer text shadows as a first-class contract surface (effects-based recipes may exist).
 - Full CSS text painting parity (blend modes, decorations, variable fonts behavior contracts, etc.).
 
+Follow-ups:
+
+- Text outline/stroke: `docs/workstreams/text-outline-stroke-surface-v1.md`
+
 ## Contract + semantics
 
 Normative contract: ADR 0279 (`docs/adr/0279-text-paint-surface-v1.md`).
