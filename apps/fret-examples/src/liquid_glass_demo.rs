@@ -264,7 +264,7 @@ struct LiquidGlassProgram;
 
 pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<LiquidGlassProgram>("liquid-glass-demo")?
-        .with_main_window("liquid_glass_demo", (1060.0, 720.0))
+        .with_main_window("liquid_glass_demo", (1280.0, 720.0))
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(
                 app,
@@ -295,7 +295,7 @@ impl MvuProgram for LiquidGlassProgram {
             show_fake: app.models_mut().insert(true),
             show_warp: app.models_mut().insert(true),
             show_warp_v2: app.models_mut().insert(false),
-            show_inspector: app.models_mut().insert(true),
+            show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
 
@@ -324,7 +324,7 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.show_fake, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
-            let _ = app.models_mut().update(&st.show_inspector, |v| *v = true);
+            let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
                 .models_mut()
@@ -512,7 +512,8 @@ fn view(
         ),
     );
 
-    let reset = msg.cmd(Msg::Reset);
+    let reset_stage = msg.cmd(Msg::Reset);
+    let reset_inspector = msg.cmd(Msg::Reset);
     let toggle_inspector = msg.cmd(Msg::ToggleInspector);
 
     let root = cx
@@ -602,29 +603,150 @@ fn view(
                                 |_cx| Vec::<AnyElement>::new(),
                             );
 
-                            // Top-right controls (keep the stage visible by allowing the inspector to be hidden).
-                            let mut controls_layout = LayoutStyle::default();
-                            controls_layout.position = PositionStyle::Absolute;
-                            controls_layout.inset.top = Some(Px(16.0));
-                            controls_layout.inset.right = Some(Px(16.0));
-                            let controls = cx.container(
+                            // Stage HUD (always present so perf scripts can target stable `test_id`s
+                            // without depending on the inspector panel state).
+                            let mut hud_layout = LayoutStyle::default();
+                            hud_layout.position = PositionStyle::Absolute;
+                            hud_layout.inset.top = Some(Px(16.0));
+                            hud_layout.inset.left = Some(Px(16.0));
+                            hud_layout.overflow = Overflow::Clip;
+
+                            let mut hud_bg = theme.color_token("card");
+                            hud_bg.a = (hud_bg.a * 0.92).clamp(0.0, 1.0);
+                            let hud = cx.container(
                                 ContainerProps {
-                                    layout: controls_layout,
+                                    layout: hud_layout,
+                                    padding: Edges::all(Px(12.0)),
+                                    background: Some(hud_bg),
+                                    border: Edges::all(Px(1.0)),
+                                    border_color: Some(theme.color_token("border")),
+                                    corner_radii: Corners::all(Px(12.0)),
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    vec![
-                                        shadcn::Button::new(if show_inspector {
-                                            "Hide inspector"
-                                        } else {
-                                            "Show inspector"
-                                        })
-                                        .variant(shadcn::ButtonVariant::Secondary)
-                                        .size(shadcn::ButtonSize::Sm)
-                                        .on_click(toggle_inspector)
-                                        .test_id("liquid-glass-toggle-inspector")
-                                        .into_element(cx),
-                                    ]
+                                    vec![shadcn::stack::vstack(
+                                        cx,
+                                        shadcn::stack::VStackProps::default()
+                                            .gap(Space::N2)
+                                            .items_stretch(),
+                                        |cx| {
+                                            vec![
+                                                shadcn::typography::h4(cx, "Liquid glass"),
+                                                shadcn::typography::muted(
+                                                    cx,
+                                                    "BackdropWarpV2 (bounded), WebGPU-safe.",
+                                                ),
+                                                shadcn::Separator::new().into_element(cx),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
+                                                                show_fake_model.clone(),
+                                                            )
+                                                            .a11y_label("Show fake lens")
+                                                            .test_id("liquid-glass-switch-show-fake")
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Fake")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                show_warp_model.clone(),
+                                                            )
+                                                            .a11y_label("Show warp v1 lens")
+                                                            .test_id(
+                                                                "liquid-glass-switch-show-warp-v1",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Warp v1")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                show_warp_v2_model.clone(),
+                                                            )
+                                                            .a11y_label("Show warp v2 lens")
+                                                            .test_id(
+                                                                "liquid-glass-switch-show-warp-v2",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Warp v2")
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
+                                                                use_backdrop_model.clone(),
+                                                            )
+                                                            .a11y_label("Backdrop mode")
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Backdrop")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                use_dither_model.clone(),
+                                                            )
+                                                            .a11y_label("Dither")
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Dither")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                animate_model.clone(),
+                                                            )
+                                                            .a11y_label("Animate phase")
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Animate")
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
+                                                                show_inspector_model.clone(),
+                                                            )
+                                                            .a11y_label("Show inspector")
+                                                            .test_id(
+                                                                "liquid-glass-switch-show-inspector",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Inspector")
+                                                                .into_element(cx),
+                                                            cx.spacer(SpacerProps::default()),
+                                                            shadcn::Button::new(if show_inspector {
+                                                                "Hide"
+                                                            } else {
+                                                                "Show"
+                                                            })
+                                                            .variant(shadcn::ButtonVariant::Secondary)
+                                                            .size(shadcn::ButtonSize::Sm)
+                                                            .on_click(toggle_inspector)
+                                                            .test_id("liquid-glass-toggle-inspector")
+                                                            .into_element(cx),
+                                                            shadcn::Button::new("Reset")
+                                                                .variant(
+                                                                    shadcn::ButtonVariant::Secondary,
+                                                                )
+                                                                .size(shadcn::ButtonSize::Sm)
+                                                                .on_click(reset_stage)
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                            ]
+                                        },
+                                    )]
                                 },
                             );
 
@@ -680,7 +802,7 @@ fn view(
                                 },
                             );
 
-                            vec![stripes, blob, controls, lenses]
+                            vec![stripes, blob, hud, lenses]
                         },
                     )
                 });
@@ -739,120 +861,6 @@ fn view(
                                             },
                                         )
                                     };
-
-                                let toggles = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_stretch(),
-                                    |cx| {
-                                        vec![
-                                            shadcn::stack::hstack(
-                                                cx,
-                                                shadcn::stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            show_inspector_model.clone(),
-                                                        )
-                                                        .a11y_label("Show inspector")
-                                                        .test_id(
-                                                            "liquid-glass-switch-show-inspector",
-                                                        )
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Show inspector")
-                                                            .into_element(cx),
-                                                        shadcn::Switch::new(
-                                                            show_fake_model.clone(),
-                                                        )
-                                                        .a11y_label("Show fake lens")
-                                                        .test_id("liquid-glass-switch-show-fake")
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Show fake lens")
-                                                            .into_element(cx),
-                                                    ]
-                                                },
-                                            ),
-                                            shadcn::stack::hstack(
-                                                cx,
-                                                shadcn::stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            show_warp_model.clone(),
-                                                        )
-                                                        .a11y_label("Show warp v1 lens")
-                                                        .test_id("liquid-glass-switch-show-warp-v1")
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Show warp v1 lens")
-                                                            .into_element(cx),
-                                                        shadcn::Switch::new(
-                                                            show_warp_v2_model.clone(),
-                                                        )
-                                                        .a11y_label("Show warp v2 lens")
-                                                        .test_id("liquid-glass-switch-show-warp-v2")
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Show warp v2 lens")
-                                                            .into_element(cx),
-                                                    ]
-                                                },
-                                            ),
-                                            shadcn::stack::hstack(
-                                                cx,
-                                                shadcn::stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            use_backdrop_model.clone(),
-                                                        )
-                                                        .a11y_label("Backdrop mode")
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Backdrop mode")
-                                                            .into_element(cx),
-                                                    ]
-                                                },
-                                            ),
-                                            shadcn::stack::hstack(
-                                                cx,
-                                                shadcn::stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            use_dither_model.clone(),
-                                                        )
-                                                        .a11y_label("Dither")
-                                                        .into_element(cx),
-                                                        shadcn::Label::new("Dither")
-                                                            .into_element(cx),
-                                                    ]
-                                                },
-                                            ),
-                                            shadcn::stack::hstack(
-                                                cx,
-                                                shadcn::stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(animate_model.clone())
-                                                            .a11y_label("Animate phase")
-                                                            .into_element(cx),
-                                                        shadcn::Label::new("Animate phase")
-                                                            .into_element(cx),
-                                                    ]
-                                                },
-                                            ),
-                                        ]
-                                    },
-                                );
 
                                 let warp_strength_row = shadcn::stack::vstack(
                                     cx,
@@ -1032,7 +1040,7 @@ fn view(
                                             shadcn::Button::new("Reset")
                                                 .variant(shadcn::ButtonVariant::Secondary)
                                                 .size(shadcn::ButtonSize::Sm)
-                                                .on_click(reset)
+                                                .on_click(reset_inspector)
                                                 .into_element(cx),
                                         ]
                                     },
@@ -1046,8 +1054,6 @@ fn view(
                                     |cx| {
                                         vec![
                                             header.into_element(cx),
-                                            shadcn::Separator::new().into_element(cx),
-                                            toggles,
                                             shadcn::Separator::new().into_element(cx),
                                             warp_strength_row,
                                             warp_scale_row,

@@ -17,6 +17,8 @@ Current status (as of 2026-02-18):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- Liquid glass demo UX was refined to keep lens toggles visible without occluding the backdrop (scripts remain stable via
+  `test_id` anchors).
 - External texture imports v2 planning and observability landed:
   - ADR 0282 (requested: zero/low-copy import path with deterministic fallbacks).
   - Renderer perf snapshot surfaces per-update ingest strategy breakdown for imported render targets

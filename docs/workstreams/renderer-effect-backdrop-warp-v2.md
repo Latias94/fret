@@ -117,3 +117,11 @@ Related (v1):
 
 - Workstream: `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 - ADR: `docs/adr/0284-backdrop-warp-effect-step-v1.md`
+
+## Demo UX notes (practical)
+
+`apps/fret-examples/src/liquid_glass_demo.rs` is intentionally treated as an *observability surface*:
+
+- Keep the toggle `test_id`s stable so `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json` remains robust.
+- Prefer a small “stage HUD” (always visible) over a large centered panel that occludes the backdrop.
+- Default the inspector to off; scripted perf baselines should not depend on inspector layout.
