@@ -875,9 +875,8 @@ impl ElementHostWidget {
                 ScrollDeferredUnboundedProbeKind::None => false,
             };
             if schedule_follow_up {
-                cx.tree.invalidate_with_source_and_detail(
+                cx.tree.schedule_barrier_relayout_with_source_and_detail(
                     cx.node,
-                    Invalidation::Layout,
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::ScrollDeferredProbe,
                 );

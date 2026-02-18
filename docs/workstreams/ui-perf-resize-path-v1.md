@@ -218,6 +218,45 @@ layout solving.
 
 ### Note (2026-02-18): VirtualList offset/viewport state should reflect the Final pass only
 
+### Finding (2026-02-18): `ScrollDeferredProbe` follow-ups should be barrier-contained (avoid ancestor relayout)
+
+When a `Scroll` element defers its unbounded probe (during resize or while descendants are transiently
+layout-invalidated), it schedules a follow-up via `ScrollDeferredProbe`. The previous behavior used a full
+`Invalidation::Layout` on the scroll node, which bubbles a relayout to ancestors.
+
+On macOS M4 this showed up as tail spikes in `ui-gallery-steady` overlay scripts (dropdown/dialog), with
+`scroll_deferred_probe` appearing in `top_invalidation_walks` but without enough attribution to answer:
+“which scroll root is asking for follow-up frames?”
+
+Diagnostics improvement:
+
+- `UiInvalidationWalkV1` now includes `root_element_path` so `fretboard diag stats` can map invalidation walks
+  back to stable debug paths (element identity chain).
+
+Concrete attribution (dropdown open/select steady):
+
+- Root: `ecosystem/fret-ui-shadcn/src/scroll_area.rs:306` / `:322` (gallery content scroll area)
+- Root: `ecosystem/fret-ui-kit/src/primitives/menu/content_panel.rs:53` (popover/menu panel scroll subtree)
+
+Mechanism fix direction:
+
+- Treat `ScrollDeferredProbe` as **barrier-internal** work: schedule a contained relayout for the scroll barrier
+  without forcing ancestor relayout.
+- Implemented by adding `UiTree::schedule_barrier_relayout_with_source_and_detail(...)` and using it from the
+  scroll layout code path instead of bubbling `Invalidation::Layout`.
+
+Result (macOS M4, release, repeat=3):
+
+- Before: `tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json` could hit
+  `top_layout_engine_solve_time_us ≈ 721us` (large outlier solve rooted in the main content stack).
+- After: the outlier is removed; remaining max is ~`164us` and is dominated by the popover `RovingFlex` solve.
+
+Remaining gap (still failing `ui-gallery-steady` baseline v25):
+
+- The remaining dropdown failure is not driven by `ScrollDeferredProbe` bubbling anymore.
+- Next step is to reduce `RovingFlex` solve cost (or prevent unnecessary **layout** invalidations for menu
+  state changes that should be paint-only).
+
 For VirtualList, the element-local `VirtualListState.offset_*` / `viewport_*` values are used as the “last committed”
 anchor for render-time range computation and other cross-frame heuristics.
 
