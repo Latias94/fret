@@ -64,9 +64,8 @@
     {
       "type": "click",
       "target": {
-        "kind": "role_and_name",
-        "role": "switch",
-        "name": "Enable Material 3 Expressive variant"
+        "kind": "test_id",
+        "id": "ui-gallery-material3-design-variant-toggle"
       }
     },
     { "type": "wait_frames", "n": 10 },
