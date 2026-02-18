@@ -427,6 +427,12 @@ pub(in crate::ui) fn preview_material3_switch(
                         .test_id("ui-gallery-material3-switch-icons-both")
                         .into_element(cx),
                     cx.text(format!("icons_both={}", icons_both_value as u8)),
+                    material3::Switch::new(icons_both.clone())
+                        .icons(true)
+                        .disabled(true)
+                        .a11y_label("Disabled Material 3 Switch (icons)")
+                        .test_id("ui-gallery-material3-switch-icons-both-disabled")
+                        .into_element(cx),
                     material3::Switch::new(icons_selected_only.clone())
                         .show_only_selected_icon(true)
                         .a11y_label("Material 3 Switch (selected icon only)")
@@ -436,6 +442,12 @@ pub(in crate::ui) fn preview_material3_switch(
                         "icons_selected_only={}",
                         icons_selected_only_value as u8
                     )),
+                    material3::Switch::new(icons_selected_only.clone())
+                        .show_only_selected_icon(true)
+                        .disabled(true)
+                        .a11y_label("Disabled Material 3 Switch (selected icon only)")
+                        .test_id("ui-gallery-material3-switch-icons-selected-only-disabled")
+                        .into_element(cx),
                 ]
             },
         ),
