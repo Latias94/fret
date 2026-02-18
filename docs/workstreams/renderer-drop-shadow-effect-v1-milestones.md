@@ -1,12 +1,28 @@
 # Renderer Effect: Drop Shadow v1 — Milestones
 
-Status: Draft (workstream tracker)
+Status: In progress (implementation landed; perf baseline pending)
 
 Tracking files:
 
 - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+
+## Progress (living)
+
+- M0: done (ADR drafted).
+- M1: done (core contract + wgpu implementation + WebGPU shader validation).
+- M2: in progress (conformance done; perf baseline pending).
+
+Progress record (initial):
+
+- Date: 2026-02-18
+- Status: Conformance landed; perf baseline pending
+- Evidence anchors:
+  - `docs/adr/0286-drop-shadow-effect-step-v1.md`
+  - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
+  - `crates/fret-render-wgpu/tests/effect_drop_shadow_v1_conformance.rs`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
 ## M0 — ADR lock + bounded parameters
 
@@ -28,4 +44,3 @@ Exit criteria:
 
 - GPU readback conformance exists.
 - Perf gate exists with a checked-in baseline.
-

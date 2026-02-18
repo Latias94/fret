@@ -314,6 +314,16 @@ impl SceneRecording {
                                 radius_px,
                                 downsample,
                             } => px_is_finite(radius_px) && downsample > 0,
+                            EffectStep::DropShadowV1(s) => {
+                                px_is_finite(s.offset_px.x)
+                                    && px_is_finite(s.offset_px.y)
+                                    && px_is_finite(s.blur_radius_px)
+                                    && s.downsample > 0
+                                    && s.color.r.is_finite()
+                                    && s.color.g.is_finite()
+                                    && s.color.b.is_finite()
+                                    && s.color.a.is_finite()
+                            }
                             EffectStep::BackdropWarpV1(w) => {
                                 px_is_finite(w.strength_px)
                                     && px_is_finite(w.scale_px)

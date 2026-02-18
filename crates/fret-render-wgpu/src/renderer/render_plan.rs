@@ -109,6 +109,7 @@ pub(super) enum RenderPlanPass {
     ColorAdjust(ColorAdjustPass),
     ColorMatrix(ColorMatrixPass),
     AlphaThreshold(AlphaThresholdPass),
+    DropShadow(DropShadowPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -215,6 +216,20 @@ pub(super) struct AlphaThresholdPass {
     pub(super) mask: Option<MaskRef>,
     pub(super) cutoff: f32,
     pub(super) soft: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct DropShadowPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) offset_px: (f32, f32),
+    pub(super) color: fret_core::scene::Color,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -424,6 +439,9 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::ReleaseTarget(t) => {
                 live[idx(t)] = false;
             }
@@ -528,6 +546,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 if let Some(mask) = p.mask {
                     mark(mask.target);
                 }
+            }
+            RenderPlanPass::DropShadow(p) => {
+                mark(p.src);
+                mark(p.dst);
             }
             RenderPlanPass::ClipMask(p) => mark(p.dst),
             RenderPlanPass::ReleaseTarget(_target) => {}

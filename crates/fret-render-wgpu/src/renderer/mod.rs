@@ -193,6 +193,14 @@ pub struct Renderer {
     alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_param_buffer: wgpu::Buffer,
 
+    drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
+    drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    drop_shadow_param_buffer: wgpu::Buffer,
+
     path_vertices: buffers::RingBuffer<PathVertex>,
 
     path_intermediate: Option<PathIntermediate>,

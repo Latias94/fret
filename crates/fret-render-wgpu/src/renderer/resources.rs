@@ -477,6 +477,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let drop_shadow_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret drop-shadow params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -586,6 +593,13 @@ impl Renderer {
             alpha_threshold_bind_group_layout: None,
             alpha_threshold_mask_bind_group_layout: None,
             alpha_threshold_param_buffer,
+            drop_shadow_pipeline_format: None,
+            drop_shadow_pipeline: None,
+            drop_shadow_masked_pipeline: None,
+            drop_shadow_mask_pipeline: None,
+            drop_shadow_bind_group_layout: None,
+            drop_shadow_mask_bind_group_layout: None,
+            drop_shadow_param_buffer,
             path_vertices,
             path_intermediate: None,
             path_composite_vertices,

@@ -309,13 +309,18 @@ milestones) when implementation begins.
     - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
     - `apps/fret-examples/src/liquid_glass_demo.rs`
   - Extension (v2, texture-driven warp field):
-    - Status: in progress (gates pending)
+    - Status: landed (conformance + perf baseline recorded)
     - Tracking:
       - `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
       - `docs/workstreams/renderer-effect-backdrop-warp-v2-todo.md`
       - `docs/workstreams/renderer-effect-backdrop-warp-v2-milestones.md`
     - Evidence:
       - `docs/adr/0285-backdrop-warp-effect-step-v2-texture-field.md`
+      - `crates/fret-render-wgpu/tests/effect_backdrop_warp_v2_conformance.rs`
+      - `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
+      - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
+      - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
+      - `apps/fret-examples/src/liquid_glass_demo.rs`
 
 - [~] REN-VNEXT-sem-100 Drop shadow (blur-based, bounded): add a general drop shadow effect step for
       non-text content (cards/popovers), with deterministic degradation and perf gates.
@@ -323,6 +328,12 @@ milestones) when implementation begins.
     - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
     - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
     - `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+  - Evidence:
+    - `docs/adr/0286-drop-shadow-effect-step-v1.md`
+    - `crates/fret-core/src/scene/mod.rs` (`EffectStep::DropShadowV1`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/drop_shadow.rs`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`DROP_SHADOW_*`)
+    - `crates/fret-render-wgpu/tests/effect_drop_shadow_v1_conformance.rs`
 
 - [x] REN-VNEXT-sem-110 Clip-path + mask closure: keep rect scissor fast paths hot, and make slow-path
       clip/mask intermediates cacheable and WebGPU-uniformity-safe (no divergent sampling hazards).

@@ -246,12 +246,84 @@ pub enum BackdropWarpKindV1 {
     LensReserved,
 }
 
+/// Bounded drop shadow parameters (v1).
+///
+/// This is a mechanism-level, blur-based shadow surface intended for general UI content (cards,
+/// popovers, overlays). It is explicitly bounded and deterministic so it remains viable on
+/// wasm/WebGPU and mobile GPUs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DropShadowV1 {
+    /// Shadow offset in logical pixels (pre-scale-factor).
+    pub offset_px: Point,
+    /// Blur radius in logical pixels (pre-scale-factor).
+    pub blur_radius_px: crate::Px,
+    /// Downsample hint (1–4). Renderers may degrade deterministically under budgets.
+    pub downsample: u32,
+    /// Solid shadow color (unpremultiplied RGBA in [0, 1]).
+    pub color: Color,
+}
+
+impl DropShadowV1 {
+    pub const MAX_BLUR_RADIUS_PX: crate::Px = crate::Px(64.0);
+
+    pub fn sanitize(self) -> Self {
+        let offset_px = Point::new(
+            crate::Px(if self.offset_px.x.0.is_finite() {
+                self.offset_px.x.0
+            } else {
+                0.0
+            }),
+            crate::Px(if self.offset_px.y.0.is_finite() {
+                self.offset_px.y.0
+            } else {
+                0.0
+            }),
+        );
+        let blur_radius_px = if self.blur_radius_px.0.is_finite() {
+            crate::Px(self.blur_radius_px.0.clamp(0.0, Self::MAX_BLUR_RADIUS_PX.0))
+        } else {
+            crate::Px(0.0)
+        };
+        let downsample = self.downsample.clamp(1, 4);
+        let color = Color {
+            r: if self.color.r.is_finite() {
+                self.color.r.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            g: if self.color.g.is_finite() {
+                self.color.g.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            b: if self.color.b.is_finite() {
+                self.color.b.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            a: if self.color.a.is_finite() {
+                self.color.a.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+        };
+
+        Self {
+            offset_px,
+            blur_radius_px,
+            downsample,
+            color,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectStep {
     GaussianBlur {
         radius_px: crate::Px,
         downsample: u32,
     },
+    DropShadowV1(DropShadowV1),
     BackdropWarpV1(BackdropWarpV1),
     BackdropWarpV2(BackdropWarpV2),
     ColorAdjust {
@@ -287,6 +359,7 @@ impl EffectStep {
             }
             EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
             EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
+            EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },

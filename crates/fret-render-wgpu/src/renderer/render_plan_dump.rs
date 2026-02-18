@@ -289,6 +289,18 @@ enum JsonDumpPass {
         soft: f32,
         load: JsonDumpLoadOp,
     },
+    DropShadow {
+        src: String,
+        dst: String,
+        src_size: [u32; 2],
+        dst_size: [u32; 2],
+        dst_scissor: Option<JsonDumpScissorRect>,
+        mask_uniform_index: Option<u32>,
+        mask: Option<JsonDumpMaskRef>,
+        offset_px: [f32; 2],
+        color: [f32; 4],
+        load: JsonDumpLoadOp,
+    },
     ClipMask {
         dst: String,
         dst_size: [u32; 2],
@@ -448,6 +460,18 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             soft: pass.soft,
             load: encode_load_op(pass.load),
         },
+        RenderPlanPass::DropShadow(pass) => JsonDumpPass::DropShadow {
+            src: plan_target_name(pass.src).to_string(),
+            dst: plan_target_name(pass.dst).to_string(),
+            src_size: [pass.src_size.0, pass.src_size.1],
+            dst_size: [pass.dst_size.0, pass.dst_size.1],
+            dst_scissor: pass.dst_scissor.map(Into::into),
+            mask_uniform_index: pass.mask_uniform_index,
+            mask: pass.mask.map(Into::into),
+            offset_px: [pass.offset_px.0, pass.offset_px.1],
+            color: [pass.color.r, pass.color.g, pass.color.b, pass.color.a],
+            load: encode_load_op(pass.load),
+        },
         RenderPlanPass::ClipMask(pass) => JsonDumpPass::ClipMask {
             dst: plan_target_name(pass.dst).to_string(),
             dst_size: [pass.dst_size.0, pass.dst_size.1],
@@ -500,6 +524,7 @@ struct JsonDumpCounts {
     color_adjust: usize,
     color_matrix: usize,
     alpha_threshold: usize,
+    drop_shadow: usize,
     clip_mask: usize,
     release_target: usize,
 }
@@ -518,6 +543,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
         color_adjust: 0,
         color_matrix: 0,
         alpha_threshold: 0,
+        drop_shadow: 0,
         clip_mask: 0,
         release_target: 0,
     };
@@ -535,6 +561,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
             RenderPlanPass::ColorAdjust(_) => c.color_adjust += 1,
             RenderPlanPass::ColorMatrix(_) => c.color_matrix += 1,
             RenderPlanPass::AlphaThreshold(_) => c.alpha_threshold += 1,
+            RenderPlanPass::DropShadow(_) => c.drop_shadow += 1,
             RenderPlanPass::ClipMask(_) => c.clip_mask += 1,
             RenderPlanPass::ReleaseTarget(_) => c.release_target += 1,
         }

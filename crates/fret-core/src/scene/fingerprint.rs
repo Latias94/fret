@@ -319,6 +319,17 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         state = mix_px(state, radius_px);
                         mix_u64(state, u64::from(downsample))
                     }
+                    EffectStep::DropShadowV1(s) => {
+                        let mut state = mix_u64(state, 9);
+                        state = mix_px(state, s.offset_px.x);
+                        state = mix_px(state, s.offset_px.y);
+                        state = mix_px(state, s.blur_radius_px);
+                        state = mix_u64(state, u64::from(s.downsample));
+                        state = mix_f32(state, s.color.r);
+                        state = mix_f32(state, s.color.g);
+                        state = mix_f32(state, s.color.b);
+                        mix_f32(state, s.color.a)
+                    }
                     EffectStep::BackdropWarpV1(w) => {
                         let mut state = mix_u64(state, 7);
                         state = mix_px(state, w.strength_px);

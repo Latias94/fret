@@ -1,7 +1,8 @@
-Status: Draft (workstream tracker)
+Status: In progress (ADR drafted; core + renderer implementation landed; perf baseline pending)
 
-This workstream defines a bounded, portable **drop shadow** surface for general UI content (not
-just text). The goal is to support the common “elevation shadow” vocabulary in a way that:
+This workstream defines a bounded, portable **blur-based drop shadow** mechanism surface for
+general UI content (not just text). The goal is to support the common “elevation shadow” vocabulary
+in a way that:
 
 - is deterministic and capability-gated,
 - remains viable on wasm/WebGPU and mobile GPUs,
@@ -33,17 +34,18 @@ A bounded shadow contract lets the renderer:
 
 Add a new effect step variant to `fret-core::scene::EffectStep`:
 
-- `EffectStep::DropShadowV1 { offset, blur_radius_px, color }` (name is a placeholder until ADR lock)
+- `EffectStep::DropShadowV1(DropShadowV1)`
 
 Contract properties:
 
 - **single layer**
 - **bounded blur radius** (clamped)
 - **solid color**
-- `offset` is in logical pixels (pre-scale-factor)
+- `offset_px` is in logical pixels (pre-scale-factor)
+- `downsample` is a bounded hint (1–4) that participates in deterministic budgets
 
 This step is intended for `EffectMode::FilterContent` (content is rendered to an intermediate).
-Under `EffectMode::Backdrop`, renderers should deterministically degrade (ADR must lock behavior).
+Under `EffectMode::Backdrop`, renderers deterministically degrade by skipping the step (no shadow).
 
 ## Semantics (v1)
 
@@ -59,9 +61,8 @@ For an effect layer with children:
 
 Deterministic degradation rules:
 
-- If budgets cannot satisfy the blur:
-  - reduce quality/downsample first,
-  - then deterministically skip the shadow step (no shadow).
+- If `EffectMode::Backdrop`: skip.
+- If intermediate budgets cannot satisfy the blur: skip.
 
 ## Cost model notes
 
@@ -87,3 +88,6 @@ Deterministic degradation rules:
 - TODOs: `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
 - Milestones: `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
 
+Related ADR:
+
+- `docs/adr/0286-drop-shadow-effect-step-v1.md`

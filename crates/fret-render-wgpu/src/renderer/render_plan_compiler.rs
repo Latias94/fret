@@ -116,6 +116,7 @@ pub(super) fn compile_for_scene(
             fret_core::EffectStep::BackdropWarpV2(_w) => {
                 effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
             }
+            fret_core::EffectStep::DropShadowV1(_s) => false,
             fret_core::EffectStep::ColorAdjust { .. } => {
                 effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
             }
