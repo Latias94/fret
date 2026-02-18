@@ -1549,9 +1549,24 @@ impl TaffyLayoutEngine {
         let Some(frame_id) = self.frame_id else {
             return;
         };
+        // Only stamp nodes that are part of the engine's current "seen" set for this frame.
+        //
+        // The engine can retain stale `children` edges (e.g. when a node was previously attached
+        // but later detached without an explicit `set_children` update). Stamping through those
+        // stale edges needlessly inflates per-solve work and can amplify tail-latency spikes on
+        // multi-root frames (window roots + overlays + detached flow roots).
+        //
+        // Using the "seen" set keeps stamping proportional to the subtree that was actually
+        // requested/built for the current frame.
+        if !self.is_seen(root) {
+            return;
+        }
         self.mark_solved_stack_scratch.clear();
         self.mark_solved_stack_scratch.push(root);
         while let Some(node) = self.mark_solved_stack_scratch.pop() {
+            if !self.is_seen(node) {
+                continue;
+            }
             self.node_solved_stamp.insert(
                 node,
                 SolvedStamp {
@@ -1560,8 +1575,11 @@ impl TaffyLayoutEngine {
                 },
             );
             if let Some(children) = self.children.get(node) {
-                self.mark_solved_stack_scratch
-                    .extend(children.iter().copied());
+                for &child in children {
+                    if self.is_seen(child) {
+                        self.mark_solved_stack_scratch.push(child);
+                    }
+                }
             }
         }
     }
