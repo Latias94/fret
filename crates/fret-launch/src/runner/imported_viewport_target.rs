@@ -59,6 +59,37 @@ pub struct ImportedViewportFallbacks {
     pub cpu_upload: Option<ImportedViewportFallbackUpdate>,
 }
 
+impl ImportedViewportFallbacks {
+    pub fn single(
+        strategy: RenderTargetIngestStrategy,
+        update: ImportedViewportFallbackUpdate,
+    ) -> Self {
+        let mut fallbacks = Self::default();
+        match strategy {
+            RenderTargetIngestStrategy::Owned => fallbacks.owned = Some(update),
+            RenderTargetIngestStrategy::GpuCopy => fallbacks.gpu_copy = Some(update),
+            RenderTargetIngestStrategy::CpuUpload => fallbacks.cpu_upload = Some(update),
+            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
+                panic!("unexpected fallback strategy: {strategy:?}")
+            }
+        }
+        fallbacks
+    }
+
+    pub fn single_view(
+        strategy: RenderTargetIngestStrategy,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+        keepalive: Option<EngineFrameKeepalive>,
+    ) -> Self {
+        Self::single(
+            strategy,
+            ImportedViewportFallbackUpdate::new(view, size, metadata, keepalive),
+        )
+    }
+}
+
 /// Per-frame imported render target intended to be embedded into the UI via `SceneOp::ViewportSurface`.
 ///
 /// Unlike [`super::ViewportRenderTarget`], this helper does **not** call `renderer.update_render_target(...)`

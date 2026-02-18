@@ -738,36 +738,13 @@ fn record_engine_frame(
             size: st.target_px_size,
             ingest_strategy: effective_strategy,
         });
-        let mut fallbacks = fret_launch::ImportedViewportFallbacks::default();
-        match effective_strategy {
-            RenderTargetIngestStrategy::Owned => {
-                fallbacks.owned = Some(fret_launch::ImportedViewportFallbackUpdate {
-                    view: view.clone(),
-                    size: st.target_px_size,
-                    metadata: RenderTargetMetadata::default(),
-                    keepalive: None,
-                });
-            }
-            RenderTargetIngestStrategy::GpuCopy => {
-                fallbacks.gpu_copy = Some(fret_launch::ImportedViewportFallbackUpdate {
-                    view: view.clone(),
-                    size: st.target_px_size,
-                    metadata: RenderTargetMetadata::default(),
-                    keepalive: None,
-                });
-            }
-            RenderTargetIngestStrategy::CpuUpload => {
-                fallbacks.cpu_upload = Some(fret_launch::ImportedViewportFallbackUpdate {
-                    view: view.clone(),
-                    size: st.target_px_size,
-                    metadata: RenderTargetMetadata::default(),
-                    keepalive: None,
-                });
-            }
-            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
-                unreachable!("contract-path fallback should never request {effective_strategy:?}")
-            }
-        }
+        let fallbacks = fret_launch::ImportedViewportFallbacks::single_view(
+            effective_strategy,
+            view.clone(),
+            st.target_px_size,
+            RenderTargetMetadata::default(),
+            None,
+        );
         match st.target.push_native_external_import_update_with_fallbacks(
             renderer,
             &mut update,
@@ -786,36 +763,13 @@ fn record_engine_frame(
             }
         }
     } else {
-        let mut fallbacks = fret_launch::ImportedViewportFallbacks::default();
-        match effective_strategy {
-            RenderTargetIngestStrategy::Owned => {
-                fallbacks.owned = Some(fret_launch::ImportedViewportFallbackUpdate::new(
-                    view.clone(),
-                    st.target_px_size,
-                    metadata,
-                    None,
-                ));
-            }
-            RenderTargetIngestStrategy::GpuCopy => {
-                fallbacks.gpu_copy = Some(fret_launch::ImportedViewportFallbackUpdate::new(
-                    view.clone(),
-                    st.target_px_size,
-                    metadata,
-                    None,
-                ));
-            }
-            RenderTargetIngestStrategy::CpuUpload => {
-                fallbacks.cpu_upload = Some(fret_launch::ImportedViewportFallbackUpdate::new(
-                    view.clone(),
-                    st.target_px_size,
-                    metadata,
-                    None,
-                ));
-            }
-            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
-                unreachable!("fallback update should never request {effective_strategy:?}")
-            }
-        }
+        let fallbacks = fret_launch::ImportedViewportFallbacks::single_view(
+            effective_strategy,
+            view.clone(),
+            st.target_px_size,
+            metadata,
+            None,
+        );
 
         st.target.push_update_with_fallbacks(
             &mut update,
