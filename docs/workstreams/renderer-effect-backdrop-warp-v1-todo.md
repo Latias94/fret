@@ -63,8 +63,8 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Demo validation (optional but recommended)
 
-- [ ] BWARP-demo-060 Extend the liquid glass demo to exercise the new step behind a toggle:
+- [x] BWARP-demo-060 Extend the liquid glass demo to exercise the new step behind a toggle:
       keep fake-glass baseline available and document deterministic degradation.
   - Evidence anchors:
-    - `apps/fret-examples/src/liquid_glass_demo.rs` (uses the new step when enabled)
+    - `apps/fret-examples/src/liquid_glass_demo.rs` (fake vs warp lenses + inspector toggles)
     - `apps/fret-demo/src/bin/liquid_glass_demo.rs` (entrypoint, if needed)

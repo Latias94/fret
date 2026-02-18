@@ -13,7 +13,7 @@ Tracking files:
 - M0: in progress (ADR is present but still marked Draft).
 - M1: done (wgpu implementation + WebGPU shader validation).
 - M2: in progress (conformance landed; perf baseline still pending).
-- M3: pending (demo toggle + adoption notes).
+- M3: in progress (demo now exercises the step; adoption notes pending).
 
 ## M0 — ADR lock + bounded vocabulary
 
