@@ -30,13 +30,13 @@ Plan: `docs/workstreams/material3-icon-toggle-button-expressive-v1-refactor-plan
 
 ### B) Expressive shapes (ecosystem/fret-ui-material3)
 
-- [ ] Add an `IconToggleButtonShapes` equivalent:
+- [x] Add an `IconToggleButtonShapes` equivalent:
   - unchecked, pressed, checked corner radii (v1 = corners-only).
 - [x] Implement morph selection rule: `pressed > checked > unchecked`.
 - [x] Add checked-shape tokens (or a derived fallback):
   - e.g. `md.comp.icon-button.checked.container.shape` (final key depends on token import policy),
   - fall back to base shape if missing.
-- [ ] Ensure animations are stable:
+- [x] Ensure animations are stable:
   - scene structure remains stable during press and during checked transitions,
   - geometry stabilizes after settle (similar to existing icon button stability gates).
 
@@ -76,3 +76,6 @@ Plan: `docs/workstreams/material3-icon-toggle-button-expressive-v1-refactor-plan
 - Gallery surface: `apps/fret-ui-gallery/src/ui/previews/material3/controls.rs`
 - Diagnostics script: `tools/diag-scripts/ui-gallery-material3-icon-toggle-button-expressive-screenshots.json`
 - Headless semantics test: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`icon_toggle_button_semantics_role_and_checked_state_are_stable`)
+- Headless animation stability tests:
+  - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`icon_button_pressed_scene_structure_is_stable`)
+  - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`icon_toggle_button_checked_transition_scene_structure_is_stable`)

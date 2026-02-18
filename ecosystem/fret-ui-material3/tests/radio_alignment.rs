@@ -3916,6 +3916,143 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
 }
 
 #[test]
+fn icon_toggle_button_checked_transition_scene_structure_is_stable() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        IconToggleButton, MaterialDesignVariant, with_material_design_variant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked_model = app.models.insert(false);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            with_material_design_variant(cx, MaterialDesignVariant::Expressive, |cx| {
+                let button = IconToggleButton::new(checked_model.clone(), ids::ui::CHECK)
+                    .a11y_label("icon toggle button")
+                    .test_id("icon-toggle-button")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), button)]
+            })
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let button_bounds = {
+        let button_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("icon-toggle-button") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected icon-toggle-button in semantics snapshot");
+
+        ui.debug_node_visual_bounds(button_node)
+            .expect("expected icon-toggle-button visual bounds")
+    };
+
+    let press_at = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    let mut baseline_clip_corners: Option<(i32, i32, i32, i32)> = None;
+    let mut saw_corner_change = false;
+    for frame in 0..24 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        // Ignore the first couple frames: focus + modality may settle after the click.
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected IconToggleButton to keep a stable scene structure while checked corner morph is active"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
+
+            let corners = scene
+                .ops()
+                .iter()
+                .find_map(|op| match op {
+                    SceneOp::PushClipRRect { corner_radii, .. } => Some(*corner_radii),
+                    _ => None,
+                })
+                .expect("expected PushClipRRect while rendering IconToggleButton");
+
+            let sig = (
+                ((corners.top_left.0 * 10.0).round()) as i32,
+                ((corners.top_right.0 * 10.0).round()) as i32,
+                ((corners.bottom_right.0 * 10.0).round()) as i32,
+                ((corners.bottom_left.0 * 10.0).round()) as i32,
+            );
+
+            match baseline_clip_corners {
+                None => baseline_clip_corners = Some(sig),
+                Some(prev) if sig != prev => saw_corner_change = true,
+                Some(_) => {}
+            }
+        }
+
+        if frame >= 16 {
+            let geom = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    geom, *prev,
+                    "expected IconToggleButton to keep stable quad geometry after checked morph settles"
+                );
+            } else {
+                baseline_quads = Some(geom);
+            }
+        }
+    }
+
+    assert!(
+        saw_corner_change,
+        "expected IconToggleButton quad corner radii to change during checked morph"
+    );
+}
+
+#[test]
 fn switch_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Switch;
 

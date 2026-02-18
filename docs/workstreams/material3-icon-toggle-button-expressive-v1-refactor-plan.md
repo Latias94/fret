@@ -40,6 +40,7 @@ Goal: land a v1 “Icon Toggle Button” surface that:
   - Legacy static toggle styling still exists via `IconButton.toggle(true)` + `IconButton.selected(bool)`,
     but `IconToggleButton` is the recommended surface for interactive behavior.
   - Expressive shape morph includes checked state (selection rule: `pressed > checked > unchecked`).
+  - Expressive shapes are modeled as a first-class `IconToggleButtonShapes` (corners-only, v1).
   - A11y is Compose-aligned for toggle mode: `role=Checkbox` + `checked`, and does not set `selected`.
 - Tokens: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`
   - Provides base + pressed shape radius tokens and per-variant color keys.
@@ -51,6 +52,8 @@ Goal: land a v1 “Icon Toggle Button” surface that:
   - Validates pressed animation does not change scene structure.
   - Semantics gate exists for toggle button role + checked state:
     `icon_toggle_button_semantics_role_and_checked_state_are_stable`.
+  - Checked transition stability gate exists (scene structure + quad geometry):
+    `icon_toggle_button_checked_transition_scene_structure_is_stable`.
 
 ## Observed divergences vs Compose / MUI
 

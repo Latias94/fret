@@ -203,31 +203,14 @@ impl IconButton {
                 let now_frame = cx.frame_id.0;
                 let pressed = enabled && st.pressed;
                 let checked = self.toggle && self.selected;
-                let (unchecked_radius, checked_radius, pressed_radius, corner_spring, size_tokens) = {
+                let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
-                    let unchecked_radius = icon_button_shape_radius(theme);
-                    let pressed_radius = icon_button_pressed_shape_radius(theme);
-                    let checked_radius = if self.toggle
-                        && resolved_design_variant(
-                            cx,
-                            theme_default_design_variant(theme),
-                        ) == MaterialDesignVariant::Expressive
-                    {
-                        icon_button_selected_shape_radius(theme)
-                    } else {
-                        unchecked_radius
-                    };
+                    let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, self.toggle, None);
                     let scheme_spring =
                         sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
                     let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
                     let size_tokens = icon_button_size_tokens(theme, self.size);
-                    (
-                        unchecked_radius,
-                        checked_radius,
-                        pressed_radius,
-                        corner_spring,
-                        size_tokens,
-                    )
+                    (shapes, corner_spring, size_tokens)
                 };
 
                 let (corner_radii, corner_want_frames) = animated_icon_button_corner_radii(
@@ -236,9 +219,7 @@ impl IconButton {
                     now_frame,
                     pressed,
                     checked,
-                    unchecked_radius,
-                    pressed_radius,
-                    checked_radius,
+                    shapes,
                     corner_spring,
                 );
 
@@ -331,7 +312,12 @@ impl IconButton {
                             );
 
                             let ripple_base_opacity =
-                                icon_button_tokens::pressed_state_layer_opacity(theme, self.variant, self.toggle, self.selected);
+                                icon_button_tokens::pressed_state_layer_opacity(
+                                    theme,
+                                    self.variant,
+                                    self.toggle,
+                                    self.selected,
+                                );
                             let config = material_pressable_indication_config(theme, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
@@ -372,12 +358,47 @@ impl IconButton {
     }
 }
 
+/// Expressive-aligned toggle button shapes (corner radius only, v1).
+///
+/// This matches the Compose Material3 Expressive outcome-level contract:
+/// `pressed > checked > unchecked`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IconToggleButtonShapes {
+    /// The unchecked shape.
+    pub shape: Px,
+    /// The pressed shape.
+    pub pressed_shape: Px,
+    /// The checked shape.
+    pub checked_shape: Px,
+}
+
+impl IconToggleButtonShapes {
+    pub fn new(shape: Px, pressed_shape: Px, checked_shape: Px) -> Self {
+        Self {
+            shape,
+            pressed_shape,
+            checked_shape,
+        }
+    }
+
+    fn target_radius(self, pressed: bool, checked: bool) -> Px {
+        if pressed {
+            self.pressed_shape
+        } else if checked {
+            self.checked_shape
+        } else {
+            self.shape
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct IconToggleButton {
     checked: Model<bool>,
     icon: IconId,
     variant: IconButtonVariant,
     size: IconButtonSize,
+    shapes: Option<IconToggleButtonShapes>,
     on_activate: Option<OnActivate>,
     style: IconButtonStyle,
     disabled: bool,
@@ -404,6 +425,7 @@ impl IconToggleButton {
             icon,
             variant: IconButtonVariant::default(),
             size: IconButtonSize::default(),
+            shapes: None,
             on_activate: None,
             style: IconButtonStyle::default(),
             disabled: false,
@@ -419,6 +441,11 @@ impl IconToggleButton {
 
     pub fn size(mut self, size: IconButtonSize) -> Self {
         self.size = size;
+        self
+    }
+
+    pub fn shapes(mut self, shapes: IconToggleButtonShapes) -> Self {
+        self.shapes = Some(shapes);
         self
     }
 
@@ -472,30 +499,14 @@ impl IconToggleButton {
 
                 let now_frame = cx.frame_id.0;
                 let pressed = enabled && st.pressed;
-                let (unchecked_radius, checked_radius, pressed_radius, corner_spring, size_tokens) = {
+                let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
-                    let unchecked_radius = icon_button_shape_radius(theme);
-                    let pressed_radius = icon_button_pressed_shape_radius(theme);
-                    let checked_radius = if resolved_design_variant(
-                        cx,
-                        theme_default_design_variant(theme),
-                    ) == MaterialDesignVariant::Expressive
-                    {
-                        icon_button_selected_shape_radius(theme)
-                    } else {
-                        unchecked_radius
-                    };
+                    let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, true, self.shapes);
                     let scheme_spring =
                         sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
                     let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
                     let size_tokens = icon_button_size_tokens(theme, self.size);
-                    (
-                        unchecked_radius,
-                        checked_radius,
-                        pressed_radius,
-                        corner_spring,
-                        size_tokens,
-                    )
+                    (shapes, corner_spring, size_tokens)
                 };
 
                 let (corner_radii, corner_want_frames) = animated_icon_button_corner_radii(
@@ -504,9 +515,7 @@ impl IconToggleButton {
                     now_frame,
                     pressed,
                     checked,
-                    unchecked_radius,
-                    pressed_radius,
-                    checked_radius,
+                    shapes,
                     corner_spring,
                 );
 
@@ -598,12 +607,13 @@ impl IconToggleButton {
                                 is_focused,
                             );
 
-                            let ripple_base_opacity = icon_button_tokens::pressed_state_layer_opacity(
-                                theme,
-                                self.variant,
-                                true,
-                                checked,
-                            );
+                            let ripple_base_opacity =
+                                icon_button_tokens::pressed_state_layer_opacity(
+                                    theme,
+                                    self.variant,
+                                    true,
+                                    checked,
+                                );
                             let config = material_pressable_indication_config(theme, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
@@ -665,28 +675,44 @@ fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec)
     icon_button_tokens::pressed_container_corner_spring(theme, scheme_fallback)
 }
 
+fn resolved_icon_toggle_button_shapes<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    theme: &Theme,
+    toggle: bool,
+    override_shapes: Option<IconToggleButtonShapes>,
+) -> IconToggleButtonShapes {
+    if let Some(shapes) = override_shapes {
+        return shapes;
+    }
+
+    let base = Px(icon_button_shape_radius(theme));
+    let pressed = Px(icon_button_pressed_shape_radius(theme));
+
+    let expressive = resolved_design_variant(cx, theme_default_design_variant(theme))
+        == MaterialDesignVariant::Expressive;
+    let checked = if toggle && expressive {
+        Px(icon_button_selected_shape_radius(theme))
+    } else {
+        base
+    };
+
+    IconToggleButtonShapes::new(base, pressed, checked)
+}
+
 fn animated_icon_button_corner_radii<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     pressable_id: fret_ui::elements::GlobalElementId,
     now_frame: u64,
     pressed: bool,
     checked: bool,
-    unchecked_radius: f32,
-    pressed_radius: f32,
-    checked_radius: f32,
+    shapes: IconToggleButtonShapes,
     spring: SpringSpec,
 ) -> (Corners, bool) {
-    let target = if pressed {
-        pressed_radius
-    } else if checked {
-        checked_radius
-    } else {
-        unchecked_radius
-    };
+    let target = shapes.target_radius(pressed, checked).0;
 
     cx.with_state_for(pressable_id, IconButtonCornerRuntime::default, |rt| {
         if !rt.spring.is_initialized() {
-            rt.spring.reset(now_frame, unchecked_radius);
+            rt.spring.reset(now_frame, target);
         }
 
         rt.spring.set_target(now_frame, target, spring);
