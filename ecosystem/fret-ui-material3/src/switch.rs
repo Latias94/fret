@@ -6,11 +6,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size, SvgFit};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
-    AnyElement, ContainerProps, Length, Overflow, PointerRegionProps, PressableA11y, PressableProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -20,6 +22,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
     material_pressable_indication_config,
@@ -80,6 +83,10 @@ impl SwitchStyle {
 pub struct Switch {
     selected: Model<bool>,
     disabled: bool,
+    icons: bool,
+    show_only_selected_icon: bool,
+    icon_on: Option<IconId>,
+    icon_off: Option<IconId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_activate: Option<OnActivate>,
@@ -90,6 +97,8 @@ impl std::fmt::Debug for Switch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Switch")
             .field("disabled", &self.disabled)
+            .field("icons", &self.icons)
+            .field("show_only_selected_icon", &self.show_only_selected_icon)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("on_activate", &self.on_activate.is_some())
@@ -103,6 +112,10 @@ impl Switch {
         Self {
             selected,
             disabled: false,
+            icons: false,
+            show_only_selected_icon: false,
+            icon_on: Some(fret_icons::ids::ui::CHECK),
+            icon_off: Some(fret_icons::ids::ui::CLOSE),
             a11y_label: None,
             test_id: None,
             on_activate: None,
@@ -112,6 +125,34 @@ impl Switch {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Shows switch icons inside the thumb.
+    ///
+    /// This mirrors Material Web's `icons` property.
+    pub fn icons(mut self, icons: bool) -> Self {
+        self.icons = icons;
+        self
+    }
+
+    /// Shows only the "selected" icon when checked, and hides the unselected icon.
+    ///
+    /// This mirrors Material Web's `show-only-selected-icon` behavior and overrides `.icons(...)`.
+    pub fn show_only_selected_icon(mut self, show_only_selected_icon: bool) -> Self {
+        self.show_only_selected_icon = show_only_selected_icon;
+        self
+    }
+
+    /// Overrides the icon displayed when the switch is selected.
+    pub fn icon_on(mut self, icon: IconId) -> Self {
+        self.icon_on = Some(icon);
+        self
+    }
+
+    /// Overrides the icon displayed when the switch is unselected.
+    pub fn icon_off(mut self, icon: IconId) -> Self {
+        self.icon_off = Some(icon);
         self
     }
 
@@ -143,6 +184,10 @@ impl Switch {
                 let theme = Theme::global(&*cx.app);
                 switch_size_tokens(theme)
             };
+            let icons_enabled = self.icons;
+            let show_only_selected_icon = self.show_only_selected_icon;
+            let icon_on = self.icon_on.clone();
+            let icon_off = self.icon_off.clone();
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -339,7 +384,25 @@ impl Switch {
                                 )
                             });
 
-                        let geom = switch_geometry(size, thumb_t, pressed_t);
+                        let icons_always = icons_enabled && !show_only_selected_icon;
+                        let icons_selected_only = show_only_selected_icon;
+                        let geom = switch_geometry(
+                            size,
+                            thumb_t,
+                            pressed_t,
+                            icons_always,
+                            icons_selected_only,
+                        );
+                        let handle_child = material_switch_handle_icon(
+                            cx,
+                            selected,
+                            enabled,
+                            tokens_interaction,
+                            icons_enabled,
+                            show_only_selected_icon,
+                            icon_on.clone(),
+                            icon_off.clone(),
+                        );
                         let track = switch_track(
                             cx,
                             size,
@@ -347,6 +410,7 @@ impl Switch {
                             chrome,
                             track_corner_radii,
                             handle_corner_radii,
+                            handle_child,
                         );
 
                         let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
@@ -400,6 +464,8 @@ struct SwitchSizeTokens {
     unselected_handle_height: Px,
     pressed_handle_width: Px,
     pressed_handle_height: Px,
+    with_icon_handle_width: Px,
+    with_icon_handle_height: Px,
     track_y_offset: Px,
 }
 
@@ -436,6 +502,13 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
         .metric_by_key("md.comp.switch.pressed.handle.height")
         .unwrap_or(Px(28.0));
 
+    let with_icon_handle_width = theme
+        .metric_by_key("md.comp.switch.with-icon.handle.width")
+        .unwrap_or(selected_handle_width);
+    let with_icon_handle_height = theme
+        .metric_by_key("md.comp.switch.with-icon.handle.height")
+        .unwrap_or(selected_handle_height);
+
     let track_y_offset = Px(((state_layer.0 - track_height.0) * 0.5).max(0.0));
 
     SwitchSizeTokens {
@@ -449,6 +522,8 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
         unselected_handle_height,
         pressed_handle_width,
         pressed_handle_height,
+        with_icon_handle_width,
+        with_icon_handle_height,
         track_y_offset,
     }
 }
@@ -462,14 +537,39 @@ struct SwitchGeometry {
     ink_bounds: Rect,
 }
 
-fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: f32) -> SwitchGeometry {
+fn switch_geometry(
+    size: SwitchSizeTokens,
+    thumb_t: f32,
+    pressed: f32,
+    icons_always: bool,
+    icons_selected_only: bool,
+) -> SwitchGeometry {
     let thumb_t = thumb_t.clamp(0.0, 1.0);
 
     let pressed_t = pressed.clamp(0.0, 1.0);
-    let base_width = Px(size.unselected_handle_width.0
-        + (size.selected_handle_width.0 - size.unselected_handle_width.0) * thumb_t);
-    let base_height = Px(size.unselected_handle_height.0
-        + (size.selected_handle_height.0 - size.unselected_handle_height.0) * thumb_t);
+    let unselected_width = if icons_always {
+        size.with_icon_handle_width
+    } else {
+        size.unselected_handle_width
+    };
+    let unselected_height = if icons_always {
+        size.with_icon_handle_height
+    } else {
+        size.unselected_handle_height
+    };
+    let selected_width = if icons_always || icons_selected_only {
+        size.with_icon_handle_width
+    } else {
+        size.selected_handle_width
+    };
+    let selected_height = if icons_always || icons_selected_only {
+        size.with_icon_handle_height
+    } else {
+        size.selected_handle_height
+    };
+
+    let base_width = Px(unselected_width.0 + (selected_width.0 - unselected_width.0) * thumb_t);
+    let base_height = Px(unselected_height.0 + (selected_height.0 - unselected_height.0) * thumb_t);
 
     let handle_width = Px(base_width.0 + (size.pressed_handle_width.0 - base_width.0) * pressed_t);
     let handle_height =
@@ -510,6 +610,7 @@ fn switch_track<H: UiHost>(
     chrome: switch_tokens::SwitchChrome,
     track_corner_radii: Corners,
     handle_corner_radii: Corners,
+    handle_child: Option<AnyElement>,
 ) -> AnyElement {
     let mut track = ContainerProps::default();
     track.layout.size.width = Length::Px(size.track_width);
@@ -532,10 +633,79 @@ fn switch_track<H: UiHost>(
         handle.corner_radii = handle_corner_radii;
         handle.background = Some(chrome.handle_color);
 
-        vec![cx.container(handle, |_cx| Vec::new())]
+        vec![cx.container(handle, move |cx| {
+            let Some(child) = handle_child else {
+                return Vec::new();
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| vec![child],
+            )]
+        })]
     })
 }
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
+}
+
+fn material_switch_handle_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    selected: bool,
+    enabled: bool,
+    interaction: switch_tokens::SwitchInteraction,
+    icons: bool,
+    show_only_selected_icon: bool,
+    icon_on: Option<IconId>,
+    icon_off: Option<IconId>,
+) -> Option<AnyElement> {
+    let show_icons = icons || show_only_selected_icon;
+    if !show_icons {
+        return None;
+    }
+
+    let icon = if selected {
+        icon_on
+    } else if icons && !show_only_selected_icon {
+        icon_off
+    } else {
+        None
+    }?;
+
+    let (size, color) = {
+        let theme = Theme::global(&*cx.app);
+        let size = switch_tokens::icon_size(theme, selected);
+        let color = switch_tokens::icon_color(theme, selected, enabled, interaction);
+        (size, color)
+    };
+
+    Some(material_icon(cx, &icon, size, color))
+}
+
+fn material_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.color = color;
+    cx.svg_icon_props(props)
 }
