@@ -540,11 +540,14 @@ impl SceneRecording {
                 SceneOp::Text {
                     origin,
                     paint,
+                    outline,
                     shadow,
                     ..
                 } => {
                     if !point_is_finite(origin)
                         || !paint_is_finite(paint)
+                        || outline
+                            .is_some_and(|o| !paint_is_finite(o.paint) || !o.width_px.0.is_finite())
                         || shadow.is_some_and(|s| !text_shadow_is_finite(s))
                     {
                         return Err(SceneValidationError {

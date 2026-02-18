@@ -76,6 +76,35 @@ impl TextShadowV1 {
     }
 }
 
+/// A bounded, portable text outline/stroke surface (v1).
+///
+/// This is intentionally minimal so it can be implemented deterministically across wasm/mobile
+/// backends. More advanced strategies (e.g. SDF/MSDF atlases, multi-layer outlines) remain v2+.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextOutlineV1 {
+    pub paint: Paint,
+    /// Outline width in logical pixels (pre-scale-factor).
+    pub width_px: crate::Px,
+}
+
+impl TextOutlineV1 {
+    pub const MAX_WIDTH_PX: crate::Px = crate::Px(8.0);
+
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.width_px.0.is_finite() {
+            return None;
+        }
+        let width_px = crate::Px(self.width_px.0.clamp(0.0, Self::MAX_WIDTH_PX.0));
+        if width_px.0 <= 0.0 {
+            return None;
+        }
+        Some(Self {
+            paint: self.paint.sanitize(),
+            width_px,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectMode {
     /// Render children to an offscreen intermediate, then filter and composite the result.
@@ -479,6 +508,21 @@ impl SceneRecording {
                 chain: chain.sanitize(),
                 quality,
             },
+            SceneOp::Text {
+                order,
+                origin,
+                text,
+                paint,
+                outline,
+                shadow,
+            } => SceneOp::Text {
+                order,
+                origin,
+                text,
+                paint: paint.sanitize(),
+                outline: outline.and_then(|o| o.sanitize()),
+                shadow,
+            },
             other => other,
         };
 
@@ -754,6 +798,7 @@ pub enum SceneOp {
         origin: Point,
         text: TextBlobId,
         paint: Paint,
+        outline: Option<TextOutlineV1>,
         shadow: Option<TextShadowV1>,
     },
 
