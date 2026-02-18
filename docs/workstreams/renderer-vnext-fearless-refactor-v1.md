@@ -52,8 +52,9 @@ Current status (as of 2026-02-18):
 
 Remaining (next):
 
-- Outlined/stroked text as a bounded contract surface:
-  - Tracking: `docs/workstreams/text-outline-stroke-surface-v1.md`
+- External texture imports v2 (native): land one real native external frame source behind a deterministic
+  fallback chain (capability-gated; web remains copy-path baseline).
+  - Tracking: `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
 - Evidence-driven (optional): add bounded WebGPU material pipeline variants only if perf evidence warrants it:
   - Tracking: `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (`REN-VNEXT-webgpu-004`)
 

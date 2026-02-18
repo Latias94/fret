@@ -251,7 +251,7 @@ milestones) when implementation begins.
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
     - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
-- [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
+- [x] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
   - Status (2026-02-18): v1 landed for painted text fills (solid + gradients) and a bounded text shadow surface.
     - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
     - Landed (v1): GPU readback conformance gate for text gradient paint.
@@ -259,7 +259,7 @@ milestones) when implementation begins.
     - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
     - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
       (text/path still deterministically degrade materials to a solid base color).
-    - In progress (v1): `TextOutlineV1` contract + wgpu (mask+subpixel) implementation + conformance landed; adoption pending.
+    - Landed (v1): `TextOutlineV1` contract + wgpu (mask+subpixel) implementation + conformance; adoption landed via ui-gallery probe.
     - Tracking workstream (outline/stroke):
       - `docs/workstreams/text-outline-stroke-surface-v1.md`
       - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
@@ -276,6 +276,7 @@ milestones) when implementation begins.
     - `crates/fret-core/src/scene/mod.rs` (`TextOutlineV1`, `SceneOp::Text { outline }`)
     - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (outline pipeline variant)
     - `crates/fret-render-wgpu/tests/text_outline_conformance.rs` (`gpu_text_outline_v1_renders_a_visible_ring_for_mask_glyphs`)
+    - `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs`
     - `crates/fret-render-wgpu/tests/text_paint_conformance.rs` (`gpu_text_shadow_v1_renders_a_separate_layer`)
   - Gates:
     - `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
