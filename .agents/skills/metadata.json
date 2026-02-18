@@ -2,7 +2,7 @@
   "name": "fret-skills",
   "version": "0.7.2",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-14",
+  "last_updated": "2026-02-18",
   "intents": {
     "maintain_framework": {
       "primary": "fret-framework-maintainer-guide",
@@ -71,7 +71,7 @@
     "ui": ["fret-app-ui-builder", "fret-ui-review"],
     "diagnostics": ["fret-diag-workflow", "fret-perf-optimization", "fret-perf-tracy-bridge"],
     "performance": ["fret-perf-optimization", "fret-diag-workflow", "fret-perf-tracy-bridge"],
-    "parity": ["fret-shadcn-source-alignment"],
+    "parity": ["fret-shadcn-source-alignment", "fret-material-source-alignment"],
     "quality": [
       "fret-crate-audits",
       "fret-boundary-checks",
@@ -104,6 +104,23 @@
       "ring",
       "glassmorphism",
       "glass panel"
+    ],
+    "material3": [
+      "material",
+      "material3",
+      "material 3",
+      "material design",
+      "material design 3",
+      "material expressive",
+      "m3 expressive",
+      "mui",
+      "material-ui",
+      "material ui",
+      "compose material3",
+      "state layer",
+      "ripple",
+      "tonal",
+      "elevation"
     ],
     "ux": [
       "polish",
@@ -339,6 +356,7 @@
       "fret-perf-optimization",
       "fret-perf-tracy-bridge",
       "fret-shadcn-source-alignment",
+      "fret-material-source-alignment",
       "fret-crate-audits",
       "fret-boundary-checks",
       "fret-fixture-driven-harnesses",
