@@ -105,6 +105,7 @@ pub(super) enum RenderPlanPass {
     CompositePremul(CompositePremulPass),
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
+    BackdropWarp(BackdropWarpPass),
     ColorAdjust(ColorAdjustPass),
     ColorMatrix(ColorMatrixPass),
     AlphaThreshold(AlphaThresholdPass),
@@ -148,6 +149,24 @@ pub(super) struct BlurPass {
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) axis: BlurAxis,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct BackdropWarpPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) origin_px: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) strength_px: f32,
+    pub(super) scale_px: f32,
+    pub(super) phase: f32,
+    pub(super) chromatic_aberration_px: f32,
+    pub(super) kind: fret_core::scene::BackdropWarpKindV1,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -387,6 +406,9 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::Blur(BlurPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::BackdropWarp(BackdropWarpPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::ColorAdjust(ColorAdjustPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
@@ -467,6 +489,13 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::Blur(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::BackdropWarp(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {

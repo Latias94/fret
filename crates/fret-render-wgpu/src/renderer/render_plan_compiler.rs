@@ -104,8 +104,7 @@ pub(super) fn compile_for_scene(
                 .is_some()
             }
             fret_core::EffectStep::BackdropWarpV1(_w) => {
-                // Not yet implemented; v1 contract surface is staged in `fret-core` first.
-                false
+                effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
             }
             fret_core::EffectStep::ColorAdjust { .. } => {
                 effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
@@ -327,6 +326,7 @@ fn compile_for_scene_inner(
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
+         mode: fret_core::EffectMode,
          chain: fret_core::EffectChain,
          quality: fret_core::EffectQuality,
          ctx_viewport_size: (u32, u32),
@@ -369,6 +369,7 @@ fn compile_for_scene_inner(
                 passes,
                 &in_use_targets,
                 srcdst,
+                mode,
                 chain,
                 quality,
                 scissor,
@@ -438,6 +439,7 @@ fn compile_for_scene_inner(
                                     &mut passes,
                                     &draw_scopes,
                                     parent_target,
+                                    mode,
                                     chain,
                                     quality,
                                     parent_size,
@@ -586,6 +588,7 @@ fn compile_for_scene_inner(
                                 &mut passes,
                                 &draw_scopes,
                                 content_target,
+                                scope.mode,
                                 scope.chain,
                                 scope.quality,
                                 scope.content_size,

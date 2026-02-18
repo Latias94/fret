@@ -1,9 +1,9 @@
 use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
-    AlphaThresholdPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass, ColorMatrixPass,
-    FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass,
-    ScissorRect,
+    AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
+    ColorMatrixPass, FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass, ScaleMode,
+    ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -39,6 +39,7 @@ pub(super) fn apply_chain_in_place(
     passes: &mut Vec<RenderPlanPass>,
     in_use_targets: &[PlanTarget],
     srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
     chain: fret_core::EffectChain,
     quality: fret_core::EffectQuality,
     scissor: ScissorRect,
@@ -155,8 +156,27 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
-            fret_core::EffectStep::BackdropWarpV1(_w) => {
-                // Not yet implemented in the effect chain.
+            fret_core::EffectStep::BackdropWarpV1(w) => {
+                if mode != fret_core::EffectMode::Backdrop {
+                    continue;
+                }
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+                append_backdrop_warp_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    scissor,
+                    w.sanitize(),
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
             }
             fret_core::EffectStep::ColorAdjust {
                 saturation,
@@ -305,6 +325,15 @@ pub(super) fn color_adjust_enabled(
     }
     let full = estimate_texture_bytes(viewport_size, format, 1);
     full.saturating_mul(2) <= budget_bytes
+}
+
+pub(super) fn backdrop_warp_enabled(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+) -> bool {
+    // BackdropWarp v1 uses the same single-scratch texture pattern as color-adjust/matrix.
+    color_adjust_enabled(viewport_size, format, budget_bytes)
 }
 
 pub(super) fn pixelate_enabled(
@@ -584,6 +613,52 @@ fn append_color_adjust_in_place_single_scratch(
         dst_size: size,
         dst_scissor: None,
         load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+fn append_backdrop_warp_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV1,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if scissor.w == 0 || scissor.h == 0 {
+        return;
+    }
+
+    // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        origin_px: (scissor.x, scissor.y),
+        dst_scissor: Some(scissor),
+        mask_uniform_index,
+        mask,
+        strength_px: warp.strength_px.0,
+        scale_px: warp.scale_px.0,
+        phase: warp.phase,
+        chromatic_aberration_px: warp.chromatic_aberration_px.0,
+        kind: warp.kind,
+        load: wgpu::LoadOp::Load,
     }));
 }
 

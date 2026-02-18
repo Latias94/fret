@@ -456,6 +456,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let backdrop_warp_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret backdrop-warp params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let color_matrix_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret color-matrix params buffer"),
             size: 256,
@@ -546,6 +553,13 @@ impl Renderer {
             scale_param_buffer,
             scale_param_stride,
             scale_param_capacity,
+            backdrop_warp_pipeline_format: None,
+            backdrop_warp_pipeline: None,
+            backdrop_warp_masked_pipeline: None,
+            backdrop_warp_mask_pipeline: None,
+            backdrop_warp_bind_group_layout: None,
+            backdrop_warp_mask_bind_group_layout: None,
+            backdrop_warp_param_buffer,
             color_adjust_pipeline_format: None,
             color_adjust_pipeline: None,
             color_adjust_masked_pipeline: None,

@@ -8,6 +8,13 @@ Tracking files:
 - `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`
 
+## Progress (living)
+
+- M0: in progress (ADR is present but still marked Draft).
+- M1: done (wgpu implementation + WebGPU shader validation).
+- M2: in progress (conformance landed; perf baseline still pending).
+- M3: pending (demo toggle + adoption notes).
+
 ## M0 — ADR lock + bounded vocabulary
 
 Exit criteria:

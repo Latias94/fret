@@ -153,6 +153,14 @@ pub struct Renderer {
     scale_param_stride: u64,
     scale_param_capacity: usize,
 
+    backdrop_warp_pipeline_format: Option<wgpu::TextureFormat>,
+    backdrop_warp_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_masked_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_mask_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_param_buffer: wgpu::Buffer,
+
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
     color_adjust_pipeline: Option<wgpu::RenderPipeline>,
     color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,

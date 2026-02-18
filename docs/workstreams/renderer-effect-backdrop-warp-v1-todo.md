@@ -35,23 +35,24 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Renderer implementation (wgpu)
 
-- [ ] BWARP-wgpu-030 Implement `BackdropWarp` in `fret-render-wgpu`:
+- [x] BWARP-wgpu-030 Implement `BackdropWarp` in `fret-render-wgpu`:
       integrate into the backdrop effect pass with bounded pipeline variants.
   - Requirements:
     - strict scissor to effect bounds,
     - uniform-control-flow-safe WGSL (no divergent sampling branches),
     - deterministic degradation when unsupported / budgeted.
   - Evidence anchors:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (chain compile)
     - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (effect execution)
-    - `crates/fret-render-wgpu/src/renderer/shaders/*` (warp eval + sampling)
-    - `crates/fret-render-wgpu/src/renderer/pipelines/*` (variant keying)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (pipelines + bind groups)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`BACKDROP_WARP_*` shaders)
 
 ## Conformance + portability gates
 
-- [ ] BWARP-test-040 Add a GPU readback conformance test:
+- [x] BWARP-test-040 Add a GPU readback conformance test:
       backdrop warp modifies sampled backdrop pixels deterministically.
   - Evidence anchors:
-    - `crates/fret-render-wgpu/tests/*_conformance.rs` (new test)
+    - `crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
 - [ ] BWARP-perf-050 Add a steady-state perf gate + baseline:
