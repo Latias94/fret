@@ -178,6 +178,65 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::BackdropWarpV2(w) => {
+                if mode != fret_core::EffectMode::Backdrop {
+                    continue;
+                }
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+
+                // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
+                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: srcdst,
+                    dst: scratch,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: None,
+                    load: wgpu::LoadOp::Clear(ctx.clear),
+                }));
+
+                let base = w.base.sanitize();
+                let (warp_image, warp_uv, warp_sampling, warp_encoding) = match w.field {
+                    fret_core::scene::BackdropWarpFieldV2::Procedural => (
+                        None,
+                        fret_core::scene::UvRect::FULL,
+                        fret_core::scene::ImageSamplingHint::Default,
+                        fret_core::scene::WarpMapEncodingV1::RgSigned,
+                    ),
+                    fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                        image,
+                        uv,
+                        sampling,
+                        encoding,
+                    } => (Some(image), uv, sampling, encoding),
+                };
+
+                passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
+                    src: scratch,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    origin_px: (scissor.x, scissor.y),
+                    bounds_size_px: (scissor.w, scissor.h),
+                    dst_scissor: Some(scissor),
+                    mask_uniform_index,
+                    mask,
+                    strength_px: base.strength_px.0,
+                    scale_px: base.scale_px.0,
+                    phase: base.phase,
+                    chromatic_aberration_px: base.chromatic_aberration_px.0,
+                    kind: base.kind,
+                    warp_image,
+                    warp_uv,
+                    warp_sampling,
+                    warp_encoding,
+                    load: wgpu::LoadOp::Load,
+                }));
+            }
             fret_core::EffectStep::ColorAdjust {
                 saturation,
                 brightness,
@@ -650,6 +709,7 @@ fn append_backdrop_warp_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         origin_px: (scissor.x, scissor.y),
+        bounds_size_px: (scissor.w, scissor.h),
         dst_scissor: Some(scissor),
         mask_uniform_index,
         mask,
@@ -658,6 +718,10 @@ fn append_backdrop_warp_in_place_single_scratch(
         phase: warp.phase,
         chromatic_aberration_px: warp.chromatic_aberration_px.0,
         kind: warp.kind,
+        warp_image: None,
+        warp_uv: fret_core::scene::UvRect::FULL,
+        warp_sampling: fret_core::scene::ImageSamplingHint::Default,
+        warp_encoding: fret_core::scene::WarpMapEncodingV1::RgSigned,
         load: wgpu::LoadOp::Load,
     }));
 }

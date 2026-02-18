@@ -161,6 +161,12 @@ pub struct Renderer {
     backdrop_warp_mask_pipeline: Option<wgpu::RenderPipeline>,
     backdrop_warp_bind_group_layout: Option<wgpu::BindGroupLayout>,
     backdrop_warp_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    backdrop_warp_image_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_masked_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_mask_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_image_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     backdrop_warp_param_buffer: wgpu::Buffer,
 
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,

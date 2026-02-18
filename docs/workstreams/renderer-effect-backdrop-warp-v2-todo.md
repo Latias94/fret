@@ -1,6 +1,6 @@
 # Renderer Effect: Backdrop Warp v2 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Landed (wgpu default renderer; conformance + perf baseline recorded)
 
 Tracking format:
 
@@ -12,7 +12,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Design lock
 
-- [ ] BWARP2-adr-010 Add an ADR for the bounded backdrop warp v2 surface:
+- [x] BWARP2-adr-010 Add an ADR for the bounded backdrop warp v2 surface:
       image-driven warp field source, decoding semantics, deterministic degradation rules, and
       wasm/mobile constraints.
   - Exit criteria:
@@ -27,18 +27,19 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
 
 ## Contract changes
 
-- [ ] BWARP2-core-020 Add a new `EffectStep` variant for backdrop warp v2 in `fret-core`.
+- [x] BWARP2-core-020 Add a new `EffectStep` variant for backdrop warp v2 in `fret-core`.
   - Notes:
     - Prefer `ImageId + UvRect + ImageSamplingHint` (portable, bounded).
     - Keep decoding vocabulary small (e.g. `WarpMapEncodingV1`).
     - Keep chromatic aberration optional and bounded by a small max.
   - Evidence anchors:
-    - `crates/fret-core/src/scene/mod.rs` (`EffectStep`)
-    - `crates/fret-core/src/scene/{validate.rs,fingerprint.rs}` (sanitize + determinism)
+    - `crates/fret-core/src/scene/mod.rs` (`EffectStep::BackdropWarpV2`, `BackdropWarpV2`, `BackdropWarpFieldV2`)
+    - `crates/fret-core/src/scene/fingerprint.rs` (`mix_scene_op` for `EffectStep::BackdropWarpV2`)
+    - `crates/fret-core/src/scene/validate.rs` (`EffectStep::BackdropWarpV2` validation)
 
 ## Renderer implementation (wgpu)
 
-- [ ] BWARP2-wgpu-030 Implement `BackdropWarpV2` in `fret-render-wgpu`:
+- [x] BWARP2-wgpu-030 Implement `BackdropWarpV2` in `fret-render-wgpu`:
       integrate into the backdrop effect pass with bounded pipeline variants and one extra sampled
       image binding (warp field).
   - Requirements:
@@ -46,34 +47,32 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - uniform-control-flow-safe WGSL (no divergent sampling branches),
     - deterministic degradation when unsupported / budgeted.
   - Evidence anchors:
-    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (chain compile)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (effect execution)
-    - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (pipelines + bind groups)
-    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`BACKDROP_WARP_*` shaders)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (`EffectStep::BackdropWarpV2` -> `RenderPlanPass::BackdropWarp`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (warp-field image pipelines + bind group layouts)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`BACKDROP_WARP_*` WGSL; WebGPU-uniformity-safe sampling)
 
 ## Conformance + portability gates
 
-- [ ] BWARP2-test-040 Add a GPU readback conformance test:
+- [x] BWARP2-test-040 Add a GPU readback conformance test:
       image-driven warp modifies sampled backdrop pixels deterministically (and degrades
       deterministically when the warp field is missing).
   - Evidence anchors:
     - `crates/fret-render-wgpu/tests/effect_backdrop_warp_v2_conformance.rs`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
-- [ ] BWARP2-perf-050 Add a steady-state perf gate + baseline for v2:
+- [x] BWARP2-perf-050 Add a steady-state perf gate + baseline for v2:
       worst-frame stability under map-driven warp + blur chain.
   - Notes:
     - Keep sample counts bounded and observe pipeline key growth via existing renderer counters.
   - Evidence anchors:
-    - `tools/perf/*`
-    - `tools/diag-scripts/*`
-    - `docs/workstreams/perf-baselines/*`
+    - `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
+    - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
+    - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
 
 ## Demo validation (optional but recommended)
 
-- [ ] BWARP2-demo-060 Update `liquid_glass_demo` to exercise v2 behind a toggle:
+- [x] BWARP2-demo-060 Update `liquid_glass_demo` to exercise v2 behind a toggle:
       include a dense background stage so distortion is visually obvious, and keep the fake-glass
       baseline available.
   - Evidence anchors:
     - `apps/fret-examples/src/liquid_glass_demo.rs`
-

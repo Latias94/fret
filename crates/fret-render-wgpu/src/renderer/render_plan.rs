@@ -160,6 +160,7 @@ pub(super) struct BackdropWarpPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) origin_px: (u32, u32),
+    pub(super) bounds_size_px: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
@@ -168,6 +169,10 @@ pub(super) struct BackdropWarpPass {
     pub(super) phase: f32,
     pub(super) chromatic_aberration_px: f32,
     pub(super) kind: fret_core::scene::BackdropWarpKindV1,
+    pub(super) warp_image: Option<fret_core::ImageId>,
+    pub(super) warp_uv: fret_core::scene::UvRect,
+    pub(super) warp_sampling: fret_core::scene::ImageSamplingHint,
+    pub(super) warp_encoding: fret_core::scene::WarpMapEncodingV1,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 

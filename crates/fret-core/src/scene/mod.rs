@@ -166,6 +166,80 @@ impl BackdropWarpV1 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WarpMapEncodingV1 {
+    /// Decode displacement from RG in [0, 1] mapped to [-1, 1].
+    ///
+    /// This is a good default for authored displacement maps.
+    RgSigned,
+    /// Decode a normal from RGB in [0, 1] mapped to [-1, 1], and use XY as displacement.
+    ///
+    /// This is convenient when the warp field is stored as a normal map.
+    NormalRgb,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BackdropWarpFieldV2 {
+    /// Use the procedural v1 warp field (`BackdropWarpV1`).
+    Procedural,
+    /// Use an image-driven displacement/normal map as the warp field.
+    ImageDisplacementMap {
+        image: ImageId,
+        uv: UvRect,
+        sampling: ImageSamplingHint,
+        encoding: WarpMapEncodingV1,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BackdropWarpV2 {
+    /// The v1 parameters are retained as the portable base (and deterministic fallback).
+    pub base: BackdropWarpV1,
+    pub field: BackdropWarpFieldV2,
+}
+
+impl BackdropWarpV2 {
+    pub fn sanitize(self) -> Self {
+        let base = self.base.sanitize();
+        let field = match self.field {
+            BackdropWarpFieldV2::Procedural => BackdropWarpFieldV2::Procedural,
+            BackdropWarpFieldV2::ImageDisplacementMap {
+                image,
+                uv,
+                sampling,
+                encoding,
+            } => {
+                let uv = if uv.u0.is_finite()
+                    && uv.v0.is_finite()
+                    && uv.u1.is_finite()
+                    && uv.v1.is_finite()
+                {
+                    uv
+                } else {
+                    UvRect::FULL
+                };
+                let sampling = match sampling {
+                    ImageSamplingHint::Default => ImageSamplingHint::Default,
+                    ImageSamplingHint::Linear => ImageSamplingHint::Linear,
+                    ImageSamplingHint::Nearest => ImageSamplingHint::Nearest,
+                };
+                let encoding = match encoding {
+                    WarpMapEncodingV1::RgSigned => WarpMapEncodingV1::RgSigned,
+                    WarpMapEncodingV1::NormalRgb => WarpMapEncodingV1::NormalRgb,
+                };
+                BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling,
+                    encoding,
+                }
+            }
+        };
+
+        Self { base, field }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackdropWarpKindV1 {
     Wave,
     /// Reserved for a lens-like warp in a future v1.x/v2. Renderers may treat this as `Wave`.
@@ -179,6 +253,7 @@ pub enum EffectStep {
         downsample: u32,
     },
     BackdropWarpV1(BackdropWarpV1),
+    BackdropWarpV2(BackdropWarpV2),
     ColorAdjust {
         saturation: f32,
         brightness: f32,
@@ -211,6 +286,7 @@ impl EffectStep {
                 EffectStep::ColorMatrix { m }
             }
             EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
+            EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },

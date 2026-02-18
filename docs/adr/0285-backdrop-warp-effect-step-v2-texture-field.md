@@ -65,8 +65,10 @@ The step is only meaningful when used under `EffectMode::Backdrop`:
 1. If used with `EffectMode::FilterContent`: deterministically degrade (one rule, explicitly chosen):
    - Option A: skip the warp (no-op) and preserve the rest of the chain.
    - Option B: treat as `BackdropWarpV1` procedural (for a stable fallback).
-   - This ADR chooses **Option B** (procedural fallback) to preserve “distortion exists” semantics
-     even when the mode is misused. Renderers may still clamp strength to zero under budgets.
+   - This ADR chooses **Option A** (skip) to preserve the “backdrop warp” meaning:
+     - `EffectMode::FilterContent` does not sample backdrop pixels by definition,
+     - and ADR 0284 already requires `BackdropWarpV1` to be ignored under `FilterContent`.
+     This keeps layering semantics consistent and avoids accidental “content-warp” behavior.
 2. If the warp field image is unavailable or unsupported:
    - degrade to `Procedural(BackdropWarpV1)` (or skip if strength is zero).
 3. Under budget pressure:
@@ -98,4 +100,3 @@ Cons:
 - Workstream: `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
 - TODO: `docs/workstreams/renderer-effect-backdrop-warp-v2-todo.md`
 - Milestones: `docs/workstreams/renderer-effect-backdrop-warp-v2-milestones.md`
-

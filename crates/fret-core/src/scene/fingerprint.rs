@@ -333,6 +333,52 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                             },
                         )
                     }
+                    EffectStep::BackdropWarpV2(w) => {
+                        let mut state = mix_u64(state, 8);
+                        // Base (procedural) parameters are always included to preserve deterministic fallback.
+                        state = mix_px(state, w.base.strength_px);
+                        state = mix_px(state, w.base.scale_px);
+                        state = mix_f32(state, w.base.phase);
+                        state = mix_px(state, w.base.chromatic_aberration_px);
+                        state = mix_u64(
+                            state,
+                            match w.base.kind {
+                                BackdropWarpKindV1::Wave => 1,
+                                BackdropWarpKindV1::LensReserved => 2,
+                            },
+                        );
+                        match w.field {
+                            BackdropWarpFieldV2::Procedural => mix_u64(state, 1),
+                            BackdropWarpFieldV2::ImageDisplacementMap {
+                                image,
+                                uv,
+                                sampling,
+                                encoding,
+                            } => {
+                                let mut state = mix_u64(state, 2);
+                                state = mix_u64(state, image.data().as_ffi());
+                                state = mix_f32(state, uv.u0);
+                                state = mix_f32(state, uv.v0);
+                                state = mix_f32(state, uv.u1);
+                                state = mix_f32(state, uv.v1);
+                                state = mix_u64(
+                                    state,
+                                    match sampling {
+                                        ImageSamplingHint::Default => 0,
+                                        ImageSamplingHint::Linear => 1,
+                                        ImageSamplingHint::Nearest => 2,
+                                    },
+                                );
+                                mix_u64(
+                                    state,
+                                    match encoding {
+                                        WarpMapEncodingV1::RgSigned => 1,
+                                        WarpMapEncodingV1::NormalRgb => 2,
+                                    },
+                                )
+                            }
+                        }
+                    }
                     EffectStep::ColorAdjust {
                         saturation,
                         brightness,

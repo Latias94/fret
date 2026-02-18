@@ -1,4 +1,4 @@
-Status: Draft (workstream tracker)
+Status: Landed (wgpu default renderer; conformance + perf baseline recorded)
 
 This workstream defines and lands a **bounded, portable “backdrop warp v2”** effect step that
 enables *asset-driven* liquid-glass style visuals:
@@ -58,7 +58,7 @@ Notes:
 - The maximum displacement (in px) remains bounded by the contract (clamped).
 
 The step is only meaningful under `EffectMode::Backdrop` (sampling already-rendered backdrop).
-Under `FilterContent`, renderers deterministically degrade (ADR must lock one rule).
+Under `FilterContent`, renderers deterministically degrade by skipping the step (no-op).
 
 ## Semantics (v2)
 
@@ -77,7 +77,7 @@ Given a pixel in the effect bounds:
 
 Deterministic degradation rules (ordered):
 
-1. If `EffectMode::FilterContent`: degrade to `BackdropWarpV1` procedural no-op or skip (ADR lock).
+1. If `EffectMode::FilterContent`: skip the warp step (no-op) and preserve the rest of the chain.
 2. If the image warp field is unavailable (missing image, unsupported sampling, budgets):
    - degrade to `Procedural(BackdropWarpV1)` with the same strength clamp (or skip if `strength_px == 0`).
 3. Under budget pressure:
@@ -117,4 +117,3 @@ Related (v1):
 
 - Workstream: `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 - ADR: `docs/adr/0284-backdrop-warp-effect-step-v1.md`
-

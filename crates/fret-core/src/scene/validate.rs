@@ -321,6 +321,28 @@ impl SceneRecording {
                                     && w.phase.is_finite()
                                     && px_is_finite(w.chromatic_aberration_px)
                             }
+                            EffectStep::BackdropWarpV2(w) => {
+                                let base_ok = px_is_finite(w.base.strength_px)
+                                    && px_is_finite(w.base.scale_px)
+                                    && w.base.scale_px.0 > 0.0
+                                    && w.base.phase.is_finite()
+                                    && px_is_finite(w.base.chromatic_aberration_px);
+                                if !base_ok {
+                                    false
+                                } else {
+                                    match w.field {
+                                        BackdropWarpFieldV2::Procedural => true,
+                                        BackdropWarpFieldV2::ImageDisplacementMap {
+                                            uv, ..
+                                        } => {
+                                            uv.u0.is_finite()
+                                                && uv.v0.is_finite()
+                                                && uv.u1.is_finite()
+                                                && uv.v1.is_finite()
+                                        }
+                                    }
+                                }
+                            }
                             EffectStep::ColorAdjust {
                                 saturation,
                                 brightness,

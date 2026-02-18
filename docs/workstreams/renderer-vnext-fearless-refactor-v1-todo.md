@@ -308,6 +308,14 @@ milestones) when implementation begins.
     - `crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs`
     - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
     - `apps/fret-examples/src/liquid_glass_demo.rs`
+  - Extension (v2, texture-driven warp field):
+    - Status: in progress (gates pending)
+    - Tracking:
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2-todo.md`
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2-milestones.md`
+    - Evidence:
+      - `docs/adr/0285-backdrop-warp-effect-step-v2-texture-field.md`
 
 - [~] REN-VNEXT-sem-100 Drop shadow (blur-based, bounded): add a general drop shadow effect step for
       non-text content (cards/popovers), with deterministic degradation and perf gates.

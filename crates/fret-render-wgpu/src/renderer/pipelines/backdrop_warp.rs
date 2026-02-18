@@ -13,6 +13,11 @@ impl Renderer {
             && self.backdrop_warp_bind_group_layout.is_some()
             && self.backdrop_warp_mask_pipeline.is_some()
             && self.backdrop_warp_mask_bind_group_layout.is_some()
+            && self.backdrop_warp_image_pipeline.is_some()
+            && self.backdrop_warp_image_masked_pipeline.is_some()
+            && self.backdrop_warp_image_bind_group_layout.is_some()
+            && self.backdrop_warp_image_mask_pipeline.is_some()
+            && self.backdrop_warp_image_mask_bind_group_layout.is_some()
         {
             return;
         }
@@ -52,7 +57,7 @@ impl Renderer {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: Some(std::num::NonZeroU64::new(32).unwrap()),
+                        min_binding_size: Some(std::num::NonZeroU64::new(64).unwrap()),
                     },
                     count: None,
                 },
@@ -78,7 +83,7 @@ impl Renderer {
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
-                            min_binding_size: Some(std::num::NonZeroU64::new(32).unwrap()),
+                            min_binding_size: Some(std::num::NonZeroU64::new(64).unwrap()),
                         },
                         count: None,
                     },
@@ -95,18 +100,114 @@ impl Renderer {
                 ],
             });
 
+        let image_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret backdrop-warp image bind group layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: Some(std::num::NonZeroU64::new(64).unwrap()),
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        let image_mask_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret backdrop-warp image mask bind group layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: Some(std::num::NonZeroU64::new(64).unwrap()),
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret backdrop-warp shader"),
             source: wgpu::ShaderSource::Wgsl(BACKDROP_WARP_SHADER.into()),
+        });
+        let image_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret backdrop-warp image shader"),
+            source: wgpu::ShaderSource::Wgsl(BACKDROP_WARP_IMAGE_SHADER.into()),
         });
         let masked_src = backdrop_warp_masked_shader_source();
         let masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret backdrop-warp masked shader"),
             source: wgpu::ShaderSource::Wgsl(masked_src.into()),
         });
+        let image_masked_src = backdrop_warp_image_masked_shader_source();
+        let image_masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret backdrop-warp image masked shader"),
+            source: wgpu::ShaderSource::Wgsl(image_masked_src.into()),
+        });
         let mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret backdrop-warp mask shader"),
             source: wgpu::ShaderSource::Wgsl(BACKDROP_WARP_MASK_SHADER.into()),
+        });
+        let image_mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret backdrop-warp image mask shader"),
+            source: wgpu::ShaderSource::Wgsl(BACKDROP_WARP_IMAGE_MASK_SHADER.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -125,6 +226,28 @@ impl Renderer {
             bind_group_layouts: &[&self.uniform_bind_group_layout, &mask_bind_group_layout],
             immediate_size: 0,
         });
+
+        let image_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("fret backdrop-warp image pipeline layout"),
+                bind_group_layouts: &[&image_bind_group_layout],
+                immediate_size: 0,
+            });
+        let image_masked_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("fret backdrop-warp image masked pipeline layout"),
+                bind_group_layouts: &[&self.uniform_bind_group_layout, &image_bind_group_layout],
+                immediate_size: 0,
+            });
+        let image_mask_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("fret backdrop-warp image mask pipeline layout"),
+                bind_group_layouts: &[
+                    &self.uniform_bind_group_layout,
+                    &image_mask_bind_group_layout,
+                ],
+                immediate_size: 0,
+            });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret backdrop-warp pipeline"),
@@ -148,6 +271,40 @@ impl Renderer {
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        let image_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret backdrop-warp image pipeline"),
+            layout: Some(&image_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &image_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &image_shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format,
@@ -206,6 +363,41 @@ impl Renderer {
             cache: None,
         });
 
+        let image_masked_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("fret backdrop-warp image masked pipeline"),
+                layout: Some(&image_masked_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &image_masked_shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &image_masked_shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend: Some(masked_blend),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                }),
+                multiview_mask: None,
+                cache: None,
+            });
+
         let mask_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret backdrop-warp mask pipeline"),
             layout: Some(&mask_pipeline_layout),
@@ -240,11 +432,51 @@ impl Renderer {
             cache: None,
         });
 
+        let image_mask_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret backdrop-warp image mask pipeline"),
+            layout: Some(&image_mask_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &image_mask_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &image_mask_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(masked_blend),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
         self.backdrop_warp_pipeline_format = Some(format);
         self.backdrop_warp_bind_group_layout = Some(bind_group_layout);
         self.backdrop_warp_mask_bind_group_layout = Some(mask_bind_group_layout);
         self.backdrop_warp_pipeline = Some(pipeline);
         self.backdrop_warp_masked_pipeline = Some(masked_pipeline);
         self.backdrop_warp_mask_pipeline = Some(mask_pipeline);
+
+        self.backdrop_warp_image_bind_group_layout = Some(image_bind_group_layout);
+        self.backdrop_warp_image_mask_bind_group_layout = Some(image_mask_bind_group_layout);
+        self.backdrop_warp_image_pipeline = Some(image_pipeline);
+        self.backdrop_warp_image_masked_pipeline = Some(image_masked_pipeline);
+        self.backdrop_warp_image_mask_pipeline = Some(image_mask_pipeline);
     }
 }

@@ -1,6 +1,6 @@
 # Renderer Effect: Backdrop Warp v2 — Milestones
 
-Status: Draft (workstream tracker)
+Status: Landed (wgpu default renderer; conformance + perf baseline recorded)
 
 Tracking files:
 
@@ -10,10 +10,33 @@ Tracking files:
 
 ## Progress (living)
 
-- M0: not started (ADR lock).
-- M1: not started (core contract + wgpu implementation).
-- M2: not started (conformance + steady-state perf baseline).
-- M3: not started (demo validation + adoption notes).
+- M0: done (ADR drafted + bounded vocabulary).
+- M1: done (core contract + wgpu implementation + WebGPU shader validation).
+- M2: done (conformance + steady-state perf baseline).
+- M3: done (demo validation + adoption notes).
+
+Progress record (M0/M1):
+
+- Date: 2026-02-18
+- Status: Implemented (local branch); conformance landed; perf + demo toggles pending
+- Evidence anchors:
+  - `docs/adr/0285-backdrop-warp-effect-step-v2-texture-field.md`
+  - `crates/fret-core/src/scene/mod.rs` (`EffectStep::BackdropWarpV2`, `BackdropWarpV2`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (`EffectStep::BackdropWarpV2` compile path)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (warp-field image pipeline variants)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`BACKDROP_WARP_*` WGSL)
+  - Gates:
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo test -p fret-render-wgpu --test effect_backdrop_warp_v2_conformance`
+
+Progress record (M2):
+
+- Date: 2026-02-18
+- Status: Baseline recorded (v2 steady script)
+- Evidence anchors:
+  - `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
+  - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
+  - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
 
 ## M0 — ADR lock + bounded vocabulary
 
@@ -51,6 +74,9 @@ Evidence anchors:
 
 - `crates/fret-render-wgpu/tests/*_conformance.rs`
 - `docs/workstreams/perf-baselines/*`
+  - Script: `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
+  - Seed policy: `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
+  - Baseline: `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
 
 ## M3 — Demo validation + adoption notes
 
@@ -65,4 +91,3 @@ Exit criteria:
 Evidence anchors:
 
 - `apps/fret-examples/src/liquid_glass_demo.rs`
-

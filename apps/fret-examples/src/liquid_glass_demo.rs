@@ -1,8 +1,9 @@
-//! Liquid glass demo (BackdropWarpV1).
+//! Liquid glass demo (BackdropWarpV1 / BackdropWarpV2).
 //!
 //! This demo intentionally keeps the "stage" visible and places two small lenses on top:
 //! - Fake glass: blur + color adjust
-//! - True warp: BackdropWarpV1 + blur + color adjust
+//! - True warp (v1): BackdropWarpV1 + blur + color adjust
+//! - True warp (v2): BackdropWarpV2 (image warp field) + blur + color adjust
 
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -10,16 +11,18 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_core::scene::{
-    BackdropWarpKindV1, BackdropWarpV1, ColorSpace, DitherMode, EffectChain, EffectMode,
-    EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS, Paint, TileMode,
+    BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2, ColorSpace,
+    DitherMode, EffectChain, EffectMode, EffectQuality, EffectStep, GradientStop,
+    ImageSamplingHint, LinearGradient, MAX_STOPS, Paint, TileMode, UvRect, WarpMapEncodingV1,
 };
-use fret_core::{Color, Corners, Edges, Point, Px};
+use fret_core::{Color, Corners, Edges, ImageColorSpace, Point, Px};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, TextProps,
 };
+use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
 use fret_ui_shadcn as shadcn;
 
@@ -75,7 +78,7 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
 }
 
 fn build_chain(
-    warp: Option<BackdropWarpV1>,
+    warp: Option<EffectStep>,
     blur_radius_px: f32,
     blur_downsample: u32,
     saturation: f32,
@@ -84,8 +87,8 @@ fn build_chain(
     dither: bool,
 ) -> EffectChain {
     let mut steps: Vec<EffectStep> = Vec::new();
-    if let Some(w) = warp {
-        steps.push(EffectStep::BackdropWarpV1(w.sanitize()));
+    if let Some(step) = warp {
+        steps.push(step);
     }
     if blur_radius_px > 0.0 && steps.len() < EffectChain::MAX_STEPS {
         steps.push(EffectStep::GaussianBlur {
@@ -108,6 +111,46 @@ fn build_chain(
     EffectChain::from_steps(&steps).sanitize()
 }
 
+fn generate_warp_map_rg_signed(width: u32, height: u32) -> Vec<u8> {
+    let w = width.max(1);
+    let h = height.max(1);
+    let mut out = vec![0u8; (w as usize) * (h as usize) * 4];
+
+    for y in 0..h {
+        for x in 0..w {
+            let u = if w > 1 {
+                (x as f32) / ((w - 1) as f32)
+            } else {
+                0.0
+            };
+            let v = if h > 1 {
+                (y as f32) / ((h - 1) as f32)
+            } else {
+                0.0
+            };
+
+            let p = glam::Vec2::new(u - 0.5, v - 0.5);
+            let r = p.length().min(1.0);
+            let a = p.y.atan2(p.x);
+
+            let amp = 0.22 * (1.0 - r).powf(0.6);
+            let dx = (a * 4.0 + r * 18.0).sin() * amp;
+            let dy = (a * 3.0 - r * 16.0).cos() * amp;
+
+            let rr = ((dx * 0.5 + 0.5) * 255.0).round().clamp(0.0, 255.0) as u8;
+            let gg = ((dy * 0.5 + 0.5) * 255.0).round().clamp(0.0, 255.0) as u8;
+
+            let idx = ((y as usize) * (w as usize) + (x as usize)) * 4;
+            out[idx] = rr;
+            out[idx + 1] = gg;
+            out[idx + 2] = 128;
+            out[idx + 3] = 255;
+        }
+    }
+
+    out
+}
+
 fn lens_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
@@ -122,8 +165,8 @@ fn lens_panel<H: UiHost>(
 
     let highlight = linear_gradient(
         &[
-            (0.0, srgb(255, 255, 255, 0.14)),
-            (0.44, srgb(255, 255, 255, 0.03)),
+            (0.0, srgb(255, 255, 255, 0.10)),
+            (0.44, srgb(255, 255, 255, 0.02)),
             (1.0, srgb(255, 255, 255, 0.00)),
         ],
         Point::new(Px(0.0), Px(0.0)),
@@ -166,10 +209,10 @@ fn lens_panel<H: UiHost>(
                     let inner = ContainerProps {
                         layout: inner_layout,
                         padding: Edges::all(Px(14.0)),
-                        background: Some(srgb(16, 18, 24, 0.18)),
+                        background: Some(srgb(16, 18, 24, 0.08)),
                         background_paint: Some(highlight),
                         border: Edges::all(Px(1.0)),
-                        border_color: Some(srgb(255, 255, 255, 0.18)),
+                        border_color: Some(srgb(255, 255, 255, 0.22)),
                         corner_radii: Corners::all(radius),
                         ..Default::default()
                     };
@@ -187,9 +230,14 @@ fn lens_panel<H: UiHost>(
 struct LiquidGlassState {
     show_fake: Model<bool>,
     show_warp: Model<bool>,
+    show_warp_v2: Model<bool>,
     show_inspector: Model<bool>,
     animate: Model<bool>,
     phase_speed: Model<Vec<f32>>,
+
+    warp_map_size: (u32, u32),
+    warp_map_key: ImageAssetKey,
+    warp_map_rgba: Arc<Vec<u8>>,
 
     warp_strength_px: Model<Vec<f32>>,
     warp_scale_px: Model<Vec<f32>>,
@@ -233,12 +281,27 @@ impl MvuProgram for LiquidGlassProgram {
     type Message = Msg;
 
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
+        let warp_map_size = (128u32, 128u32);
+        let warp_map_rgba = generate_warp_map_rg_signed(warp_map_size.0, warp_map_size.1);
+        let warp_map_key = ImageAssetKey::from_rgba8(
+            warp_map_size.0,
+            warp_map_size.1,
+            ImageColorSpace::Linear,
+            &warp_map_rgba,
+        );
+        let warp_map_rgba = Arc::new(warp_map_rgba);
+
         Self::State {
             show_fake: app.models_mut().insert(true),
             show_warp: app.models_mut().insert(true),
+            show_warp_v2: app.models_mut().insert(false),
             show_inspector: app.models_mut().insert(true),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
+
+            warp_map_size,
+            warp_map_key,
+            warp_map_rgba,
 
             warp_strength_px: app.models_mut().insert(vec![10.0]),
             warp_scale_px: app.models_mut().insert(vec![72.0]),
@@ -260,6 +323,7 @@ impl MvuProgram for LiquidGlassProgram {
         if matches!(message, Msg::Reset) {
             let _ = app.models_mut().update(&st.show_fake, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp, |v| *v = true);
+            let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = true);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -310,6 +374,7 @@ fn view(
 
     let show_fake_model = st.show_fake.clone();
     let show_warp_model = st.show_warp.clone();
+    let show_warp_v2_model = st.show_warp_v2.clone();
     let animate_model = st.animate.clone();
     let phase_speed_model = st.phase_speed.clone();
     let show_inspector_model = st.show_inspector.clone();
@@ -330,6 +395,7 @@ fn view(
 
     let show_fake = cx.watch_model(&st.show_fake).layout().copied_or(true);
     let show_warp = cx.watch_model(&st.show_warp).layout().copied_or(true);
+    let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().copied_or(false);
     let show_inspector = cx.watch_model(&st.show_inspector).layout().copied_or(true);
     let animate = cx.watch_model(&st.animate).layout().copied_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
@@ -361,13 +427,27 @@ fn view(
         cx.request_animation_frame();
     }
 
-    let warp = BackdropWarpV1 {
+    let warp_image = cx.app.with_image_asset_cache(|cache, app| {
+        cache.use_rgba8_keyed(
+            app,
+            cx.window,
+            st.warp_map_key,
+            st.warp_map_size.0,
+            st.warp_map_size.1,
+            st.warp_map_rgba.as_ref().as_slice(),
+            ImageColorSpace::Linear,
+        )
+    });
+    let warp_map_loaded = warp_image.is_some();
+
+    let warp_base = BackdropWarpV1 {
         strength_px: Px(warp_strength_px),
         scale_px: Px(warp_scale_px.max(1.0)),
         phase,
         chromatic_aberration_px: Px(warp_chroma_px),
         kind: BackdropWarpKindV1::Wave,
     };
+    let warp_base = warp_base.sanitize();
 
     let fake_chain = build_chain(
         None,
@@ -379,7 +459,29 @@ fn view(
         use_dither,
     );
     let warp_chain = build_chain(
-        Some(warp),
+        Some(EffectStep::BackdropWarpV1(warp_base)),
+        blur_radius_px,
+        blur_downsample,
+        saturation,
+        brightness,
+        contrast,
+        use_dither,
+    );
+
+    let warp_v2_field = match warp_image {
+        Some(image) => BackdropWarpFieldV2::ImageDisplacementMap {
+            image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Linear,
+            encoding: WarpMapEncodingV1::RgSigned,
+        },
+        None => BackdropWarpFieldV2::Procedural,
+    };
+    let warp_v2_chain = build_chain(
+        Some(EffectStep::BackdropWarpV2(BackdropWarpV2 {
+            base: warp_base,
+            field: warp_v2_field,
+        })),
         blur_radius_px,
         blur_downsample,
         saturation,
@@ -394,6 +496,7 @@ fn view(
         height: Length::Fill,
         ..Default::default()
     };
+    root_layout.position = PositionStyle::Relative;
 
     let bg = linear_gradient(
         &[
@@ -519,6 +622,7 @@ fn view(
                                         .variant(shadcn::ButtonVariant::Secondary)
                                         .size(shadcn::ButtonSize::Sm)
                                         .on_click(toggle_inspector)
+                                        .test_id("liquid-glass-toggle-inspector")
                                         .into_element(cx),
                                     ]
                                 },
@@ -540,20 +644,37 @@ fn view(
                                 move |cx| {
                                     let mut out: Vec<AnyElement> = Vec::new();
                                     if show_fake {
-                                        out.push(lens_panel(
-                                            cx,
-                                            Arc::from("Fake glass (blur + adjust)"),
-                                            mode,
-                                            fake_chain,
-                                        ));
+                                        out.push(
+                                            lens_panel(
+                                                cx,
+                                                Arc::from("Fake glass (blur + adjust)"),
+                                                mode,
+                                                fake_chain,
+                                            )
+                                            .test_id("liquid-glass-lens-fake"),
+                                        );
                                     }
                                     if show_warp {
-                                        out.push(lens_panel(
-                                            cx,
-                                            Arc::from("True warp (BackdropWarpV1 + blur)"),
-                                            mode,
-                                            warp_chain,
-                                        ));
+                                        out.push(
+                                            lens_panel(
+                                                cx,
+                                                Arc::from("Warp v1 (procedural)"),
+                                                mode,
+                                                warp_chain,
+                                            )
+                                            .test_id("liquid-glass-lens-warp-v1"),
+                                        );
+                                    }
+                                    if show_warp_v2 {
+                                        out.push(
+                                            lens_panel(
+                                                cx,
+                                                Arc::from("Warp v2 (image field)"),
+                                                mode,
+                                                warp_v2_chain,
+                                            )
+                                            .test_id("liquid-glass-lens-warp-v2"),
+                                        );
                                     }
                                     out
                                 },
@@ -567,9 +688,12 @@ fn view(
                 let inspector = show_inspector.then(|| {
                     cx.keyed("liquid_glass.inspector", |cx| {
                         let mut layout = LayoutStyle::default();
+                        layout.position = PositionStyle::Absolute;
+                        layout.inset.top = Some(Px(0.0));
+                        layout.inset.right = Some(Px(0.0));
+                        layout.inset.bottom = Some(Px(0.0));
                         layout.size.width = Length::Px(Px(380.0));
                         layout.size.height = Length::Fill;
-                        layout.flex.shrink = 0.0;
                         layout.overflow = Overflow::Clip;
 
                         cx.container(
@@ -585,10 +709,12 @@ fn view(
                                 let header = shadcn::CardHeader::new([
                                     shadcn::CardTitle::new("Inspector").into_element(cx),
                                     shadcn::CardDescription::new(format!(
-                                        "mode={:?} steps(fake={}, warp={})",
+                                        "mode={:?} steps(fake={}, v1={}, v2={}) warp_map_loaded={}",
                                         mode,
                                         fake_chain.iter().count(),
-                                        warp_chain.iter().count()
+                                        warp_chain.iter().count(),
+                                        warp_v2_chain.iter().count(),
+                                        warp_map_loaded
                                     ))
                                     .into_element(cx),
                                 ]);
@@ -632,6 +758,9 @@ fn view(
                                                             show_inspector_model.clone(),
                                                         )
                                                         .a11y_label("Show inspector")
+                                                        .test_id(
+                                                            "liquid-glass-switch-show-inspector",
+                                                        )
                                                         .into_element(cx),
                                                         shadcn::Label::new("Show inspector")
                                                             .into_element(cx),
@@ -639,6 +768,7 @@ fn view(
                                                             show_fake_model.clone(),
                                                         )
                                                         .a11y_label("Show fake lens")
+                                                        .test_id("liquid-glass-switch-show-fake")
                                                         .into_element(cx),
                                                         shadcn::Label::new("Show fake lens")
                                                             .into_element(cx),
@@ -655,9 +785,18 @@ fn view(
                                                         shadcn::Switch::new(
                                                             show_warp_model.clone(),
                                                         )
-                                                        .a11y_label("Show warp lens")
+                                                        .a11y_label("Show warp v1 lens")
+                                                        .test_id("liquid-glass-switch-show-warp-v1")
                                                         .into_element(cx),
-                                                        shadcn::Label::new("Show warp lens")
+                                                        shadcn::Label::new("Show warp v1 lens")
+                                                            .into_element(cx),
+                                                        shadcn::Switch::new(
+                                                            show_warp_v2_model.clone(),
+                                                        )
+                                                        .a11y_label("Show warp v2 lens")
+                                                        .test_id("liquid-glass-switch-show-warp-v2")
+                                                        .into_element(cx),
+                                                        shadcn::Label::new("Show warp v2 lens")
                                                             .into_element(cx),
                                                     ]
                                                 },
@@ -933,26 +1072,12 @@ fn view(
                     })
                 });
 
-                let mut row_layout = LayoutStyle::default();
-                row_layout.size.width = Length::Fill;
-                row_layout.size.height = Length::Fill;
-                vec![cx.row(
-                    RowProps {
-                        layout: row_layout,
-                        gap: Px(0.0),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
-                        ..Default::default()
-                    },
-                    move |_cx| {
-                        let mut out = Vec::with_capacity(if show_inspector { 2 } else { 1 });
-                        out.push(stage);
-                        if let Some(inspector) = inspector {
-                            out.push(inspector);
-                        }
-                        out
-                    },
-                )]
+                let mut out = Vec::with_capacity(if show_inspector { 2 } else { 1 });
+                out.push(stage);
+                if let Some(inspector) = inspector {
+                    out.push(inspector);
+                }
+                out
             },
         )
         .test_id("liquid-glass-root");
