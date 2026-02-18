@@ -299,8 +299,16 @@ impl Switch {
                         //
                         // Mirror that split so mouse-focus can tint the handle/icons without
                         // forcing unselected track chroming.
-                        let tokens_interaction_state_layer =
-                            tokens_interaction_for(is_focused_visible);
+                        // Material Web's switch ripple/state-layer only expresses hover/pressed.
+                        // Focus is expressed via focus ring + component chroming, not via a focus
+                        // state layer.
+                        let tokens_interaction_state_layer = if is_pressed {
+                            switch_tokens::SwitchInteraction::Pressed
+                        } else if is_hovered {
+                            switch_tokens::SwitchInteraction::Hovered
+                        } else {
+                            switch_tokens::SwitchInteraction::None
+                        };
                         let tokens_interaction_handle = tokens_interaction_for(is_focused_any);
                         let tokens_interaction_track_unselected =
                             tokens_interaction_for(is_focused_visible);
