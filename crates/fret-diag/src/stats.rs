@@ -1185,6 +1185,7 @@ struct BundleStatsWorstHoverLayout {
 pub(super) struct BundleStatsInvalidationWalk {
     pub(super) root_node: u64,
     pub(super) root_element: Option<u64>,
+    pub(super) root_element_path: Option<String>,
     pub(super) kind: Option<String>,
     pub(super) source: Option<String>,
     pub(super) detail: Option<String>,
@@ -1950,6 +1951,11 @@ impl BundleStatsReport {
                         }
                         if let Some(el) = w.root_element {
                             s.push_str(&format!(" element={}", el));
+                        }
+                        if let Some(path) = w.root_element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            s.push_str(&format!(" element_path={}", elide_middle(path, 120)));
                         }
                         if let Some(trunc) = w.truncated_at {
                             s.push_str(&format!(" trunc_at={}", trunc));
@@ -3686,6 +3692,13 @@ impl BundleStatsReport {
                         w_obj.insert(
                             "root_element".to_string(),
                             w.root_element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        w_obj.insert(
+                            "root_element_path".to_string(),
+                            w.root_element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
                         );
                         w_obj.insert(
                             "kind".to_string(),
@@ -11246,6 +11259,30 @@ pub(super) fn bundle_stats_from_json_with_options(
     Ok(out)
 }
 
+fn elide_middle(s: &str, max_chars: usize) -> String {
+    if max_chars == 0 {
+        return String::new();
+    }
+    let len = s.chars().count();
+    if len <= max_chars {
+        return s.to_string();
+    }
+
+    // Keep output compact but still searchable by both prefix and suffix.
+    let head = max_chars / 2;
+    let tail = max_chars.saturating_sub(head + 1);
+    let head_str: String = s.chars().take(head).collect();
+    let tail_str: String = s
+        .chars()
+        .rev()
+        .take(tail)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    format!("{head_str}…{tail_str}")
+}
+
 fn snapshot_top_invalidation_walks(
     snapshot: &serde_json::Value,
     max: usize,
@@ -11265,6 +11302,10 @@ fn snapshot_top_invalidation_walks(
         .map(|w| BundleStatsInvalidationWalk {
             root_node: w.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
             root_element: w.get("root_element").and_then(|v| v.as_u64()),
+            root_element_path: w
+                .get("root_element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             kind: w
                 .get("kind")
                 .and_then(|v| v.as_str())

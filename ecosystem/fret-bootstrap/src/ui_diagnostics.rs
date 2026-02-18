@@ -9749,7 +9749,7 @@ impl UiTreeDebugSnapshotV1 {
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
-                .map(UiInvalidationWalkV1::from_walk)
+                .map(|w| UiInvalidationWalkV1::from_walk(w, window, element_runtime_state))
                 .collect(),
             hover_declarative_invalidation_hotspots: ui
                 .debug_hover_declarative_invalidation_hotspots(20)
@@ -12206,6 +12206,8 @@ pub struct UiInvalidationWalkV1 {
     pub root_node: u64,
     #[serde(default)]
     pub root_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_element_path: Option<String>,
     pub kind: UiInvalidationKindV1,
     pub source: UiInvalidationSourceV1,
     #[serde(default)]
@@ -12216,7 +12218,11 @@ pub struct UiInvalidationWalkV1 {
 }
 
 impl UiInvalidationWalkV1 {
-    fn from_walk(walk: &fret_ui::tree::UiDebugInvalidationWalk) -> Self {
+    fn from_walk(
+        walk: &fret_ui::tree::UiDebugInvalidationWalk,
+        window: AppWindowId,
+        element_runtime_state: Option<&ElementRuntime>,
+    ) -> Self {
         let kind = match walk.inv {
             Invalidation::Paint => UiInvalidationKindV1::Paint,
             Invalidation::Layout => UiInvalidationKindV1::Layout,
@@ -12235,9 +12241,13 @@ impl UiInvalidationWalkV1 {
             fret_ui::tree::UiDebugInvalidationSource::Focus => UiInvalidationSourceV1::Focus,
             fret_ui::tree::UiDebugInvalidationSource::Other => UiInvalidationSourceV1::Other,
         };
+        let root_element_path = walk.root_element.and_then(|element| {
+            element_runtime_state.and_then(|rt| rt.debug_path_for_element(window, element))
+        });
         Self {
             root_node: key_to_u64(walk.root),
             root_element: walk.root_element.map(|e| e.0),
+            root_element_path,
             kind,
             source,
             detail: walk.detail.as_str().map(|s| s.to_string()),
