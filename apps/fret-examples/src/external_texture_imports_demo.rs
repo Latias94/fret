@@ -786,13 +786,41 @@ fn record_engine_frame(
             }
         }
     } else {
-        st.target.push_update_with_deterministic_fallback(
+        let mut fallbacks = fret_launch::ImportedViewportFallbacks::default();
+        match effective_strategy {
+            RenderTargetIngestStrategy::Owned => {
+                fallbacks.owned = Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                    view.clone(),
+                    st.target_px_size,
+                    metadata,
+                    None,
+                ));
+            }
+            RenderTargetIngestStrategy::GpuCopy => {
+                fallbacks.gpu_copy = Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                    view.clone(),
+                    st.target_px_size,
+                    metadata,
+                    None,
+                ));
+            }
+            RenderTargetIngestStrategy::CpuUpload => {
+                fallbacks.cpu_upload = Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                    view.clone(),
+                    st.target_px_size,
+                    metadata,
+                    None,
+                ));
+            }
+            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
+                unreachable!("fallback update should never request {effective_strategy:?}")
+            }
+        }
+
+        st.target.push_update_with_fallbacks(
             &mut update,
-            view.clone(),
-            st.target_px_size,
-            metadata,
             RenderTargetIngestStrategy::ExternalZeroCopy,
-            &[effective_strategy],
+            fallbacks,
         );
     }
 

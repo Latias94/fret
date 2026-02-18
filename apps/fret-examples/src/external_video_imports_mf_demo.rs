@@ -310,13 +310,18 @@ fn record_engine_frame(
     let mut metadata = RenderTargetMetadata::default();
     match st.mode {
         ExternalVideoImportsMode::CheckerGpu => {
-            st.target.push_update_with_deterministic_fallback(
+            st.target.push_update_with_fallbacks(
                 &mut update,
-                view.clone(),
-                st.target_px_size,
-                metadata,
                 RenderTargetIngestStrategy::Owned,
-                &[RenderTargetIngestStrategy::Owned],
+                fret_launch::ImportedViewportFallbacks {
+                    owned: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                        view.clone(),
+                        st.target_px_size,
+                        metadata,
+                        None,
+                    )),
+                    ..Default::default()
+                },
             );
 
             // A tiny animated clear tint is enough to keep the contract-path hot.
@@ -363,13 +368,18 @@ fn record_engine_frame(
 
             // Stage M2A: request the v2 ceiling, but deterministically degrade to CPU upload.
             // The requested/effective split is visible in perf bundles.
-            st.target.push_update_with_deterministic_fallback(
+            st.target.push_update_with_fallbacks(
                 &mut update,
-                view.clone(),
-                st.target_px_size,
-                metadata,
                 RenderTargetIngestStrategy::ExternalZeroCopy,
-                &[RenderTargetIngestStrategy::CpuUpload],
+                fret_launch::ImportedViewportFallbacks {
+                    cpu_upload: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                        view.clone(),
+                        st.target_px_size,
+                        metadata,
+                        None,
+                    )),
+                    ..Default::default()
+                },
             );
 
             if let Some((size, bytes_per_row, bgra8)) = decoded_frame.as_ref() {
@@ -449,13 +459,18 @@ fn record_engine_frame(
             };
 
             metadata.color_encoding = color_encoding;
-            st.target.push_update_with_deterministic_fallback(
+            st.target.push_update_with_fallbacks(
                 &mut update,
-                view.clone(),
-                size,
-                metadata,
                 RenderTargetIngestStrategy::ExternalZeroCopy,
-                &[RenderTargetIngestStrategy::GpuCopy],
+                fret_launch::ImportedViewportFallbacks {
+                    gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                        view.clone(),
+                        size,
+                        metadata,
+                        None,
+                    )),
+                    ..Default::default()
+                },
             );
         }
     }

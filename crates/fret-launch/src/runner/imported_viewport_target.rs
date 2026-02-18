@@ -26,6 +26,20 @@ pub struct ImportedViewportFallbackUpdate {
 }
 
 impl ImportedViewportFallbackUpdate {
+    pub fn new(
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        metadata: RenderTargetMetadata,
+        keepalive: Option<EngineFrameKeepalive>,
+    ) -> Self {
+        Self {
+            view,
+            size,
+            metadata,
+            keepalive,
+        }
+    }
+
     fn into_parts(
         self,
     ) -> (
@@ -213,6 +227,69 @@ impl ImportedViewportRenderTarget {
     ) -> RenderTargetIngestStrategy {
         let effective = Self::select_deterministic_fallback_effective(requested, available);
         self.push_update_with_ingest_strategies(update, view, size, metadata, requested, effective);
+        effective
+    }
+
+    /// Record an imported view update while selecting an effective ingestion strategy via the v2
+    /// deterministic fallback chain (ADR 0282), using explicit fallback payloads.
+    ///
+    /// Compared to `push_update_with_deterministic_fallback`, this helper removes boilerplate by:
+    /// - deriving `available` from the provided payload set,
+    /// - selecting the effective strategy deterministically,
+    /// - and pushing any per-frame keepalive token when present.
+    ///
+    /// Callers MUST provide at least one fallback payload.
+    pub fn push_update_with_fallbacks(
+        &self,
+        update: &mut EngineFrameUpdate,
+        requested: RenderTargetIngestStrategy,
+        mut fallbacks: ImportedViewportFallbacks,
+    ) -> RenderTargetIngestStrategy {
+        let mut available = Vec::with_capacity(3);
+        if fallbacks.owned.is_some() {
+            available.push(RenderTargetIngestStrategy::Owned);
+        }
+        if fallbacks.gpu_copy.is_some() {
+            available.push(RenderTargetIngestStrategy::GpuCopy);
+        }
+        if fallbacks.cpu_upload.is_some() {
+            available.push(RenderTargetIngestStrategy::CpuUpload);
+        }
+
+        assert!(
+            !available.is_empty(),
+            "ImportedViewportFallbacks must provide at least one strategy"
+        );
+
+        let effective = Self::select_deterministic_fallback_effective(requested, &available);
+        let (view, size, metadata, keepalive) = match effective {
+            RenderTargetIngestStrategy::Owned => fallbacks
+                .owned
+                .take()
+                .expect("Owned fallback must be present when marked available")
+                .into_parts(),
+            RenderTargetIngestStrategy::GpuCopy => fallbacks
+                .gpu_copy
+                .take()
+                .expect("GpuCopy fallback must be present when marked available")
+                .into_parts(),
+            RenderTargetIngestStrategy::CpuUpload => fallbacks
+                .cpu_upload
+                .take()
+                .expect("CpuUpload fallback must be present when marked available")
+                .into_parts(),
+            RenderTargetIngestStrategy::Unknown | RenderTargetIngestStrategy::ExternalZeroCopy => {
+                panic!("unexpected fallback strategy: {effective:?}")
+            }
+        };
+
+        let metadata = Self::with_ingest_strategies(metadata, requested, effective);
+        if let Some(keepalive) = keepalive {
+            self.push_update_with_metadata_and_keepalive(update, view, size, metadata, keepalive);
+        } else {
+            self.push_update_with_metadata(update, view, size, metadata);
+        }
+
         effective
     }
 
