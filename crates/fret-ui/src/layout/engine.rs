@@ -399,12 +399,12 @@ impl TaffyLayoutEngine {
     /// many child roots. Solving them one-by-one can amplify fixed per-solve overhead into
     /// tail-latency spikes (e.g. virtual list "jump to bottom").
     ///
-    /// Safety: this batches roots only when all of the following hold:
-    /// - each root is a layout root in the engine (no recorded parent in `self.parent`)
-    /// - each root has a *definite* available size in both axes
-    /// - each root is not already solved for its `(available, scale_factor)` key
+    /// Safety: this batches a *subset* of roots only when all of the following hold for that root:
+    /// - the root is a layout root in the engine (no recorded parent in `self.parent`)
+    /// - the root has a *definite* available size in both axes
+    /// - the root is not already solved for its `(available, scale_factor)` key
     ///
-    /// When the preconditions do not hold, this falls back to per-root compute.
+    /// Non-batchable roots fall back to per-root compute.
     pub(crate) fn compute_independent_roots_with_measure_if_needed(
         &mut self,
         roots: &[(NodeId, LayoutSize<AvailableSpace>)],
@@ -417,9 +417,25 @@ impl TaffyLayoutEngine {
             1.0
         };
 
-        let mut pending: Vec<(NodeId, LayoutId, LayoutSize<AvailableSpace>)> =
+        fn compute_individual<F: FnMut(NodeId, LayoutConstraints) -> Size>(
+            engine: &mut TaffyLayoutEngine,
+            roots: &[(NodeId, LayoutSize<AvailableSpace>)],
+            scale_factor: f32,
+            measure: &mut F,
+        ) {
+            for &(root, available) in roots {
+                let _ = engine.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    scale_factor,
+                    &mut *measure,
+                );
+            }
+        }
+
+        let mut batchable: Vec<(NodeId, LayoutId, LayoutSize<AvailableSpace>)> =
             Vec::with_capacity(roots.len());
-        let mut can_batch = true;
+        let mut fallback: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
         for &(root, available) in roots {
             let Some(layout_id) = self.layout_id_for_node(root) else {
                 continue;
@@ -432,7 +448,8 @@ impl TaffyLayoutEngine {
             // Only batch truly-independent roots. If the engine already knows about a parent,
             // computing under a synthetic wrapper could interfere with the parent solve stamp.
             if self.parent.get(root).is_some() {
-                can_batch = false;
+                fallback.push((root, available));
+                continue;
             }
 
             // Batching relies on roots being sized via `build_viewport_flow_subtree`'s
@@ -441,31 +458,33 @@ impl TaffyLayoutEngine {
             if !matches!(available.width, AvailableSpace::Definite(_))
                 || !matches!(available.height, AvailableSpace::Definite(_))
             {
-                can_batch = false;
+                fallback.push((root, available));
+                continue;
             }
 
-            pending.push((root, layout_id, available));
+            batchable.push((root, layout_id, available));
         }
 
-        if pending.is_empty() {
+        if batchable.is_empty() {
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
-        if pending.len() == 1 || !can_batch {
-            for (root, _layout_id, available) in pending {
-                let _ = self.compute_root_for_node_with_measure_if_needed(
-                    root,
-                    available,
-                    sf,
-                    &mut measure,
-                );
-            }
+        if batchable.len() == 1 {
+            let (root, _layout_id, available) = batchable[0];
+            let _ = self.compute_root_for_node_with_measure_if_needed(
+                root,
+                available,
+                sf,
+                &mut measure,
+            );
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
         let mut scratch_w_dp: f32 = 0.0;
         let mut scratch_h_dp: f32 = 0.0;
-        for &(_root, _id, available) in &pending {
+        for &(_root, _id, available) in &batchable {
             let (AvailableSpace::Definite(w), AvailableSpace::Definite(h)) =
                 (available.width, available.height)
             else {
@@ -484,7 +503,7 @@ impl TaffyLayoutEngine {
         scratch_h_dp = scratch_h_dp.max(1.0);
 
         let Some(scratch_id) = self.ensure_batch_root_scratch() else {
-            for (root, _layout_id, available) in pending {
+            for (root, _layout_id, available) in batchable {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
                     available,
@@ -492,6 +511,7 @@ impl TaffyLayoutEngine {
                     &mut measure,
                 );
             }
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         };
 
@@ -517,7 +537,7 @@ impl TaffyLayoutEngine {
         {
             Self::warn_taffy_error_once("set_style(batch_root)", err);
             let _ = self.tree.set_children(scratch_id, &[]);
-            for (root, _layout_id, available) in pending {
+            for (root, _layout_id, available) in batchable {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
                     available,
@@ -525,13 +545,14 @@ impl TaffyLayoutEngine {
                     &mut measure,
                 );
             }
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
         self.batch_root_style_size_bits = Some(scratch_bits);
 
         self.batch_root_children_scratch.clear();
-        self.batch_root_children_scratch.reserve(pending.len());
-        for (_root, id, _available) in &pending {
+        self.batch_root_children_scratch.reserve(batchable.len());
+        for (_root, id, _available) in &batchable {
             self.batch_root_children_scratch.push(id.0);
         }
         if let Err(err) = self
@@ -540,7 +561,7 @@ impl TaffyLayoutEngine {
         {
             Self::warn_taffy_error_once("set_children(batch_root)", err);
             let _ = self.tree.set_children(scratch_id, &[]);
-            for (root, _layout_id, available) in pending {
+            for (root, _layout_id, available) in batchable {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
                     available,
@@ -548,6 +569,7 @@ impl TaffyLayoutEngine {
                     &mut measure,
                 );
             }
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
@@ -746,11 +768,12 @@ impl TaffyLayoutEngine {
             span.record("measure_cache_hits", measure_cache_hits);
             span.record("measure_us", measure_time.as_micros() as u64);
             self.last_solve_time += self.last_solve_elapsed;
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
         self.solve_generation = self.solve_generation.saturating_add(1);
-        let stamp_root = pending[0].0;
+        let stamp_root = batchable[0].0;
         span.record("root", tracing::field::debug(stamp_root));
         self.last_solve_root = Some(stamp_root);
 
@@ -762,7 +785,7 @@ impl TaffyLayoutEngine {
             }
         }
         if let Some(frame_id) = self.frame_id {
-            for &(root, _id, available) in &pending {
+            for &(root, _id, available) in &batchable {
                 self.mark_solved_subtree(root);
                 self.root_solve_stamp.insert(
                     root,
@@ -787,6 +810,8 @@ impl TaffyLayoutEngine {
 
         // Detach roots from the synthetic parent so they remain independent roots in the engine.
         let _ = self.tree.set_children(scratch_id, &[]);
+
+        compute_individual(self, &fallback, sf, &mut measure);
     }
 
     pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
