@@ -807,6 +807,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
+                | UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { .. }
                 | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { .. }
                 | UiPredicateV1::DockFloatingDragActiveIs { .. }
@@ -16647,6 +16648,7 @@ struct DockDragRuntimeState {
     window_under_moving_window: Option<AppWindowId>,
     window_under_moving_window_source: fret_runtime::WindowUnderCursorSource,
     transparent_payload_applied: bool,
+    transparent_payload_mouse_passthrough_applied: bool,
     window_under_cursor_source: fret_runtime::WindowUnderCursorSource,
 }
 
@@ -16664,6 +16666,8 @@ fn dock_drag_runtime_state(app: &fret_app::App) -> Option<DockDragRuntimeState> 
         window_under_moving_window: drag.window_under_moving_window,
         window_under_moving_window_source: drag.window_under_moving_window_source,
         transparent_payload_applied: drag.transparent_payload_applied,
+        transparent_payload_mouse_passthrough_applied: drag
+            .transparent_payload_mouse_passthrough_applied,
         window_under_cursor_source: drag.window_under_cursor_source,
     })
 }
@@ -16736,6 +16740,11 @@ fn eval_predicate_without_semantics(
             dock_drag_runtime
                 .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
                 || (!*applied && dock_drag_runtime.is_none()),
+        ),
+        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => Some(
+            dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.transparent_payload_mouse_passthrough_applied == *applied
+            }) || (!*applied && dock_drag_runtime.is_none()),
         ),
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
             Some(dock_drag_runtime.is_some_and(|drag| {

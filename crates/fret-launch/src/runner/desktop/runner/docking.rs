@@ -214,6 +214,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     manual_follow: true,
                     last_outer_pos: None,
                     transparent_payload_applied: false,
+                    mouse_passthrough_applied: false,
                     always_on_top_applied: false,
                 });
             }
@@ -292,6 +293,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 && let Some(drag) = self.app.drag_mut(pointer_id)
             {
                 drag.transparent_payload_applied = want_transparent_payload;
+                if !want_transparent_payload {
+                    drag.transparent_payload_mouse_passthrough_applied = false;
+                }
             }
         }
 
@@ -366,6 +370,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && let Some(drag) = self.app.drag_mut(pointer_id)
         {
             drag.transparent_payload_applied = false;
+            drag.transparent_payload_mouse_passthrough_applied = false;
         }
 
         if let Some(state) = self.windows.get(follow.window) {

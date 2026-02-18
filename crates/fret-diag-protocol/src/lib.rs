@@ -1167,6 +1167,11 @@ pub enum UiPredicateV1 {
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
     },
+    /// True when the latest docking diagnostics report that the runner successfully applied
+    /// click-through mouse passthrough for the moving window during transparent payload.
+    DockDragTransparentPayloadMousePassthroughAppliedIs {
+        applied: bool,
+    },
     /// True when the latest docking diagnostics report a dock drag session whose hovered-window
     /// selection source matches `source`.
     ///

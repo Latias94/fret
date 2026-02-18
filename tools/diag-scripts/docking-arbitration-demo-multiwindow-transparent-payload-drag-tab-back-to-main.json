@@ -71,6 +71,12 @@
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_transparent_payload_mouse_passthrough_applied_is", "applied": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
       "predicate": { "kind": "dock_drag_moving_window_is", "window": { "kind": "last_seen" } },
       "timeout_frames": 240
     },

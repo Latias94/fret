@@ -68,6 +68,7 @@ pub(super) struct DockTearoffFollow {
     pub(super) manual_follow: bool,
     pub(super) last_outer_pos: Option<PhysicalPosition<i32>>,
     pub(super) transparent_payload_applied: bool,
+    pub(super) mouse_passthrough_applied: bool,
     pub(super) always_on_top_applied: bool,
 }
 
