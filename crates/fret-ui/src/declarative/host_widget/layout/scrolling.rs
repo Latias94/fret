@@ -1064,11 +1064,18 @@ impl ElementHostWidget {
 
         let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
-        if !is_probe_layout && cx.children.len() > 1 {
+        if !is_probe_layout {
             let solve_started = profile_cfg.is_some().then(Instant::now);
-            let roots: Vec<(NodeId, Rect)> =
-                cx.children.iter().map(|&c| (c, content_bounds)).collect();
-            cx.solve_barrier_child_roots_if_needed(&roots);
+            match cx.children {
+                [child] => {
+                    cx.solve_barrier_child_root_if_needed(*child, content_bounds);
+                }
+                children => {
+                    let roots: Vec<(NodeId, Rect)> =
+                        children.iter().map(|&c| (c, content_bounds)).collect();
+                    cx.solve_barrier_child_roots_if_needed(&roots);
+                }
+            }
             if let Some(started) = solve_started {
                 t_solve_barrier = started.elapsed();
             }

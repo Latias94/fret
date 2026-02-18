@@ -31,6 +31,8 @@ impl<H: UiHost> UiTree<H> {
                 crate::declarative::frame::element_record_for_node(app, window, child)
                     .map(|r| r.instance)
             });
+            let miss_debug = missing_child
+                .map(|child| self.layout_engine.debug_child_layout_rect_miss(node, child));
 
             tracing::warn!(
                 window = ?self.window,
@@ -39,6 +41,7 @@ impl<H: UiHost> UiTree<H> {
                 label = ?label,
                 missing_child = ?missing_child,
                 missing_label = ?missing_label,
+                child_rect_miss = ?miss_debug,
                 path = ?self.debug_node_path(node),
                 "layout engine child rects missing; falling back to widget-local solve"
             );

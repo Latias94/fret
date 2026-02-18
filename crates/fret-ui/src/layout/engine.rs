@@ -69,6 +69,26 @@ pub struct TaffyLayoutEngine {
     last_solve_measure_hotspots: Vec<LayoutEngineMeasureHotspot>,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub(crate) struct ChildLayoutRectSolvedStampDebug {
+    pub(crate) frame_id: FrameId,
+    pub(crate) solve_generation: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub(crate) struct ChildLayoutRectMissDebug {
+    pub(crate) solve_generation: u64,
+    pub(crate) engine_frame_id: Option<FrameId>,
+    pub(crate) parent_stamp: Option<ChildLayoutRectSolvedStampDebug>,
+    pub(crate) child_stamp: Option<ChildLayoutRectSolvedStampDebug>,
+    pub(crate) parent_seen: bool,
+    pub(crate) child_seen: bool,
+    pub(crate) child_engine_parent: Option<NodeId>,
+    pub(crate) child_layout_id_present: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct RootSolveKey {
     width_bits: u64,
@@ -332,6 +352,30 @@ impl TaffyLayoutEngine {
         }
         self.layout_id_for_node(child)
             .map(|id| self.layout_rect(id))
+    }
+
+    pub(crate) fn debug_child_layout_rect_miss(
+        &self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> ChildLayoutRectMissDebug {
+        fn stamp_debug(stamp: Option<SolvedStamp>) -> Option<ChildLayoutRectSolvedStampDebug> {
+            stamp.map(|s| ChildLayoutRectSolvedStampDebug {
+                frame_id: s.frame_id,
+                solve_generation: s.solve_generation,
+            })
+        }
+
+        ChildLayoutRectMissDebug {
+            solve_generation: self.solve_generation,
+            engine_frame_id: self.frame_id,
+            parent_stamp: stamp_debug(self.node_solved_stamp.get(parent).copied()),
+            child_stamp: stamp_debug(self.node_solved_stamp.get(child).copied()),
+            parent_seen: self.is_seen(parent),
+            child_seen: self.is_seen(child),
+            child_engine_parent: self.parent.get(child).copied(),
+            child_layout_id_present: self.layout_id_for_node(child).is_some(),
+        }
     }
 
     pub fn root_is_solved_for(
@@ -824,21 +868,6 @@ impl TaffyLayoutEngine {
         let _ = self.tree.set_children(scratch_id, &[]);
 
         compute_individual(self, &fallback, sf, &mut measure);
-    }
-
-    pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
-        if self.layout_id_for_node(root).is_none() {
-            return;
-        }
-        self.mark_seen_stack_scratch.clear();
-        self.mark_seen_stack_scratch.push(root);
-        while let Some(node) = self.mark_seen_stack_scratch.pop() {
-            self.mark_seen(node);
-            if let Some(children) = self.children.get(node) {
-                self.mark_seen_stack_scratch
-                    .extend(children.iter().copied());
-            }
-        }
     }
 
     pub(crate) fn set_viewport_root_override_size(

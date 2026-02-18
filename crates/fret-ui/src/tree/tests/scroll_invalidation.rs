@@ -411,7 +411,7 @@ fn virtual_list_window_jump_rerender_uses_latest_handle_offset() {
 }
 
 #[test]
-fn virtual_list_window_shift_detail_classifies_viewport_resize() {
+fn virtual_list_render_window_range_tracks_viewport_resize() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -488,28 +488,60 @@ fn virtual_list_window_shift_detail_classifies_viewport_resize() {
     ui.paint_all(&mut app, &mut services, bounds_small, &mut scene, 1.0);
     app.advance_frame();
 
-    // Frame 2: enlarge viewport so the current visible range escapes the previously rendered
-    // overscan window.
+    let list_element = crate::declarative::with_window_frame(&mut app, window, |window_frame| {
+        let window_frame = window_frame?;
+        window_frame.instances.iter().find_map(|(_node, record)| {
+            match &record.instance {
+                crate::declarative::frame::ElementInstance::VirtualList(_) => Some(record.element),
+                _ => None,
+            }
+        })
+    })
+    .expect("expected a VirtualList element in the window frame");
+
+    // Frame 2: resize and rerender. Render should compute an updated `render_window_range` so
+    // prepaint does not need to schedule a viewport-resize prefetch rerender.
     let root = render_frame(&mut ui, &mut app, &mut services, bounds_large, 1);
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds_large, 1.0);
 
-    let record = ui
+    let (render_window_range, state_offset, state_viewport) = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |state| (state.render_window_range, state.offset_y, state.viewport_h),
+    );
+    let render_window_range =
+        render_window_range.expect("expected render_window_range to be populated");
+    assert_eq!(
+        render_window_range.overscan, 10,
+        "expected VirtualList render_window_range to preserve overscan on viewport resize"
+    );
+    let visible = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |state| state.metrics.visible_range(state_offset, state_viewport, 0),
+    )
+    .expect("expected a visible range");
+    assert_eq!(
+        (render_window_range.start_index, render_window_range.end_index),
+        (visible.start_index, visible.end_index),
+        "expected render_window_range to match the resized viewport's visible span"
+    );
+
+    let last = ui
         .debug_virtual_list_windows()
         .iter()
         .rev()
-        .find(|r| {
-            r.window_shift_reason
-                == Some(crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize)
-                && r.window_shift_apply_mode
-                    == Some(
-                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender,
-                    )
-        })
-        .expect("expected a viewport-resize window shift record");
+        .find(|r| r.element == list_element)
+        .expect("expected a virtual list window debug record");
     assert_eq!(
-        record.window_shift_invalidation_detail,
-        Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate)
+        last.window_shift_kind,
+        crate::tree::UiDebugVirtualListWindowShiftKind::None,
+        "expected viewport resize under rerender to avoid a prepaint window shift"
     );
 }
 

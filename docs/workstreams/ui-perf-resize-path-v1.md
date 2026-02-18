@@ -304,6 +304,34 @@ Node-level attribution snapshot (2026-02-18, macOS M4):
   scroll subtree (dropdown menu content) as the top self-time layout node, consistent with the “overlay roots dominate
   solve time” model. Evidence: `target/fret-diag-layout-node-profile2-1771399625/fretboard.stdout.json`.
 
+### Finding (2026-02-18): pre-solve barrier relayout roots (avoid widget-local fallback solves)
+
+Some relayout work is intentionally **barrier-contained** and runs as independent solves:
+
+- pending barrier relayout roots (scheduled by scroll/virtualization/etc.), and
+- contained `ViewCache` relayout roots (post main viewport roots).
+
+If these roots are solved “late” without a corresponding layout-engine pre-solve, the widget-local flow fallback path
+can trigger (log: `layout engine child rects missing; falling back to widget-local solve`). This is bad for tail
+latency because it adds additional out-of-band layout-engine passes within the same frame.
+
+Fix direction:
+
+- Pre-solve these roots via the layout engine (`UiTree::solve_barrier_flow_roots_if_needed(...)`) before entering the
+  per-root layout pass, so child rects exist and widget-local fallback solves stay rare.
+- When reusing cached flow subtrees (translation-only / cache-hit paths), mark “seen” via the **UiTree children**
+  (not the layout-engine cached children list) to avoid relying on stale engine-side topology.
+- Improve traceability when fallback does happen by logging the layout-engine stamp/seen state for the missing child.
+
+Evidence (macOS M4, release, gate PASS; repeat=7, attempts=3):
+
+- `ui-resize-probes` gate: `target/fret-diag-resize-probes-gate-1771435266/summary.json`
+  - worst overall: `target/fret-diag-resize-probes-gate-1771435266/attempt-1/1771435304603-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `top_total_time_us` worst overall: `8635us`
+- `ui-code-editor-resize-probes` gate: `target/fret-diag-resize-probes-gate-1771435434/summary.json`
+  - worst overall: `target/fret-diag-resize-probes-gate-1771435434/attempt-1/1771435447121-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `top_total_time_us` worst overall: `6700us`
+
 ## GPUI/Zed resize notes (transferable vs not)
 
 GPUI is a strong reference for “Zed feel”, but it is not a complete template for Fret:

@@ -896,6 +896,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut roots_with_bounds: Vec<(NodeId, Rect)> = Vec::with_capacity(targets.len());
         for root in targets {
             let Some(node) = self.nodes.get(root) else {
                 continue;
@@ -929,6 +930,15 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            roots_with_bounds.push((root, bounds));
+        }
+
+        // Pending barrier relayouts run as contained solves. Pre-solve each root via the layout
+        // engine to avoid widget-local fallback solves (which amplify tail latency by triggering
+        // extra out-of-band engine passes).
+        self.solve_barrier_flow_roots_if_needed(app, services, &roots_with_bounds, scale_factor);
+
+        for (root, bounds) in roots_with_bounds {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
             if self.debug_enabled {
@@ -1111,6 +1121,27 @@ impl<H: UiHost> UiTree<H> {
         self.viewport_roots.clear();
     }
 
+    fn mark_layout_engine_seen_subtree_from_ui_children(
+        &mut self,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+    ) {
+        if engine.layout_id_for_node(root).is_none() {
+            return;
+        }
+
+        self.scratch_node_stack.clear();
+        self.scratch_node_stack.push(root);
+        while let Some(node) = self.scratch_node_stack.pop() {
+            engine.mark_seen_if_present(node);
+            if let Some(entry) = self.nodes.get(node) {
+                for &child in &entry.children {
+                    self.scratch_node_stack.push(child);
+                }
+            }
+        }
+    }
+
     fn layout_contained_view_cache_roots_if_needed(
         &mut self,
         app: &mut H,
@@ -1195,6 +1226,11 @@ impl<H: UiHost> UiTree<H> {
             targets.push((id, bounds));
         }
 
+        // Contained cache-root relayouts run as independent solves after the main viewport roots.
+        // Pre-solve via the layout engine so cache-root subtrees don't trigger widget-local
+        // fallback solves (which create extra solves and jitter within the same frame).
+        self.solve_barrier_flow_roots_if_needed(app, services, &targets, scale_factor);
+
         for (root, bounds) in targets {
             if self.debug_enabled {
                 self.debug_stats.view_cache_contained_relayouts = self
@@ -1277,13 +1313,13 @@ impl<H: UiHost> UiTree<H> {
                 && measured != Size::default();
 
             if engine.layout_id_for_node(root).is_some() && (!needs_layout || is_translation_only) {
-                engine.mark_seen_subtree_from_cached_children(root);
+                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
                 continue;
             }
             if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
-                engine.mark_seen_subtree_from_cached_children(root);
+                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
             } else {
                 build_viewport_flow_subtree(
                     &mut engine,
@@ -1493,7 +1529,10 @@ impl<H: UiHost> UiTree<H> {
                     if engine.layout_id_for_node(item.root).is_some()
                         && (!item.needs_layout || item.is_translation_only)
                     {
-                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        self.mark_layout_engine_seen_subtree_from_ui_children(
+                            &mut engine,
+                            item.root,
+                        );
                         continue;
                     }
                     if reuse_cached_flow
@@ -1501,7 +1540,10 @@ impl<H: UiHost> UiTree<H> {
                         && !item.layout_invalidated
                     {
                         engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
-                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        self.mark_layout_engine_seen_subtree_from_ui_children(
+                            &mut engine,
+                            item.root,
+                        );
                     } else {
                         build_viewport_flow_subtree(
                             &mut engine,
