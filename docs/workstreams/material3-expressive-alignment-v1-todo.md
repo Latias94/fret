@@ -20,6 +20,9 @@ This TODO list is **Expressive-variant focused**. For general Material3 parity w
 - [ ] Segmented buttons: selection indicator geometry + keyboard nav + state layer.
 - [ ] Radio: verify pressed/hover/focus outcome parity in Expressive.
 - [ ] Slider: thumb/track sizing + tick marks + semantics/value exposure.
+  - [x] Add UI gallery page + stable `test_id` targets.
+  - [x] Add diag v2 gate for `set_slider_value` + Standard/Expressive screenshots (packed).
+  - [x] Align `with_tick_marks` endcaps (stop indicator) and update material3 headless goldens.
 
 ## Inputs
 
@@ -39,4 +42,3 @@ This TODO list is **Expressive-variant focused**. For general Material3 parity w
   - `apps/fret-ui-gallery`: demo section + stable `test_id`
   - `tools/diag-scripts`: script v2 that asserts invariants + packs bundle/screenshots
   - `ecosystem/fret-ui-material3/tests`: headless gates for deterministic invariants
-
