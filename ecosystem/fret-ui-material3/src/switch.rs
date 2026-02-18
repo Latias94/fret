@@ -32,9 +32,12 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::motion::SpringAnimator;
 use crate::tokens::switch as switch_tokens;
+
+fn material_web_easing_standard(x: f32) -> f32 {
+    // Material Web: `md.sys.motion.easing.standard = cubic-bezier(0.2, 0, 0, 1)`
+    fret_ui_kit::headless::easing::CubicBezier::new(0.2, 0.0, 0.0, 1.0).sample(x)
+}
 
 fn material_web_switch_handle_overshoot_ease(x: f32) -> f32 {
     // Material Web (M3) switch handle-container overshoot:
@@ -315,17 +318,9 @@ impl Switch {
                         let tokens_interaction_track_selected =
                             tokens_interaction_for(is_focused_any);
 
-                        #[derive(Default)]
-                        struct SwitchThumbRuntime {
-                            selected: SpringAnimator,
-                            pressed: SpringAnimator,
-                            prev_pressed: bool,
-                        }
-
                         let (
                             state_layer_target,
                             state_layer_color,
-                            spring,
                             chrome_unselected,
                             chrome_selected,
                             track_corner_radii,
@@ -352,9 +347,6 @@ impl Switch {
                                 |color| color.resolve(theme),
                                 || state_layer_color,
                             );
-
-                            let spring =
-                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
 
                             let chrome_unselected_track = switch_tokens::chrome(
                                 theme,
@@ -447,7 +439,6 @@ impl Switch {
                             (
                                 state_layer_target,
                                 state_layer_color,
-                                spring,
                                 chrome_unselected,
                                 chrome_selected,
                                 track_corner_radii,
@@ -456,80 +447,92 @@ impl Switch {
                                 config,
                             )
                         };
-                        let (thumb_t, pressed_t, chrome_t, position_t, thumb_active) =
-                            cx.named("thumb_runtime", |cx| {
-                                let desired_selected = if selected { 1.0 } else { 0.0 };
-                                let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
+                        let (
+                            thumb_t,
+                            pressed_t,
+                            chrome_t,
+                            position_t,
+                            thumb_active,
+                            thumb_active_for_icons,
+                        ) = cx.named("thumb_runtime", |cx| {
+                            let desired_selected = if selected { 1.0 } else { 0.0 };
+                            let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
 
-                                // Match Material Web's selected/unselected crossfade which is driven
-                                // via pseudo-element opacity transitions (67ms linear).
-                                let chrome_duration = if enabled {
-                                    Duration::from_millis(67)
+                            let size_duration = if enabled {
+                                Duration::from_millis(250)
+                            } else {
+                                Duration::ZERO
+                            };
+                            let size = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                cx,
+                                desired_selected,
+                                size_duration,
+                                material_web_easing_standard,
+                            );
+
+                            let pressed_duration = if enabled {
+                                if is_pressed {
+                                    Duration::from_millis(100)
                                 } else {
-                                    Duration::ZERO
-                                };
-                                let chrome = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                    Duration::from_millis(250)
+                                }
+                            } else {
+                                Duration::ZERO
+                            };
+                            let pressed_ease = if is_pressed {
+                                fret_ui_kit::headless::easing::linear
+                            } else {
+                                material_web_easing_standard
+                            };
+                            let pressed = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                cx,
+                                desired_pressed,
+                                pressed_duration,
+                                pressed_ease,
+                            );
+
+                            // Match Material Web's selected/unselected crossfade which is driven
+                            // via pseudo-element opacity transitions (67ms linear).
+                            let chrome_duration = if enabled {
+                                Duration::from_millis(67)
+                            } else {
+                                Duration::ZERO
+                            };
+                            let chrome = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                cx,
+                                desired_selected,
+                                chrome_duration,
+                                fret_ui_kit::headless::easing::linear,
+                            );
+
+                            // Match Material Web's handle-container "overshoot" position
+                            // transition (margin 300ms cubic-bezier).
+                            let position_duration = if enabled {
+                                Duration::from_millis(300)
+                            } else {
+                                Duration::ZERO
+                            };
+                            let position =
+                                fret_ui_kit::declarative::motion::drive_tween_f32_unclamped(
                                     cx,
                                     desired_selected,
-                                    chrome_duration,
-                                    fret_ui_kit::headless::easing::linear,
+                                    position_duration,
+                                    material_web_switch_handle_overshoot_ease,
                                 );
 
-                                // Match Material Web's handle-container "overshoot" position
-                                // transition (margin 300ms cubic-bezier).
-                                let position_duration = if enabled {
-                                    Duration::from_millis(300)
-                                } else {
-                                    Duration::ZERO
-                                };
-                                let position =
-                                    fret_ui_kit::declarative::motion::drive_tween_f32_unclamped(
-                                        cx,
-                                        desired_selected,
-                                        position_duration,
-                                        material_web_switch_handle_overshoot_ease,
-                                    );
+                            let selection_active =
+                                size.animating || chrome.animating || position.animating;
+                            let any_active = selection_active || pressed.animating;
 
-                                let thumb_state_id = cx.root_id();
-                                cx.with_state_for(
-                                    thumb_state_id,
-                                    SwitchThumbRuntime::default,
-                                    |rt| {
-                                        if !rt.selected.is_initialized() {
-                                            rt.selected.reset(now_frame, desired_selected);
-                                        }
-                                        if !rt.pressed.is_initialized() {
-                                            rt.pressed.reset(now_frame, desired_pressed);
-                                        }
-
-                                        rt.selected.set_target(now_frame, desired_selected, spring);
-                                        rt.pressed.set_target(now_frame, desired_pressed, spring);
-                                        rt.selected.advance(now_frame);
-
-                                        // Match Compose's `SnapSpec` for the "pressed" transition:
-                                        // - snap to the pressed state on pointer down
-                                        // - animate back to rest on release
-                                        if is_pressed {
-                                            if !rt.prev_pressed {
-                                                rt.pressed.reset(now_frame, 1.0);
-                                            }
-                                        } else {
-                                            rt.pressed.advance(now_frame);
-                                        }
-                                        rt.prev_pressed = is_pressed;
-                                        (
-                                            rt.selected.value(),
-                                            rt.pressed.value(),
-                                            chrome.value,
-                                            position.value,
-                                            rt.selected.is_active()
-                                                || rt.pressed.is_active()
-                                                || chrome.animating
-                                                || position.animating,
-                                        )
-                                    },
-                                )
-                            });
+                            (
+                                size.value,
+                                pressed.value,
+                                chrome.value,
+                                position.value,
+                                any_active,
+                                selection_active,
+                            )
+                        });
 
                         let chrome =
                             mix_switch_chrome(chrome_unselected, chrome_selected, chrome_t);
@@ -547,7 +550,7 @@ impl Switch {
                         let handle_child = material_switch_handle_icon(
                             cx,
                             thumb_t,
-                            thumb_active,
+                            thumb_active_for_icons,
                             selected,
                             enabled,
                             tokens_interaction_handle,

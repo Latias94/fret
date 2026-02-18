@@ -45,11 +45,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-material3/src/switch.rs`
     - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
 
-- [~] M3X-switch-003 Decide + implement the switch “overshoot” position motion source of truth (Material Web vs Compose).
+- [x] M3X-switch-003 Decide + implement the switch “overshoot” position motion source of truth (Material Web vs Compose).
   - Material Web: handle-container margin transition with overshoot bezier.
   - Compose: motion scheme + springy thumb offset/size.
   - Decision (v1): match Material Web’s handle-container overshoot for position; keep size/pressed behavior iterative.
   - Gate: fixed-timestep timeline screenshots (`fretboard diag run --fixed-frame-delta-ms 16`).
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/switch.rs`
+    - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 
 - [x] M3X-switch-004 Align focus state-layer policy (focus ring only; no focus state layer).
   - Rationale: Material Web switch ripple/state layer only expresses hover/pressed; focus is via focus ring + chroming.
