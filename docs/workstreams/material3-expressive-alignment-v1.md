@@ -1,109 +1,96 @@
-# Material3 Expressive Alignment v1
-
-Status: Active (workstream note; not a contract)
-
-This workstream aligns Fret's Material 3 component ecosystem to upstream behaviors and tokens (including
-Material 3 “Expressive”), with regression protection (tests + diag scripts + evidence bundles).
-
-Trackers:
-
-- Plan: `docs/workstreams/material3-expressive-alignment-v1-refactor-plan.md`
-- TODO: `docs/workstreams/material3-expressive-alignment-v1-todo.md`
-- Milestones: `docs/workstreams/material3-expressive-alignment-v1-milestones.md`
-
-Upstream references (local snapshots under `repo-ref/`):
-
-- MUI Material UI: `repo-ref/material-ui/`
-- Compose Material3: `repo-ref/compose-multiplatform-core/compose/material3/`
-- Material Web (tokens + CSS implementation detail): `repo-ref/material-web/`
-- Base UI (headless patterns): `repo-ref/base-ui/`
-- Radix primitives (for interaction policy comparisons): `repo-ref/primitives/`
-
+---
+title: Material 3 Expressive Alignment (v1)
+status: active
+date: 2026-02-18
+scope: ecosystem/fret-ui-material3, ecosystem/fret-ui-kit, tools/diag-scripts
 ---
 
-## Goals
+## Upstream references (non-normative)
 
-1. Match Material 3 behavior outcomes (states, motion, density, semantics).
-2. Keep layering clean:
-   - mechanism/contract work stays in `crates/*`,
-   - policy/state machines live in `ecosystem/fret-ui-kit`,
-   - Material recipes + token mapping live in `ecosystem/fret-ui-material3`.
-3. Make parity reviewable:
-   - record 1–3 evidence anchors per change (upstream file/symbol, in-tree owner path/symbol, gate path).
-4. Prevent regressions:
-   - unit tests for deterministic token/state logic,
-   - headless suites + goldens for stable token-to-style mapping,
-   - `fretboard diag` scripts (stable `test_id`) for interaction + motion.
+This workstream references optional local snapshots under `repo-ref/` for convenience.
+Upstream sources:
 
----
+- Material Web: https://github.com/material-components/material-web
+- MUI Material UI: https://github.com/mui/material-ui
+- Compose Material3: https://github.com/JetBrains/compose-multiplatform-core (see `compose/material3`)
+- MUI Base UI: https://github.com/mui/base-ui
+- Radix Primitives (for interaction policy comparisons only): https://github.com/radix-ui/primitives
 
-## Non-goals
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-- Recreating DOM/Compose APIs 1:1; we only port behavior outcomes.
-- Leaking component policy into `crates/fret-ui` unless it is a true mechanism/contract.
-- Locking a “final” Material component API surface; recipes may evolve as long as behavior stays aligned.
+# Material 3 Expressive Alignment (v1) — Workstream
 
----
+This workstream tracks aligning Fret’s Material recipe layer to **Material 3 (Expressive)** outcomes.
+The goal is to enable building editor-grade and app-grade UIs with Material behavior without leaking
+policy into `crates/*`.
 
-## Source-of-truth ordering
+Key constraints:
 
-When references disagree, prefer:
+- `crates/*` stays mechanism/contract only (focus, semantics, layout, overlays, rendering boundaries).
+- Material policy and recipes live in `ecosystem/*`:
+  - tokens + recipes: `ecosystem/fret-ui-material3`
+  - headless policy primitives + motion drivers: `ecosystem/fret-ui-kit`
+- Diagnostics is the enforcement tool:
+  - scripts: `tools/diag-scripts/*.json`
+  - evidence packs: `fretboard diag run --pack`
 
-1. Material 3 guidelines/spec intent (when unambiguous),
-2. Compose Material3 (GPU/toolkit style state machines + semantics),
-3. MUI Material UI (web interaction quirks, defaults, density),
-4. Material Web implementation detail (tokens + CSS fallback chains),
-5. Base UI / Radix as headless pattern references (accessibility + composition).
+Milestone board (one-screen): `docs/workstreams/material3-expressive-alignment-v1-milestones.md`.
+TODO board (detailed): `docs/workstreams/material3-expressive-alignment-v1-todo.md`.
 
----
+## What “alignment” means (definition of done)
 
-## Fearless refactor plan
+For each component we consider aligned when we have:
 
-The detailed “fearless refactor” workflow for this workstream lives in:
-`docs/workstreams/material3-expressive-alignment-v1-refactor-plan.md`.
+1. A clear upstream source-of-truth for the mismatch class:
+   - tokens/layout/density → Material + MUI + Compose (pick one primary)
+   - interaction policy → Compose + Base UI (avoid DOM-only assumptions)
+   - motion → Compose motion scheme + Material Web durations/easing where relevant
+2. The implementation lives in the correct layer (mechanism vs policy vs recipe).
+3. A regression gate:
+   - unit test for deterministic geometry/state invariants, and/or
+   - `fretboard diag` script with stable `test_id` selectors (+ fixed timestep when motion matters).
+4. 1–3 evidence anchors: upstream file(s), in-tree owner symbol(s), and gate(s).
 
----
+## Repo mapping (where changes should land)
 
-## Regression gates and evidence
+- Mechanisms (rare): `crates/fret-ui`, `crates/fret-runtime`, `crates/fret-render`
+- Policy primitives (common): `ecosystem/fret-ui-kit`
+  - dismiss/focus-restore, roving focus, keyboard routing, motion drivers
+- Material recipe layer (default): `ecosystem/fret-ui-material3`
+  - token keys (`md.comp.*`) and token fallbacks
+  - component recipes (composition + styling)
+  - stable `test_id` surfaces for gates
 
-Preferred gate stack:
+## Current implementation anchors
 
-- Unit tests near token/policy owners.
-- Headless suites with explicit golden update workflow (`FRET_UPDATE_GOLDENS=1` only when changes are intended).
-- `tools/diag-scripts/*.json` (schema v2) that:
-  - navigates via stable `test_id`,
-  - captures at least one `capture_bundle`,
-  - uses screenshots only when they add signal.
+- Switch recipe: `ecosystem/fret-ui-material3/src/switch.rs`
+- Switch tokens: `ecosystem/fret-ui-material3/src/tokens/switch.rs`
+- Token source mapping (Material Web v30): `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+- Text field recipe: `ecosystem/fret-ui-material3/src/text_field.rs`
+- UI gallery previews: `apps/fret-ui-gallery/src/ui/previews/material3/`
 
-Diagnostics hygiene:
+## Evidence packs and scripts (start here)
 
-- Do not grep or print `bundle.json` directly (it is large).
-- Use bounded helpers:
-  - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
-  - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json> <pattern> --mode contains --top 50`
-  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id>`
+- Switch baseline screenshots + bundle:
+  - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
+- Switch chrome crossfade timeline (fixed timestep recommended):
+  - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
+- Switch focus chroming screenshots:
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+- Text field hover screenshots:
+  - `tools/diag-scripts/ui-gallery-material3-text-field-outlined-hover-screenshots.json`
 
----
+## Component coverage (v1 target set)
 
-## Component inventory (initial)
+This workstream is intentionally incremental. The initial target set focuses on controls that
+exercise token/state/motion layering boundaries:
 
-This list is intentionally incomplete; expand it as we land parity work:
-
-- Toggle/Switch
+- Switch (toggle) / Checkbox / Radio
+- Buttons (filled/outlined/tonal/text) + IconButton
+- Text fields (filled/outlined) + supporting/error states
 - Slider
-- TextField (filled/outlined)
-- Checkbox / Radio
-- Buttons (text/filled/tonal/outlined)
-- Chips (assist/filter/input/suggestion)
-- FAB / Extended FAB
-- Tabs
-- Menus / Select
-- Dialog / Bottom sheet (if applicable)
-- Navigation components
+- Menus (incl. focus + dismiss policy) and Select/Combobox-like recipes
+- Dialog + Snackbar (overlay behavior, focus trap/restore, dismiss policy)
 
-Each component change must declare:
+Detailed sequencing and ownership lives in the TODO + milestones docs.
 
-- upstream reference(s),
-- owning layer(s),
-- gate(s) added/updated,
-- evidence bundle (if interaction/motion changed).

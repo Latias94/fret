@@ -1,51 +1,94 @@
-# Material 3 Expressive Alignment v1 (Milestones)
+---
+title: Material 3 Expressive Alignment (v1) — Milestones
+status: active
+date: 2026-02-18
+scope: ecosystem/fret-ui-material3, ecosystem/fret-ui-kit, diag gates
+---
 
-This document defines milestone checkpoints for aligning Material 3 Expressive outcomes in Fret.
+## Upstream references (non-normative)
 
-Plan: `docs/workstreams/material3-expressive-alignment-v1-refactor-plan.md`  
-TODO: `docs/workstreams/material3-expressive-alignment-v1-todo.md`
+This document references optional local checkouts under `repo-ref/` for convenience.
+Upstream sources:
 
-## M0: Evidence-ready baseline
+- Material Web: https://github.com/material-components/material-web
+- Compose Material3: https://github.com/JetBrains/compose-multiplatform-core (see `compose/material3`)
+- MUI Material UI: https://github.com/mui/material-ui
 
-Exit criteria:
+See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 
-- UI gallery surfaces exist for the target components with stable `test_id`.
-- At least one diag script v2 exists and runs with:
-  - `FRET_DIAG_GPU_SCREENSHOTS=1`
-  - `--pack` (shareable artifact)
-- At least one headless gate exists for "stable structure while pressed" (or an equivalent invariant).
+# Material 3 Expressive Alignment (v1) — Milestones
 
-## M1: Controls parity (checkbox / switch / icon toggle)
+This document is a **one-screen milestone board** for the Material 3 Expressive alignment workstream.
 
-Exit criteria:
+Source of truth for detailed TODOs: `docs/workstreams/material3-expressive-alignment-v1-todo.md`.
+Narrative + layering rules: `docs/workstreams/material3-expressive-alignment-v1.md`.
 
-- Checkbox supports indeterminate outcome (tri-state) with:
-  - semantics mapping (`checked: None`) and diag predicate gate (`checked_is_none`),
-  - screenshot evidence in both Standard and Expressive variants.
-- Switch thumb/track icon + sizing outcomes match upstream references for:
-  - selected/unselected, enabled/disabled, with/without icons.
-- Icon toggle button expressive shape morph is gated and stable.
+## Definition of done (component-level)
 
-## M2: Segmented / slider parity
+We consider a component “aligned (v1)” when:
 
-Exit criteria:
+1. Token mapping is explicit and stable (`md.comp.*` keys + clear fallback chain).
+2. Interaction policy lives in the correct layer (no policy leakage into `crates/*`).
+3. Motion outcomes are deterministic under fixed timestep when gated.
+4. At least one regression gate exists (unit test and/or `fretboard diag` script).
 
-- Segmented buttons: selection indicator geometry, keyboard navigation, and state layers are aligned and gated.
-- Slider: value semantics, thumb sizing, and interaction outcomes are aligned and gated.
+## Milestones
 
-## M3: Input fields parity (text field / select / autocomplete)
+### M0 — Foundations (tokens + motion + evidence)
 
-Exit criteria:
+Acceptance criteria:
 
-- Text field: error/disabled/supporting-text outcomes match upstream, with at least one diag gate per major state.
-- Select/autocomplete: overlay anchoring + keyboard navigation + dismissal behavior are stable and gated.
+- `ecosystem/fret-ui-material3` has a clear “token source of truth” story (versioned import + mapping).
+- Motion drivers are reused from `ecosystem/fret-ui-kit` where appropriate (no duplicate tween engines).
+- UI gallery surfaces provide stable `test_id` targets for scripts.
+- A small set of diag scripts exists to capture state + motion evidence.
 
-## M4: Navigation + surfaces parity (tabs / nav / dialogs)
+Status: In progress.
 
-Exit criteria:
+### M1 — Switch (toggle) parity baseline
 
-- Tabs: indicator motion + selection semantics are aligned and gated.
-- Navigation components: selection indicator + expressive sizing are aligned and gated.
-- Dialog/bottom sheet/snackbar/tooltip: elevation/scrim/motion outcomes are aligned and gated (dismiss policy stays in
-  ecosystem).
+Acceptance criteria:
+
+- Switch chrome transitions match Material Web timing (selected/unselected color crossfade).
+- Focus chroming rules match upstream selectors (handle/icons vs track split).
+- Basic icon modes are supported and gated (`icons`, `show-only-selected-icon`).
+
+Status: In progress (baseline exists; continue tightening).
+
+Evidence anchors:
+
+- Parity note: `docs/workstreams/material3-switch-handle-parity-note.md`
+- Scripts:
+  - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
+  - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+
+### M2 — Text field parity baseline
+
+Acceptance criteria:
+
+- Outlined/filled text fields match token-driven hover/focus/error/disabled outcomes.
+- Keyboard routing + focus-visible behavior is gated via diag evidence.
+
+Status: In progress.
+
+### M3 — Core controls set (checkbox/radio/button/slider)
+
+Acceptance criteria:
+
+- Controls are recipe-complete in UI gallery with stable selectors.
+- Token + interaction + motion deltas are documented with anchors.
+- At least one gate per control family exists.
+
+Status: Not started.
+
+### M4 — Overlay-driven surfaces (menus/dialog/snackbar)
+
+Acceptance criteria:
+
+- Dismiss + focus trap/restore policy is centralized in `fret-ui-kit` primitives.
+- Material3 overlay recipes exist in `fret-ui-material3`.
+- Overlay correctness is gated via scripts (dismiss + focus restore + placement invariants).
+
+Status: Not started.
 

@@ -70,12 +70,33 @@ We should validate:
 - the ripple does not drift/jump under pressed handle resizing,
 - state layer remains centered on the handle across transitions.
 
+### 4) Focus chroming is split (focus-within vs focus-visible)
+
+Material Web uses mixed focus selectors for switch chroming:
+
+- Handle + icons use `:focus-within` (mouse focus can tint the handle).
+- Track chroming differs by state:
+  - selected: `:focus-within`
+  - unselected: `:focus-visible` (keyboard focus only)
+
+If we treat “focused” as strictly `focus-visible` everywhere, we will miss the handle/icon focus tint
+when the switch is mouse-focused. If we treat “focused” as “any focus” everywhere, we will force
+unselected track chroming to appear on mouse-focus, which diverges from the reference behavior.
+
+Current Fret intent:
+
+- Keep the focus ring gated on `focus-visible` (accessibility + keyboard navigation).
+- Split switch token-driven chroming so the handle/icons can respond to “any focus” without forcing
+  unselected track focus chroming.
+
 ## Evidence + gates
 
 - Baseline diag capture script (screenshots + bundle):
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
 - Crossfade timeline evidence (captures frame-by-frame switch chrome transition):
   - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
+- Focus chroming evidence (click-focus vs focus-visible split):
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
 
 Next gates (once we add icon support):
 
