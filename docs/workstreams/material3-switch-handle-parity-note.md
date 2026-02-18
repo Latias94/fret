@@ -31,36 +31,32 @@ incrementally with evidence and gates.
 
 ## Observed gaps / likely drift sources
 
-### 1) No thumb content / icon support
+### 1) Thumb icons: motion/visibility parity is not locked
 
 Material Web and Compose both support icons/content inside the thumb:
 
 - Material Web: `icons` + `show-only-selected-icon` and a `.handle.with-icon` sizing variant.
 - Compose: `thumbContent` (and thumb size chooses the larger diameter when content exists).
 
-Fret switch currently renders an empty thumb container and does not expose a policy surface to
-provide thumb content or show-only-selected icon behavior.
+Fret already supports `icons` and `show_only_selected_icon` at the recipe layer (see anchors below),
+but we have not yet locked the **transition outcomes** (e.g. icon fade/rotate details) against the
+upstream references.
 
 **Practical impact**
 
-- We cannot match Material Web “icons” demos or token behavior (`md.comp.switch.*.icon.*`).
-- Handle sizing cannot follow the `with-icon` token path (`md.comp.switch.with-icon.handle.*`).
+- Visual drift is most likely to show up during state transitions (unchecked ↔ checked, pressed ↔ released),
+  especially in `show-only-selected-icon` mode where Material Web keeps the "on" icon in the DOM to animate it
+  even when unchecked.
 
-### 2) With-icon handle sizing is not modeled
+### 2) With-icon handle sizing parity needs evidence
 
 Material Web has an explicit handle size variant when icons are present:
 
 - `md.comp.switch.with-icon.handle.width`
 - `md.comp.switch.with-icon.handle.height`
 
-Fret currently only models:
-
-- selected handle size,
-- unselected handle size,
-- pressed handle size.
-
-This means even if we add icons later, the handle geometry will remain incorrect until we thread
-the “has thumb content” state into the geometry rules.
+Fret models this variant and threads it into geometry, but we should keep a small gate that prevents
+future refactors from regressing the `with-icon` sizing rules.
 
 ### 3) Ripple/state-layer geometry needs explicit evidence
 
@@ -74,10 +70,35 @@ We should validate:
 - the ripple does not drift/jump under pressed handle resizing,
 - state layer remains centered on the handle across transitions.
 
+### 4) Focus chroming is split (focus-within vs focus-visible)
+
+Material Web uses mixed focus selectors for switch chroming:
+
+- Handle + icons use `:focus-within` (mouse focus can tint the handle).
+- Track chroming differs by state:
+  - selected: `:focus-within`
+  - unselected: `:focus-visible` (keyboard focus only)
+
+If we treat “focused” as strictly `focus-visible` everywhere, we will miss the handle/icon focus tint
+when the switch is mouse-focused. If we treat “focused” as “any focus” everywhere, we will force
+unselected track chroming to appear on mouse-focus, which diverges from the reference behavior.
+
+Current Fret intent:
+
+- Keep the focus ring gated on `focus-visible` (accessibility + keyboard navigation).
+- Split switch token-driven chroming so the handle/icons can respond to “any focus” without forcing
+  unselected track focus chroming.
+
 ## Evidence + gates
 
 - Baseline diag capture script (screenshots + bundle):
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
+- Crossfade timeline evidence (captures frame-by-frame switch chrome transition):
+  - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
+- Focus chroming evidence (click-focus vs focus-visible split):
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+- Handle overshoot timeline evidence (captures frame-by-frame handle position transition):
+  - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 
 Next gates (once we add icon support):
 
@@ -90,4 +111,3 @@ Next gates (once we add icon support):
 - Add a headless test that asserts handle geometry matches token expectations for:
   - unchecked/checked/pressed,
   - with-icon size overrides.
-

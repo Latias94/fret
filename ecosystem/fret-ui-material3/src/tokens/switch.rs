@@ -21,6 +21,47 @@ pub(crate) struct SwitchChrome {
     pub(crate) handle_color: Color,
 }
 
+pub(crate) fn icon_size(theme: &Theme, selected: bool) -> Px {
+    let key = if selected {
+        "md.comp.switch.selected.icon.size"
+    } else {
+        "md.comp.switch.unselected.icon.size"
+    };
+    theme.metric_by_key(key).unwrap_or(Px(16.0))
+}
+
+pub(crate) fn icon_color(
+    theme: &Theme,
+    selected: bool,
+    enabled: bool,
+    interaction: SwitchInteraction,
+) -> Color {
+    if !enabled {
+        let base = theme
+            .color_by_key(disabled_icon_color_key(selected))
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let opacity = theme
+            .number_by_key(disabled_icon_opacity_key(selected))
+            .unwrap_or(0.38);
+        return alpha_mul(base, opacity);
+    }
+
+    theme
+        .color_by_key(icon_color_key(selected, interaction))
+        .unwrap_or_else(|| {
+            if selected {
+                theme
+                    .color_by_key("md.sys.color.on-primary")
+                    .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"))
+            } else {
+                theme
+                    .color_by_key("md.sys.color.on-surface-variant")
+                    .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+            }
+        })
+}
+
 fn shape_or_full(theme: &Theme, key: &str) -> Corners {
     theme
         .corners_by_key(key)
@@ -207,6 +248,35 @@ fn disabled_chrome(theme: &Theme, selected: bool) -> SwitchChrome {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn icon_color_key(selected: bool, interaction: SwitchInteraction) -> &'static str {
+    match (selected, interaction) {
+        (true, SwitchInteraction::Pressed) => "md.comp.switch.selected.pressed.icon.color",
+        (true, SwitchInteraction::Focused) => "md.comp.switch.selected.focus.icon.color",
+        (true, SwitchInteraction::Hovered) => "md.comp.switch.selected.hover.icon.color",
+        (true, SwitchInteraction::None) => "md.comp.switch.selected.icon.color",
+        (false, SwitchInteraction::Pressed) => "md.comp.switch.unselected.pressed.icon.color",
+        (false, SwitchInteraction::Focused) => "md.comp.switch.unselected.focus.icon.color",
+        (false, SwitchInteraction::Hovered) => "md.comp.switch.unselected.hover.icon.color",
+        (false, SwitchInteraction::None) => "md.comp.switch.unselected.icon.color",
+    }
+}
+
+fn disabled_icon_color_key(selected: bool) -> &'static str {
+    if selected {
+        "md.comp.switch.disabled.selected.icon.color"
+    } else {
+        "md.comp.switch.disabled.unselected.icon.color"
+    }
+}
+
+fn disabled_icon_opacity_key(selected: bool) -> &'static str {
+    if selected {
+        "md.comp.switch.disabled.selected.icon.opacity"
+    } else {
+        "md.comp.switch.disabled.unselected.icon.opacity"
+    }
 }
 
 fn state_layer_opacity_key(selected: bool, interaction: SwitchInteraction) -> &'static str {

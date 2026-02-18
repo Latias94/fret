@@ -254,6 +254,7 @@ pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
+pub(crate) const PAGE_MATERIAL3_SLIDER: &str = "material3_slider";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
 pub(crate) const PAGE_MATERIAL3_BADGE: &str = "material3_badge";
 pub(crate) const PAGE_MATERIAL3_SEGMENTED_BUTTON: &str = "material3_segmented_button";
@@ -476,6 +477,7 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
     "ui_gallery.nav.select.material3_icon_button";
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
+pub(crate) const CMD_NAV_MATERIAL3_SLIDER: &str = "ui_gallery.nav.select.material3_slider";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
 pub(crate) const CMD_NAV_MATERIAL3_BADGE: &str = "ui_gallery.nav.select.material3_badge";
 pub(crate) const CMD_NAV_MATERIAL3_SEGMENTED_BUTTON: &str =
@@ -2223,6 +2225,21 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-material3",
                 CMD_NAV_MATERIAL3_SWITCH,
                 &["material3", "switch", "state-layer", "ripple", "forms"],
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SLIDER,
+                "Slider",
+                "Material 3 Slider (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SLIDER,
+                &[
+                    "material3",
+                    "slider",
+                    "state-layer",
+                    "ripple",
+                    "forms",
+                    "value",
+                ],
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_RADIO,

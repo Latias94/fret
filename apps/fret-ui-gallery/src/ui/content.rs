@@ -384,6 +384,7 @@ fn page_preview(
     let switch = models.switch.clone();
     let material3_checkbox = models.material3_checkbox.clone();
     let material3_switch = models.material3_switch.clone();
+    let material3_slider_value = models.material3_slider_value.clone();
     let material3_radio_value = models.material3_radio_value.clone();
     let material3_tabs_value = models.material3_tabs_value.clone();
     let material3_list_value = models.material3_list_value.clone();
@@ -726,6 +727,9 @@ fn page_preview(
         }),
         PAGE_MATERIAL3_SWITCH => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_switch(cx, material3_switch)
+        }),
+        PAGE_MATERIAL3_SLIDER => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_slider(cx, material3_slider_value)
         }),
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)

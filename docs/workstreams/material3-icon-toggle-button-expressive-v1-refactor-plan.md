@@ -36,18 +36,24 @@ Goal: land a v1 “Icon Toggle Button” surface that:
 ## Current state (in-tree anchors)
 
 - Component: `ecosystem/fret-ui-material3/src/icon_button.rs`
-  - Toggle mode is represented by `IconButton.toggle(true)` + `IconButton.selected(bool)`.
-  - There is no built-in “checked model” / “onCheckedChange” contract.
-  - Pressed corner morph only: unchecked vs pressed; checked is not part of the shape system.
-  - A11y currently sets `role=Button` and also sets both `selected` and `checked` when `toggle=true`.
+  - First-class toggle contract exists: `IconToggleButton::new(Model<bool>, IconId)`.
+  - Legacy static toggle styling still exists via `IconButton.toggle(true)` + `IconButton.selected(bool)`,
+    but `IconToggleButton` is the recommended surface for interactive behavior.
+  - Expressive shape morph includes checked state (selection rule: `pressed > checked > unchecked`).
+  - Expressive shapes are modeled as a first-class `IconToggleButtonShapes` (corners-only, v1).
+  - A11y is Compose-aligned for toggle mode: `role=Checkbox` + `checked`, and does not set `selected`.
 - Tokens: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`
   - Provides base + pressed shape radius tokens and per-variant color keys.
-  - Does not model a checked-shape token (Expressive expects checked shape to be distinct).
+  - Models a selected/checked shape radius token (Expressive expects checked shape to be distinct).
 - Gallery surface: `apps/fret-ui-gallery/src/ui/previews/material3/controls.rs` (`preview_material3_icon_button`)
-  - Shows “Toggle on/off” examples but they are currently static (no state updates on click).
-  - No stable `test_id` exists for the toggle examples (diag scripts must fall back to a11y name).
+  - Contains an interactive `IconToggleButton` demo backed by a `Model<bool>`.
+  - Stable `test_id` exists for both the toggle button and its checked marker.
 - Existing stability gate: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`icon_button_pressed_scene_structure_is_stable`)
   - Validates pressed animation does not change scene structure.
+  - Semantics gate exists for toggle button role + checked state:
+    `icon_toggle_button_semantics_role_and_checked_state_are_stable`.
+  - Checked transition stability gate exists (scene structure + quad geometry):
+    `icon_toggle_button_checked_transition_scene_structure_is_stable`.
 
 ## Observed divergences vs Compose / MUI
 
@@ -55,21 +61,22 @@ Outcome-level gaps (these are not “just wrong tokens”):
 
 1) **Missing toggle contract**
    - Compose: `checked: Boolean` + `onCheckedChange` (controlled).
-   - Fret M3: `.toggle(true)` is a styling + semantics hint, not a real toggleable widget contract.
-   - Result: gallery “Toggle on/off” examples don’t change state on click, and we cannot gate toggle behavior.
+   - Fret M3: `IconToggleButton::new(Model<bool>, IconId)` provides a controlled, interactive contract.
+   - Result: gallery + diag script can gate toggle behavior deterministically.
 
 2) **Expressive shape morph requires `checked`**
    - Compose Expressive: `IconToggleButtonShapes(shape, pressedShape, checkedShape)` and `shapeForInteraction(checked, ...)`.
-   - Fret M3: animates only `pressed` radius; `checked` cannot affect shape today.
+   - Fret M3: expressive variant morphs across `pressed/checked/unchecked` corner radii.
 
 3) **A11y role/flags are under-specified**
    - Compose sets `role = Role.Checkbox` for toggleable icon buttons.
    - MUI uses `aria-pressed` on a `button` (toggle button semantics).
-   - Fret currently sets `role=Button` + `selected` + `checked` simultaneously for toggle mode.
-   - We should choose a single portable semantics strategy and lock it with a test + diag evidence.
+   - Fret chooses Compose-aligned semantics for Material3 toggle icon buttons:
+     `role=Checkbox` + `checked`, and does not set `selected`.
+   - This is gated via a headless semantics test and a diag script predicate (`role_is` + `checked_is`).
 
 4) **Selectors for diag gating are weak**
-   - Without `test_id`, scripts must use `role_and_name`, which is more brittle under copy changes.
+   - Stable `test_id` selectors are now present for gating.
 
 ## Refactor strategy (fearless, reversible)
 
@@ -139,4 +146,3 @@ Ship a minimal 3-pack:
 - A11y strategy is explicitly chosen and regression-gated.
 - UI gallery provides stable `test_id` selectors.
 - At least one diag script produces a packed bundle with screenshots for review.
-

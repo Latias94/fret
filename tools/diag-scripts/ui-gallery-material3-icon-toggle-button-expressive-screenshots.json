@@ -40,15 +40,32 @@
     },
     { "type": "wait_frames", "n": 20 },
 
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" },
+        "role": "checkbox"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "m3-icon-button-toggle-00-standard-idle" },
     { "type": "capture_screenshot", "label": "m3-icon-button-toggle-00-standard-idle" },
 
     {
       "type": "click",
       "target": {
-        "kind": "role_and_name",
-        "role": "switch",
-        "name": "Enable Material 3 Expressive variant"
+        "kind": "test_id",
+        "id": "ui-gallery-material3-design-variant-toggle"
       }
     },
     { "type": "wait_frames", "n": 10 },
@@ -57,19 +74,35 @@
 
     {
       "type": "click",
-      "target": { "kind": "role_and_name", "role": "button", "name": "Toggle off" }
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" }
     },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "m3-icon-button-toggle-20-click-toggle-off" },
-    { "type": "capture_screenshot", "label": "m3-icon-button-toggle-20-click-toggle-off" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "m3-icon-button-toggle-20-click-checked-true" },
+    { "type": "capture_screenshot", "label": "m3-icon-button-toggle-20-click-checked-true" },
 
     {
       "type": "click",
-      "target": { "kind": "role_and_name", "role": "button", "name": "Toggle on" }
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" }
     },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "m3-icon-button-toggle-30-click-toggle-on" },
-    { "type": "capture_screenshot", "label": "m3-icon-button-toggle-30-click-toggle-on" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-icon-toggle-button" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "m3-icon-button-toggle-30-click-checked-false" },
+    { "type": "capture_screenshot", "label": "m3-icon-button-toggle-30-click-checked-false" },
 
     { "type": "capture_bundle", "label": "ui-gallery-material3-icon-toggle-button-expressive" }
   ]

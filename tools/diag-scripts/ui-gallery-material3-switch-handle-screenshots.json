@@ -49,10 +49,32 @@
     { "type": "wait_frames", "n": 6 },
     { "type": "capture_bundle", "label": "m3-switch-20-pressed" },
     { "type": "capture_screenshot", "label": "m3-switch-20-pressed" },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" }
+    },
     { "type": "pointer_up" },
     { "type": "wait_frames", "n": 6 },
     { "type": "capture_bundle", "label": "m3-switch-21-released" },
     { "type": "capture_screenshot", "label": "m3-switch-21-released" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-both-00-idle" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-00-idle" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-both-10-selected" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-10-selected" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-selected-only-00-idle" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-00-idle" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-selected-only-10-selected" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-10-selected" },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
     { "type": "wait_frames", "n": 6 },
@@ -62,4 +84,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-material3-switch-handle-screenshots" }
   ]
 }
-

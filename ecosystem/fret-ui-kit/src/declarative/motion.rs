@@ -109,6 +109,21 @@ pub(crate) fn tween_value_at(
     start + (end - start) * eased
 }
 
+pub(crate) fn tween_value_at_unclamped(
+    start: f32,
+    end: f32,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+    elapsed: Duration,
+) -> f32 {
+    if duration == Duration::ZERO {
+        return end;
+    }
+    let t = (elapsed.as_secs_f64() / duration.as_secs_f64()).clamp(0.0, 1.0) as f32;
+    let eased = ease(t);
+    start + (end - start) * eased
+}
+
 pub(crate) fn tween_velocity_at(
     start: f32,
     end: f32,
@@ -125,6 +140,25 @@ pub(crate) fn tween_velocity_at(
     }
     let v0 = tween_value_at(start, end, duration, ease, t0);
     let v1 = tween_value_at(start, end, duration, ease, t1);
+    (v1 - v0) / (t1 - t0).as_secs_f32()
+}
+
+pub(crate) fn tween_velocity_at_unclamped(
+    start: f32,
+    end: f32,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+    elapsed: Duration,
+) -> f32 {
+    // Finite-difference approximation. This is primarily used for retargeting continuity.
+    let dt = Duration::from_millis(1);
+    let t0 = elapsed.saturating_sub(dt);
+    let t1 = (elapsed + dt).min(duration);
+    if t1 <= t0 {
+        return 0.0;
+    }
+    let v0 = tween_value_at_unclamped(start, end, duration, ease, t0);
+    let v1 = tween_value_at_unclamped(start, end, duration, ease, t1);
     (v1 - v0) / (t1 - t0).as_secs_f32()
 }
 
@@ -189,6 +223,109 @@ pub fn drive_tween_f32<H: UiHost>(
                         tween_value_at(st.start, st.target, st.duration, st.ease, st.elapsed);
                     let velocity =
                         tween_velocity_at(st.start, st.target, st.duration, st.ease, st.elapsed);
+                    st.value = value;
+                    st.velocity = velocity;
+
+                    if st.elapsed >= st.duration {
+                        st.value = st.target;
+                        st.velocity = 0.0;
+                        st.animating = false;
+                    }
+                } else if st.last_frame_id == 0 {
+                    st.last_frame_id = frame_id;
+                }
+
+                DrivenMotionF32 {
+                    value: st.value,
+                    velocity: st.velocity,
+                    animating: st.animating,
+                }
+            });
+
+            set_continuous_frames(cx, out.animating);
+            if out.animating {
+                cx.notify_for_animation_frame();
+            }
+            out
+        },
+    )
+}
+
+#[track_caller]
+pub fn drive_tween_f32_unclamped<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    target: f32,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+) -> DrivenMotionF32 {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion {
+        set_continuous_frames(cx, false);
+        return DrivenMotionF32 {
+            value: target,
+            velocity: 0.0,
+            animating: false,
+        };
+    }
+
+    let loc = Location::caller();
+    cx.keyed(
+        (
+            loc.file(),
+            loc.line(),
+            loc.column(),
+            "drive_tween_f32_unclamped",
+        ),
+        |cx| {
+            let frame_id = cx.frame_id.0;
+            let dt = effective_frame_delta_for_cx(cx);
+
+            let out = cx.with_state(TweenF32State::default, |st| {
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_frame_id = frame_id;
+                    st.start = target;
+                    st.target = target;
+                    st.value = target;
+                    st.velocity = 0.0;
+                    st.elapsed = Duration::ZERO;
+                    st.duration = duration;
+                    st.ease = ease;
+                    st.animating = false;
+                }
+
+                // Retarget.
+                if target != st.target
+                    || st.duration != duration
+                    || st.ease as usize != ease as usize
+                {
+                    st.start = st.value;
+                    st.target = target;
+                    st.duration = duration;
+                    st.ease = ease;
+                    st.elapsed = Duration::ZERO;
+                    st.animating = true;
+                }
+
+                // Advance at most once per frame.
+                if st.animating && st.last_frame_id != frame_id {
+                    st.last_frame_id = frame_id;
+                    st.elapsed = st.elapsed.saturating_add(dt);
+
+                    let value = tween_value_at_unclamped(
+                        st.start,
+                        st.target,
+                        st.duration,
+                        st.ease,
+                        st.elapsed,
+                    );
+                    let velocity = tween_velocity_at_unclamped(
+                        st.start,
+                        st.target,
+                        st.duration,
+                        st.ease,
+                        st.elapsed,
+                    );
                     st.value = value;
                     st.velocity = velocity;
 

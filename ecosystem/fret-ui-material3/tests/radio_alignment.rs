@@ -3800,6 +3800,259 @@ fn icon_button_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
+    use fret_icons::ids;
+    use fret_ui_material3::IconToggleButton;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked_model = app.models.insert(false);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let button = IconToggleButton::new(checked_model.clone(), ids::ui::CHECK)
+                .a11y_label("icon toggle button")
+                .test_id("icon-toggle-button")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), button)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let (button_node, button_bounds, initial_checked) = {
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        let node = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("icon-toggle-button"))
+            .expect("expected icon-toggle-button in semantics snapshot");
+        assert_eq!(
+            node.role,
+            fret_core::SemanticsRole::Checkbox,
+            "expected IconToggleButton semantics role=Checkbox"
+        );
+        assert_eq!(
+            node.flags.selected, false,
+            "expected IconToggleButton not to set `selected`"
+        );
+        assert_eq!(
+            node.flags.checked,
+            Some(false),
+            "expected IconToggleButton checked=false initially"
+        );
+        let bounds = ui
+            .debug_node_visual_bounds(node.id)
+            .expect("expected icon-toggle-button visual bounds");
+        (node.id, bounds, node.flags.checked)
+    };
+
+    let press_at = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    app.advance_frame();
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("icon-toggle-button"))
+        .expect("expected icon-toggle-button in semantics snapshot");
+    assert_eq!(
+        node.role,
+        fret_core::SemanticsRole::Checkbox,
+        "expected IconToggleButton semantics role=Checkbox after toggle"
+    );
+    assert_eq!(
+        node.flags.selected, false,
+        "expected IconToggleButton not to set `selected` after toggle"
+    );
+    assert_eq!(
+        initial_checked,
+        Some(false),
+        "expected initial checked state to be false"
+    );
+    assert_eq!(
+        node.flags.checked,
+        Some(true),
+        "expected IconToggleButton checked=true after click"
+    );
+
+    // Sanity: the visual node should still be queryable.
+    ui.debug_node_visual_bounds(button_node)
+        .expect("expected icon-toggle-button visual bounds after click");
+}
+
+#[test]
+fn icon_toggle_button_checked_transition_scene_structure_is_stable() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        IconToggleButton, MaterialDesignVariant, with_material_design_variant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked_model = app.models.insert(false);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            with_material_design_variant(cx, MaterialDesignVariant::Expressive, |cx| {
+                let button = IconToggleButton::new(checked_model.clone(), ids::ui::CHECK)
+                    .a11y_label("icon toggle button")
+                    .test_id("icon-toggle-button")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), button)]
+            })
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let button_bounds = {
+        let button_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("icon-toggle-button") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected icon-toggle-button in semantics snapshot");
+
+        ui.debug_node_visual_bounds(button_node)
+            .expect("expected icon-toggle-button visual bounds")
+    };
+
+    let press_at = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    let mut baseline_clip_corners: Option<(i32, i32, i32, i32)> = None;
+    let mut saw_corner_change = false;
+    for frame in 0..24 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        // Ignore the first couple frames: focus + modality may settle after the click.
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected IconToggleButton to keep a stable scene structure while checked corner morph is active"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
+
+            let corners = scene
+                .ops()
+                .iter()
+                .find_map(|op| match op {
+                    SceneOp::PushClipRRect { corner_radii, .. } => Some(*corner_radii),
+                    _ => None,
+                })
+                .expect("expected PushClipRRect while rendering IconToggleButton");
+
+            let sig = (
+                ((corners.top_left.0 * 10.0).round()) as i32,
+                ((corners.top_right.0 * 10.0).round()) as i32,
+                ((corners.bottom_right.0 * 10.0).round()) as i32,
+                ((corners.bottom_left.0 * 10.0).round()) as i32,
+            );
+
+            match baseline_clip_corners {
+                None => baseline_clip_corners = Some(sig),
+                Some(prev) if sig != prev => saw_corner_change = true,
+                Some(_) => {}
+            }
+        }
+
+        if frame >= 16 {
+            let geom = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    geom, *prev,
+                    "expected IconToggleButton to keep stable quad geometry after checked morph settles"
+                );
+            } else {
+                baseline_quads = Some(geom);
+            }
+        }
+    }
+
+    assert!(
+        saw_corner_change,
+        "expected IconToggleButton quad corner radii to change during checked morph"
+    );
+}
+
+#[test]
 fn switch_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Switch;
 
@@ -3913,6 +4166,266 @@ fn switch_pressed_scene_structure_is_stable() {
         }
 
         ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+    }
+}
+
+#[test]
+fn switch_icons_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::Switch;
+
+    let schemes = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    let scenarios = [
+        ("icons_both.unselected", false, false),
+        ("icons_both.selected", true, false),
+        ("icons_selected_only.unselected", false, true),
+        ("icons_selected_only.selected", true, true),
+    ];
+
+    for (mode, variant, label) in schemes {
+        for (scenario, initial_selected, selected_only) in scenarios {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(320.0), Px(240.0)),
+            );
+
+            let selected = app.models_mut().insert(initial_selected);
+            let test_id = "switch-icons";
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let mut switch = Switch::new(selected.clone())
+                        .a11y_label("switch")
+                        .test_id(test_id);
+                    if selected_only {
+                        switch = switch.show_only_selected_icon(true);
+                    } else {
+                        switch = switch.icons(true);
+                    }
+
+                    let el = switch.into_element(cx);
+                    vec![with_padding(cx, Px(32.0), el)]
+                })
+            };
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let switch_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        if node.test_id.as_deref() == Some(test_id) {
+                            Some(node.id)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .unwrap_or_else(|| panic!("expected switch semantics node ({label}, {scenario})"));
+            let switch_bounds = ui
+                .debug_node_visual_bounds(switch_node)
+                .unwrap_or_else(|| panic!("expected switch visual bounds ({label}, {scenario})"));
+            let press_at = Point::new(
+                Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+                Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_down(PointerId(1), press_at),
+            );
+
+            let mut baseline_structure: Option<Vec<SceneSig>> = None;
+            let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+            for frame in 0..24 {
+                app.advance_frame();
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+                let mut scene = Scene::default();
+                ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+                if frame >= 2 && frame < 7 {
+                    let sig = scene_signature(&scene);
+                    if let Some(prev) = baseline_structure.as_ref() {
+                        assert_eq!(
+                            sig, *prev,
+                            "expected Switch icons scene structure to be stable while pressed ({label}, {scenario})"
+                        );
+                    } else {
+                        baseline_structure = Some(sig);
+                    }
+                }
+
+                if frame >= 16 {
+                    let sig = scene_quad_geometry_signature(&scene);
+                    if let Some(prev) = baseline_quads.as_ref() {
+                        assert_eq!(
+                            sig, *prev,
+                            "expected Switch icons quad geometry to be stable after animations settle ({label}, {scenario})"
+                        );
+                    } else {
+                        baseline_quads = Some(sig);
+                    }
+                }
+            }
+
+            ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+        }
+    }
+}
+
+#[test]
+fn switch_selected_only_icon_persists_during_toggle_animation() {
+    use fret_core::SceneOp;
+    use fret_ui_material3::Switch;
+
+    fn svg_icon_op_count(scene: &Scene) -> usize {
+        scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::SvgMaskIcon { .. } | SceneOp::SvgImage { .. }))
+            .count()
+    }
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+
+        let selected = app.models_mut().insert(true);
+        let test_id = "switch-selected-only-icon";
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let el = Switch::new(selected.clone())
+                        .show_only_selected_icon(true)
+                        .a11y_label("switch")
+                        .test_id(test_id)
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), el)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            svg_icon_op_count(&scene) >= 1,
+            "expected selected-only icon to be painted when selected ({label})"
+        );
+
+        let switch_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some(test_id) {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected switch semantics node ({label})"));
+        let switch_bounds = ui
+            .debug_node_visual_bounds(switch_node)
+            .unwrap_or_else(|| panic!("expected switch visual bounds ({label})"));
+        let press_at = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+        let mut saw_icon_gone_after_settle = false;
+        for frame in 0..120usize {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            let count = svg_icon_op_count(&scene);
+
+            if frame < 2 {
+                assert!(
+                    count >= 1,
+                    "expected selected-only icon to persist while toggle animation starts ({label}, frame={frame}, count={count})"
+                );
+            }
+
+            if frame >= 60 && count == 0 {
+                saw_icon_gone_after_settle = true;
+            }
+        }
+
+        assert!(
+            saw_icon_gone_after_settle,
+            "expected selected-only icon to be removed after toggle settles ({label})"
+        );
     }
 }
 
@@ -4031,6 +4544,98 @@ fn checkbox_pressed_scene_structure_is_stable() {
 
         ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
+}
+
+#[test]
+fn checkbox_tristate_semantics_and_toggle_outcomes() {
+    use fret_ui_material3::Checkbox;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let checked = app.models_mut().insert(None::<bool>);
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let checkbox = Checkbox::new_optional(checked.clone())
+                .a11y_label("checkbox")
+                .test_id("checkbox-tristate")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), checkbox)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("checkbox-tristate"))
+        .expect("expected tristate checkbox in semantics snapshot");
+    assert_eq!(
+        node.flags.checked, None,
+        "expected indeterminate checkbox to map to checked: None"
+    );
+
+    let checkbox_bounds = ui
+        .debug_node_visual_bounds(node.id)
+        .expect("expected checkbox visual bounds");
+    let press_at = Point::new(
+        Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+        Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    assert_eq!(
+        app.models().get_cloned(&checked),
+        Some(Some(true)),
+        "expected tristate checkbox to toggle indeterminate -> checked"
+    );
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("checkbox-tristate"))
+        .expect("expected tristate checkbox in semantics snapshot");
+    assert_eq!(node.flags.checked, Some(true));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+
+    assert_eq!(
+        app.models().get_cloned(&checked),
+        Some(Some(false)),
+        "expected tristate checkbox to toggle checked -> unchecked"
+    );
 }
 
 #[test]
@@ -6391,6 +6996,113 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
             );
         }
     }
+}
+
+#[test]
+fn segmented_button_semantics_roles_match_compose_baseline() {
+    use std::collections::BTreeSet;
+
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+
+    let single_value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("alpha"));
+    let multi_value: Model<BTreeSet<Arc<str>>> = app
+        .models_mut()
+        .insert([Arc::<str>::from("alpha")].into_iter().collect());
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let single = SegmentedButtonSet::single(single_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha").test_id("segmented-single-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta").test_id("segmented-single-beta"),
+                    SegmentedButtonItem::new("gamma", "Gamma")
+                        .disabled(true)
+                        .test_id("segmented-single-gamma-disabled"),
+                ])
+                .a11y_label("single segmented")
+                .test_id("segmented-single")
+                .into_element(cx);
+
+            let multi = SegmentedButtonSet::multi(multi_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha").test_id("segmented-multi-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta").test_id("segmented-multi-beta"),
+                ])
+                .a11y_label("multi segmented")
+                .test_id("segmented-multi")
+                .into_element(cx);
+
+            let mut props = FlexProps::default();
+            props.direction = fret_core::Axis::Vertical;
+            props.gap = Px(16.0);
+            let content = cx.flex(props, |_cx| vec![single, multi]);
+            vec![with_padding(cx, Px(24.0), content)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let find = |id: &str| -> &fret_core::SemanticsNode {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("expected semantics node {id}"))
+    };
+
+    let group_single = find("segmented-single");
+    assert_eq!(group_single.role, fret_core::SemanticsRole::RadioGroup);
+
+    let alpha = find("segmented-single-alpha");
+    assert_eq!(alpha.role, fret_core::SemanticsRole::RadioButton);
+    assert_eq!(alpha.flags.checked, Some(true));
+    assert!(
+        !alpha.flags.selected,
+        "radio buttons should not set selected"
+    );
+
+    let beta = find("segmented-single-beta");
+    assert_eq!(beta.role, fret_core::SemanticsRole::RadioButton);
+    assert_eq!(beta.flags.checked, Some(false));
+    assert!(
+        !beta.flags.selected,
+        "radio buttons should not set selected"
+    );
+
+    let multi_alpha = find("segmented-multi-alpha");
+    assert_eq!(multi_alpha.role, fret_core::SemanticsRole::Checkbox);
+    assert_eq!(multi_alpha.flags.checked, Some(true));
+    assert!(
+        !multi_alpha.flags.selected,
+        "checkboxes should not set selected"
+    );
+
+    let multi_beta = find("segmented-multi-beta");
+    assert_eq!(multi_beta.role, fret_core::SemanticsRole::Checkbox);
+    assert_eq!(multi_beta.flags.checked, Some(false));
+    assert!(
+        !multi_beta.flags.selected,
+        "checkboxes should not set selected"
+    );
 }
 
 #[test]

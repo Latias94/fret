@@ -49,8 +49,8 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn state_layer_opacity_key(checked: bool, interaction: CheckboxInteraction) -> &'static str {
-    match (checked, interaction) {
+fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
+    match (selected, interaction) {
         (true, CheckboxInteraction::Pressed) => {
             "md.comp.checkbox.selected.pressed.state-layer.opacity"
         }
@@ -84,7 +84,7 @@ fn sys_state_opacity_key(interaction: CheckboxInteraction) -> &'static str {
 
 pub(crate) fn state_layer_target_opacity(
     theme: &Theme,
-    checked: bool,
+    selected: bool,
     enabled: bool,
     interaction: CheckboxInteraction,
 ) -> f32 {
@@ -96,21 +96,21 @@ pub(crate) fn state_layer_target_opacity(
         CheckboxInteraction::None => 0.0,
         CheckboxInteraction::Pressed => theme
             .number_by_key(state_layer_opacity_key(
-                checked,
+                selected,
                 CheckboxInteraction::Pressed,
             ))
             .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
             .unwrap_or(0.1),
         CheckboxInteraction::Focused => theme
             .number_by_key(state_layer_opacity_key(
-                checked,
+                selected,
                 CheckboxInteraction::Focused,
             ))
             .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Focused)))
             .unwrap_or(0.1),
         CheckboxInteraction::Hovered => theme
             .number_by_key(state_layer_opacity_key(
-                checked,
+                selected,
                 CheckboxInteraction::Hovered,
             ))
             .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Hovered)))
@@ -118,18 +118,18 @@ pub(crate) fn state_layer_target_opacity(
     }
 }
 
-pub(crate) fn pressed_state_layer_opacity(theme: &Theme, checked: bool) -> f32 {
+pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
     theme
         .number_by_key(state_layer_opacity_key(
-            checked,
+            selected,
             CheckboxInteraction::Pressed,
         ))
         .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
         .unwrap_or(0.1)
 }
 
-fn state_layer_color_key(checked: bool, interaction: CheckboxInteraction) -> &'static str {
-    match (checked, interaction) {
+fn state_layer_color_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
+    match (selected, interaction) {
         (true, CheckboxInteraction::Pressed) => {
             "md.comp.checkbox.selected.pressed.state-layer.color"
         }
@@ -151,11 +151,11 @@ fn state_layer_color_key(checked: bool, interaction: CheckboxInteraction) -> &'s
 
 pub(crate) fn state_layer_color(
     theme: &Theme,
-    checked: bool,
+    selected: bool,
     interaction: CheckboxInteraction,
 ) -> Color {
     theme
-        .color_by_key(state_layer_color_key(checked, interaction))
+        .color_by_key(state_layer_color_key(selected, interaction))
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
         .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
 }
@@ -203,11 +203,11 @@ fn unselected_outline_color_key(interaction: CheckboxInteraction) -> &'static st
 
 pub(crate) fn chrome(
     theme: &Theme,
-    checked: bool,
+    selected: bool,
     enabled: bool,
     interaction: CheckboxInteraction,
 ) -> CheckboxChrome {
-    if checked {
+    if selected {
         let mut container = theme
             .color_by_key("md.comp.checkbox.selected.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))

@@ -2,15 +2,20 @@
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing/colors via `md.comp.switch.*`.
-//! - State layer (hover/pressed/focus) + unbounded ripple using `fret_ui::paint`.
+//! - State layer (hover/pressed/focus) + ripple driven by `fret_ui::paint`.
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use fret_core::{Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size};
+use fret_core::{
+    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit, Transform2D,
+};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
-    AnyElement, ContainerProps, Length, Overflow, PointerRegionProps, PressableA11y, PressableProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -20,6 +25,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
     material_pressable_indication_config,
@@ -29,6 +35,12 @@ use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interac
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::switch as switch_tokens;
+
+fn material_web_switch_handle_overshoot_ease(x: f32) -> f32 {
+    // Material Web (M3) switch handle-container overshoot:
+    // `transition: margin 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275)`.
+    fret_ui_kit::headless::easing::CubicBezier::new(0.175, 0.885, 0.32, 1.275).sample_unclamped(x)
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
@@ -80,6 +92,10 @@ impl SwitchStyle {
 pub struct Switch {
     selected: Model<bool>,
     disabled: bool,
+    icons: bool,
+    show_only_selected_icon: bool,
+    icon_on: Option<IconId>,
+    icon_off: Option<IconId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_activate: Option<OnActivate>,
@@ -90,6 +106,8 @@ impl std::fmt::Debug for Switch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Switch")
             .field("disabled", &self.disabled)
+            .field("icons", &self.icons)
+            .field("show_only_selected_icon", &self.show_only_selected_icon)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("on_activate", &self.on_activate.is_some())
@@ -103,6 +121,10 @@ impl Switch {
         Self {
             selected,
             disabled: false,
+            icons: false,
+            show_only_selected_icon: false,
+            icon_on: Some(fret_icons::ids::ui::CHECK),
+            icon_off: Some(fret_icons::ids::ui::CLOSE),
             a11y_label: None,
             test_id: None,
             on_activate: None,
@@ -112,6 +134,34 @@ impl Switch {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Shows switch icons inside the thumb.
+    ///
+    /// This mirrors Material Web's `icons` property.
+    pub fn icons(mut self, icons: bool) -> Self {
+        self.icons = icons;
+        self
+    }
+
+    /// Shows only the "selected" icon when checked, and hides the unselected icon.
+    ///
+    /// This mirrors Material Web's `show-only-selected-icon` behavior and overrides `.icons(...)`.
+    pub fn show_only_selected_icon(mut self, show_only_selected_icon: bool) -> Self {
+        self.show_only_selected_icon = show_only_selected_icon;
+        self
+    }
+
+    /// Overrides the icon displayed when the switch is selected.
+    pub fn icon_on(mut self, icon: IconId) -> Self {
+        self.icon_on = Some(icon);
+        self
+    }
+
+    /// Overrides the icon displayed when the switch is unselected.
+    pub fn icon_off(mut self, icon: IconId) -> Self {
+        self.icon_off = Some(icon);
         self
     }
 
@@ -143,6 +193,10 @@ impl Switch {
                 let theme = Theme::global(&*cx.app);
                 switch_size_tokens(theme)
             };
+            let icons_enabled = self.icons;
+            let show_only_selected_icon = self.show_only_selected_icon;
+            let icon_on = self.icon_on.clone();
+            let icon_off = self.icon_off.clone();
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -208,7 +262,8 @@ impl Switch {
 
                         let is_pressed = enabled && st.pressed;
                         let is_hovered = enabled && st.hovered;
-                        let is_focused = enabled && st.focused && focus_visible;
+                        let is_focused_any = enabled && st.focused;
+                        let is_focused_visible = is_focused_any && focus_visible;
                         let selected = cx
                             .get_model_copied(&self.selected, Invalidation::Paint)
                             .unwrap_or(false);
@@ -217,32 +272,54 @@ impl Switch {
                         if selected {
                             states |= WidgetStates::SELECTED;
                         }
+                        let mut states_unselected = states;
+                        states_unselected.remove(fret_ui_kit::WidgetState::Selected);
+                        let mut states_selected = states;
+                        states_selected.insert(fret_ui_kit::WidgetState::Selected);
 
-                        let tokens_interaction =
-                            match pressable_interaction(is_pressed, is_hovered, is_focused) {
-                                Some(PressableInteraction::Pressed) => {
-                                    switch_tokens::SwitchInteraction::Pressed
-                                }
-                                Some(PressableInteraction::Focused) => {
-                                    switch_tokens::SwitchInteraction::Focused
-                                }
-                                Some(PressableInteraction::Hovered) => {
-                                    switch_tokens::SwitchInteraction::Hovered
-                                }
-                                None => switch_tokens::SwitchInteraction::None,
-                            };
+                        let tokens_interaction_for = |is_focused: bool| match pressable_interaction(
+                            is_pressed, is_hovered, is_focused,
+                        ) {
+                            Some(PressableInteraction::Pressed) => {
+                                switch_tokens::SwitchInteraction::Pressed
+                            }
+                            Some(PressableInteraction::Focused) => {
+                                switch_tokens::SwitchInteraction::Focused
+                            }
+                            Some(PressableInteraction::Hovered) => {
+                                switch_tokens::SwitchInteraction::Hovered
+                            }
+                            None => switch_tokens::SwitchInteraction::None,
+                        };
+
+                        // Material Web uses mixed focus selectors:
+                        // - handle + icons: `:focus-within`
+                        // - track (unselected): `:focus-visible`
+                        // - track (selected): `:focus-within`
+                        //
+                        // Mirror that split so mouse-focus can tint the handle/icons without
+                        // forcing unselected track chroming.
+                        let tokens_interaction_state_layer =
+                            tokens_interaction_for(is_focused_visible);
+                        let tokens_interaction_handle = tokens_interaction_for(is_focused_any);
+                        let tokens_interaction_track_unselected =
+                            tokens_interaction_for(is_focused_visible);
+                        let tokens_interaction_track_selected =
+                            tokens_interaction_for(is_focused_any);
 
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
                             selected: SpringAnimator,
                             pressed: SpringAnimator,
+                            prev_pressed: bool,
                         }
 
                         let (
                             state_layer_target,
                             state_layer_color,
                             spring,
-                            chrome,
+                            chrome_unselected,
+                            chrome_selected,
                             track_corner_radii,
                             handle_corner_radii,
                             ripple_base_opacity,
@@ -254,12 +331,12 @@ impl Switch {
                                 theme,
                                 selected,
                                 enabled,
-                                tokens_interaction,
+                                tokens_interaction_state_layer,
                             );
                             let state_layer_color = switch_tokens::state_layer_color(
                                 theme,
                                 selected,
-                                tokens_interaction,
+                                tokens_interaction_state_layer,
                             );
                             let state_layer_color = resolve_override_slot_with(
                                 self.style.state_layer_color.as_ref(),
@@ -271,26 +348,80 @@ impl Switch {
                             let spring =
                                 sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
 
-                            let mut chrome =
-                                switch_tokens::chrome(theme, selected, enabled, tokens_interaction);
-                            let token_track_color = chrome.track_color;
-                            chrome.track_color = resolve_override_slot_with(
+                            let chrome_unselected_track = switch_tokens::chrome(
+                                theme,
+                                false,
+                                enabled,
+                                tokens_interaction_track_unselected,
+                            );
+                            let chrome_unselected_handle = switch_tokens::chrome(
+                                theme,
+                                false,
+                                enabled,
+                                tokens_interaction_handle,
+                            );
+                            let mut chrome_unselected = switch_tokens::SwitchChrome {
+                                track_color: chrome_unselected_track.track_color,
+                                outline_color: chrome_unselected_track.outline_color,
+                                handle_color: chrome_unselected_handle.handle_color,
+                            };
+                            let token_track_color = chrome_unselected.track_color;
+                            chrome_unselected.track_color = resolve_override_slot_with(
                                 self.style.track_color.as_ref(),
-                                states,
+                                states_unselected,
                                 |color| color.resolve(theme),
                                 || token_track_color,
                             );
-                            let token_handle_color = chrome.handle_color;
-                            chrome.handle_color = resolve_override_slot_with(
+                            let token_handle_color = chrome_unselected.handle_color;
+                            chrome_unselected.handle_color = resolve_override_slot_with(
                                 self.style.handle_color.as_ref(),
-                                states,
+                                states_unselected,
                                 |color| color.resolve(theme),
                                 || token_handle_color,
                             );
-                            let token_outline_color = chrome.outline_color;
-                            chrome.outline_color = resolve_override_slot_opt_with(
+                            let token_outline_color = chrome_unselected.outline_color;
+                            chrome_unselected.outline_color = resolve_override_slot_opt_with(
                                 self.style.outline_color.as_ref(),
-                                states,
+                                states_unselected,
+                                |color| color.resolve(theme),
+                                || token_outline_color,
+                            );
+
+                            let chrome_selected_track = switch_tokens::chrome(
+                                theme,
+                                true,
+                                enabled,
+                                tokens_interaction_track_selected,
+                            );
+                            let chrome_selected_handle = switch_tokens::chrome(
+                                theme,
+                                true,
+                                enabled,
+                                tokens_interaction_handle,
+                            );
+                            let mut chrome_selected = switch_tokens::SwitchChrome {
+                                track_color: chrome_selected_track.track_color,
+                                outline_color: chrome_selected_track.outline_color,
+                                handle_color: chrome_selected_handle.handle_color,
+                            };
+                            let token_track_color = chrome_selected.track_color;
+                            chrome_selected.track_color = resolve_override_slot_with(
+                                self.style.track_color.as_ref(),
+                                states_selected,
+                                |color| color.resolve(theme),
+                                || token_track_color,
+                            );
+                            let token_handle_color = chrome_selected.handle_color;
+                            chrome_selected.handle_color = resolve_override_slot_with(
+                                self.style.handle_color.as_ref(),
+                                states_selected,
+                                |color| color.resolve(theme),
+                                || token_handle_color,
+                            );
+                            let token_outline_color = chrome_selected.outline_color;
+                            chrome_selected.outline_color = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states_selected,
                                 |color| color.resolve(theme),
                                 || token_outline_color,
                             );
@@ -309,37 +440,114 @@ impl Switch {
                                 state_layer_target,
                                 state_layer_color,
                                 spring,
-                                chrome,
+                                chrome_unselected,
+                                chrome_selected,
                                 track_corner_radii,
                                 handle_corner_radii,
                                 ripple_base_opacity,
                                 config,
                             )
                         };
-                        let (thumb_t, pressed_t, thumb_active) =
-                            cx.with_state_for(pressable_id, SwitchThumbRuntime::default, |rt| {
+                        let (thumb_t, pressed_t, chrome_t, position_t, thumb_active) =
+                            cx.named("thumb_runtime", |cx| {
                                 let desired_selected = if selected { 1.0 } else { 0.0 };
                                 let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
 
-                                if !rt.selected.is_initialized() {
-                                    rt.selected.reset(now_frame, desired_selected);
-                                }
-                                if !rt.pressed.is_initialized() {
-                                    rt.pressed.reset(now_frame, desired_pressed);
-                                }
+                                // Match Material Web's selected/unselected crossfade which is driven
+                                // via pseudo-element opacity transitions (67ms linear).
+                                let chrome_duration = if enabled {
+                                    Duration::from_millis(67)
+                                } else {
+                                    Duration::ZERO
+                                };
+                                let chrome = fret_ui_kit::declarative::motion::drive_tween_f32(
+                                    cx,
+                                    desired_selected,
+                                    chrome_duration,
+                                    fret_ui_kit::headless::easing::linear,
+                                );
 
-                                rt.selected.set_target(now_frame, desired_selected, spring);
-                                rt.pressed.set_target(now_frame, desired_pressed, spring);
-                                rt.selected.advance(now_frame);
-                                rt.pressed.advance(now_frame);
-                                (
-                                    rt.selected.value(),
-                                    rt.pressed.value(),
-                                    rt.selected.is_active() || rt.pressed.is_active(),
+                                // Match Material Web's handle-container "overshoot" position
+                                // transition (margin 300ms cubic-bezier).
+                                let position_duration = if enabled {
+                                    Duration::from_millis(300)
+                                } else {
+                                    Duration::ZERO
+                                };
+                                let position =
+                                    fret_ui_kit::declarative::motion::drive_tween_f32_unclamped(
+                                        cx,
+                                        desired_selected,
+                                        position_duration,
+                                        material_web_switch_handle_overshoot_ease,
+                                    );
+
+                                let thumb_state_id = cx.root_id();
+                                cx.with_state_for(
+                                    thumb_state_id,
+                                    SwitchThumbRuntime::default,
+                                    |rt| {
+                                        if !rt.selected.is_initialized() {
+                                            rt.selected.reset(now_frame, desired_selected);
+                                        }
+                                        if !rt.pressed.is_initialized() {
+                                            rt.pressed.reset(now_frame, desired_pressed);
+                                        }
+
+                                        rt.selected.set_target(now_frame, desired_selected, spring);
+                                        rt.pressed.set_target(now_frame, desired_pressed, spring);
+                                        rt.selected.advance(now_frame);
+
+                                        // Match Compose's `SnapSpec` for the "pressed" transition:
+                                        // - snap to the pressed state on pointer down
+                                        // - animate back to rest on release
+                                        if is_pressed {
+                                            if !rt.prev_pressed {
+                                                rt.pressed.reset(now_frame, 1.0);
+                                            }
+                                        } else {
+                                            rt.pressed.advance(now_frame);
+                                        }
+                                        rt.prev_pressed = is_pressed;
+                                        (
+                                            rt.selected.value(),
+                                            rt.pressed.value(),
+                                            chrome.value,
+                                            position.value,
+                                            rt.selected.is_active()
+                                                || rt.pressed.is_active()
+                                                || chrome.animating
+                                                || position.animating,
+                                        )
+                                    },
                                 )
                             });
 
-                        let geom = switch_geometry(size, thumb_t, pressed_t);
+                        let chrome =
+                            mix_switch_chrome(chrome_unselected, chrome_selected, chrome_t);
+
+                        let icons_always = icons_enabled && !show_only_selected_icon;
+                        let icons_selected_only = show_only_selected_icon;
+                        let geom = switch_geometry(
+                            size,
+                            thumb_t,
+                            position_t,
+                            pressed_t,
+                            icons_always,
+                            icons_selected_only,
+                        );
+                        let handle_child = material_switch_handle_icon(
+                            cx,
+                            thumb_t,
+                            thumb_active,
+                            selected,
+                            enabled,
+                            tokens_interaction_handle,
+                            icons_enabled,
+                            show_only_selected_icon,
+                            icon_on.clone(),
+                            icon_off.clone(),
+                        );
                         let track = switch_track(
                             cx,
                             size,
@@ -347,6 +555,7 @@ impl Switch {
                             chrome,
                             track_corner_radii,
                             handle_corner_radii,
+                            handle_child,
                         );
 
                         let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
@@ -400,6 +609,8 @@ struct SwitchSizeTokens {
     unselected_handle_height: Px,
     pressed_handle_width: Px,
     pressed_handle_height: Px,
+    with_icon_handle_width: Px,
+    with_icon_handle_height: Px,
     track_y_offset: Px,
 }
 
@@ -436,6 +647,13 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
         .metric_by_key("md.comp.switch.pressed.handle.height")
         .unwrap_or(Px(28.0));
 
+    let with_icon_handle_width = theme
+        .metric_by_key("md.comp.switch.with-icon.handle.width")
+        .unwrap_or(selected_handle_width);
+    let with_icon_handle_height = theme
+        .metric_by_key("md.comp.switch.with-icon.handle.height")
+        .unwrap_or(selected_handle_height);
+
     let track_y_offset = Px(((state_layer.0 - track_height.0) * 0.5).max(0.0));
 
     SwitchSizeTokens {
@@ -449,6 +667,8 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
         unselected_handle_height,
         pressed_handle_width,
         pressed_handle_height,
+        with_icon_handle_width,
+        with_icon_handle_height,
         track_y_offset,
     }
 }
@@ -462,14 +682,42 @@ struct SwitchGeometry {
     ink_bounds: Rect,
 }
 
-fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: f32) -> SwitchGeometry {
-    let thumb_t = thumb_t.clamp(0.0, 1.0);
+fn switch_geometry(
+    size: SwitchSizeTokens,
+    size_t: f32,
+    position_t: f32,
+    pressed: f32,
+    icons_always: bool,
+    icons_selected_only: bool,
+) -> SwitchGeometry {
+    let size_t = size_t.clamp(0.0, 1.0);
+    // Allow a small overshoot to match Material Web's custom cubic-bezier position easing.
+    let position_t = position_t.clamp(-0.2, 1.2);
 
     let pressed_t = pressed.clamp(0.0, 1.0);
-    let base_width = Px(size.unselected_handle_width.0
-        + (size.selected_handle_width.0 - size.unselected_handle_width.0) * thumb_t);
-    let base_height = Px(size.unselected_handle_height.0
-        + (size.selected_handle_height.0 - size.unselected_handle_height.0) * thumb_t);
+    let unselected_width = if icons_always {
+        size.with_icon_handle_width
+    } else {
+        size.unselected_handle_width
+    };
+    let unselected_height = if icons_always {
+        size.with_icon_handle_height
+    } else {
+        size.unselected_handle_height
+    };
+    let selected_width = if icons_always || icons_selected_only {
+        size.with_icon_handle_width
+    } else {
+        size.selected_handle_width
+    };
+    let selected_height = if icons_always || icons_selected_only {
+        size.with_icon_handle_height
+    } else {
+        size.selected_handle_height
+    };
+
+    let base_width = Px(unselected_width.0 + (selected_width.0 - unselected_width.0) * size_t);
+    let base_height = Px(unselected_height.0 + (selected_height.0 - unselected_height.0) * size_t);
 
     let handle_width = Px(base_width.0 + (size.pressed_handle_width.0 - base_width.0) * pressed_t);
     let handle_height =
@@ -482,7 +730,7 @@ fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: f32) -> Switch
 
     let on_x = Px(size.track_width.0 - handle_width.0 - padding_x.0);
     let off_x = padding_x;
-    let handle_x = Px(off_x.0 + (on_x.0 - off_x.0) * thumb_t);
+    let handle_x = Px(off_x.0 + (on_x.0 - off_x.0) * position_t);
     let handle_y = padding_y;
 
     let thumb_cx = Px(handle_x.0 + handle_width.0 * 0.5);
@@ -510,6 +758,7 @@ fn switch_track<H: UiHost>(
     chrome: switch_tokens::SwitchChrome,
     track_corner_radii: Corners,
     handle_corner_radii: Corners,
+    handle_child: Option<AnyElement>,
 ) -> AnyElement {
     let mut track = ContainerProps::default();
     track.layout.size.width = Length::Px(size.track_width);
@@ -532,10 +781,182 @@ fn switch_track<H: UiHost>(
         handle.corner_radii = handle_corner_radii;
         handle.background = Some(chrome.handle_color);
 
-        vec![cx.container(handle, |_cx| Vec::new())]
+        vec![cx.container(handle, move |cx| {
+            let Some(child) = handle_child else {
+                return Vec::new();
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| vec![child],
+            )]
+        })]
     })
+}
+
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
+fn lerp_color(a: Color, b: Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+        r: a.r + (b.r - a.r) * t,
+        g: a.g + (b.g - a.g) * t,
+        b: a.b + (b.b - a.b) * t,
+        a: a.a + (b.a - a.a) * t,
+    }
+}
+
+fn mix_switch_chrome(
+    unselected: switch_tokens::SwitchChrome,
+    selected: switch_tokens::SwitchChrome,
+    t: f32,
+) -> switch_tokens::SwitchChrome {
+    let t = t.clamp(0.0, 1.0);
+
+    let outline_color = match (unselected.outline_color, selected.outline_color) {
+        (Some(a), Some(b)) => Some(lerp_color(a, b, t)),
+        (Some(a), None) => Some(alpha_mul(a, 1.0 - t)),
+        (None, Some(b)) => Some(alpha_mul(b, t)),
+        (None, None) => None,
+    };
+
+    switch_tokens::SwitchChrome {
+        track_color: lerp_color(unselected.track_color, selected.track_color, t),
+        outline_color,
+        handle_color: lerp_color(unselected.handle_color, selected.handle_color, t),
+    }
 }
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
+}
+
+fn material_switch_handle_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    thumb_t: f32,
+    thumb_active: bool,
+    selected: bool,
+    enabled: bool,
+    interaction: switch_tokens::SwitchInteraction,
+    icons: bool,
+    show_only_selected_icon: bool,
+    icon_on: Option<IconId>,
+    icon_off: Option<IconId>,
+) -> Option<AnyElement> {
+    let thumb_t = thumb_t.clamp(0.0, 1.0);
+
+    if show_only_selected_icon {
+        if !thumb_active && !selected {
+            return None;
+        }
+
+        let on_icon = icon_on?;
+        let (size, color) = {
+            let theme = Theme::global(&*cx.app);
+            let size = switch_tokens::icon_size(theme, true);
+            let color = switch_tokens::icon_color(theme, true, enabled, interaction);
+            (size, color)
+        };
+        let opacity = thumb_t;
+        let rotation_degrees = -45.0 * (1.0 - thumb_t);
+
+        let layer =
+            material_switch_icon_layer(cx, &on_icon, size, color, opacity, rotation_degrees);
+        return Some(material_switch_icon_overlay(cx, vec![layer]));
+    }
+
+    if !icons {
+        return None;
+    }
+
+    let on_icon = icon_on?;
+    let off_icon = icon_off?;
+    let (on, off) = {
+        let theme = Theme::global(&*cx.app);
+        let on_size = switch_tokens::icon_size(theme, true);
+        let off_size = switch_tokens::icon_size(theme, false);
+        let on_color = switch_tokens::icon_color(theme, true, enabled, interaction);
+        let off_color = switch_tokens::icon_color(theme, false, enabled, interaction);
+        ((on_size, on_color), (off_size, off_color))
+    };
+
+    let on_layer = material_switch_icon_layer(cx, &on_icon, on.0, on.1, thumb_t, 0.0);
+    let off_layer = material_switch_icon_layer(cx, &off_icon, off.0, off.1, 1.0 - thumb_t, 0.0);
+    Some(material_switch_icon_overlay(cx, vec![on_layer, off_layer]))
+}
+
+fn material_switch_icon_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layers: Vec<AnyElement>,
+) -> AnyElement {
+    let mut wrapper = ContainerProps::default();
+    wrapper.layout.size.width = Length::Fill;
+    wrapper.layout.size.height = Length::Fill;
+    wrapper.layout.position = fret_ui::element::PositionStyle::Relative;
+    wrapper.layout.overflow = Overflow::Visible;
+    cx.container(wrapper, move |_cx| layers)
+}
+
+fn material_switch_icon_layer<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+    opacity: f32,
+    rotation_degrees: f32,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.color = color;
+    props.opacity = opacity.clamp(0.0, 1.0);
+
+    let center = Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5));
+    let transform = Transform2D::rotation_about_degrees(rotation_degrees, center);
+
+    let icon = cx.visual_transform(transform, move |cx| vec![cx.svg_icon_props(props)]);
+
+    let mut layer = ContainerProps::default();
+    layer.layout.position = fret_ui::element::PositionStyle::Absolute;
+    layer.layout.inset.top = Some(Px(0.0));
+    layer.layout.inset.right = Some(Px(0.0));
+    layer.layout.inset.bottom = Some(Px(0.0));
+    layer.layout.inset.left = Some(Px(0.0));
+    layer.layout.size.width = Length::Fill;
+    layer.layout.size.height = Length::Fill;
+    layer.layout.overflow = Overflow::Visible;
+    cx.container(layer, move |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        vec![cx.flex(
+            FlexProps {
+                layout,
+                direction: Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| vec![icon],
+        )]
+    })
 }
