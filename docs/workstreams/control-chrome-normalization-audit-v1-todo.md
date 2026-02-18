@@ -20,7 +20,7 @@ Workstream overview:
   - [x] `pressable.layout.size.height = Px(_)` -> chrome height Fill (border-box semantics)
   - [x] `min/max` shrink-by `(padding + border)` is correct for both axes
   - [x] `centered_fixed_chrome_*` enforces overflow + centering wrapper Fill
-  - [ ] icon-button: stretched hit box + fixed chrome stays centered (visual invariants)
+  - [x] icon-button: stretched hit box + fixed chrome stays centered (visual invariants)
 
 ### Audit + migration (M1/M2)
 
