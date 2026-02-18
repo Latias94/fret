@@ -26,7 +26,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::pressable_interaction;
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
+};
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::suggestion_chip as suggestion_chip_tokens;
 
@@ -423,7 +425,11 @@ impl SuggestionChip {
 
                         let chrome = cx.container(chrome, move |_cx| vec![overlay, content]);
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

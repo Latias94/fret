@@ -38,7 +38,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
-    centered_fill, enforce_minimum_interactive_size, minimum_interactive_size,
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
 use crate::tokens::input_chip as input_chip_tokens;
 
@@ -509,7 +509,11 @@ impl InputChip {
 
                         let chrome = cx.container(chrome, move |_cx| vec![overlay, content]);
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

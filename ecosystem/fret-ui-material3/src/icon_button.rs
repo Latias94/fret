@@ -31,7 +31,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
+};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::icon_button as icon_button_tokens;
@@ -347,18 +349,12 @@ impl IconButton {
                             colors.outline,
                             vec![overlay, content],
                         );
-                        let chrome_test_id = pressable_props
-                            .a11y
-                            .test_id
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                        let chrome = if let Some(test_id) = chrome_test_id {
-                            chrome.test_id(test_id)
-                        } else {
-                            chrome
-                        };
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 
@@ -653,18 +649,12 @@ impl IconToggleButton {
                             colors.outline,
                             vec![overlay, content],
                         );
-                        let chrome_test_id = pressable_props
-                            .a11y
-                            .test_id
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                        let chrome = if let Some(test_id) = chrome_test_id {
-                            chrome.test_id(test_id)
-                        } else {
-                            chrome
-                        };
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

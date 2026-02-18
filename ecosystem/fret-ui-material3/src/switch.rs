@@ -31,7 +31,9 @@ use crate::foundation::indication::{
     material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
+};
 use crate::tokens::switch as switch_tokens;
 
 fn material_web_easing_standard(x: f32) -> f32 {
@@ -697,7 +699,11 @@ impl Switch {
                         outer.corner_radii = Corners::all(Px(0.0));
 
                         let chrome = cx.container(outer, move |_cx| vec![overlay, track]);
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

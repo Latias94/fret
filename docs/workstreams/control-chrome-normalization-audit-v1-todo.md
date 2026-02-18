@@ -38,6 +38,7 @@ Workstream overview:
   - [x] Dialog trigger in a stretched row: `tools/diag-scripts/ui-gallery-control-chrome-flex1-dialog-trigger-fill.json`
   - [x] Centered fixed chrome in a stretched row (center aligned): `tools/diag-scripts/ui-gallery-centered-fixed-chrome-flex1-center-aligned.json`
   - [x] Material3 IconButton: centered fixed chrome (min touch target): `tools/diag-scripts/ui-gallery-material3-icon-button-centered-chrome.json`
+  - [x] Material3 Checkbox: centered fixed chrome (min touch target): `tools/diag-scripts/ui-gallery-material3-checkbox-centered-chrome.json`
   - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
   - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
   - [ ] ButtonGroup with stretched items
