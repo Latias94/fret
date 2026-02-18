@@ -77,6 +77,8 @@ For each component we consider aligned when we have:
   - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
 - Switch focus chroming screenshots:
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+- Switch focus-visible screenshots:
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 - Switch handle overshoot timeline:
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 - Text field hover screenshots:

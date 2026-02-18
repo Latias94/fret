@@ -97,6 +97,8 @@ Current Fret intent:
   - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
 - Focus chroming evidence (click-focus vs focus-visible split):
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+- Focus-visible evidence (keyboard modality flips focus ring + chroming selectors):
+  - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 - Handle overshoot timeline evidence (captures frame-by-frame handle position transition):
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-overshoot-timeline-screenshots.json`
 

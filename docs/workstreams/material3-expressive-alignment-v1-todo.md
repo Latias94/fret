@@ -51,8 +51,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Decision (v1): match Material Web’s handle-container overshoot for position; keep size/pressed behavior iterative.
   - Gate: fixed-timestep timeline screenshots (`fretboard diag run --fixed-frame-delta-ms 16`).
 
-- [ ] M3X-switch-004 Verify focus state-layer policy (focus ring only vs focus state-layer opacity).
-  - If we diverge intentionally, document it here with rationale.
+- [x] M3X-switch-004 Align focus state-layer policy (focus ring only; no focus state layer).
+  - Rationale: Material Web switch ripple/state layer only expresses hover/pressed; focus is via focus ring + chroming.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/switch.rs`
+    - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 
 ## M2 — Text field token/state parity
 
