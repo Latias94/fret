@@ -60,6 +60,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-material3/src/switch.rs`
     - `tools/diag-scripts/ui-gallery-material3-switch-focus-visible-screenshots.json`
 
+  - [ ] M3X-switch-005 Align switch icon motion timing (opacity/transform).
+    - Material Web: opacity 33ms linear; transform 167ms easing-standard.
+    - Gate: timeline screenshots under fixed timestep.
+    - Evidence:
+      - `ecosystem/fret-ui-material3/src/switch.rs`
+      - `tools/diag-scripts/ui-gallery-material3-switch-icon-motion-timeline-screenshots.json`
+
 ## M2 — Text field token/state parity
 
 - [x] M3X-textfield-001 Honor outlined hover tokens (track/outline + container hover).
