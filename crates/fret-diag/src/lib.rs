@@ -8339,6 +8339,10 @@ See: `docs/tracy.md`.\n";
                                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 Some(bundle_path.as_path()),
                                 Some(0),
+                                None,
+                                None,
+                                None,
+                                None,
                             ));
                         }
 
@@ -8385,6 +8389,8 @@ See: `docs/tracy.md`.\n";
                     Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf, u64)> = None;
+                let mut script_worst_layout: Option<(u64, PathBuf, u64)> = None;
+                let mut script_worst_solve: Option<(u64, PathBuf, u64)> = None;
 
                 for run_index in 0..repeat {
                     if !reuse_process {
@@ -8995,6 +9001,20 @@ See: `docs/tracy.md`.\n";
                         Some((prev_us, _, _)) if *prev_us >= top_total => {}
                         _ => {
                             script_worst = Some((top_total, bundle_path.clone(), run_index as u64))
+                        }
+                    }
+                    match &script_worst_layout {
+                        Some((prev_us, _, _)) if *prev_us >= top_layout => {}
+                        _ => {
+                            script_worst_layout =
+                                Some((top_layout, bundle_path.clone(), run_index as u64))
+                        }
+                    }
+                    match &script_worst_solve {
+                        Some((prev_us, _, _)) if *prev_us >= top_solve => {}
+                        _ => {
+                            script_worst_solve =
+                                Some((top_solve, bundle_path.clone(), run_index as u64))
                         }
                     }
 
@@ -9883,6 +9903,14 @@ See: `docs/tracy.md`.\n";
                                 .as_ref()
                                 .map(|(_us, bundle, _run)| bundle.as_path()),
                             script_worst.as_ref().map(|(_us, _bundle, run)| *run),
+                            script_worst_layout
+                                .as_ref()
+                                .map(|(_us, bundle, _run)| bundle.as_path()),
+                            script_worst_layout.as_ref().map(|(_us, _bundle, run)| *run),
+                            script_worst_solve
+                                .as_ref()
+                                .map(|(_us, bundle, _run)| bundle.as_path()),
+                            script_worst_solve.as_ref().map(|(_us, _bundle, run)| *run),
                         ));
                     }
                 }
@@ -19991,6 +20019,10 @@ mod tests {
             0,
             None,
             None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(failures.is_empty());
     }
@@ -20041,6 +20073,10 @@ mod tests {
             0,
             Some(Path::new("bundle.json")),
             Some(7),
+            None,
+            None,
+            None,
+            None,
         );
         assert_eq!(failures.len(), 6);
         for failure in &failures {
