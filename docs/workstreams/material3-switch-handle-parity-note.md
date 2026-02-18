@@ -89,6 +89,20 @@ Current Fret intent:
 - Split switch token-driven chroming so the handle/icons can respond to “any focus” without forcing
   unselected track focus chroming.
 
+### 5) Thumb motion details (position + size)
+
+Material Web switch uses distinct motion channels for the thumb:
+
+- **Position**: handle-container margin transition (300ms overshoot cubic-bezier).
+- **Size**: handle width/height transition (250ms, `easing-standard`), with a pressed override:
+  - pressed down: 100ms linear
+  - release: back to 250ms `easing-standard`
+
+Fret aligns these as:
+
+- Position: tween (unclamped easing) to preserve overshoot behavior.
+- Size + pressed: tweens matching the Material Web durations/easing.
+
 ## Evidence + gates
 
 - Baseline diag capture script (screenshots + bundle):
