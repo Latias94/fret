@@ -6,6 +6,7 @@ use fret_ui::element::{
     PressableState,
 };
 use fret_ui::elements::GlobalElementId;
+use std::sync::Arc;
 
 fn normalize_control_chrome_sizing(
     pressable_props: &PressableProps,
@@ -96,7 +97,16 @@ where
         chrome_props.layout.overflow = Overflow::Clip;
         normalize_control_chrome_sizing(&pressable_props, &mut chrome_props);
 
-        let content = cx.container(chrome_props, children);
+        let chrome_test_id = pressable_props
+            .a11y
+            .test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
+        let mut content = cx.container(chrome_props, children);
+        if let Some(test_id) = chrome_test_id {
+            content = content.test_id(test_id);
+        }
         (pressable_props, vec![content])
     })
 }
@@ -130,7 +140,16 @@ where
         pressable_props.layout.overflow = Overflow::Visible;
         chrome_props.layout.overflow = Overflow::Clip;
 
-        let chrome = cx.container(chrome_props, children);
+        let chrome_test_id = pressable_props
+            .a11y
+            .test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
+        let mut chrome = cx.container(chrome_props, children);
+        if let Some(test_id) = chrome_test_id {
+            chrome = chrome.test_id(test_id);
+        }
 
         let mut center = FlexProps::default();
         center.direction = Axis::Horizontal;

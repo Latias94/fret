@@ -104,6 +104,31 @@ pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<Any
     let default_body = shadcn::Button::new("Button").into_element(cx);
     let default = section(cx, "Default", default_body);
 
+    let flex_1 = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Flex 1")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .refine_layout(LayoutRefinement::default().flex_1())
+                        .test_id("ui-gallery-button-flex1-left")
+                        .into_element(cx),
+                    shadcn::Button::new("Flex 1")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .refine_layout(LayoutRefinement::default().flex_1())
+                        .test_id("ui-gallery-button-flex1-right")
+                        .into_element(cx),
+                ]
+            },
+        );
+        section(cx, "Flex 1 (chrome fill)", body)
+    };
+
     let outline_body = shadcn::Button::new("Outline")
         .variant(shadcn::ButtonVariant::Outline)
         .into_element(cx);
@@ -249,6 +274,7 @@ pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<Any
             vec![
                 size,
                 default,
+                flex_1,
                 outline,
                 secondary,
                 ghost,

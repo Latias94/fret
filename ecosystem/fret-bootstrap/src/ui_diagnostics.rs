@@ -16568,6 +16568,31 @@ fn eval_predicate(
 
             w <= max_w + eps && h <= max_h + eps
         }
+        UiPredicateV1::BoundsApproxEqual { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax = a.bounds.origin.x.0;
+            let ay = a.bounds.origin.y.0;
+            let aw = a.bounds.size.width.0.max(0.0);
+            let ah = a.bounds.size.height.0.max(0.0);
+
+            let bx = b.bounds.origin.x.0;
+            let by = b.bounds.origin.y.0;
+            let bw = b.bounds.size.width.0.max(0.0);
+            let bh = b.bounds.size.height.0.max(0.0);
+
+            (ax - bx).abs() <= eps
+                && (ay - by).abs() <= eps
+                && (aw - bw).abs() <= eps
+                && (ah - bh).abs() <= eps
+        }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
                 return false;
