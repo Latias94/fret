@@ -256,7 +256,8 @@ impl Switch {
 
                         let is_pressed = enabled && st.pressed;
                         let is_hovered = enabled && st.hovered;
-                        let is_focused = enabled && st.focused && focus_visible;
+                        let is_focused_any = enabled && st.focused;
+                        let is_focused_visible = is_focused_any && focus_visible;
                         let selected = cx
                             .get_model_copied(&self.selected, Invalidation::Paint)
                             .unwrap_or(false);
@@ -270,19 +271,35 @@ impl Switch {
                         let mut states_selected = states;
                         states_selected.insert(fret_ui_kit::WidgetState::Selected);
 
-                        let tokens_interaction =
-                            match pressable_interaction(is_pressed, is_hovered, is_focused) {
-                                Some(PressableInteraction::Pressed) => {
-                                    switch_tokens::SwitchInteraction::Pressed
-                                }
-                                Some(PressableInteraction::Focused) => {
-                                    switch_tokens::SwitchInteraction::Focused
-                                }
-                                Some(PressableInteraction::Hovered) => {
-                                    switch_tokens::SwitchInteraction::Hovered
-                                }
-                                None => switch_tokens::SwitchInteraction::None,
-                            };
+                        let tokens_interaction_for = |is_focused: bool| match pressable_interaction(
+                            is_pressed, is_hovered, is_focused,
+                        ) {
+                            Some(PressableInteraction::Pressed) => {
+                                switch_tokens::SwitchInteraction::Pressed
+                            }
+                            Some(PressableInteraction::Focused) => {
+                                switch_tokens::SwitchInteraction::Focused
+                            }
+                            Some(PressableInteraction::Hovered) => {
+                                switch_tokens::SwitchInteraction::Hovered
+                            }
+                            None => switch_tokens::SwitchInteraction::None,
+                        };
+
+                        // Material Web uses mixed focus selectors:
+                        // - handle + icons: `:focus-within`
+                        // - track (unselected): `:focus-visible`
+                        // - track (selected): `:focus-within`
+                        //
+                        // Mirror that split so mouse-focus can tint the handle/icons without
+                        // forcing unselected track chroming.
+                        let tokens_interaction_state_layer =
+                            tokens_interaction_for(is_focused_visible);
+                        let tokens_interaction_handle = tokens_interaction_for(is_focused_any);
+                        let tokens_interaction_track_unselected =
+                            tokens_interaction_for(is_focused_visible);
+                        let tokens_interaction_track_selected =
+                            tokens_interaction_for(is_focused_any);
 
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
@@ -308,12 +325,12 @@ impl Switch {
                                 theme,
                                 selected,
                                 enabled,
-                                tokens_interaction,
+                                tokens_interaction_state_layer,
                             );
                             let state_layer_color = switch_tokens::state_layer_color(
                                 theme,
                                 selected,
-                                tokens_interaction,
+                                tokens_interaction_state_layer,
                             );
                             let state_layer_color = resolve_override_slot_with(
                                 self.style.state_layer_color.as_ref(),
@@ -325,8 +342,23 @@ impl Switch {
                             let spring =
                                 sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
 
-                            let mut chrome_unselected =
-                                switch_tokens::chrome(theme, false, enabled, tokens_interaction);
+                            let chrome_unselected_track = switch_tokens::chrome(
+                                theme,
+                                false,
+                                enabled,
+                                tokens_interaction_track_unselected,
+                            );
+                            let chrome_unselected_handle = switch_tokens::chrome(
+                                theme,
+                                false,
+                                enabled,
+                                tokens_interaction_handle,
+                            );
+                            let mut chrome_unselected = switch_tokens::SwitchChrome {
+                                track_color: chrome_unselected_track.track_color,
+                                outline_color: chrome_unselected_track.outline_color,
+                                handle_color: chrome_unselected_handle.handle_color,
+                            };
                             let token_track_color = chrome_unselected.track_color;
                             chrome_unselected.track_color = resolve_override_slot_with(
                                 self.style.track_color.as_ref(),
@@ -349,8 +381,23 @@ impl Switch {
                                 || token_outline_color,
                             );
 
-                            let mut chrome_selected =
-                                switch_tokens::chrome(theme, true, enabled, tokens_interaction);
+                            let chrome_selected_track = switch_tokens::chrome(
+                                theme,
+                                true,
+                                enabled,
+                                tokens_interaction_track_selected,
+                            );
+                            let chrome_selected_handle = switch_tokens::chrome(
+                                theme,
+                                true,
+                                enabled,
+                                tokens_interaction_handle,
+                            );
+                            let mut chrome_selected = switch_tokens::SwitchChrome {
+                                track_color: chrome_selected_track.track_color,
+                                outline_color: chrome_selected_track.outline_color,
+                                handle_color: chrome_selected_handle.handle_color,
+                            };
                             let token_track_color = chrome_selected.track_color;
                             chrome_selected.track_color = resolve_override_slot_with(
                                 self.style.track_color.as_ref(),
@@ -466,7 +513,7 @@ impl Switch {
                             thumb_active,
                             selected,
                             enabled,
-                            tokens_interaction,
+                            tokens_interaction_handle,
                             icons_enabled,
                             show_only_selected_icon,
                             icon_on.clone(),
