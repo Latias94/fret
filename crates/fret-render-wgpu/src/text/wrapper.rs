@@ -1619,6 +1619,69 @@ mod tests {
     }
 
     #[test]
+    fn word_wrap_min_content_width_matches_longest_unbreakable_segment() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(20.0),
+            ..Default::default()
+        };
+
+        // Under a near-zero wrap width, word-wrap should break at whitespace opportunities, but
+        // must not break within tokens. The resulting wrapped lines should therefore represent
+        // the "unbreakable segments" whose maximum width matches min-content semantics.
+        let text = "foo barbaz qux";
+        let wrapped = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            TextConstraints {
+                max_width: Some(Px(0.0)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            },
+        );
+
+        assert!(
+            wrapped.lines.len() >= 2,
+            "expected near-zero word-wrap to produce multiple visual lines for spaced text"
+        );
+        assert_eq!(
+            wrapped.lines.len(),
+            wrapped.line_ranges.len(),
+            "expected line_ranges to match wrapped line count"
+        );
+
+        // Validate each produced line width against an independently shaped single-line slice
+        // matching the wrapped range. This avoids making assumptions about whether trailing
+        // whitespace is kept at soft wrap boundaries.
+        for (range, line) in wrapped.line_ranges.iter().zip(wrapped.lines.iter()) {
+            let slice = &text[range.clone()];
+            let expected = shaper.shape_single_line_metrics(TextInputRef::plain(slice, &base), 1.0);
+            let delta = (expected.width - line.width).abs();
+            assert!(
+                delta <= 0.75,
+                "expected wrapped line width to match shaped slice; slice={:?} expected={} actual={} delta={}",
+                slice,
+                expected.width,
+                line.width,
+                delta
+            );
+        }
+
+        let max_line_w = wrapped
+            .lines
+            .iter()
+            .map(|l| l.width)
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_line_w > 0.0,
+            "expected non-zero min-content width for non-empty text"
+        );
+    }
+
+    #[test]
     fn word_break_wrap_can_break_single_token() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {

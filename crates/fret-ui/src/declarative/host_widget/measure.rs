@@ -175,15 +175,10 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
             // For `TextWrap::WordBreak`, long tokens are explicitly allowed to break when needed,
             // so a "near-zero" min-content approximation is also reasonable.
             //
-            // For `TextWrap::Word`, treating min-content as near-zero is *pathological* for common
-            // UI labels/headings: it forces mid-word wrapping during intrinsic sizing, and when the
-            // parent uses those intrinsic widths (e.g. `items_start()` stacks), it produces narrow
-            // text nodes like `Multipl\ne`.
-            //
-            // Until we have a proper "longest word" intrinsic measurement path, treat word-wrap
-            // min-content as unconstrained (max-content) to avoid surprising layout.
-            TextWrap::Grapheme | TextWrap::WordBreak => Some(Px(0.0)),
-            TextWrap::Word => None,
+            // For `TextWrap::Word`, we want min-content to approach the "longest unbreakable
+            // segment" width (CSS-like). Using a near-zero wrap width achieves this as long as
+            // the text backend does not break within tokens for word-wrap (no mid-word breaks).
+            TextWrap::Grapheme | TextWrap::WordBreak | TextWrap::Word => Some(Px(0.0)),
             TextWrap::None => None,
         },
     }
