@@ -103,6 +103,12 @@ allocated height, ecosystem components may opt into the fixed line box behavior 
 
 This forces the text widget to paint inside a stable line box and avoids per-component “nudge” hacks.
 
+Next step (mechanism, v1):
+
+- Add an opt-in “bounds-as-line-box” vertical placement mode for single-line text, so fixed-height
+  controls can set the text element height to `Fill` and still get GPUI/CSS-like half-leading
+  baseline placement without forcing `h_px(line_height)` everywhere.
+
 ## Guidance: choosing a wrap mode
 
 - Use `TextWrap::Word` for UI labels/buttons/tabs (prevents mid-token breaks).
