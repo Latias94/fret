@@ -41,7 +41,7 @@ Workstream overview:
   - [x] Material3 Checkbox: centered fixed chrome (min touch target): `tools/diag-scripts/ui-gallery-material3-checkbox-centered-chrome.json`
   - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
   - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
-  - [ ] ButtonGroup with stretched items
+  - [x] ButtonGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-button-group-flex1-item-fill.json`
 
 ---
 
