@@ -234,6 +234,10 @@ impl UiBuilder<crate::ui::TextBox> {
     pub fn truncate(self) -> Self {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
     }
+
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
+    }
 }
 
 impl UiBuilder<crate::ui::RawTextBox> {
@@ -263,6 +267,10 @@ impl UiBuilder<crate::ui::RawTextBox> {
 
     pub fn truncate(self) -> Self {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
 }
 
