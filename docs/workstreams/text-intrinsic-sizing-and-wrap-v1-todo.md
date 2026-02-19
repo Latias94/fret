@@ -28,6 +28,7 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 ## Tests (fast, deterministic)
 
 - [x] `fret-render-wgpu`: unit tests for intrinsic width behavior per wrap mode.
+- [x] `fret-render-wgpu`: wasm conformance gate runs the same wrap fixtures (Parley/UAX#14) under `wasm-bindgen-test`.
 - [ ] `fret-ui`: integration test that validates no “vertical text” under shrink-wrap container.
 - [ ] Add at least one selection/hit-test test case for wrapped text (ensure indices remain stable).
 

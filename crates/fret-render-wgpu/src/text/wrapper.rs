@@ -2097,8 +2097,7 @@ mod tests {
         ranges.iter().map(|r| [r.start, r.end]).collect()
     }
 
-    #[test]
-    fn text_wrap_conformance_v1_fixtures() {
+    fn run_text_wrap_conformance_v1_fixtures() {
         let raw = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/src/text/tests/fixtures/text_wrap_conformance_v1.json"
@@ -2230,5 +2229,23 @@ mod tests {
             "wrap conformance fixture failures:\n{}",
             failures.join("\n")
         );
+    }
+
+    #[test]
+    fn text_wrap_conformance_v1_fixtures() {
+        run_text_wrap_conformance_v1_fixtures();
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    mod wasm_wrap_conformance {
+        use super::*;
+        use wasm_bindgen_test::*;
+
+        wasm_bindgen_test_configure!(run_in_browser);
+
+        #[wasm_bindgen_test]
+        fn text_wrap_conformance_v1_fixtures_wasm() {
+            run_text_wrap_conformance_v1_fixtures();
+        }
     }
 }
