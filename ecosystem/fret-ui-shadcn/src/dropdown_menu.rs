@@ -2194,6 +2194,9 @@ impl DropdownMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
+                                                        let chrome_test_id = test_id
+                                                            .clone()
+                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
@@ -2350,29 +2353,29 @@ impl DropdownMenu {
                                                                     })
                                                                 };
 
-                                                                let row_padding = padding_override.unwrap_or(Edges {
-                                                                    top: pad_y,
-                                                                    right: pad_x,
-                                                                    bottom: pad_y,
-                                                                    left: pad_left,
-                                                                });
+                                                                 let row_padding = padding_override.unwrap_or(Edges {
+                                                                     top: pad_y,
+                                                                     right: pad_x,
+                                                                     bottom: pad_y,
+                                                                     left: pad_left,
+                                                                 });
 
-                                                                        let children = vec![cx.container(
-                                                                            ContainerProps {
-                                                                                layout: {
-                                                                                    let mut layout = LayoutStyle::default();
-                                                                                    layout.size.width = Length::Fill;
-                                                                                    layout
-                                                                                },
-                                                                                padding: row_padding,
-                                                                                background: Some(row_bg),
-                                                                                corner_radii: fret_core::Corners::all(radius_sm),
-                                                                                ..Default::default()
-                                                                            },
-                                                                    move |cx| {
-                                                                        if let Some(custom) = content.clone() {
-                                                                            return vec![custom];
-                                                                        }
+                                                                 let child = cx.container(
+                                                                             ContainerProps {
+                                                                                 layout: {
+                                                                                     let mut layout = LayoutStyle::default();
+                                                                                     layout.size.width = Length::Fill;
+                                                                                     layout
+                                                                                 },
+                                                                                 padding: row_padding,
+                                                                                 background: Some(row_bg),
+                                                                                 corner_radii: fret_core::Corners::all(radius_sm),
+                                                                                 ..Default::default()
+                                                                             },
+                                                                     move |cx| {
+                                                                         if let Some(custom) = content.clone() {
+                                                                             return vec![custom];
+                                                                         }
 
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                             2 + usize::from(
@@ -2420,28 +2423,35 @@ impl DropdownMenu {
                                                                             ));
                                                                         }
 
-                                                                        vec![cx.flex(
-                                                                            FlexProps {
-                                                                                layout: {
-                                                                                    let mut layout = LayoutStyle::default();
-                                                                                    layout.size.width = Length::Fill;
-                                                                                    layout
-                                                                                },
-                                                                                direction: fret_core::Axis::Horizontal,
-                                                                                gap: Px(8.0),
-                                                                                padding: Edges::all(Px(0.0)),
-                                                                                justify: MainAlign::Start,
-                                                                                align: CrossAlign::Center,
-                                                                                wrap: false,
-                                                                            },
-                                                                            move |_cx| row.clone(),
-                                                                        )]
-                                                                    },
-                                                                )];
+                                                                         vec![cx.flex(
+                                                                             FlexProps {
+                                                                                 layout: {
+                                                                                     let mut layout = LayoutStyle::default();
+                                                                                     layout.size.width = Length::Fill;
+                                                                                     layout
+                                                                                 },
+                                                                                 direction: fret_core::Axis::Horizontal,
+                                                                                 gap: Px(8.0),
+                                                                                 padding: Edges::all(Px(0.0)),
+                                                                                 justify: MainAlign::Start,
+                                                                                 align: CrossAlign::Center,
+                                                                                 wrap: false,
+                                                                             },
+                                                                             move |_cx| row.clone(),
+                                                                         )]
+                                                                     },
+                                                                 );
 
-                                                                (props, children)
-                                                            })
-                                                        }));
+                                                                 let mut chrome = child;
+                                                                 if let Some(test_id) = chrome_test_id.clone() {
+                                                                     chrome = chrome.test_id(test_id);
+                                                                 }
+
+                                                                 let children = vec![chrome];
+
+                                                                 (props, children)
+                                                             })
+                                                         }));
                                                             }
                                                         }
                                                     }
