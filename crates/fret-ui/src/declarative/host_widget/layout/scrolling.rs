@@ -99,6 +99,7 @@ impl ElementHostWidget {
             prev_offset_y,
             prev_viewport_w,
             prev_viewport_h,
+            mut layout_scratch,
         ) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -121,6 +122,7 @@ impl ElementHostWidget {
                     state.offset_y,
                     state.viewport_w,
                     state.viewport_h,
+                    std::mem::take(&mut state.layout_scratch),
                 )
             },
         );
@@ -213,8 +215,8 @@ impl ElementHostWidget {
             Px((offset.0 - start.0).max(0.0))
         });
 
-        let mut measured_updates: Vec<(fret_core::NodeId, usize, Px)> =
-            Vec::with_capacity(cx.children.len());
+        layout_scratch.measured_updates.clear();
+        layout_scratch.measured_updates.reserve(cx.children.len());
 
         match props.measure_mode {
             crate::element::VirtualListMeasureMode::Measured => {
@@ -261,11 +263,13 @@ impl ElementHostWidget {
                         metrics.height_at(idx)
                     };
 
-                    measured_updates.push((child, idx, measured_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, measured_extent));
                 }
 
                 let mut any_measured_change = false;
-                for (_, idx, measured_extent) in &measured_updates {
+                for (_, idx, measured_extent) in &layout_scratch.measured_updates {
                     if metrics.set_measured_height(*idx, *measured_extent) {
                         any_measured_change = true;
                     }
@@ -292,14 +296,18 @@ impl ElementHostWidget {
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
                     let estimated_extent = metrics.height_at(idx);
-                    measured_updates.push((child, idx, estimated_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, estimated_extent));
                 }
             }
             crate::element::VirtualListMeasureMode::Known => {
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
                     let known_extent = metrics.height_at(idx);
-                    measured_updates.push((child, idx, known_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, known_extent));
                 }
             }
         }
@@ -346,32 +354,10 @@ impl ElementHostWidget {
             },
         });
 
-        let mut child_rects: Vec<(NodeId, usize, Rect)> =
-            Vec::with_capacity(measured_updates.len());
-        for (child, idx, measured_extent) in &measured_updates {
-            let start = metrics.offset_for_index(*idx);
-            let origin = match axis {
-                fret_core::Axis::Vertical => {
-                    let y = cx.bounds.origin.y.0 + start.0;
-                    fret_core::Point::new(cx.bounds.origin.x, Px(y))
-                }
-                fret_core::Axis::Horizontal => {
-                    let x = cx.bounds.origin.x.0 + start.0;
-                    fret_core::Point::new(Px(x), cx.bounds.origin.y)
-                }
-            };
-            let child_bounds = match axis {
-                fret_core::Axis::Vertical => {
-                    Rect::new(origin, Size::new(size.width, *measured_extent))
-                }
-                fret_core::Axis::Horizontal => {
-                    Rect::new(origin, Size::new(*measured_extent, size.height))
-                }
-            };
-            child_rects.push((*child, *idx, child_bounds));
-        }
-
-        let mut barrier_roots: Vec<(NodeId, Rect)> = Vec::new();
+        layout_scratch.barrier_roots.clear();
+        layout_scratch
+            .barrier_roots
+            .reserve(layout_scratch.measured_updates.len());
         let mut should_defer_overscan_layout = false;
         if !is_probe_layout && props.overscan > 0 && viewport.0 > 0.0 {
             if deferred_scroll_consumed {
@@ -423,27 +409,73 @@ impl ElementHostWidget {
             }
         }
 
-        if should_defer_overscan_layout {
-            if let Some(visible) = visible_range {
-                barrier_roots.reserve(child_rects.len());
-                for (child, idx, bounds) in &child_rects {
-                    if *idx >= visible.start_index && *idx <= visible.end_index {
-                        barrier_roots.push((*child, *bounds));
-                    }
+        let bounds_for_start_and_extent = |start: Px, extent: Px| -> Rect {
+            let origin = match axis {
+                fret_core::Axis::Vertical => {
+                    let y = cx.bounds.origin.y.0 + start.0;
+                    fret_core::Point::new(cx.bounds.origin.x, Px(y))
+                }
+                fret_core::Axis::Horizontal => {
+                    let x = cx.bounds.origin.x.0 + start.0;
+                    fret_core::Point::new(Px(x), cx.bounds.origin.y)
+                }
+            };
+            match axis {
+                fret_core::Axis::Vertical => Rect::new(origin, Size::new(size.width, extent)),
+                fret_core::Axis::Horizontal => Rect::new(origin, Size::new(extent, size.height)),
+            }
+        };
+
+        let use_visible_item_starts = props.measure_mode
+            != crate::element::VirtualListMeasureMode::Measured
+            && layout_scratch.measured_updates.len() == props.visible_items.len();
+
+        let mut prev_idx: Option<usize> = None;
+        let mut prev_start: Px = Px(0.0);
+        let mut prev_extent: Px = Px(0.0);
+        let gap = metrics.gap();
+
+        for (pos, (child, idx, measured_extent)) in
+            layout_scratch.measured_updates.iter().enumerate()
+        {
+            let start = if use_visible_item_starts {
+                props
+                    .visible_items
+                    .get(pos)
+                    .map(|item| item.start)
+                    .unwrap_or_else(|| metrics.offset_for_index(*idx))
+            } else {
+                let start = if let Some(prev) = prev_idx
+                    && *idx == prev.saturating_add(1)
+                {
+                    Px(prev_start.0 + prev_extent.0 + gap.0)
+                } else {
+                    metrics.offset_for_index(*idx)
+                };
+                prev_idx = Some(*idx);
+                prev_start = start;
+                prev_extent = *measured_extent;
+                start
+            };
+
+            if should_defer_overscan_layout {
+                let Some(visible) = visible_range else {
+                    continue;
+                };
+                if *idx < visible.start_index || *idx > visible.end_index {
+                    continue;
                 }
             }
-        } else {
-            barrier_roots.reserve(child_rects.len());
-            for (child, _idx, bounds) in &child_rects {
-                barrier_roots.push((*child, *bounds));
-            }
+
+            let child_bounds = bounds_for_start_and_extent(start, *measured_extent);
+            layout_scratch.barrier_roots.push((*child, child_bounds));
         }
 
         if !is_probe_layout {
-            cx.solve_barrier_child_roots_if_needed(&barrier_roots);
+            cx.solve_barrier_child_roots_if_needed(&layout_scratch.barrier_roots);
         }
 
-        for (child, child_bounds) in &barrier_roots {
+        for (child, child_bounds) in &layout_scratch.barrier_roots {
             let _ = cx.layout_in(*child, *child_bounds);
         }
 
@@ -485,6 +517,7 @@ impl ElementHostWidget {
                 }
                 state.items_revision = props.items_revision;
                 state.metrics = metrics;
+                state.layout_scratch = layout_scratch;
             },
         );
 

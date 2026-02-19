@@ -300,6 +300,45 @@ Implementation anchors:
 - `crates/fret-ui/src/tree/paint/node.rs` (record into scratch buffer)
 - `crates/fret-ui/src/tree/paint/entry.rs` (flush buffer once per paint pass)
 
+### Finding (2026-02-19): avoid per-row `offset_for_index` lookups in VirtualList layout
+
+`VirtualList` layout computes per-row child bounds by mapping `index -> start offset` and then constructing a
+`Rect` for each visible row. In the Measured/Known virtualization modes, `VirtualListMetrics::offset_for_index`
+delegates to the underlying virtualizer (`item_start`), which is not O(1).
+
+Previously, `layout_virtual_list_impl` called `offset_for_index` for every visible row during layout bounds
+construction, which showed up as a measurable slice of `layout.roots` time on both the VirtualList torture script
+and resize stress.
+
+Change:
+
+- For Fixed/Known virtualization modes, reuse the render-computed `VirtualItem.start` values (already produced
+  while building `props.visible_items`).
+- For Measured mode, compute starts incrementally when indices are contiguous (one `offset_for_index` call for the
+  first row, then `start += extent + gap`), falling back to `offset_for_index` when the index stream is not
+  strictly increasing by 1.
+
+Evidence (macOS M4, release, suite prewarm + prelude + view-cache env):
+
+- VirtualList torture:
+  - Before: `target/fret-diag/1771476206028-ui-gallery-virtual-list-bottom-steady/bundle.json`
+  - After: `target/fret-diag/1771477342327-ui-gallery-virtual-list-bottom-steady/bundle.json`
+  - Diff highlights:
+    - `max.total_time_us`: `6290us -> 5999us` (`-4.6%`)
+    - `max.layout_roots_time_us`: `2259us -> 2155us` (`-4.6%`)
+
+- Resize stress:
+  - Before: `target/fret-diag/1771476223086-ui-gallery-window-resize-stress-steady/bundle.json`
+  - After: `target/fret-diag/1771477371017-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Diff highlights:
+    - `max.total_time_us`: `8318us -> 7757us` (`-6.7%`)
+    - `max.layout_roots_time_us`: `2679us -> 2492us` (`-7.0%`)
+
+Implementation anchors:
+
+- `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (`layout_virtual_list_impl`)
+- `crates/fret-ui/src/virtual_list/mod.rs` (`VirtualListMetrics::offset_for_index`)
+
 ### Note (2026-02-18): VirtualList offset/viewport state should reflect the Final pass only
 
 ### Finding (2026-02-18): `ScrollDeferredProbe` follow-ups should be barrier-contained (avoid ancestor relayout)

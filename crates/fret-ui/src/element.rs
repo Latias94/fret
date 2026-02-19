@@ -1962,6 +1962,13 @@ pub struct VirtualListState {
     pub(crate) items_len: usize,
     pub(crate) key_cache: VirtualListKeyCacheMode,
     pub(crate) keys: Vec<crate::ItemKey>,
+    pub(crate) layout_scratch: VirtualListLayoutScratch,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct VirtualListLayoutScratch {
+    pub(crate) measured_updates: Vec<(NodeId, usize, Px)>,
+    pub(crate) barrier_roots: Vec<(NodeId, Rect)>,
 }
 
 #[derive(Debug, Clone)]
