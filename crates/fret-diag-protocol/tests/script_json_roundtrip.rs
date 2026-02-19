@@ -94,6 +94,13 @@ fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_markdown_span_link_gate_activate() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-markdown-span-link-gate-activate.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"

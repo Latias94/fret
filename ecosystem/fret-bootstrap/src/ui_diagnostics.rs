@@ -1476,6 +1476,7 @@ impl UiDiagnosticsService {
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::ClickSelectableTextSpanStable { .. }
                 | UiActionStepV2::WaitBoundsStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
@@ -2237,7 +2238,6 @@ impl UiDiagnosticsService {
                                 window,
                                 input_ctx,
                                 element_runtime,
-                                input_ctx,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
@@ -2464,7 +2464,6 @@ impl UiDiagnosticsService {
                                 window,
                                 input_ctx,
                                 element_runtime,
-                                input_ctx,
                                 text_input_snapshot,
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
@@ -3239,6 +3238,272 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::ClickSelectableTextSpanStable {
+                target,
+                tag,
+                button,
+                click_count,
+                modifiers,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let note = format!(
+                    "click_selectable_text_span_stable(tag={})",
+                    truncate_debug_value(tag.as_str(), 64)
+                );
+
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickSelectableTextSpanStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickSelectableTextSpanStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_pos: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds),
+                                    Some(node),
+                                    Some("click_selectable_text_span_stable.timeout"),
+                                    self.cfg.max_debug_string_bytes,
+                                );
+                            }
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-click_selectable_span-timeout"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("click_selectable_text_span_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let bounds_local: Option<Rect> = match element_runtime.and_then(|rt| {
+                                rt.selectable_text_interactive_span_bounds_for_node(window, node.id)
+                            }) {
+                                None => {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) if spans.is_empty() => {
+                                    // Best-effort: span bounds are computed during `paint_all()`. If
+                                    // we don't see them yet, wait a few frames before failing.
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) => spans
+                                    .iter()
+                                    .find(|span| span.tag.as_ref() == tag.as_str())
+                                    .map(|span| span.bounds_local)
+                                    .or_else(|| {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-click_selectable_span-tag-not-found"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason = Some(
+                                            "click_selectable_text_span_stable_tag_not_found"
+                                                .to_string(),
+                                        );
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        None
+                                    }),
+                            };
+
+                            if let Some(bounds_local) = bounds_local {
+                                let span_bounds = Rect::new(
+                                    Point::new(
+                                        Px(node.bounds.origin.x.0 + bounds_local.origin.x.0),
+                                        Px(node.bounds.origin.y.0 + bounds_local.origin.y.0),
+                                    ),
+                                    bounds_local.size,
+                                );
+
+                                let skinny = Rect::new(
+                                    span_bounds.origin,
+                                    fret_core::Size::new(
+                                        Px(span_bounds.size.width.0.max(1.0).min(2.0)),
+                                        span_bounds.size.height,
+                                    ),
+                                );
+                                let pos = center_of_rect_clamped_to_rect(skinny, window_bounds);
+
+                                let moved = match state.last_pos {
+                                    Some(last) => {
+                                        let dx = (pos.x.0 - last.x.0).abs();
+                                        let dy = (pos.y.0 - last.y.0).abs();
+                                        dx.max(dy)
+                                    }
+                                    None => 0.0,
+                                };
+
+                                if moved <= max_move_px {
+                                    state.stable_count = state.stable_count.saturating_add(1);
+                                } else {
+                                    state.stable_count = 1;
+                                }
+                                state.last_pos = Some(pos);
+
+                                if state.stable_count >= stable_required {
+                                    if let Some(ui) = ui {
+                                        let mut hit = build_hit_test_trace_entry_for_selector(
+                                            ui,
+                                            element_runtime,
+                                            window,
+                                            Some(snapshot),
+                                            &target,
+                                            step_index as u32,
+                                            pos,
+                                            Some(node),
+                                            Some(&note),
+                                            self.cfg.max_debug_string_bytes,
+                                        );
+                                        let ok = hit.includes_intended == Some(true)
+                                            || hit.hit_path_contains_intended == Some(true);
+                                        if !ok {
+                                            hit.note =
+                                                Some("click_selectable_span.mismatch".to_string());
+                                            push_hit_test_trace(
+                                                &mut active.hit_test_trace,
+                                                hit.clone(),
+                                            );
+                                            push_click_stable_trace(
+                                                &mut active.click_stable_trace,
+                                                UiClickStableTraceEntryV1 {
+                                                    step_index: step_index as u32,
+                                                    stable_required,
+                                                    stable_count: state.stable_count,
+                                                    moved_px: moved,
+                                                    max_move_px,
+                                                    remaining_frames: state.remaining_frames,
+                                                    hit_test: hit,
+                                                },
+                                            );
+                                            state.stable_count = 0;
+                                            state.last_pos = None;
+                                            state.remaining_frames =
+                                                state.remaining_frames.saturating_sub(1);
+                                            active.v2_step_state = Some(
+                                                V2StepState::ClickSelectableTextSpanStable(state),
+                                            );
+                                            output.request_redraw = true;
+                                        } else {
+                                            hit.note =
+                                                Some("click_selectable_span.click".to_string());
+                                            push_hit_test_trace(&mut active.hit_test_trace, hit);
+                                            record_overlay_placement_trace(
+                                                &mut active.overlay_placement_trace,
+                                                element_runtime,
+                                                Some(snapshot),
+                                                window,
+                                                step_index as u32,
+                                                "click_selectable_span.click",
+                                            );
+                                            output.events.extend(click_events_with_modifiers(
+                                                pos,
+                                                button,
+                                                click_count,
+                                                click_modifiers,
+                                            ));
+                                            active.next_step = active.next_step.saturating_add(1);
+                                            active.v2_step_state = None;
+                                            output.request_redraw = true;
+                                            if self.cfg.script_auto_dump {
+                                                force_dump_label = Some(format!(
+                                                    "script-step-{step_index:04}-click_selectable_span-click"
+                                                ));
+                                            }
+                                        }
+                                    } else {
+                                        output.events.extend(click_events_with_modifiers(
+                                            pos,
+                                            button,
+                                            click_count,
+                                            click_modifiers,
+                                        ));
+                                        active.next_step = active.next_step.saturating_add(1);
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        if self.cfg.script_auto_dump {
+                                            force_dump_label = Some(format!(
+                                                "script-step-{step_index:04}-click_selectable_span-click"
+                                            ));
+                                        }
+                                    }
+                                } else {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(state));
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_selectable_span-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some(
+                            "click_selectable_text_span_stable_no_semantics_match".to_string(),
+                        );
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_selectable_span-no-semantics"
                     ));
                     stop_script = true;
                     failure_reason = Some("no_semantics_snapshot".to_string());
@@ -4066,8 +4331,6 @@ impl UiDiagnosticsService {
                             window,
                             input_ctx,
                             element_runtime,
-                            app.global::<fret_runtime::WindowInputContextService>()
-                                .and_then(|svc| svc.snapshot(window)),
                             app.global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(window)),
                             app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -4666,7 +4929,6 @@ impl UiDiagnosticsService {
                         window,
                         input_ctx,
                         element_runtime,
-                        input_ctx,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -4760,7 +5022,6 @@ impl UiDiagnosticsService {
                         window,
                         input_ctx,
                         element_runtime,
-                        input_ctx,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
@@ -7498,6 +7759,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return matches!(
             state,
             V2StepState::ClickStable(_)
+                | V2StepState::ClickSelectableTextSpanStable(_)
                 | V2StepState::WaitBoundsStable(_)
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
@@ -7517,6 +7779,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     match step {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::ClickStable { .. }
+        | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
@@ -9217,6 +9480,7 @@ impl PendingScript {
 #[derive(Debug, Clone)]
 enum V2StepState {
     ClickStable(V2ClickStableState),
+    ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
     WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
@@ -9254,6 +9518,14 @@ struct V2ClickStableState {
     remaining_frames: u32,
     stable_count: u32,
     last_center: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickSelectableTextSpanStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_pos: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -14922,6 +15194,7 @@ fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
     match step {
         UiActionStepV2::Click { .. } => "click",
         UiActionStepV2::ClickStable { .. } => "click_stable",
+        UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
         UiActionStepV2::DragTo { .. } => "drag_to",
@@ -16436,7 +16709,6 @@ fn eval_predicate(
     window: AppWindowId,
     input_ctx: Option<&fret_runtime::InputContext>,
     element_runtime: Option<&ElementRuntime>,
-    input_ctx: Option<&fret_runtime::InputContext>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,

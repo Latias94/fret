@@ -164,6 +164,23 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn click_selectable_text_span_stable(
+        self,
+        target: UiSelectorV1,
+        tag: impl Into<String>,
+    ) -> Self {
+        self.push(UiActionStepV2::ClickSelectableTextSpanStable {
+            target,
+            tag: tag.into(),
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        })
+    }
+
     pub fn click_stable_with_modifiers(
         self,
         target: UiSelectorV1,

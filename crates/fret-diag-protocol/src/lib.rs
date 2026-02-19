@@ -532,6 +532,31 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Click an interactive span (by `tag`) inside a `SelectableText` target after its computed
+    /// span bounds remain stable for `stable_frames`.
+    ///
+    /// This is intended for rich text surfaces where the clickable region is smaller than the
+    /// semantics node bounds (e.g. link spans inside a paragraph), and where clicking the center
+    /// of the node can miss the span.
+    ClickSelectableTextSpanStable {
+        target: UiSelectorV1,
+        tag: String,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Wait until a target's semantics bounds have remained stable for `stable_frames`.
     ///
     /// This is useful for overlays/virtualized surfaces where measured bounds can jump across

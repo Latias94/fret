@@ -65,7 +65,11 @@
       "timeout_frames": 600
     },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" } },
+    {
+      "type": "click_selectable_text_span_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+      "tag": "https://example.com"
+    },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-activated" } },
