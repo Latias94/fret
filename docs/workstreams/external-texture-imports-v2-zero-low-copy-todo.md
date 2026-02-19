@@ -112,7 +112,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `crates/fret-launch/src/runner/shared_allocation.rs` (`dx12::Dx12SharedAllocationWriteGuard`)
     - `apps/fret-examples/src/external_texture_imports_demo.rs` (uses the helper in DX12 clear mode)
 
-- [~] EXTV2-native-105 Prototype a real native frame source landing as DX12 GPU copy (MF, env-gated):
+- [x] EXTV2-native-105 Prototype a real native frame source landing as DX12 GPU copy (MF, env-gated):
       decode via Media Foundation with a DXGI device manager and copy frames into a shared allocation
       (requested `ExternalZeroCopy`, effective `GpuCopy`), with deterministic fallback to checker/CPU paths.
   - Notes:
