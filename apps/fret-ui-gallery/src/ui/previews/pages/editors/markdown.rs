@@ -446,7 +446,8 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         }
         cached.1.clone()
     };
-    let preview = markdown::Markdown::new(preview_source).into_element(cx);
+    let components = markdown::MarkdownComponents::default().with_open_url();
+    let preview = markdown::markdown_with(cx, preview_source.as_ref(), &components);
 
     let editor_panel = cx.container(
         decl_style::container_props(
