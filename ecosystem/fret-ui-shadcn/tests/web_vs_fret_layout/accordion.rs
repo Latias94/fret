@@ -91,7 +91,16 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
         )]
     };
 
-    for frame in 0..12 {
+    // Accordion content uses a measured-height open transition that requires at least:
+    // - one frame to lay out an off-flow measurement wrapper, and
+    // - one additional frame to read the cached bounds and start the open animation.
+    //
+    // Drive a bounded number of frames and stop early once the open content wrapper settles to
+    // the web golden height. This keeps the test robust to motion duration changes.
+    let mut settled_snap: Option<fret_core::SemanticsSnapshot> = None;
+    let mut last_snap: Option<fret_core::SemanticsSnapshot> = None;
+    for frame in 0..48u64 {
+        app.set_tick_id(fret_runtime::TickId(frame));
         app.set_frame_id(FrameId(frame));
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -105,11 +114,34 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
         ui.set_root(root);
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let Some(snap) = ui.semantics_snapshot().cloned() else {
+            continue;
+        };
+        last_snap = Some(snap.clone());
+
+        let Some(trig_1) = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("item-1"))
+        else {
+            continue;
+        };
+        let Some(content_id) = trig_1.controls.first().copied() else {
+            continue;
+        };
+        let Some(content) = snap.nodes.iter().find(|n| n.id == content_id) else {
+            continue;
+        };
+
+        if (content.bounds.size.height.0 - web_open_content.rect.h).abs() <= 1.0 {
+            settled_snap = Some(snap);
+            break;
+        }
     }
 
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
+    let snap = settled_snap
+        .or(last_snap)
         .expect("expected semantics snapshot");
 
     let trig_1 = snap
@@ -275,7 +307,10 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
         )]
     };
 
-    for frame in 0..12 {
+    let mut settled_snap: Option<fret_core::SemanticsSnapshot> = None;
+    let mut last_snap: Option<fret_core::SemanticsSnapshot> = None;
+    for frame in 0..48u64 {
+        app.set_tick_id(fret_runtime::TickId(frame));
         app.set_frame_id(FrameId(frame));
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -289,11 +324,34 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
         ui.set_root(root);
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let Some(snap) = ui.semantics_snapshot().cloned() else {
+            continue;
+        };
+        last_snap = Some(snap.clone());
+
+        let Some(trig_1) = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("item-1"))
+        else {
+            continue;
+        };
+        let Some(content_id) = trig_1.controls.first().copied() else {
+            continue;
+        };
+        let Some(content) = snap.nodes.iter().find(|n| n.id == content_id) else {
+            continue;
+        };
+
+        if (content.bounds.size.height.0 - web_open_content.rect.h).abs() <= 1.0 {
+            settled_snap = Some(snap);
+            break;
+        }
     }
 
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
+    let snap = settled_snap
+        .or(last_snap)
         .expect("expected semantics snapshot");
 
     let trig_1 = snap

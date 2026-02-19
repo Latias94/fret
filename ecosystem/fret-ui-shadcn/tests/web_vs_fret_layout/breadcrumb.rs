@@ -483,6 +483,7 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
                                         slant: Default::default(),
                                         line_height: Some(line_height),
                                         letter_spacing_em: None,
+                                        ..Default::default()
                                     };
 
                                     let mut props = PressableProps::default();
