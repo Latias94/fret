@@ -1387,6 +1387,37 @@ mod tests {
     }
 
     #[test]
+    fn word_wrap_does_not_break_single_token() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(20.0),
+            ..Default::default()
+        };
+
+        let text = "Demo";
+        let constraints = TextConstraints {
+            max_width: Some(Px(1.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        assert!(
+            wrapped.lines[0].width > 1.0,
+            "expected word-wrap to keep a single token unbroken and allow overflow"
+        );
+    }
+
+    #[test]
     fn parley_word_wrap_handles_long_attributed_paragraph_under_resize_jitter() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {

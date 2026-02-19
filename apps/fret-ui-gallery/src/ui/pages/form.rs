@@ -327,7 +327,7 @@ pub(super) fn preview_forms(
                 .max_w(Px(840.0))
                 .code(
                     "rust",
-                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
      cx,
      fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
      |cx| {
@@ -343,7 +343,7 @@ pub(super) fn preview_forms(
         .into_element(cx)
      },
 );"#,
-                 ),
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

@@ -5,22 +5,8 @@ use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
 use fret_core::time::Instant;
 
-fn compute_text_vertical_offset(
-    style: Option<&fret_core::TextStyle>,
-    layout_height: Length,
-    bounds_height: Px,
-    metrics_height: Px,
-) -> Px {
-    // Approximate CSS "half-leading": when a text element uses a fixed line box (`leading-*`),
-    // center the font's em box within the line box. This better matches web baseline behavior for
-    // shadcn recipes (e.g. `text-sm leading-snug`).
-    match (style, layout_height) {
-        (Some(style), Length::Px(line_box)) => {
-            let line_height = style.line_height.unwrap_or(line_box);
-            Px(((line_height.0 - style.size.0) * 0.5).max(0.0))
-        }
-        _ => Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0)),
-    }
+fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
+    Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
 }
 
 impl ElementHostWidget {
@@ -592,12 +578,8 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset = compute_text_vertical_offset(
-                    props.style.as_ref(),
-                    props.layout.size.height,
-                    cx.bounds.size.height,
-                    metrics.size.height,
-                );
+                let vertical_offset =
+                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
                     cx.bounds.origin.y + vertical_offset + metrics.baseline,
@@ -786,12 +768,8 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset = compute_text_vertical_offset(
-                    Some(&style),
-                    props.layout.size.height,
-                    cx.bounds.size.height,
-                    metrics.size.height,
-                );
+                let vertical_offset =
+                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
                     cx.bounds.origin.y + vertical_offset + metrics.baseline,
@@ -1140,12 +1118,8 @@ impl ElementHostWidget {
                     }
                 }
 
-                let vertical_offset = compute_text_vertical_offset(
-                    Some(&style),
-                    props.layout.size.height,
-                    cx.bounds.size.height,
-                    metrics.size.height,
-                );
+                let vertical_offset =
+                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
                     cx.bounds.origin.y + vertical_offset + metrics.baseline,
@@ -1825,7 +1799,7 @@ mod tests {
     use fret_core::{FontId, FontWeight, Px, TextStyle};
 
     #[test]
-    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
+    fn text_vertical_offset_centers_metrics_in_bounds() {
         let style = TextStyle {
             font: FontId::default(),
             size: Px(12.0),
@@ -1835,8 +1809,8 @@ mod tests {
             letter_spacing_em: None,
         };
 
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
+        let _ = style;
+        let offset = compute_text_vertical_offset(Px(16.0), Px(12.0));
         assert_eq!(offset, Px(2.0));
     }
 
@@ -1851,8 +1825,8 @@ mod tests {
             letter_spacing_em: None,
         };
 
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
+        let _ = style;
+        let offset = compute_text_vertical_offset(Px(12.0), Px(14.0));
         assert_eq!(offset, Px(0.0));
     }
 }

@@ -32,7 +32,7 @@ pub(in crate::ui) fn preview_tabs(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
             move |cx| vec![shadcn::typography::h4(cx, title), body],
         )

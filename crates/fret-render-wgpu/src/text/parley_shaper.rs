@@ -538,11 +538,15 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
+        let base_line_height = metrics.line_height.max(0.0);
         let mut line_height = metrics.line_height.max(0.0);
         line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
         if let Some(requested) = base_style.line_height {
             line_height = line_height.max((requested.0 * scale).max(0.0));
         }
+        let baseline = (metrics.baseline.max(0.0)
+            + ((line_height - base_line_height).max(0.0) * 0.5))
+            .clamp(0.0, line_height.max(0.0));
 
         let mut glyphs: Vec<ParleyGlyph> = Vec::new();
         let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -593,7 +597,7 @@ impl ParleyShaper {
             width: metrics.advance,
             ascent: metrics.ascent,
             descent: metrics.descent,
-            baseline: metrics.baseline,
+            baseline,
             line_height,
             glyphs,
             clusters,
@@ -610,7 +614,10 @@ impl ParleyShaper {
             input,
             Some(max_width_px),
             WordBreakStrength::Normal,
-            OverflowWrap::BreakWord,
+            // `TextWrap::Word` is intended to wrap at whitespace/word boundaries. Avoid breaking
+            // within a single token; use `TextWrap::Grapheme` when mid-token wrapping is desired
+            // (paths/URLs/code identifiers, CJK-heavy editor surfaces).
+            OverflowWrap::Normal,
             TextWrapMode::Wrap,
             scale,
             false,
@@ -627,7 +634,8 @@ impl ParleyShaper {
             input,
             Some(max_width_px),
             WordBreakStrength::Normal,
-            OverflowWrap::BreakWord,
+            // See `shape_paragraph_word_wrap`.
+            OverflowWrap::Normal,
             TextWrapMode::Wrap,
             scale,
             true,
@@ -704,11 +712,15 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
+        let base_line_height = metrics.line_height.max(0.0);
         let mut line_height = metrics.line_height.max(0.0);
         line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
         if let Some(requested) = base_style.line_height {
             line_height = line_height.max((requested.0 * scale).max(0.0));
         }
+        let baseline = (metrics.baseline.max(0.0)
+            + ((line_height - base_line_height).max(0.0) * 0.5))
+            .clamp(0.0, line_height.max(0.0));
 
         let mut clusters: Vec<ShapedCluster> = Vec::new();
 
@@ -731,7 +743,7 @@ impl ParleyShaper {
             width: metrics.advance,
             ascent: metrics.ascent,
             descent: metrics.descent,
-            baseline: metrics.baseline,
+            baseline,
             line_height,
             glyphs: Vec::new(),
             clusters,
@@ -824,12 +836,16 @@ impl ParleyShaper {
             let line_start = line_range.start;
             let metrics = *line.metrics();
 
+            let base_line_height = metrics.line_height.max(0.0);
             let mut line_height = metrics.line_height.max(0.0);
             line_height =
                 line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
             if let Some(requested) = base_style.line_height {
                 line_height = line_height.max((requested.0 * scale).max(0.0));
             }
+            let baseline = (metrics.baseline.max(0.0)
+                + ((line_height - base_line_height).max(0.0) * 0.5))
+                .clamp(0.0, line_height.max(0.0));
 
             let mut glyphs: Vec<ParleyGlyph> = Vec::new();
             let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -886,7 +902,7 @@ impl ParleyShaper {
                     width: metrics.advance,
                     ascent: metrics.ascent,
                     descent: metrics.descent,
-                    baseline: metrics.baseline,
+                    baseline,
                     line_height,
                     glyphs,
                     clusters,
@@ -1411,6 +1427,41 @@ mod tests {
 
         let layout = shaper.shape_single_line(input, 1.0);
         assert!(layout.line_height + 0.001 >= 40.0);
+    }
+
+    #[test]
+    fn explicit_line_height_increases_baseline_via_half_leading() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(14.0),
+            line_height: None,
+            ..Default::default()
+        };
+        let tall = TextStyle {
+            line_height: Some(Px(20.0)),
+            ..base.clone()
+        };
+
+        let a = shaper.shape_single_line_metrics(TextInputRef::plain("Hello", &base), 1.0);
+        let b = shaper.shape_single_line_metrics(TextInputRef::plain("Hello", &tall), 1.0);
+
+        assert!(
+            b.baseline > a.baseline + 0.1,
+            "expected baseline to increase when line_height expands (half-leading); a.baseline={} b.baseline={} a.line_height={} b.line_height={}",
+            a.baseline,
+            b.baseline,
+            a.line_height,
+            b.line_height
+        );
+        assert!(
+            b.baseline <= b.line_height + 0.001,
+            "expected baseline to remain within the line box; baseline={} line_height={}",
+            b.baseline,
+            b.line_height
+        );
     }
 
     #[test]

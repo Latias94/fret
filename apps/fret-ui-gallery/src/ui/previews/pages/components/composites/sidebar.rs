@@ -424,7 +424,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
 
         let inset = shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Sidebar Inset").into_element(cx)
+                shadcn::CardTitle::new("Sidebar Inset").into_element(cx),
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![
