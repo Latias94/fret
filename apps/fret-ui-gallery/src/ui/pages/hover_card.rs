@@ -7,6 +7,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         desc: &'static str,
                         test_id: &'static str| {
         let muted_fg = cx.with_theme(|theme| theme.color_token("muted-foreground"));
+        let desc_test_id: Arc<str> = Arc::from(format!("{test_id}-desc"));
+        let joined_test_id: Arc<str> = Arc::from(format!("{test_id}-joined"));
 
         let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("VC").into_element(cx)])
             .refine_layout(
@@ -29,14 +31,16 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                     .text_size_px(Px(14.0))
                     .line_height_px(Px(20.0))
                     .wrap(TextWrap::Word)
-                    .into_element(cx);
+                    .into_element(cx)
+                    .test_id(desc_test_id.clone());
                 let joined = ui::text(cx, "Joined December 2021")
                     .w_full()
                     .text_size_px(Px(12.0))
                     .line_height_px(Px(16.0))
                     .text_color(ColorRef::Color(muted_fg))
                     .wrap(TextWrap::Word)
-                    .into_element(cx);
+                    .into_element(cx)
+                    .test_id(joined_test_id.clone());
                 vec![
                     shadcn::CardTitle::new(name).into_element(cx),
                     description,
