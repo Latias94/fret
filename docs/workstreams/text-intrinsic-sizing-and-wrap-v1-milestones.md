@@ -5,7 +5,8 @@ Start: 2026-02-19
 
 ## M0 — Spec + regression map (1–2 days)
 
-- [x] Confirm ADR 0251 scope and accept tokenization v1 rules for `TextWrap::Word`.
+- [x] Land ADR 0251 scope and semantics.
+- [ ] Accept tokenization v1 rules for `TextWrap::Word` unbreakable segments.
 - [ ] Identify the top 5 UI Gallery pages affected by shrink-wrap + wrap (repros + expected).
 - [ ] Add/confirm at least 1 deterministic gate:
   - a unit test for intrinsic widths (preferred), and/or
