@@ -5746,6 +5746,69 @@ mod tests {
     }
 
     #[test]
+    fn glyph_cache_key_tracks_scale_factor_below_one() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Keep this test deterministic: bundled fonts only (no system font discovery).
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+            text.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "mmmm";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints_1x = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let constraints_half = TextConstraints {
+            scale_factor: 0.5,
+            ..constraints_1x
+        };
+
+        let (blob_a, _metrics_a) = text.prepare(content, &style, constraints_1x);
+        let (blob_b, _metrics_b) = text.prepare(content, &style, constraints_half);
+
+        let a = text.blob(blob_a).expect("prepared blob (scale=1.0)");
+        let b = text.blob(blob_b).expect("prepared blob (scale=0.5)");
+
+        let ga = a.shape.glyphs.first().expect("expected at least one glyph");
+        let gb = b.shape.glyphs.first().expect("expected at least one glyph");
+
+        let size_a = f32::from_bits(ga.key.size_bits);
+        let size_b = f32::from_bits(gb.key.size_bits);
+
+        let ratio = size_b / size_a.max(1.0);
+        assert!(
+            (ratio - 0.5).abs() <= 0.15,
+            "expected glyph cache key font size to scale with constraints.scale_factor; size_a={size_a} size_b={size_b} ratio={ratio}"
+        );
+
+        text.release(blob_a);
+        text.release(blob_b);
+    }
+
+    #[test]
     fn grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
