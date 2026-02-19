@@ -194,8 +194,8 @@ pub fn text_base<H: UiHost>(
 ///
 /// Wrapping notes:
 /// - This defaults to `TextWrap::Word` (wrap at word boundaries; do not break long tokens).
-/// - For body copy that may contain long URLs/paths/identifiers, prefer `TextWrap::WordBreak` so
-///   a single token cannot force horizontal overflow.
+/// - For body copy that may contain long URLs/paths/identifiers, prefer [`text_prose_break_words`]
+///   so a single token cannot force horizontal overflow.
 /// - For editor-like surfaces that must always wrap even within tokens, prefer `TextWrap::Grapheme`.
 /// - `WordBreak`/`Grapheme` behave best when the parent provides a definite width (`w_full`,
 ///   `Length::Fill`, `max_w`, etc.); in shrink-wrapped layouts they can legitimately measure
@@ -214,6 +214,27 @@ pub fn text_prose<H: UiHost>(
         style: Some(style),
         color: None,
         wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+    })
+}
+
+/// `text_prose` variant that matches Tailwind's `break-words` intent:
+/// prefer wrapping at word boundaries, but allow breaking long tokens when needed.
+pub fn text_prose_break_words<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::WordBreak,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
     })
