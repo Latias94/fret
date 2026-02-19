@@ -53,6 +53,7 @@ Workstream overview:
   - [x] ButtonGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-button-group-flex1-item-fill.json`
   - [x] Shadcn DropdownMenu item: chrome fills pressable: `tools/diag-scripts/ui-gallery-dropdown-menu-item-chrome-fill.json`
   - [x] Shadcn ContextMenu item: chrome fills pressable: `tools/diag-scripts/ui-gallery-context-menu-item-chrome-fill.json`
+  - [x] Shadcn NavigationMenu trigger: chrome fills pressable: `tools/diag-scripts/ui-gallery-navigation-menu-trigger-chrome-fill.json`
 
 ---
 
@@ -84,6 +85,7 @@ Legend:
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar items (overlay) | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill` + derives `<id>.chrome` semantics. |
 | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | Dropdown menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | `tools/diag-scripts/ui-gallery-dropdown-menu-item-chrome-fill.json` | Item row background container sets `w = Fill` + derives `<id>.chrome` semantics. |
 | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | Context menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | `tools/diag-scripts/ui-gallery-context-menu-item-chrome-fill.json` | `menu_row_children` chrome container sets `w = Fill` + derives `<id>.chrome` semantics. |
+| `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | NavigationMenu triggers | `AdHocChrome` | Possible (caller-dependent) | Unknown | Unknown | Consider migrating to `ControlChrome` | `tools/diag-scripts/ui-gallery-navigation-menu-trigger-chrome-fill.json` | Derives `<id>.chrome` semantics for the trigger wrapper container. |
 | `ecosystem/fret-ui-material3/src/segmented_button.rs` | Segmented button segments | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | `material_segment_chrome` sets `w = Fill`. |
 | `ecosystem/fret-ui-material3/src/navigation_bar.rs` | NavigationBar items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-navigation-bar-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
 | `ecosystem/fret-ui-material3/src/navigation_rail.rs` | NavigationRail items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-navigation-rail-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
