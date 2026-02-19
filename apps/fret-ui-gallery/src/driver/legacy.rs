@@ -206,6 +206,7 @@ struct UiGalleryWindowState {
     code_editor_soft_wrap: Model<bool>,
     code_editor_folds: Model<bool>,
     code_editor_inlays: Model<bool>,
+    markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_slider_value: Model<f32>,
@@ -325,6 +326,7 @@ impl UiGalleryWindowState {
             code_editor_soft_wrap: self.code_editor_soft_wrap.clone(),
             code_editor_folds: self.code_editor_folds.clone(),
             code_editor_inlays: self.code_editor_inlays.clone(),
+            markdown_link_gate_last_activation: self.markdown_link_gate_last_activation.clone(),
         }
     }
 }
@@ -1062,6 +1064,7 @@ impl UiGalleryDriver {
         let code_editor_soft_wrap = app.models_mut().insert(false);
         let code_editor_folds = app.models_mut().insert(false);
         let code_editor_inlays = app.models_mut().insert(false);
+        let markdown_link_gate_last_activation = app.models_mut().insert(None::<Arc<str>>);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_slider_value = app.models_mut().insert(0.3f32);
@@ -1212,6 +1215,7 @@ impl UiGalleryDriver {
             code_editor_soft_wrap,
             code_editor_folds,
             code_editor_inlays,
+            markdown_link_gate_last_activation,
             material3_checkbox,
             material3_switch,
             material3_slider_value,

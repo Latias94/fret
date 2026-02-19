@@ -421,6 +421,7 @@ fn page_preview(
     let code_editor_soft_wrap = models.code_editor_soft_wrap.clone();
     let code_editor_folds = models.code_editor_folds.clone();
     let code_editor_inlays = models.code_editor_inlays.clone();
+    let markdown_link_gate_last_activation = models.markdown_link_gate_last_activation.clone();
 
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -472,6 +473,7 @@ fn page_preview(
             code_editor_soft_wrap,
             code_editor_folds,
             code_editor_inlays,
+            markdown_link_gate_last_activation,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),

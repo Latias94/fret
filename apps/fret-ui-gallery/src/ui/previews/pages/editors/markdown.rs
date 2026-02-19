@@ -51,6 +51,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
     soft_wrap: Model<bool>,
     folds: Model<bool>,
     inlays: Model<bool>,
+    markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
@@ -449,6 +450,83 @@ pub(in crate::ui) fn preview_markdown_editor_source(
     let components = markdown::MarkdownComponents::default().with_open_url();
     let preview = markdown::markdown_with(cx, preview_source.as_ref(), &components);
 
+    let link_gate_href: Arc<str> = Arc::<str>::from("https://example.com");
+    let link_gate_last = cx
+        .app
+        .models()
+        .read(&markdown_link_gate_last_activation, |v| v.clone())
+        .ok()
+        .flatten();
+    let link_gate = {
+        let href = link_gate_href.clone();
+        let activate_model = markdown_link_gate_last_activation.clone();
+
+        let span = fret_core::TextSpan {
+            len: href.len(),
+            shaping: Default::default(),
+            paint: fret_core::TextPaintStyle {
+                fg: Some(theme.color_token("primary")),
+                bg: None,
+                underline: Some(fret_core::UnderlineStyle {
+                    color: None,
+                    style: fret_core::DecorationLineStyle::Solid,
+                }),
+                strikethrough: None,
+            },
+        };
+        let rich = fret_core::AttributedText::new(href.clone(), Arc::from([span]));
+
+        let mut props = fret_ui::element::SelectableTextProps::new(rich);
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        props.wrap = fret_core::TextWrap::WordBreak;
+        props.overflow = fret_core::TextOverflow::Clip;
+        props.color = Some(theme.color_token("primary"));
+        props.interactive_spans = Arc::from([fret_ui::element::SelectableTextInteractiveSpan {
+            range: 0..href.len(),
+            tag: href.clone(),
+        }]);
+
+        let link = cx
+            .selectable_text_with_id_props(move |cx, id| {
+                cx.selectable_text_on_activate_span_for(
+                    id,
+                    Arc::new(move |host, action_cx, _reason, activation| {
+                        let _ = host
+                            .models_mut()
+                            .update(&activate_model, |v| *v = Some(activation.tag.clone()));
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                    }),
+                );
+                props
+            })
+            .test_id("ui-gallery-markdown-span-link-gate");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| {
+                let mut out = vec![
+                    shadcn::typography::muted(
+                        cx,
+                        "Interactive span gate: click the link to exercise SelectableText span activation.",
+                    ),
+                    link,
+                ];
+                if let Some(href) = link_gate_last.as_ref() {
+                    out.push(
+                        shadcn::typography::muted(cx, format!("Activated: {href}"))
+                            .test_id("ui-gallery-markdown-span-link-activated"),
+                    );
+                }
+                out
+            },
+        )
+    };
+
     let editor_panel = cx.container(
         decl_style::container_props(
             theme,
@@ -463,6 +541,15 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         |_cx| vec![editor],
     );
 
+    let preview_body = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_stretch()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![link_gate, preview],
+    );
+
     let preview_panel = cx.container(
         decl_style::container_props(
             theme,
@@ -474,7 +561,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                 .w_full()
                 .h_px(MetricRef::Px(Px(520.0))),
         ),
-        |_cx| vec![preview],
+        |_cx| vec![preview_body],
     );
 
     let body = doc_layout::wrap_row(
