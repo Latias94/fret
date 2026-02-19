@@ -87,7 +87,16 @@ fn main() -> anyhow::Result<()> {
         .with_context(|| format!("create_dir_all failed: {}", export_dir.display()))?;
 
     let bundle_path = export_dir.join("bundle.json");
-    std::fs::write(&bundle_path, serde_json::to_string_pretty(&bundle)?)
+    let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
+        .ok()
+        .map(|v| v.trim().to_ascii_lowercase());
+    let write_compact = matches!(bundle_json_format.as_deref(), Some("compact" | "min"));
+    let bytes = if write_compact {
+        serde_json::to_vec(&bundle)?
+    } else {
+        serde_json::to_vec_pretty(&bundle)?
+    };
+    std::fs::write(&bundle_path, bytes)
         .with_context(|| format!("write failed: {}", bundle_path.display()))?;
 
     let latest_path = out_dir.join("latest.txt");

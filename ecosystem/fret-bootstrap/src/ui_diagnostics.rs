@@ -7183,12 +7183,24 @@ impl UiDiagnosticsService {
             if std::fs::create_dir_all(&dir).is_err() {
                 return None;
             }
-            if write_json_compact(dir.join("bundle.json"), &bundle).is_err() {
+            let bundle_json_path = dir.join("bundle.json");
+            let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
+                .ok()
+                .map(|v| v.trim().to_ascii_lowercase());
+            let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
+
+            let write_result = if want_pretty {
+                write_json(bundle_json_path.clone(), &bundle)
+            } else {
+                // Default: compact/minified JSON. This keeps bundles smaller and avoids accidental
+                // output explosions when someone greps a bundle.
+                write_json_compact(bundle_json_path.clone(), &bundle)
+            };
+
+            if write_result.is_err() {
                 return None;
             }
-            bundle_json_bytes = std::fs::metadata(dir.join("bundle.json"))
-                .ok()
-                .map(|m| m.len());
+            bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
             if self.cfg.screenshot_on_dump {
                 let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");

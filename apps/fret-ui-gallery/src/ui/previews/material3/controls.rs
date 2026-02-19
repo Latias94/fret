@@ -94,11 +94,13 @@ pub(in crate::ui) fn preview_material3_icon_button(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
-            vec![material3::IconButton::new(ids::ui::CLOSE)
-                .variant(material3::IconButtonVariant::Filled)
-                .a11y_label("Material 3 icon button (centered chrome)")
-                .test_id("ui-gallery-material3-icon-button-centered")
-                .into_element(cx)]
+            vec![
+                material3::IconButton::new(ids::ui::CLOSE)
+                    .variant(material3::IconButtonVariant::Filled)
+                    .a11y_label("Material 3 icon button (centered chrome)")
+                    .test_id("ui-gallery-material3-icon-button-centered")
+                    .into_element(cx),
+            ]
         },
     );
 
