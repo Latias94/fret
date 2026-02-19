@@ -104,6 +104,7 @@ Legend:
 | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Commit copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
 | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Env vars copy button | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Same pattern as code block. |
 | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Terminal copy/clear buttons | `CenteredFixedChrome` | Yes | N/A (fixed + centered) | OK | N/A | Uses helper | Keeps tool chrome centered when the row stretches. |
+| `ecosystem/fret-workspace/src/tab_strip.rs` | Workspace TabStrip tabs | `AdHocChrome` | Yes | Unknown (width `Auto`) | At risk | Adopt `control_chrome_*` or normalize Fill | N/A | Adds `<id>.chrome` semantics on the tab container for diag gating. |
 
 Add rows as audit progresses. The key question for each row is:
 
