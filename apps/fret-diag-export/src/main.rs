@@ -90,11 +90,11 @@ fn main() -> anyhow::Result<()> {
     let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
         .ok()
         .map(|v| v.trim().to_ascii_lowercase());
-    let write_compact = matches!(bundle_json_format.as_deref(), Some("compact" | "min"));
-    let bytes = if write_compact {
-        serde_json::to_vec(&bundle)?
-    } else {
+    let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
+    let bytes = if want_pretty {
         serde_json::to_vec_pretty(&bundle)?
+    } else {
+        serde_json::to_vec(&bundle)?
     };
     std::fs::write(&bundle_path, bytes)
         .with_context(|| format!("write failed: {}", bundle_path.display()))?;
