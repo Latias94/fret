@@ -422,6 +422,9 @@ fn material_primary_tab<H: UiHost>(
     let label = item.label.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+    let chrome_test_id = test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -607,7 +610,11 @@ fn material_primary_tab<H: UiHost>(
                     Edges::all(Px(0.0))
                 };
 
-                vec![cx.flex(row, move |_cx| vec![ink, label_el])]
+                let mut chrome = cx.flex(row, move |_cx| vec![ink, label_el]);
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 
