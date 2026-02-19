@@ -524,6 +524,35 @@ fn rich_inline_builds_spans_for_inline_code_and_strikethrough() {
 }
 
 #[test]
+fn rich_inline_underlines_links() {
+    let theme = default_theme();
+    let markdown_theme = MarkdownTheme::resolve(&theme);
+
+    let events = parse_events("a [link](https://example.com)\n");
+    let pieces = inline_pieces_from_events_unwrapped(&events);
+
+    let (rich, link_spans) =
+        build_rich_attributed_text(markdown_theme, &pieces).expect("expected rich text");
+    assert!(rich.is_valid());
+    assert_eq!(link_spans.len(), 1);
+    assert_eq!(link_spans[0].href.as_ref(), "https://example.com");
+
+    let link_run = rich
+        .spans
+        .iter()
+        .find(|s| s.paint.fg == Some(markdown_theme.link))
+        .expect("expected a link-colored span");
+
+    let underline = link_run
+        .paint
+        .underline
+        .as_ref()
+        .expect("expected underline");
+    assert_eq!(underline.style, fret_core::DecorationLineStyle::Solid);
+    assert_eq!(underline.color, None);
+}
+
+#[test]
 fn pulldown_maps_inline_br_html_to_line_break() {
     let events = parse_events("a<br>b\n");
     let pieces = inline_pieces_from_events_unwrapped(&events);

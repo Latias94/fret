@@ -10,6 +10,7 @@ use std::sync::Arc;
 use fret_core::{
     AttributedText, Axis, Edges, FontId, FontWeight, Px, SemanticsRole, StrikethroughStyle,
     TextOverflow, TextPaintStyle, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap,
+    UnderlineStyle,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -396,6 +397,11 @@ fn build_rich_attributed_text(
 
         let run_bg = p.style.code.then_some(markdown_theme.inline_code_bg);
 
+        let run_underline = p.style.link.is_some().then_some(UnderlineStyle {
+            color: None,
+            style: fret_core::DecorationLineStyle::Solid,
+        });
+
         let run_strikethrough = p.style.strikethrough.then_some(StrikethroughStyle {
             color: None,
             style: fret_core::DecorationLineStyle::Solid,
@@ -412,7 +418,7 @@ fn build_rich_attributed_text(
             paint: TextPaintStyle {
                 fg: run_color,
                 bg: run_bg,
-                underline: None,
+                underline: run_underline,
                 strikethrough: run_strikethrough,
             },
         });
