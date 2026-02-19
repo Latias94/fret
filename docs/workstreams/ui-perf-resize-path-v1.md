@@ -197,7 +197,9 @@ leave state behind), the remaining `ui-gallery-steady` baseline failures on macO
 
 Local repro command (release):
 
-- `target/release/fretboard diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json --dir target/fret-diag-perf-local/20260217-suite12 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
+- Update (2026-02-19): the macOS M4 baseline was refreshed to `ui-gallery-steady.macos-m4.v26.json` and the
+  steady-suite command now includes the view-cache flags so the measurement surface matches the baseline.
+- `target/release/fretboard diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --reuse-launch --suite-prewarm tools/diag-scripts/tooling-suite-prewarm-fonts.json --suite-prelude tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v26.json --dir target/fret-diag-perf-local/20260219-ui-gallery-steady --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery`
 
 ### Finding (2026-02-18): macOS M4 resize-stress worst frames are paint-dominated
 
