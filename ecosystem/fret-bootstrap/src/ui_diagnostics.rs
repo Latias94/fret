@@ -6534,7 +6534,12 @@ impl UiDiagnosticsService {
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
-                ElementDiagnosticsSnapshotV1::from_runtime(window, runtime, snapshot)
+                ElementDiagnosticsSnapshotV1::from_runtime(
+                    window,
+                    runtime,
+                    snapshot,
+                    self.cfg.max_debug_string_bytes,
+                )
             })
         });
 
@@ -9758,6 +9763,64 @@ impl UiTreeDebugSnapshotV1 {
                 last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
             }
         });
+
+        let cache_roots: Vec<UiCacheRootStatsV1> = ui
+            .debug_cache_root_stats()
+            .iter()
+            .map(|stats| {
+                UiCacheRootStatsV1::from_stats(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    semantics.as_ref(),
+                    &contained_relayout_roots,
+                    stats,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let removed_subtrees: Vec<UiRemovedSubtreeV1> = ui
+            .debug_removed_subtrees()
+            .iter()
+            .map(|r| {
+                UiRemovedSubtreeV1::from_record(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    r,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let mut layout_engine_solves: Vec<UiLayoutEngineSolveV1> = ui
+            .debug_layout_engine_solves()
+            .iter()
+            .map(UiLayoutEngineSolveV1::from_solve)
+            .collect();
+        for s in &mut layout_engine_solves {
+            truncate_opt_string_bytes(&mut s.root_element_path, max_debug_string_bytes);
+        }
+
+        let mut layout_hotspots: Vec<UiLayoutHotspotV1> = ui
+            .debug_layout_hotspots()
+            .iter()
+            .map(UiLayoutHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut layout_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
+        let mut widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1> = ui
+            .debug_widget_measure_hotspots()
+            .iter()
+            .map(UiWidgetMeasureHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut widget_measure_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -9836,20 +9899,7 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
                 .collect(),
-            cache_roots: ui
-                .debug_cache_root_stats()
-                .iter()
-                .map(|stats| {
-                    UiCacheRootStatsV1::from_stats(
-                        window,
-                        ui,
-                        element_runtime_state,
-                        semantics.as_ref(),
-                        &contained_relayout_roots,
-                        stats,
-                    )
-                })
-                .collect(),
+            cache_roots,
             overlay_synthesis: app
                 .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
                 .and_then(|diag| diag.events_for_window(window, app.frame_id()))
@@ -9876,26 +9926,10 @@ impl UiTreeDebugSnapshotV1 {
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
                 .map(UiDockingInteractionSnapshotV1::from_snapshot),
-            removed_subtrees: ui
-                .debug_removed_subtrees()
-                .iter()
-                .map(|r| UiRemovedSubtreeV1::from_record(window, ui, element_runtime_state, r))
-                .collect(),
-            layout_engine_solves: ui
-                .debug_layout_engine_solves()
-                .iter()
-                .map(UiLayoutEngineSolveV1::from_solve)
-                .collect(),
-            layout_hotspots: ui
-                .debug_layout_hotspots()
-                .iter()
-                .map(UiLayoutHotspotV1::from_hotspot)
-                .collect(),
-            widget_measure_hotspots: ui
-                .debug_widget_measure_hotspots()
-                .iter()
-                .map(UiWidgetMeasureHotspotV1::from_hotspot)
-                .collect(),
+            removed_subtrees,
+            layout_engine_solves,
+            layout_hotspots,
+            widget_measure_hotspots,
             paint_widget_hotspots: ui
                 .debug_paint_widget_hotspots()
                 .iter()
@@ -11438,6 +11472,7 @@ impl UiRemovedSubtreeV1 {
         ui: &UiTree<App>,
         element_runtime_state: Option<&ElementRuntime>,
         r: &fret_ui::tree::UiDebugRemoveSubtreeRecord,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let outcome = match r.outcome {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::SkippedLayerRoot => "skipped_layer_root",
@@ -11445,25 +11480,29 @@ impl UiRemovedSubtreeV1 {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::Removed => "removed",
         };
 
-        let root_element_path = r.root_element.and_then(|element| {
+        let mut root_element_path = r.root_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_element_path, max_debug_string_bytes);
 
-        let root_parent_element_path = r.root_parent_element.and_then(|element| {
+        let mut root_parent_element_path = r.root_parent_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_parent_element_path, max_debug_string_bytes);
 
-        let trigger_element_path = r.trigger_element.and_then(|element| {
+        let mut trigger_element_path = r.trigger_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_path, max_debug_string_bytes);
 
-        let trigger_element_root_path = r.trigger_element_root.and_then(|element| {
+        let mut trigger_element_root_path = r.trigger_element_root.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_root_path, max_debug_string_bytes);
 
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
         let root_path_edge_len = (r.root_path_edge_len as usize)
@@ -11483,8 +11522,10 @@ impl UiRemovedSubtreeV1 {
             .root_parent
             .and_then(|parent| ui.debug_set_children_write_for(parent))
             .map(|w| {
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
                 (
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.old_len),
                     Some(w.new_len),
                     Some(w.frame_id.0),
@@ -11509,10 +11550,11 @@ impl UiRemovedSubtreeV1 {
             .map(|w| {
                 let parent_element = element_runtime_state
                     .and_then(|runtime| runtime.element_for_node(window, w.parent));
-                let parent_path = parent_element.and_then(|element| {
+                let mut parent_path = parent_element.and_then(|element| {
                     element_runtime_state
                         .and_then(|runtime| runtime.debug_path_for_element(window, element))
                 });
+                truncate_opt_string_bytes(&mut parent_path, max_debug_string_bytes);
                 let parent_is_view_cache_reuse_root = parent_element.and_then(|element| {
                     element_runtime_state.and_then(|runtime| {
                         runtime
@@ -11545,12 +11587,18 @@ impl UiRemovedSubtreeV1 {
                     }
                 }
 
+                truncate_vec_string_bytes(&mut old_elements_head_paths, max_debug_string_bytes);
+                truncate_vec_string_bytes(&mut new_elements_head_paths, max_debug_string_bytes);
+
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+
                 (
                     Some(key_to_u64(w.parent)),
                     parent_element.map(|e| e.0),
                     parent_path,
                     parent_is_view_cache_reuse_root,
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.frame_id.0),
                     old_elements_head,
                     old_elements_head_paths,
@@ -11627,7 +11675,11 @@ impl UiRemovedSubtreeV1 {
                 .to_vec(),
             outcome: Some(outcome.to_string()),
             frame_id: Some(r.frame_id.0),
-            location: Some(format!("{}:{}:{}", r.file, r.line, r.column)),
+            location: {
+                let mut location = Some(format!("{}:{}:{}", r.file, r.line, r.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+                location
+            },
         }
     }
 }
@@ -11733,6 +11785,7 @@ impl UiCacheRootStatsV1 {
         semantics: Option<&UiSemanticsSnapshotV1>,
         contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
             element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id))
@@ -11817,7 +11870,8 @@ impl UiCacheRootStatsV1 {
                 Vec::new(),
                 None,
             ));
-        Self {
+
+        let mut out = Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
             element_path,
@@ -11838,7 +11892,21 @@ impl UiCacheRootStatsV1 {
             children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
-        }
+        };
+
+        truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.children_last_set_location, max_debug_string_bytes);
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_old_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_new_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
+
+        out
     }
 }
 
@@ -13914,26 +13982,39 @@ impl ElementDiagnosticsSnapshotV1 {
         window: AppWindowId,
         runtime: &ElementRuntime,
         snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot,
+        max_debug_string_bytes: usize,
     ) -> Self {
-        let focused_element_path = snapshot
+        let mut focused_element_path = snapshot
             .focused_element
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
+        truncate_opt_string_bytes(&mut focused_element_path, max_debug_string_bytes);
+
+        let mut active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
             let a = runtime.debug_path_for_element(window, a)?;
             let b = runtime.debug_path_for_element(window, b)?;
             Some((a, b))
         });
-        let hovered_pressable_path = snapshot
+        if let Some((a, b)) = active_text_selection_path.as_mut() {
+            truncate_string_bytes(a, max_debug_string_bytes);
+            truncate_string_bytes(b, max_debug_string_bytes);
+        }
+
+        let mut hovered_pressable_path = snapshot
             .hovered_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let pressed_pressable_path = snapshot
+        truncate_opt_string_bytes(&mut hovered_pressable_path, max_debug_string_bytes);
+
+        let mut pressed_pressable_path = snapshot
             .pressed_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let hovered_hover_region_path = snapshot
+        truncate_opt_string_bytes(&mut pressed_pressable_path, max_debug_string_bytes);
+
+        let mut hovered_hover_region_path = snapshot
             .hovered_hover_region
             .and_then(|id| runtime.debug_path_for_element(window, id));
+        truncate_opt_string_bytes(&mut hovered_hover_region_path, max_debug_string_bytes);
 
-        Self {
+        let mut out = Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
             focused_element_node: snapshot.focused_element_node.map(key_to_u64),
@@ -14068,24 +14149,64 @@ impl ElementDiagnosticsSnapshotV1 {
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
                 .into_iter()
-                .map(|r| ElementNodeEntryRootOverwriteV1 {
-                    frame_id: r.frame_id.0,
-                    element: r.element.0,
-                    element_path: runtime.debug_path_for_element(window, r.element),
-                    old_root: r.old_root.0,
-                    old_root_path: runtime.debug_path_for_element(window, r.old_root),
-                    new_root: r.new_root.0,
-                    new_root_path: runtime.debug_path_for_element(window, r.new_root),
-                    old_node: r.old_node.data().as_ffi(),
-                    new_node: r.new_node.data().as_ffi(),
-                    location: Some(UiSourceLocationV1 {
-                        file: r.file.to_string(),
-                        line: r.line,
-                        column: r.column,
-                    }),
+                .map(|r| {
+                    let mut element_path = runtime.debug_path_for_element(window, r.element);
+                    let mut old_root_path = runtime.debug_path_for_element(window, r.old_root);
+                    let mut new_root_path = runtime.debug_path_for_element(window, r.new_root);
+                    truncate_opt_string_bytes(&mut element_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut old_root_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut new_root_path, max_debug_string_bytes);
+
+                    let mut file = r.file.to_string();
+                    truncate_string_bytes(&mut file, max_debug_string_bytes);
+
+                    ElementNodeEntryRootOverwriteV1 {
+                        frame_id: r.frame_id.0,
+                        element: r.element.0,
+                        element_path,
+                        old_root: r.old_root.0,
+                        old_root_path,
+                        new_root: r.new_root.0,
+                        new_root_path,
+                        old_node: r.old_node.data().as_ffi(),
+                        new_node: r.new_node.data().as_ffi(),
+                        location: Some(UiSourceLocationV1 {
+                            file,
+                            line: r.line,
+                            column: r.column,
+                        }),
+                    }
                 })
                 .collect(),
+        };
+
+        for entry in &mut out.observed_layout_queries {
+            for region in &mut entry.regions {
+                truncate_opt_string_bytes(&mut region.region_name, max_debug_string_bytes);
+                truncate_string_bytes(&mut region.invalidation, max_debug_string_bytes);
+            }
         }
+        for region in &mut out.layout_query_regions {
+            truncate_opt_string_bytes(&mut region.name, max_debug_string_bytes);
+        }
+        for entry in &mut out.observed_environment {
+            for key in &mut entry.keys {
+                truncate_string_bytes(&mut key.key, max_debug_string_bytes);
+                truncate_string_bytes(&mut key.invalidation, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_models {
+            for (_, inv) in &mut entry.models {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_globals {
+            for (_, inv) in &mut entry.globals {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+
+        out
     }
 }
 
@@ -17798,6 +17919,19 @@ fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
     }
     s.truncate(idx);
     s.push_str(suffix);
+}
+
+fn truncate_opt_string_bytes(s: &mut Option<String>, max_bytes: usize) {
+    let Some(v) = s.as_mut() else {
+        return;
+    };
+    truncate_string_bytes(v, max_bytes);
+}
+
+fn truncate_vec_string_bytes(items: &mut Vec<String>, max_bytes: usize) {
+    for s in items {
+        truncate_string_bytes(s, max_bytes);
+    }
 }
 
 fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {

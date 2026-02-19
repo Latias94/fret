@@ -458,6 +458,12 @@ Privacy / size:
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
 
+Practical bundle size controls (recommended for scripted repros you want to share):
+
+- Prefer smaller dumps: `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=10` (or `5` for very small bundles).
+- Bound path/debug strings: `FRET_DIAG_MAX_DEBUG_STRING_BYTES=2048` (or `1024`).
+- If you mostly target `test_id`, consider `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1` to keep semantics exports smaller.
+
 Script harness:
 
 - `FRET_DIAG_SCRIPT_PATH=...`: script JSON path (default `<dir>/script.json`).

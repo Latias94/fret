@@ -606,6 +606,14 @@ pub(crate) fn maybe_launch_demo(
             ..Default::default()
         }),
         screenshots_enabled: Some(wants_screenshots),
+        // Keep script-driven bundle dumps reasonably small by default.
+        //
+        // The runtime exports full frame snapshots; large dump windows can easily produce
+        // 10s of MB per bundle, which makes sharing/triage harder and increases the chance
+        // of accidental output explosions.
+        script_dump_max_snapshots: Some(10),
+        // Bound the length of exported debug strings (paths, etc).
+        max_debug_string_bytes: Some(2048),
         ..Default::default()
     };
     if let Some((_, v)) = launch_env
