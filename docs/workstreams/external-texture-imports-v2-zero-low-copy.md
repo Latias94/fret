@@ -79,6 +79,12 @@ It builds on v1’s contract-path closure:
 - Next up (native uplift, practical):
   - Tighten capability gating and failure modes for “real producer → shared allocation” paths so the
   demo code stays thin and drift-free (Windows first; then consider macOS/iOS AVF and Android).
+  - Land real platform sources behind the same deterministic fallback shape:
+    - Apple (macOS/iOS): AVFoundation adapter (start with `CpuUpload`, then consider IOSurface shared allocation).
+    - Android: MediaCodec adapter (start with `CpuUpload`, then consider `AHardwareBuffer` shared allocation).
+  - Scaffolding modules exist to keep the contract shape explicit and runner-owned:
+    - `crates/fret-launch/src/runner/apple_avfoundation_video.rs`
+    - `crates/fret-launch/src/runner/android_mediacodec_video.rs`
 
 ## Recommended execution order
 

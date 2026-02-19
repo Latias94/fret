@@ -45,6 +45,15 @@ Exit criteria:
   - reduce the post-first-screenshot wait window to avoid crossing EOF on small clips.
   - Evidence: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
 
+## 2026-02-19 — Apple/Android native adapter scaffolding (EXTV2-native-120/130)
+
+- Scope:
+  - Add runner-owned scaffolding modules for upcoming Apple AVFoundation and Android MediaCodec
+    adapters, keeping the deterministic fallback shape explicit and preventing demo-layer drift.
+- Evidence anchors:
+  - `crates/fret-launch/src/runner/apple_avfoundation_video.rs`
+  - `crates/fret-launch/src/runner/android_mediacodec_video.rs`
+
 ## M1 — Metadata closure (portable)
 
 Deliverables:

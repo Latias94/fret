@@ -147,6 +147,24 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - Script note: the post-first-screenshot `wait_frames` window is intentionally short so small video clips don’t
       cross EOF before bundle export.
 
+- [~] EXTV2-native-120 M2A: wire a real native frame source on Apple platforms (AVFoundation):
+      capability-gated `NativeExternalTextureFrame` adapter with deterministic fallback to copy paths.
+  - Initial landing target:
+    - macOS/iOS: AVFoundation decode -> CPU upload into a renderer-owned texture (`CpuUpload` effective), with full metadata attribution.
+  - Ceiling uplift (capability-gated, optional follow-up):
+    - shared-allocation via IOSurface-backed renderer-owned textures (classifies as `Owned`), or a future backend-supported external-handle import.
+  - Evidence anchors (scaffolding landed):
+    - `crates/fret-launch/src/runner/apple_avfoundation_video.rs` (`AvfVideoNativeExternalImporter`)
+
+- [~] EXTV2-native-130 M2A: wire a real native frame source on Android (MediaCodec):
+      capability-gated `NativeExternalTextureFrame` adapter with deterministic fallback to copy paths.
+  - Initial landing target:
+    - Android: MediaCodec decode -> CPU upload into a renderer-owned texture (`CpuUpload` effective), with full metadata attribution.
+  - Ceiling uplift (capability-gated, optional follow-up):
+    - shared-allocation via `AHardwareBuffer`-backed renderer-owned textures (classifies as `Owned`), or a future backend-supported external-handle import.
+  - Evidence anchors (scaffolding landed):
+    - `crates/fret-launch/src/runner/android_mediacodec_video.rs` (`MediaCodecVideoNativeExternalImporter`)
+
 - [x] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.

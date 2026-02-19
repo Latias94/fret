@@ -12,6 +12,15 @@ mod yuv_gpu;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
 pub mod windows_mf_video;
 
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "macos", target_os = "ios")
+))]
+pub mod apple_avfoundation_video;
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "android"))]
+pub mod android_mediacodec_video;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod desktop;
 #[cfg(target_arch = "wasm32")]
