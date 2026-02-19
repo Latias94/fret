@@ -614,7 +614,14 @@ fn navigation_bar_item<H: UiHost>(
                 col.gap = Px(4.0);
                 col.padding = Edges::all(Px(0.0));
 
-                vec![cx.flex(col, move |_cx| vec![ink, icon_slot, label_el])]
+                let chrome_test_id = test_id
+                    .as_ref()
+                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                let mut chrome = cx.flex(col, move |_cx| vec![ink, icon_slot, label_el]);
+                if let Some(test_id) = chrome_test_id {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 

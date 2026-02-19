@@ -564,7 +564,10 @@ fn navigation_drawer_item<H: UiHost>(
                     move |_cx| content_children,
                 );
 
-                vec![cx.container(
+                let chrome_test_id = test_id
+                    .as_ref()
+                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                let mut chrome = cx.container(
                     ContainerProps {
                         background: selected.then_some(selected_bg),
                         corner_radii,
@@ -577,7 +580,11 @@ fn navigation_drawer_item<H: UiHost>(
                         ..Default::default()
                     },
                     move |_cx| vec![ink, content],
-                )]
+                );
+                if let Some(test_id) = chrome_test_id {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 

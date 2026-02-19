@@ -39,6 +39,9 @@ Workstream overview:
   - [x] Centered fixed chrome in a stretched row (center aligned): `tools/diag-scripts/ui-gallery-centered-fixed-chrome-flex1-center-aligned.json`
   - [x] Material3 IconButton: centered fixed chrome (min touch target): `tools/diag-scripts/ui-gallery-material3-icon-button-centered-chrome.json`
   - [x] Material3 Checkbox: centered fixed chrome (min touch target): `tools/diag-scripts/ui-gallery-material3-checkbox-centered-chrome.json`
+  - [x] Material3 NavigationBar item: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-navigation-bar-item-chrome-fill.json`
+  - [x] Material3 NavigationRail item: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-navigation-rail-item-chrome-fill.json`
+  - [x] Material3 NavigationDrawer item: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-navigation-drawer-item-chrome-fill.json`
   - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
   - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
   - [x] ButtonGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-button-group-flex1-item-fill.json`
@@ -67,12 +70,16 @@ Legend:
 | `ecosystem/fret-ui-shadcn/src/item.rs` | Item (clickable) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (responsive drawer path) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/combobox.rs` | Combobox trigger (desktop path) | `ControlChrome` | Yes | Yes | OK | N/A | Uses helper | Normalized via `control_chrome_pressable_with_id_props`. |
-| `ecosystem/fret-ui-shadcn/src/tabs.rs` | Tabs triggers | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | Inner container sets `w/h = Fill`. |
+| `ecosystem/fret-ui-shadcn/src/tabs.rs` | Tabs triggers | `ControlChrome` | Yes | Yes | OK | N/A | `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json` | Migrated to `control_chrome_pressable_with_id_props`. |
+| `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | ToggleGroup items | `ControlChrome` | Yes | Yes | OK | N/A | `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json` | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-shadcn/src/menubar.rs` | Menubar items (overlay) | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill`. |
 | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | Dropdown menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | Item row background container sets `w = Fill`. |
 | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | Context menu items | `ManualFill` | Yes (`w = Fill`) | Yes (`w = Fill`) | OK | Optional: adopt helper | N/A | `menu_row_children` chrome container sets `w = Fill`. |
 | `ecosystem/fret-ui-material3/src/segmented_button.rs` | Segmented button segments | `ManualFill` | Yes | Yes | OK | Optional: adopt helper | N/A | `material_segment_chrome` sets `w = Fill`. |
+| `ecosystem/fret-ui-material3/src/navigation_bar.rs` | NavigationBar items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-navigation-bar-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
+| `ecosystem/fret-ui-material3/src/navigation_rail.rs` | NavigationRail items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-navigation-rail-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
+| `ecosystem/fret-ui-material3/src/navigation_drawer.rs` | NavigationDrawer items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-navigation-drawer-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
 | `ecosystem/fret-ui-material3/src/button.rs` | Material button | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/card.rs` | Material card | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
