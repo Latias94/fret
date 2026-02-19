@@ -210,6 +210,12 @@ impl<H: UiHost> UiTree<H> {
                     let (_, flush_elapsed) = fret_perf::measure(self.debug_enabled, || {
                         crate::elements::with_window_state(app, window, |st| {
                             for (element, visual) in records.drain(..) {
+                                if st
+                                    .current_bounds(element)
+                                    .is_some_and(|bounds| bounds == visual)
+                                {
+                                    continue;
+                                }
                                 st.record_visual_bounds(element, visual);
                             }
                         });

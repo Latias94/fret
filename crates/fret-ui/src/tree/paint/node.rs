@@ -149,6 +149,7 @@ impl<H: UiHost> UiTree<H> {
                     && let Some(prev_visual) =
                         crate::elements::with_window_state(app, window, |st| {
                             st.last_visual_bounds(element)
+                                .or_else(|| st.last_bounds(element))
                         }) {
                     let current_visual = if current_transform == Transform2D::IDENTITY {
                         bounds
@@ -345,6 +346,7 @@ impl<H: UiHost> UiTree<H> {
                             && let Some(prev_visual) =
                                 crate::elements::with_window_state(app, window, |st| {
                                     st.last_visual_bounds(element)
+                                        .or_else(|| st.last_bounds(element))
                                 })
                         {
                             let visual = Rect::new(
