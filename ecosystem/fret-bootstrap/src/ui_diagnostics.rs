@@ -4877,6 +4877,7 @@ impl UiDiagnosticsService {
             UiActionStepV2::TypeTextInto {
                 target,
                 text,
+                clear_before_type,
                 timeout_frames,
             } => {
                 active.wait_until = None;
@@ -5048,6 +5049,35 @@ impl UiDiagnosticsService {
 
                                 active.last_injected_step =
                                     Some(step_index.min(u32::MAX as usize) as u32);
+                                if clear_before_type {
+                                    fn command_modifier() -> UiKeyModifiersV1 {
+                                        let mut modifiers = UiKeyModifiersV1::default();
+                                        if cfg!(target_os = "macos") {
+                                            modifiers.meta = true;
+                                        } else {
+                                            modifiers.ctrl = true;
+                                        }
+                                        modifiers
+                                    }
+
+                                    // Avoid relying on platform-specific shortcuts in JSON scripts:
+                                    // suites commonly reuse a single launch, and input fields may
+                                    // retain previous values across runs. Prefer a bounded clear
+                                    // sweep that works even if select-all is not handled by the
+                                    // focused widget.
+                                    output.events.extend(press_key_events(
+                                        KeyCode::KeyA,
+                                        command_modifier(),
+                                        false,
+                                    ));
+                                    for _ in 0..64 {
+                                        output.events.extend(press_key_events(
+                                            KeyCode::Backspace,
+                                            UiKeyModifiersV1::default(),
+                                            false,
+                                        ));
+                                    }
+                                }
                                 output.events.push(Event::TextInput(text));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
@@ -8686,6 +8716,8 @@ mod legacy_forked_script_protocol {
         TypeTextInto {
             target: UiSelectorV1,
             text: String,
+            #[serde(default)]
+            clear_before_type: bool,
             #[serde(default = "default_action_timeout_frames")]
             timeout_frames: u32,
         },

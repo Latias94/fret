@@ -576,6 +576,8 @@ pub enum UiActionStepV2 {
     TypeTextInto {
         target: UiSelectorV1,
         text: String,
+        #[serde(default)]
+        clear_before_type: bool,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },

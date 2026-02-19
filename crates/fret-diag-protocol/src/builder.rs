@@ -248,6 +248,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::TypeTextInto {
             target,
             text: text.into(),
+            clear_before_type: false,
             timeout_frames: 180,
         })
     }
