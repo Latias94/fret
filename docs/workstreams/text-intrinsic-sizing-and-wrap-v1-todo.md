@@ -33,7 +33,7 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 
 - [ ] Add UI kit helpers:
   - [x] `text_prose_break_words` (or equivalent) using `TextWrap::WordBreak`
-  - [ ] `text_code_wrap` using `TextWrap::Grapheme`
+  - [x] `text_code_wrap` using `TextWrap::Grapheme`
 - [ ] Update shadcn recipes where long-token body copy currently overflows horizontally.
 - [ ] Add short authoring note to the docs page(s) that explain when to use each wrap mode.
 
