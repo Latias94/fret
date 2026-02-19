@@ -624,6 +624,23 @@ impl ParleyShaper {
         )
     }
 
+    pub fn shape_paragraph_word_break_wrap(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
+            TextWrapMode::Wrap,
+            scale,
+            false,
+        )
+    }
+
     pub fn shape_paragraph_word_wrap_metrics(
         &mut self,
         input: TextInputRef<'_>,
@@ -636,6 +653,23 @@ impl ParleyShaper {
             WordBreakStrength::Normal,
             // See `shape_paragraph_word_wrap`.
             OverflowWrap::Normal,
+            TextWrapMode::Wrap,
+            scale,
+            true,
+        )
+    }
+
+    pub fn shape_paragraph_word_break_wrap_metrics(
+        &mut self,
+        input: TextInputRef<'_>,
+        max_width_px: f32,
+        scale: f32,
+    ) -> Vec<(Range<usize>, ShapedLineLayout)> {
+        self.shape_paragraph_with_wrap(
+            input,
+            Some(max_width_px),
+            WordBreakStrength::Normal,
+            OverflowWrap::BreakWord,
             TextWrapMode::Wrap,
             scale,
             true,

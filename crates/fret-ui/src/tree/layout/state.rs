@@ -186,7 +186,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         match wrap {
-            fret_core::TextWrap::Word | fret_core::TextWrap::Grapheme => {
+            fret_core::TextWrap::Word | fret_core::TextWrap::WordBreak | fret_core::TextWrap::Grapheme => {
                 let quantum = bucket_px as f32;
                 if quantum <= 0.0 {
                     return width;

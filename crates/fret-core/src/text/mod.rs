@@ -82,6 +82,12 @@ impl FontWeight {
 pub enum TextWrap {
     None,
     Word,
+    /// Wrap at word boundaries, but allow breaking long tokens when necessary.
+    ///
+    /// This is similar to CSS `overflow-wrap: break-word` (with `word-break: normal`): prefer
+    /// wrapping at whitespace/line-break opportunities, but fall back to mid-token breaks when a
+    /// single "word" exceeds the available width.
+    WordBreak,
     /// Break between grapheme clusters when needed.
     ///
     /// This is intended for editor surfaces (CJK, file paths/URLs, code identifiers) where long

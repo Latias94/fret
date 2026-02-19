@@ -1519,7 +1519,9 @@ impl TextMeasureKey {
             // apply overflow policy at higher levels. Normalize away width so repeated measurements
             // (e.g. layout engine intrinsic probes) can reuse cached metrics.
             TextWrap::None => None,
-            TextWrap::Word | TextWrap::Grapheme => constraints.max_width.map(|w| w.0.to_bits()),
+            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                constraints.max_width.map(|w| w.0.to_bits())
+            }
         };
         Self {
             font: style.font.clone(),
