@@ -494,49 +494,63 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_add(inclusive_scene_ops_delta);
             }
 
-            let element = self.nodes.get(node).and_then(|n| n.element);
-            let element_kind = self.window.and_then(|window| {
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                    .map(|record| record.instance.kind_name())
-            });
-            let element_path = if self.debug_enabled {
-                #[cfg(feature = "diagnostics")]
-                {
-                    self.window.and_then(|window| {
-                        element.and_then(|element| {
-                            crate::elements::with_window_state(app, window, |st| {
-                                st.debug_path_for_element(element)
+            // Hotspot recording can be relatively expensive (element-kind lookup, debug path, list
+            // insertion). Fast-path the common case where this node can't make it into the top-N.
+            let should_record_hotspot =
+                if self.debug_paint_widget_hotspots.len() < MAX_PAINT_WIDGET_HOTSPOTS {
+                    true
+                } else {
+                    self.debug_paint_widget_hotspots
+                        .last()
+                        .is_some_and(|h| h.exclusive_time < exclusive_time)
+                };
+
+            if should_record_hotspot {
+                let element = self.nodes.get(node).and_then(|n| n.element);
+                let element_kind = self.window.and_then(|window| {
+                    crate::declarative::frame::element_record_for_node(app, window, node)
+                        .map(|record| record.instance.kind_name())
+                });
+                let element_path = if self.debug_enabled {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        self.window.and_then(|window| {
+                            element.and_then(|element| {
+                                crate::elements::with_window_state(app, window, |st| {
+                                    st.debug_path_for_element(element)
+                                })
                             })
                         })
-                    })
-                }
-                #[cfg(not(feature = "diagnostics"))]
-                {
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        None
+                    }
+                } else {
                     None
+                };
+
+                let record = UiDebugPaintWidgetHotspot {
+                    node,
+                    element,
+                    element_kind,
+                    element_path,
+                    widget_type,
+                    inclusive_time,
+                    exclusive_time,
+                    inclusive_scene_ops_delta,
+                    exclusive_scene_ops_delta,
+                };
+                let idx = self
+                    .debug_paint_widget_hotspots
+                    .iter()
+                    .position(|h| h.exclusive_time < record.exclusive_time)
+                    .unwrap_or(self.debug_paint_widget_hotspots.len());
+                self.debug_paint_widget_hotspots.insert(idx, record);
+                if self.debug_paint_widget_hotspots.len() > MAX_PAINT_WIDGET_HOTSPOTS {
+                    self.debug_paint_widget_hotspots
+                        .truncate(MAX_PAINT_WIDGET_HOTSPOTS);
                 }
-            } else {
-                None
-            };
-            let record = UiDebugPaintWidgetHotspot {
-                node,
-                element,
-                element_kind,
-                element_path,
-                widget_type,
-                inclusive_time,
-                exclusive_time,
-                inclusive_scene_ops_delta,
-                exclusive_scene_ops_delta,
-            };
-            let idx = self
-                .debug_paint_widget_hotspots
-                .iter()
-                .position(|h| h.exclusive_time < record.exclusive_time)
-                .unwrap_or(self.debug_paint_widget_hotspots.len());
-            self.debug_paint_widget_hotspots.insert(idx, record);
-            if self.debug_paint_widget_hotspots.len() > MAX_PAINT_WIDGET_HOTSPOTS {
-                self.debug_paint_widget_hotspots
-                    .truncate(MAX_PAINT_WIDGET_HOTSPOTS);
             }
         }
 
