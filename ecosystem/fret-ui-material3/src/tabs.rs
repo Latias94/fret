@@ -506,7 +506,11 @@ fn material_primary_tab<H: UiHost>(
             focus_ring_bounds: None,
         };
 
-        let pointer_region = cx.named("pointer_region", |cx| {
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
+        let mut pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
             props.layout.size.width = Length::Fill;
@@ -617,6 +621,10 @@ fn material_primary_tab<H: UiHost>(
                 vec![chrome]
             })
         });
+        if let Some(chrome_test_id) = chrome_test_id {
+            pointer_region = pointer_region
+                .attach_semantics(SemanticsDecoration::default().test_id(chrome_test_id));
+        }
 
         (pressable_props, vec![pointer_region])
     })
