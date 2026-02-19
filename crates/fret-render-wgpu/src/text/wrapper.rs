@@ -37,7 +37,7 @@ pub(crate) fn wrap_with_constraints(
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = constraints.scale_factor.max(1.0);
+    let scale = super::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),
@@ -104,7 +104,7 @@ pub(crate) fn wrap_with_constraints_measure_only(
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = constraints.scale_factor.max(1.0);
+    let scale = super::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),
@@ -1481,6 +1481,63 @@ mod tests {
         );
 
         assert_eq!(wrapped.kept_end, text.len());
+    }
+
+    #[test]
+    fn wrap_uses_scale_factor_below_one() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "hello world";
+        let constraints_1x = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let constraints_half = TextConstraints {
+            scale_factor: 0.5,
+            ..constraints_1x
+        };
+
+        let a = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints_1x,
+        );
+        let b = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints_half,
+        );
+
+        let Some(font_a) = a
+            .lines
+            .first()
+            .and_then(|l| l.glyphs.first())
+            .map(|g| g.font_size)
+        else {
+            panic!("expected shaped glyphs for scale=1.0");
+        };
+        let Some(font_b) = b
+            .lines
+            .first()
+            .and_then(|l| l.glyphs.first())
+            .map(|g| g.font_size)
+        else {
+            panic!("expected shaped glyphs for scale=0.5");
+        };
+
+        let ratio = font_b / font_a.max(1.0);
+        assert!(
+            (ratio - 0.5).abs() <= 0.15,
+            "expected shaped glyph font_size to scale with constraints.scale_factor; font_a={font_a} font_b={font_b} ratio={ratio}",
+        );
     }
 
     #[test]
