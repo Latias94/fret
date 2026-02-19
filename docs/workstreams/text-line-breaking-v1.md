@@ -55,6 +55,8 @@ Key files:
 
 - Wrapper: `crates/fret-render-wgpu/src/text/wrapper.rs`
   - `TextWrap::Word` uses Parley paragraph line breaking (wrap width drives line breaks).
+  - `TextWrap::WordBreak` uses Parley paragraph line breaking with an explicit "break long tokens if needed"
+    emergency policy (intended for prose surfaces that may contain URLs/paths/identifiers).
   - `TextWrap::Grapheme` uses `unicode_segmentation` grapheme cluster boundaries as the emergency
     break surface.
   - newline splitting (`\n`) is an outer paragraph boundary.

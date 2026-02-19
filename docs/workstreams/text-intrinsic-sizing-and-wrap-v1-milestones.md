@@ -8,9 +8,10 @@ Start: 2026-02-19
 - [x] Land ADR 0251 scope and semantics.
 - [ ] Accept tokenization v1 rules for `TextWrap::Word` unbreakable segments.
 - [ ] Identify the top 5 UI Gallery pages affected by shrink-wrap + wrap (repros + expected).
-- [ ] Add/confirm at least 1 deterministic gate:
+- [x] Add/confirm at least 1 deterministic gate:
   - a unit test for intrinsic widths (preferred), and/or
   - a diag script + screenshot bundle for the most visible regression.
+  - [x] Landed: `crates/fret-render-wgpu/src/text/wrapper.rs` tests + UI Gallery diag scripts (see evidence anchors).
 
 ## M1 — True `min-content` for `TextWrap::Word` (core landing)
 
@@ -25,7 +26,7 @@ Start: 2026-02-19
 
 ## M2 — Ecosystem authoring helpers (reduce drift)
 
-- [ ] Add UI kit helpers for common patterns:
+- [x] Add UI kit helpers for common patterns:
   - prose with break-words (`WordBreak`),
   - code/editor surfaces (`Grapheme`),
   - labels/tabs/menu rows (`nowrap` + optional truncation).

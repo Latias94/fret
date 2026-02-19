@@ -8,8 +8,11 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 ## Repros (UI Gallery)
 
 - [ ] Create a minimal page/harness that demonstrates shrink-wrap + `TextWrap::Word` intrinsic sizing.
-- [ ] Add a second repro for long-token prose (`URL-like-token-without-spaces`) where `WordBreak` is expected.
+- [x] Add a second repro for long-token prose (`URL-like-token-without-spaces`) where `WordBreak` is expected.
+  - Implemented in `Text / Measured Bounds Overlay` (`apps/fret-ui-gallery/.../text/measure_overlay.rs`).
 - [ ] Capture baseline diag bundles (native) for both cases.
+  - [x] `tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json`
+  - [x] `tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json`
 
 ## Intrinsic sizing implementation
 

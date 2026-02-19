@@ -21,6 +21,9 @@ and to prevent ecosystem drift by providing clear authoring guidance and helpers
 - ADR 0251: Text intrinsic sizing semantics (min/max-content) (v1)
 - ADR 0221: Text overflow (ellipsis) and line clamp (v1)
 - ADR 0045 / ADR 0046: geometry queries and multiline semantics
+- Related workstreams (non-normative):
+  - `docs/workstreams/text-line-breaking-v1.md` (wrap quality + conformance fixtures)
+  - `docs/workstreams/text-layout-integration-v1.md` (measurement/paint agreement hazards)
 
 ## Current state (as of 2026-02-19)
 
@@ -57,6 +60,12 @@ Known gaps:
 - I3: Measurement and paint agree on wrap width for any resolved definite width.
 - I4: Geometry queries remain valid (caret/hit-test/selection rects) after wrap strategy changes.
 
+## Authoring guidance (ecosystem)
+
+- Prose/UI copy (default): use `TextWrap::Word` (UI kit: `text_prose`).
+- Prose with long tokens (URLs/paths): use `TextWrap::WordBreak` (UI kit: `text_prose_break_words` or builder `.break_words()`).
+- Editor/code-like surfaces: use `TextWrap::Grapheme` when mid-token wrapping is explicitly desired (UI kit: `text_code_wrap`).
+
 ## Work breakdown
 
 See:
@@ -71,4 +80,6 @@ See:
 - Intrinsic sizing integration: `crates/fret-ui/src/declarative/host_widget/measure.rs`
 - Authoring helpers: `ecosystem/fret-ui-kit/src/declarative/text.rs`,
   `ecosystem/fret-ui-kit/src/ui_builder.rs`
-- Diag repro (example): `tools/diag-scripts/ui-gallery-shadcn-tabs-demo-screenshot.json`
+- Diag repro (examples):
+  - `tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json`
+  - `tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json`

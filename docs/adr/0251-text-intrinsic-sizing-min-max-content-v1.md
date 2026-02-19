@@ -106,9 +106,17 @@ Recommended architecture:
    - Should we adopt a GPUI-like “word character” set for candidates (e.g. treating `_`/`-`/`.` as
      token characters), or stick to a whitespace-only split for v1?
    - How should CJK punctuation participate?
+   - Should code/editor surfaces eventually get a distinct policy (e.g. “code token wrap”) rather
+     than reusing `Word` vs `WordBreak`?
 
 2) Cross-backend consistency:
    - Ensure wasm and native produce the same intrinsic widths for the same inputs.
+
+## References
+
+- Zed GPUI wrap candidates and token character policy:
+  - `repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs` (`LineWrapper::wrap_line`, `LineWrapper::is_word_char`)
+  - `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs` (`LineLayout::compute_wrap_boundaries`)
 
 ## Consequences
 
@@ -116,4 +124,3 @@ Recommended architecture:
 - Long-token behavior becomes explicit:
   - keep `Word` for typical UI/prose,
   - opt into `WordBreak`/`Grapheme` when long tokens must wrap.
-
