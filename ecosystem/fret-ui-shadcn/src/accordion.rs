@@ -1110,7 +1110,8 @@ impl AccordionTrigger {
                                             .text_size_px(text_style.size)
                                             .font_weight(text_style.weight)
                                             .text_color(ColorRef::Color(fg))
-                                            .nowrap();
+                                            .wrap(TextWrap::Word)
+                                            .overflow(TextOverflow::Clip);
                                         if let Some(line_height) = text_style.line_height {
                                             label_text = label_text.line_height_px(line_height);
                                         }
