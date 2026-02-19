@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret_ui::element::ContainerProps;
 
 #[derive(Default)]
 struct UiKitListTortureModels {
@@ -8,7 +9,7 @@ struct UiKitListTortureModels {
 
 pub(in crate::ui) fn preview_ui_kit_list_torture(
     cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
+    theme: &Theme,
 ) -> Vec<AnyElement> {
     let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());
     let selection = match selection {
@@ -87,6 +88,23 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
             .role(fret_core::SemanticsRole::List)
             .test_id("ui-gallery-ui-kit-list-root"),
     );
+
+    // Bound the list height so virtualization exercises a realistic viewport window.
+    let list = cx
+        .container(
+            ContainerProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .h_px(MetricRef::Px(Px(520.0))),
+                ),
+                ..Default::default()
+            },
+            |_cx| vec![list],
+        )
+        .test_id("ui-gallery-ui-kit-list-viewport");
 
     let root = stack::vstack(
         cx,
