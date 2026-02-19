@@ -4622,6 +4622,8 @@ See: `docs/tracy.md`.\n";
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
             let is_ui_gallery_text_ime_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-ime";
+            let is_ui_gallery_text_wrap_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-wrap";
             let is_ui_gallery_combobox_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-combobox";
             let is_ui_gallery_select_suite =
@@ -4828,6 +4830,19 @@ See: `docs/tracy.md`.\n";
                 } else if is_ui_gallery_text_ime_suite {
                     (
                         ui_gallery_text_ime_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_text_wrap_suite {
+                    // Text wrap/baseline gates rely on screenshots and should run with deterministic
+                    // bundled fonts on desktop.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
+
+                    (
+                        ui_gallery_text_wrap_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -12115,6 +12130,14 @@ fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
 
 fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json"]
+}
+
+fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 3] {
+    [
+        "tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
+        "tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json",
+        "tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json",
+    ]
 }
 
 fn ui_gallery_combobox_suite_scripts() -> [&'static str; 9] {
