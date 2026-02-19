@@ -45,6 +45,7 @@ Workstream overview:
   - [x] Material3 MenuItem: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-menu-item-chrome-fill.json`
   - [x] Material3 ListItem: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-list-item-chrome-fill.json`
   - [x] Material3 Tabs item: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-tabs-item-chrome-fill.json`
+  - [x] Material3 Select item: chrome fills pressable: `tools/diag-scripts/ui-gallery-material3-select-item-chrome-fill.json`
   - [x] Tabs triggers with `flex-1`: `tools/diag-scripts/ui-gallery-control-chrome-tabs-flex1-trigger-fill.json`
   - [x] ToggleGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-toggle-group-flex1-item-fill.json`
   - [x] ButtonGroup with stretched items: `tools/diag-scripts/ui-gallery-control-chrome-button-group-flex1-item-fill.json`
@@ -86,6 +87,7 @@ Legend:
 | `ecosystem/fret-ui-material3/src/menu.rs` | Menu items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-menu-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
 | `ecosystem/fret-ui-material3/src/list.rs` | List items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-list-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
 | `ecosystem/fret-ui-material3/src/tabs.rs` | Tabs items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-tabs-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
+| `ecosystem/fret-ui-material3/src/select.rs` | Select trigger + items | `ManualFill` | Yes | Yes | OK | Optional: derive chrome test ids consistently | `tools/diag-scripts/ui-gallery-material3-select-item-chrome-fill.json` | Adds `<id>.chrome` semantics to support diag gates. |
 | `ecosystem/fret-ui-material3/src/button.rs` | Material button | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret-ui-material3/src/card.rs` | Material card | `ControlChrome` | Future (if layout becomes patchable) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
 | `ecosystem/fret/src/workspace_menu.rs` | Menubar trigger | `ControlChrome` | Possible (caller-dependent) | Yes | OK | N/A | Uses helper | Migrated to `control_chrome_pressable_with_id_props`. |
