@@ -1567,8 +1567,7 @@ impl Tabs {
                                                     // host widget to apply CSS-like "half-leading" centering rather
                                                     // than centering by the prepared glyph bounds, which can read as
                                                     // slightly bottom-heavy in GPU-first layout.
-                                                    text =
-                                                        text.line_height_px(line_height).h_px(line_height);
+                                                    text = text.fixed_line_box_px(line_height);
                                                 }
                                                 if let Some(letter_spacing_em) =
                                                     style.letter_spacing_em
