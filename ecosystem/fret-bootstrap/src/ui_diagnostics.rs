@@ -5021,9 +5021,20 @@ impl UiDiagnosticsService {
                                 .and_then(|rt| rt.diagnostics_snapshot(window))
                                 .and_then(|s| s.focused_element_node)
                                 .map(key_to_u64);
-                            let focus_matches = match (state.expected_node_id, focused_node_id) {
-                                (Some(expected), Some(focused)) => expected == focused,
-                                // If we cannot observe focus, prefer making progress rather than timing out.
+                            let focus_matches = match (
+                                state.expected_node_id,
+                                focused_node_id,
+                                element_runtime
+                                    .and_then(|rt| rt.diagnostics_snapshot(window))
+                                    .is_some(),
+                            ) {
+                                (Some(expected), Some(focused), _) => expected == focused,
+                                // When we have an expected node id and diagnostics are available,
+                                // treat missing focus as a mismatch to avoid injecting into the
+                                // wrong widget.
+                                (Some(_), None, true) => false,
+                                // If we cannot observe focus (diagnostics unavailable), prefer
+                                // making progress rather than timing out.
                                 _ => true,
                             };
 
@@ -5050,33 +5061,13 @@ impl UiDiagnosticsService {
                                 active.last_injected_step =
                                     Some(step_index.min(u32::MAX as usize) as u32);
                                 if clear_before_type {
-                                    fn command_modifier() -> UiKeyModifiersV1 {
-                                        let mut modifiers = UiKeyModifiersV1::default();
-                                        if cfg!(target_os = "macos") {
-                                            modifiers.meta = true;
-                                        } else {
-                                            modifiers.ctrl = true;
-                                        }
-                                        modifiers
-                                    }
-
-                                    // Avoid relying on platform-specific shortcuts in JSON scripts:
+                                    // Prefer a platform-independent selection API over shortcuts:
                                     // suites commonly reuse a single launch, and input fields may
-                                    // retain previous values across runs. Prefer a bounded clear
-                                    // sweep that works even if select-all is not handled by the
-                                    // focused widget.
-                                    output.events.extend(press_key_events(
-                                        KeyCode::KeyA,
-                                        command_modifier(),
-                                        false,
-                                    ));
-                                    for _ in 0..64 {
-                                        output.events.extend(press_key_events(
-                                            KeyCode::Backspace,
-                                            UiKeyModifiersV1::default(),
-                                            false,
-                                        ));
-                                    }
+                                    // retain previous values across runs.
+                                    output.events.push(Event::SetTextSelection {
+                                        anchor: 0,
+                                        focus: u32::MAX,
+                                    });
                                 }
                                 output.events.push(Event::TextInput(text));
                                 active.v2_step_state = None;
