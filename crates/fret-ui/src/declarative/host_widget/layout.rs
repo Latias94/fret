@@ -26,17 +26,19 @@ impl ElementHostWidget {
             );
         }
 
-        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
-            for &(model, invalidation) in items {
-                (cx.observe_model)(model, invalidation);
-            }
-        });
-
-        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
-            for &(global, invalidation) in items {
-                (cx.observe_global)(global, invalidation);
-            }
-        });
+        crate::elements::with_observed_deps_for_element(
+            cx.app,
+            window,
+            self.element,
+            |models, globals| {
+                for &(model, invalidation) in models {
+                    (cx.observe_model)(model, invalidation);
+                }
+                for &(global, invalidation) in globals {
+                    (cx.observe_global)(global, invalidation);
+                }
+            },
+        );
 
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return Size::new(Px(0.0), Px(0.0));

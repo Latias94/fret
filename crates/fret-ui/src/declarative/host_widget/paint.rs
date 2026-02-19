@@ -30,29 +30,49 @@ impl ElementHostWidget {
             return;
         };
 
-        let models_started = cx.tree.debug_enabled().then(Instant::now);
-        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
-            for &(model, invalidation) in items {
-                (cx.observe_model)(model, invalidation);
-            }
-            if let Some(started) = models_started.as_ref() {
-                cx.tree
-                    .debug_record_paint_host_widget_observed_models(started.elapsed(), items.len());
-            }
-        });
+        let debug_enabled = cx.tree.debug_enabled();
+        let total_started = debug_enabled.then(Instant::now);
+        let (models_len, models_loop, globals_len, globals_loop) =
+            crate::elements::with_observed_deps_for_element(
+                cx.app,
+                window,
+                self.element,
+                |models, globals| {
+                    let models_started = debug_enabled.then(Instant::now);
+                    for &(model, invalidation) in models {
+                        (cx.observe_model)(model, invalidation);
+                    }
+                    let models_loop = models_started.map(|started| started.elapsed());
 
-        let globals_started = cx.tree.debug_enabled().then(Instant::now);
-        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
-            for &(global, invalidation) in items {
-                (cx.observe_global)(global, invalidation);
-            }
-            if let Some(started) = globals_started.as_ref() {
-                cx.tree.debug_record_paint_host_widget_observed_globals(
-                    started.elapsed(),
-                    items.len(),
-                );
-            }
-        });
+                    let globals_started = debug_enabled.then(Instant::now);
+                    for &(global, invalidation) in globals {
+                        (cx.observe_global)(global, invalidation);
+                    }
+                    let globals_loop = globals_started.map(|started| started.elapsed());
+
+                    (models.len(), models_loop, globals.len(), globals_loop)
+                },
+            );
+
+        if debug_enabled {
+            let total_elapsed = total_started.map(|started| started.elapsed());
+            let models_loop = models_loop.unwrap_or_default();
+            let globals_loop = globals_loop.unwrap_or_default();
+            let overhead = total_elapsed
+                .unwrap_or_default()
+                .saturating_sub(models_loop.saturating_add(globals_loop));
+            let overhead_models = overhead / 2;
+            let overhead_globals = overhead.saturating_sub(overhead_models);
+
+            cx.tree.debug_record_paint_host_widget_observed_models(
+                models_loop.saturating_add(overhead_models),
+                models_len,
+            );
+            cx.tree.debug_record_paint_host_widget_observed_globals(
+                globals_loop.saturating_add(overhead_globals),
+                globals_len,
+            );
+        }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
         let instance = self.instance(cx.app, window, cx.node);

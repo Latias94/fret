@@ -218,6 +218,36 @@ Evidence (single-script perf run, repeat=3):
 This suggests the “primary” macOS optimization target for resize-stress is paint-side traversal/caching rather than
 layout solving.
 
+### Finding (2026-02-19): reduce ElementRuntime lease overhead for observed deps
+
+`ElementHostWidget` consumes per-element “observed deps” (models + globals) during layout/paint/measure to drive
+invalidation propagation.
+
+Previously, reading observed models and observed globals used two separate `ElementRuntime` leases per widget call
+(one via `with_global_mut_untracked(ElementRuntime::new, ...)`, and one via `with_window_state(...)`).
+
+On the VirtualList torture script this showed up as measurable, steady-state overhead across both layout and paint.
+
+Change:
+
+- Add `with_observed_deps_for_element(...)` to read `(models, globals)` in a single `ElementRuntime` lease.
+- Update `ElementHostWidget::{layout_impl, paint_impl, measure_impl}` to consume deps via this combined accessor.
+- Avoid cloning the full `ElementRecord` when resolving the current instance (clone the instance only).
+
+Evidence (macOS M4, release, repeat=3; same suite prewarm + prelude + view-cache env):
+
+- Before: `target/fret-diag-perf-local/20260219-virtual-list-torture-steady-v1/1771469957738-ui-gallery-virtual-list-bottom-steady/bundle.json`
+- After: `target/fret-diag-perf-local/20260219-observed-deps-opt-v1/1771472979963-ui-gallery-virtual-list-bottom-steady/bundle.json`
+- Diff summary (`fretboard diag stats --diff ... --sort time --top 15`):
+  - `max.total_time_us`: `6670us -> 6147us` (`-7.8%`)
+  - `max.paint_time_us`: `2976us -> 2719us` (`-8.6%`)
+  - `max.layout_time_us`: `3639us -> 3421us` (`-6.0%`)
+
+Notes:
+
+- This change does not materially improve `ui-gallery-window-resize-stress-steady` on macOS, which is consistent
+  with the resize-stress worst frames being dominated by other paint/layout root work rather than deps lookup.
+
 ### Finding (2026-02-19): Batch visual-bounds recording to avoid per-node global borrows
 
 The paint pass records per-element “visual bounds” (post-`render_transform` AABB, ADR 0082) via

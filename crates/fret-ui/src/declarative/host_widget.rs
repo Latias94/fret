@@ -1,5 +1,5 @@
 use super::frame::ElementInstance;
-use super::frame::element_record_for_node;
+use super::frame::with_element_record_for_node;
 use super::prelude::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
 use fret_runtime::CommandId;
@@ -198,7 +198,7 @@ impl ElementHostWidget {
         window: AppWindowId,
         node: NodeId,
     ) -> Option<ElementInstance> {
-        element_record_for_node(app, window, node).map(|r| r.instance)
+        with_element_record_for_node(app, window, node, |r| r.instance.clone())
     }
 }
 
