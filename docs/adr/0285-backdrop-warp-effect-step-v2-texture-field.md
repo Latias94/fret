@@ -1,7 +1,10 @@
-# ADR 0285: Backdrop Warp Effect Step v2 (Texture-Driven Warp Field)
+---
+title: Backdrop Warp Effect Step v2 (Texture-Driven Warp Field)
+status: Accepted
+date: 2026-02-19
+---
 
-- Status: Draft
-- Date: 2026-02-18
+# ADR 0285: Backdrop Warp Effect Step v2 (Texture-Driven Warp Field)
 
 ## Context
 
@@ -89,6 +92,11 @@ Pros:
 - Ecosystem authors can build asset-driven glass recipes without leaking backend handles.
 - The renderer can keep costs bounded (scissor, budgets, deterministic degradation).
 - Conformance + perf can be gated on a stable mechanism surface.
+- Keeping `BackdropWarpV1` alongside v2 remains intentional:
+  - v1 provides a portable “no-assets required” baseline and a deterministic fallback when the image
+    warp field is missing/unavailable,
+  - v2 provides the higher-fidelity “real liquid glass” authoring surface (image-driven field)
+    without changing the fallback story.
 
 Cons:
 
