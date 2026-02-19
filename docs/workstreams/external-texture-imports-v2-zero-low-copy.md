@@ -71,9 +71,12 @@ It builds on v1’s contract-path closure:
     - `ImportedViewportRenderTarget::push_native_external_import_update_with_fallbacks(...)`
 - Windows MF → DX12 GPU-copy into a shared allocation is wired end-to-end (capability-gated),
   and has steady-state perf + correctness scripts/baselines.
+- A runner-side `NativeExternalTextureFrame` adapter exists for Windows MF and is exercised by the MF demo:
+  - `crates/fret-launch/src/runner/windows_mf_video.rs` (`MfVideoNativeExternalImporter`)
+  - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (MF modes route through `push_native_external_import_update`)
 - Next up (native uplift, practical):
   - Tighten capability gating and failure modes for “real producer → shared allocation” paths so the
-    demo code stays thin and drift-free (Windows first; then consider macOS/iOS AVF and Android).
+  demo code stays thin and drift-free (Windows first; then consider macOS/iOS AVF and Android).
 
 ## Recommended execution order
 

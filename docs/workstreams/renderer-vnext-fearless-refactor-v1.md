@@ -60,6 +60,8 @@ Remaining (next):
 - External texture imports v2 (native): land one real native external frame source behind a deterministic
   fallback chain (capability-gated; web remains copy-path baseline).
   - Tracking: `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+  - Status (2026-02-19): Windows MF adapter landed; remaining uplift is additional platform sources
+    (AVFoundation / MediaCodec) behind the same deterministic fallback shape.
 - Evidence-driven (optional): add bounded WebGPU material pipeline variants only if perf evidence warrants it:
   - Tracking: `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (`REN-VNEXT-webgpu-004`)
 

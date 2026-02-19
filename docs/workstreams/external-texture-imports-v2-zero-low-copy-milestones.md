@@ -24,6 +24,17 @@ Exit criteria:
 - A contributor can answer “what happens on wasm/mobile when strategy X is requested” without
   reading code.
 
+## 2026-02-19 — Windows MF native adapter closure (EXTV2-native-100)
+
+- Scope:
+  - Provide a real platform/decoder-backed `NativeExternalTextureFrame` adapter implementation
+    (Windows MF) that produces the best available path deterministically (DX12 GPU copy when
+    requested/available, otherwise CPU upload).
+  - Exercise the adapter in the MF demo so the surface stays drift-free.
+- Evidence anchors:
+  - `crates/fret-launch/src/runner/windows_mf_video.rs` (`MfVideoNativeExternalImporter`)
+  - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (MF modes route through `push_native_external_import_update`)
+
 ## M1 — Metadata closure (portable)
 
 Deliverables:

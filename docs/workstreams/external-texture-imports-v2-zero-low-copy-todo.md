@@ -142,7 +142,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - `FRET_WGPU_BACKEND=dx12 FRET_EXTV2_MF_DX12_GPU_COPY=1 FRET_MF_VIDEO_PATH=<dir_or_file> ... external_video_imports_mf_demo`
     - Run: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json` via `fret-diag-export` and confirm screenshots show decoded video frames.
 
-- [~] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
+- [x] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic
       fallback to GPU copy / CPU upload and observable attribution.
   - Evidence anchors:
@@ -153,14 +153,11 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `ImportedViewportRenderTarget::push_update_with_deterministic_fallback(...)`
       - `ImportedViewportRenderTarget::push_update_with_fallbacks(...)`
   - Remaining:
-    - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation that can
-      produce the best available path on capable backends (and deterministically degrade otherwise):
-      - Prefer shared allocation where external-handle import is blocked (producer writes into renderer-owned texture).
-      - Use true external-handle import only when upstream exposes a supported mechanism.
-    - Investigate native `ExternalZeroCopy` feasibility on wgpu 28:
-      - likely requires a supported way to wrap/import platform GPU textures (e.g. D3D12/Metal/IOSurface)
-        into a `wgpu::Texture`/`TextureView` safely; treat as capability-gated and potentially blocked
-        until upstream exposes the necessary APIs.
+    - Land a real platform/decoder-backed `NativeExternalTextureFrame` implementation:
+      - `crates/fret-launch/src/runner/windows_mf_video.rs` (`MfVideoNativeExternalImporter`)
+      - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (MF modes route through `push_native_external_import_update`)
+    - Native `ExternalZeroCopy` remains blocked on wgpu 28. Track under `EXTV2-native-102` and only revisit
+      behind explicit capability gates once upstream exposes supported texture import APIs.
 
 - [x] EXTV2-native-102 M2B (time-box): feasibility spike for a true `ExternalZeroCopy` path on
       native, behind explicit capabilities (e.g. Windows D3D12-only import).

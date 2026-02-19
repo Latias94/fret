@@ -11,6 +11,7 @@ use fret_render::{
 };
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -46,7 +47,12 @@ use windows::Win32::Media::MediaFoundation::{IMFDXGIBuffer, IMFDXGIDeviceManager
 use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx};
 use windows::core::{BOOL, HSTRING, Interface as _};
 
-use super::SharedAllocationExportError;
+use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalImportedFrame};
+use super::{NativeExternalTextureFrame, SharedAllocationExportError};
+use fret_render::{
+    RenderTargetIngestStrategy, RenderTargetMetadata, RendererCapabilities, WgpuContext,
+};
+
 use super::dx12::Dx12SharedAllocationWriteGuard;
 
 const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi", "mkv", "webm"];
@@ -1010,6 +1016,281 @@ impl Dx12GpuCopySession {
         Ok(Dx12GpuCopyTick::Copied {
             size: self.interop.size(),
             color_encoding: self.interop.color_encoding(),
+        })
+    }
+}
+
+#[derive(Clone)]
+pub struct MfVideoNativeExternalImporter {
+    inner: Arc<Mutex<MfVideoNativeExternalState>>,
+}
+
+struct MfVideoNativeExternalState {
+    path: String,
+    prefer_dx12_gpu_copy: bool,
+    cpu_reader: Option<MfVideoReader>,
+    dx12_session: Option<Dx12GpuCopySession>,
+    texture: Option<wgpu::Texture>,
+    texture_size: (u32, u32),
+}
+
+struct MfVideoNativeExternalFrame {
+    inner: Arc<Mutex<MfVideoNativeExternalState>>,
+}
+
+struct MfVideoNativeExternalKeepalive {
+    _inner: Arc<Mutex<MfVideoNativeExternalState>>,
+}
+
+impl MfVideoNativeExternalImporter {
+    pub fn new(path: impl Into<String>, prefer_dx12_gpu_copy: bool) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(MfVideoNativeExternalState {
+                path: path.into(),
+                prefer_dx12_gpu_copy,
+                cpu_reader: None,
+                dx12_session: None,
+                texture: None,
+                texture_size: (0, 0),
+            })),
+        }
+    }
+
+    pub fn path(&self) -> String {
+        self.inner
+            .lock()
+            .ok()
+            .map(|v| v.path.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn prefer_dx12_gpu_copy(&self) -> bool {
+        self.inner
+            .lock()
+            .ok()
+            .map(|v| v.prefer_dx12_gpu_copy)
+            .unwrap_or(false)
+    }
+
+    pub fn last_size(&self) -> Option<(u32, u32)> {
+        self.inner.lock().ok().and_then(|v| {
+            if v.texture.is_some() && v.texture_size.0 > 0 && v.texture_size.1 > 0 {
+                Some(v.texture_size)
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn frame(&self) -> Box<dyn NativeExternalTextureFrame> {
+        Box::new(MfVideoNativeExternalFrame {
+            inner: self.inner.clone(),
+        })
+    }
+}
+
+impl MfVideoNativeExternalState {
+    fn ensure_bgra_shared_texture(ctx: &WgpuContext, size: (u32, u32)) -> wgpu::Texture {
+        let (w, h) = size;
+        let view_formats = [wgpu::TextureFormat::Bgra8UnormSrgb];
+        ctx.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("mf video native external texture (bgra)"),
+            size: wgpu::Extent3d {
+                width: w.max(1),
+                height: h.max(1),
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Bgra8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST,
+            view_formats: &view_formats,
+        })
+    }
+
+    fn view_srgb(texture: &wgpu::Texture) -> wgpu::TextureView {
+        texture.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(wgpu::TextureFormat::Bgra8UnormSrgb),
+            ..Default::default()
+        })
+    }
+}
+
+impl NativeExternalTextureFrame for MfVideoNativeExternalFrame {
+    fn import(
+        self: Box<Self>,
+        ctx: &WgpuContext,
+        _caps: &RendererCapabilities,
+    ) -> Result<NativeExternalImportedFrame, NativeExternalImportError> {
+        let keepalive = EngineFrameKeepalive::new(MfVideoNativeExternalKeepalive {
+            _inner: self.inner.clone(),
+        });
+
+        let mut guard = self
+            .inner
+            .lock()
+            .map_err(|_| NativeExternalImportError::Failed {
+                reason: "mf_native_external_state_lock_poisoned",
+            })?;
+
+        let path = guard.path.trim().to_string();
+        if path.is_empty() {
+            return Err(NativeExternalImportError::Failed {
+                reason: "mf_video_path_empty",
+            });
+        }
+
+        let mut metadata = RenderTargetMetadata::default();
+        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::ExternalZeroCopy;
+
+        if guard.prefer_dx12_gpu_copy {
+            if guard.texture.is_none() {
+                let texture = MfVideoNativeExternalState::ensure_bgra_shared_texture(ctx, (1, 1));
+                guard.texture = Some(texture);
+                guard.texture_size = (1, 1);
+            }
+
+            let mut ensure_session = || -> Result<(), Dx12GpuCopySessionError> {
+                let texture = guard.texture.as_ref().expect("texture exists");
+                if guard.dx12_session.is_none() {
+                    guard.dx12_session = Some(Dx12GpuCopySession::new(ctx, texture, &path)?);
+                }
+                Ok(())
+            };
+
+            match ensure_session() {
+                Ok(()) => {}
+                Err(Dx12GpuCopySessionError::SharedAllocation(
+                    SharedAllocationExportError::UnsupportedBackend,
+                )) => {
+                    // Deterministic downgrade: DX12-only path unavailable.
+                    guard.prefer_dx12_gpu_copy = false;
+                }
+                Err(_) => {
+                    // Deterministic downgrade: if the fast path cannot be established, fall back to CPU upload.
+                    guard.prefer_dx12_gpu_copy = false;
+                    guard.dx12_session = None;
+                }
+            }
+        }
+
+        if guard.prefer_dx12_gpu_copy {
+            let session_size = guard
+                .dx12_session
+                .as_ref()
+                .map(|s| s.size())
+                .unwrap_or((1, 1));
+
+            if session_size != guard.texture_size {
+                guard.texture = Some(MfVideoNativeExternalState::ensure_bgra_shared_texture(
+                    ctx,
+                    session_size,
+                ));
+                guard.texture_size = session_size;
+                let texture = guard.texture.as_ref().expect("texture allocated");
+                match Dx12GpuCopySession::new(ctx, texture, &path) {
+                    Ok(session) => {
+                        guard.dx12_session = Some(session);
+                    }
+                    Err(_) => {
+                        guard.prefer_dx12_gpu_copy = false;
+                        guard.dx12_session = None;
+                    }
+                }
+            }
+
+            if guard.prefer_dx12_gpu_copy {
+                let texture = guard.texture.as_ref().expect("texture exists").clone();
+                let tick = {
+                    let session = guard.dx12_session.as_mut().expect("session exists");
+                    session.tick(ctx, &texture)
+                };
+                match tick {
+                    Ok(Dx12GpuCopyTick::Copied {
+                        size,
+                        color_encoding,
+                    }) => {
+                        guard.texture_size = size;
+                        metadata.ingest_strategy = RenderTargetIngestStrategy::GpuCopy;
+                        metadata.color_encoding = color_encoding;
+
+                        let view = MfVideoNativeExternalState::view_srgb(&texture);
+                        return Ok(NativeExternalImportedFrame {
+                            view,
+                            size,
+                            metadata,
+                            keepalive,
+                        });
+                    }
+                    Ok(Dx12GpuCopyTick::EndOfStream) => {
+                        // Deterministic loop: recreate the session and try CPU upload on the next frame.
+                        guard.dx12_session = None;
+                        guard.prefer_dx12_gpu_copy = false;
+                    }
+                    Err(_) => {
+                        guard.dx12_session = None;
+                        guard.prefer_dx12_gpu_copy = false;
+                    }
+                }
+            }
+        }
+
+        if guard.cpu_reader.is_none() {
+            guard.cpu_reader = Some(MfVideoReader::new(path.clone()).map_err(|_| {
+                NativeExternalImportError::Failed {
+                    reason: "mf_reader_init_failed",
+                }
+            })?);
+        }
+        let reader = guard.cpu_reader.as_mut().expect("cpu reader exists");
+
+        let frame = match reader
+            .read_next()
+            .map_err(|_| NativeExternalImportError::Failed {
+                reason: "mf_reader_read_next_failed",
+            })? {
+            Some(v) => v,
+            None => {
+                reader.reset().ok();
+                reader
+                    .read_next()
+                    .map_err(|_| NativeExternalImportError::Failed {
+                        reason: "mf_reader_read_next_failed_after_reset",
+                    })?
+                    .ok_or(NativeExternalImportError::Failed {
+                        reason: "mf_reader_end_of_stream",
+                    })?
+            }
+        };
+
+        metadata.ingest_strategy = RenderTargetIngestStrategy::CpuUpload;
+        metadata.color_encoding = reader.color_encoding();
+
+        if guard.texture.is_none() || guard.texture_size != frame.size {
+            guard.texture = Some(MfVideoNativeExternalState::ensure_bgra_shared_texture(
+                ctx, frame.size,
+            ));
+            guard.texture_size = frame.size;
+        }
+        let texture = guard.texture.as_ref().expect("texture allocated");
+        fret_render::write_rgba8_texture_region(
+            &ctx.queue,
+            texture,
+            (0, 0),
+            frame.size,
+            frame.bytes_per_row,
+            &frame.bgra8,
+        );
+
+        let view = MfVideoNativeExternalState::view_srgb(texture);
+        Ok(NativeExternalImportedFrame {
+            view,
+            size: frame.size,
+            metadata,
+            keepalive,
         })
     }
 }
