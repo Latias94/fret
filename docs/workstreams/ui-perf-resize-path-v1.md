@@ -213,10 +213,34 @@ Evidence (single-script perf run, repeat=3):
 - `fretboard diag stats ... --sort time --top 1` (same bundle) reports:
   - worst frame total ≈ `8.9ms`
   - `layout.solve_us ≈ 1159us`
-  - `paint.elem_bounds_calls ≈ 2172` (dominant share of paint time)
+  - `paint.elem_bounds_calls ≈ 2172`
 
 This suggests the “primary” macOS optimization target for resize-stress is paint-side traversal/caching rather than
 layout solving.
+
+### Finding (2026-02-19): Batch visual-bounds recording to avoid per-node global borrows
+
+The paint pass records per-element “visual bounds” (post-`render_transform` AABB, ADR 0082) via
+`record_visual_bounds_for_element`. Previously this recorded into element runtime via a global borrow per node.
+
+Change:
+
+- Record `(element, visual_bounds)` into a `UiTree` scratch buffer during paint traversal.
+- Flush the buffer into `WindowElementState::cur_visual_bounds` once per `paint_all` call.
+
+This keeps the contract intact (visual bounds still recorded for all elements), but avoids per-node global access.
+
+Evidence (repeat=3, release, view-cache enabled):
+
+- Before: `target/fret-diag/1771410780171-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `paint.elem_bounds_us ≈ 270us` for `paint.elem_bounds_calls ≈ 2172`
+- After: `target/fret-diag-perf-local/20260219-window-resize-stress-steady/1771465579060-ui-gallery-window-resize-stress-steady/bundle.json`
+  - `paint.elem_bounds_us ≈ 59us` for `paint.elem_bounds_calls ≈ 2170`
+
+Implementation anchors:
+
+- `crates/fret-ui/src/tree/paint/node.rs` (record into scratch buffer)
+- `crates/fret-ui/src/tree/paint/entry.rs` (flush buffer once per paint pass)
 
 ### Note (2026-02-18): VirtualList offset/viewport state should reflect the Final pass only
 

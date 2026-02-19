@@ -59,12 +59,16 @@ impl<H: UiHost> UiTree<H> {
         };
         let _span_guard = span.enter();
 
-        if let Some(window) = self.window
+        if self.window.is_some()
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
             let (_, record_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                let visual = rect_aabb_transformed(bounds, current_transform);
-                crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+                let visual = if current_transform == Transform2D::IDENTITY {
+                    bounds
+                } else {
+                    rect_aabb_transformed(bounds, current_transform)
+                };
+                self.scratch_visual_bounds_records.push((element, visual));
             });
             if let Some(record_elapsed) = record_elapsed {
                 self.debug_stats.paint_record_visual_bounds_time = self
@@ -146,7 +150,11 @@ impl<H: UiHost> UiTree<H> {
                         crate::elements::with_window_state(app, window, |st| {
                             st.last_visual_bounds(element)
                         }) {
-                    let current_visual = rect_aabb_transformed(bounds, current_transform);
+                    let current_visual = if current_transform == Transform2D::IDENTITY {
+                        bounds
+                    } else {
+                        rect_aabb_transformed(bounds, current_transform)
+                    };
                     let size_dx = (current_visual.size.width.0 - prev_visual.size.width.0).abs();
                     let size_dy = (current_visual.size.height.0 - prev_visual.size.height.0).abs();
                     if size_dx <= 0.01 && size_dy <= 0.01 {

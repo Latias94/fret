@@ -490,12 +490,13 @@ fn virtual_list_render_window_range_tracks_viewport_resize() {
 
     let list_element = crate::declarative::with_window_frame(&mut app, window, |window_frame| {
         let window_frame = window_frame?;
-        window_frame.instances.iter().find_map(|(_node, record)| {
-            match &record.instance {
+        window_frame
+            .instances
+            .iter()
+            .find_map(|(_node, record)| match &record.instance {
                 crate::declarative::frame::ElementInstance::VirtualList(_) => Some(record.element),
                 _ => None,
-            }
-        })
+            })
     })
     .expect("expected a VirtualList element in the window frame");
 
@@ -527,7 +528,10 @@ fn virtual_list_render_window_range_tracks_viewport_resize() {
     )
     .expect("expected a visible range");
     assert_eq!(
-        (render_window_range.start_index, render_window_range.end_index),
+        (
+            render_window_range.start_index,
+            render_window_range.end_index
+        ),
         (visible.start_index, visible.end_index),
         "expected render_window_range to match the resized viewport's visible span"
     );

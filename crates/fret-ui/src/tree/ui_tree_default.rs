@@ -34,6 +34,7 @@ impl<H: UiHost> Default for UiTree<H> {
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
             scratch_element_nodes: Vec::new(),
+            scratch_visual_bounds_records: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,

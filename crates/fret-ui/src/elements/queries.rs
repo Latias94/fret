@@ -100,6 +100,8 @@ pub fn visual_bounds_for_element<H: UiHost>(
     with_window_state(app, window, |st| {
         st.last_visual_bounds(element)
             .or_else(|| st.current_visual_bounds(element))
+            .or_else(|| st.last_bounds(element))
+            .or_else(|| st.current_bounds(element))
     })
 }
 

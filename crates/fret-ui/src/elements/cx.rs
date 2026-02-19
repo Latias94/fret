@@ -255,7 +255,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
     /// without mixing layout transforms into the layout solver.
     pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
-        self.window_state.last_visual_bounds(element)
+        self.window_state
+            .last_visual_bounds(element)
+            .or_else(|| self.window_state.last_bounds(element))
     }
 
     /// Returns the last recorded root bounds for the element's root, if available.

@@ -212,9 +212,7 @@ fn snap_paint(p: Paint) -> SnapColor {
         Paint::LinearGradient(_)
         | Paint::RadialGradient(_)
         | Paint::SweepGradient(_)
-        | Paint::Material { .. } => {
-            snap_color(Color::TRANSPARENT)
-        }
+        | Paint::Material { .. } => snap_color(Color::TRANSPARENT),
     }
 }
 

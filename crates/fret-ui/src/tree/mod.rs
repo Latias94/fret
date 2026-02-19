@@ -213,6 +213,7 @@ pub struct UiTree<H: UiHost> {
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
     scratch_element_nodes: Vec<(GlobalElementId, NodeId)>,
+    scratch_visual_bounds_records: Vec<(GlobalElementId, Rect)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,

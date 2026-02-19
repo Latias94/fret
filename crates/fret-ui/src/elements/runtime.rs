@@ -1722,6 +1722,12 @@ impl WindowElementState {
                     .get(&id)
                     .copied()
                     .or_else(|| self.cur_visual_bounds.get(&id).copied())
+                    .or_else(|| {
+                        self.prev_bounds
+                            .get(&id)
+                            .copied()
+                            .or_else(|| self.cur_bounds.get(&id).copied())
+                    })
             })
         };
         let node_for = |element: Option<GlobalElementId>| {
