@@ -6,7 +6,7 @@ Start: 2026-02-19
 ## M0 — Spec + regression map (1–2 days)
 
 - [x] Land ADR 0251 scope and semantics.
-- [ ] Accept tokenization v1 rules for `TextWrap::Word` unbreakable segments.
+- [x] Accept v1 segmentation rules for `TextWrap::Word` unbreakable segments (Parley/UAX#14).
 - [ ] Identify the top 5 UI Gallery pages affected by shrink-wrap + wrap (repros + expected).
 - [x] Add/confirm at least 1 deterministic gate:
   - a unit test for intrinsic widths (preferred), and/or

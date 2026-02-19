@@ -1,6 +1,6 @@
 # ADR 0251: Text Intrinsic Sizing (min/max-content) Semantics (v1)
 
-Status: Proposed
+Status: Accepted
 Date: 2026-02-19
 
 ## Context
@@ -61,9 +61,11 @@ Semantics by wrap mode:
 
 - `TextWrap::Word`
   - `max_content_width = single-line width`
-  - `min_content_width = width(longest unbreakable token)`
-  - Token definition (v1): split on Unicode whitespace and explicit newlines; punctuation policy is
-    backend-defined but must be deterministic and documented. (See Open Questions.)
+  - `min_content_width = width(longest unbreakable segment)`
+  - Segment definition (v1): the segments induced by Parley’s line-breaking opportunities (UAX#14)
+    under our `Word` mapping (`OverflowWrap::Normal`, no emergency mid-token breaks). In other
+    words, `min_content_width` is the maximum visual line width produced when wrapping the
+    paragraph under a near-zero wrap width with `TextWrap::Word`.
   - Rationale: word-wrapped text must not report near-zero min-content, or shrink-wrapped parents
     will measure a pathological width and cause per-character wrapping.
 
@@ -102,12 +104,9 @@ Recommended architecture:
 
 ## Open Questions
 
-1) Tokenization policy for `TextWrap::Word`:
-   - Should we adopt a GPUI-like “word character” set for candidates (e.g. treating `_`/`-`/`.` as
-     token characters), or stick to a whitespace-only split for v1?
-   - How should CJK punctuation participate?
+1) Code/editor authoring policy:
    - Should code/editor surfaces eventually get a distinct policy (e.g. “code token wrap”) rather
-     than reusing `Word` vs `WordBreak`?
+     than reusing `Word` vs `WordBreak` vs `Grapheme`?
 
 2) Cross-backend consistency:
    - Ensure wasm and native produce the same intrinsic widths for the same inputs.

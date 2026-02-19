@@ -16,10 +16,9 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 
 ## Intrinsic sizing implementation
 
-- [ ] Decide v1 tokenization for “longest token”:
-  - [ ] whitespace-only split, or
-  - [ ] GPUI-like `is_word_char` candidate set, or
-  - [ ] hybrid (whitespace split with extra token characters).
+- [x] Decide v1 segmentation for `TextWrap::Word` min-content:
+  - Use Parley/UAX#14 line-breaking opportunities with `OverflowWrap::Normal` (no emergency mid-token breaks).
+  - Do not introduce a custom GPUI-like `is_word_char` set in v1; use `WordBreak`/`Grapheme` explicitly when needed.
 - [ ] Add renderer measurement API surface for intrinsic widths (internal-first):
   - [ ] `max_content_width`
   - [ ] `min_content_width` (wrap-dependent)
