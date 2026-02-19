@@ -68,6 +68,31 @@ Known gaps:
 - Markdown/document surfaces: default to `TextWrap::WordBreak` for paragraphs/headings to avoid long-token overflow
   (e.g. `ecosystem/fret-markdown`).
 
+## Layout constraints (required for predictable wrap)
+
+Wrap policy is only meaningful when the text widget is measured with a **definite** width. In practice:
+
+- Ensure some ancestor resolves a width constraint (`w_full`, `max_w`, explicit px width, etc.).
+- In flex layouts, ensure the *flex item that contains text* opts into shrinking below min-content:
+  - set `min_w_0()` on the text container (the equivalent of CSS `min-width: 0`),
+  - otherwise long tokens can force overflow or cause surprising intrinsic sizing outcomes.
+
+If your page layout uses a shrink-wrapped column (`w_fit`) around prose/markdown, prefer switching it
+to `w_full().min_w_0()` and constraining it via an outer max-width instead.
+
+## API quick reference (ecosystem)
+
+Declarative helpers:
+
+- `fret_ui_kit::text_nowrap` / `text_truncate` (Tailwind `whitespace-nowrap` / `truncate` intent)
+- `fret_ui_kit::text_prose` / `text_prose_break_words`
+- `fret_ui_kit::text_code_wrap`
+
+Builder helpers:
+
+- `fret_ui_kit::UiBuilder<...>::nowrap()` / `.break_words()`
+- `fret_ui_kit::UiBuilder<...>::wrap(TextWrap::...)` for explicit policy
+
 ## Work breakdown
 
 See:

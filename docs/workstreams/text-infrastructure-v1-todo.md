@@ -6,7 +6,8 @@ This is a checklist-style tracker. It is **non-normative**.
 
 - [x] Span semantics v1: expose interactive spans as semantics metadata on the parent node (ADR 0283).
 - [ ] Span semantics v2: expose interactive spans as semantics children (role=link, name=text, bounds).
-- [ ] Span hit-test bounds v1: map span ranges → visual bounds for diagnostics/a11y (staged).
+- [x] Span hit-test bounds v1 (diagnostics): expose interactive span bounds for scripted clicks.
+- [ ] Span hit-test bounds v2 (a11y): map span bounds to semantics children / platform accessibility.
 - [ ] Span hover routing v1: stable “hovered span” state in `SelectableText`.
 - [x] Span activation invariants: add tests that span activation does not interfere with selection drag.
 - [ ] Mixed-direction staging: expand fixtures for RTL/mixed-direction link spans.
@@ -20,4 +21,5 @@ This is a checklist-style tracker. It is **non-normative**.
 ## Tooling / gates
 
 - [x] Add a UI Gallery screenshot gate that clearly shows link underline + long-token wrapping in the same frame.
-- [ ] Add a diagnostics gate for span semantics once span nodes exist (selector-based scripted click).
+- [x] Add a diagnostics gate for clickable spans (selector-based scripted click).
+- [ ] Add a diagnostics gate for span semantics once span nodes exist (role/name/bounds selectors).

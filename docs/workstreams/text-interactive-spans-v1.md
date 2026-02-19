@@ -81,7 +81,9 @@ Implemented (2026-02-19):
 Remaining v1 gaps:
 
 - Semantics/a11y: spans are not represented as per-span semantics nodes with bounds.
-- Diagnostics selectors: span-level targeting is not yet available (node-level only).
+- Diagnostics selectors: v1 supports span-level targeting for `SelectableText` via a span tag
+  (`click_selectable_text_span_stable`), but spans are still not addressable as independent
+  semantics nodes.
 
 ## Work breakdown
 
@@ -91,6 +93,9 @@ See: `docs/workstreams/text-interactive-spans-v1-todo.md`.
 
  - Markdown renderer (rich paragraphs + interactive link spans):
   - `ecosystem/fret-markdown/src/lib.rs`
+ - Diagnostics span click step (v2 scripts):
+  - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::ClickSelectableTextSpanStable`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Inline span semantics metadata (v1):
   - `docs/adr/0283-text-inline-spans-semantics-metadata-v1.md`
 - Text wrap semantics + intrinsic sizing:

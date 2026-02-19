@@ -37,12 +37,15 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 
 ## Ecosystem authoring ergonomics
 
-- [ ] Add UI kit helpers:
+- [x] Add UI kit helpers:
   - [x] `text_prose_break_words` (or equivalent) using `TextWrap::WordBreak`
   - [x] `text_code_wrap` using `TextWrap::Grapheme`
 - [ ] Update shadcn recipes where long-token body copy currently overflows horizontally.
 - [x] Update Markdown prose defaults to use `TextWrap::WordBreak` to avoid long-token overflow.
-- [ ] Add short authoring note to the docs page(s) that explain when to use each wrap mode.
+- [x] Add short authoring note to the docs page(s) that explain when to use each wrap mode.
+  - Implemented in `docs/workstreams/text-intrinsic-sizing-and-wrap-v1.md`.
+- [x] Document required layout constraints (definite width + `min_w_0`) to make wrap behavior predictable.
+  - Implemented in `docs/workstreams/text-intrinsic-sizing-and-wrap-v1.md`.
 
 ## Follow-ups (separate feature)
 

@@ -83,6 +83,26 @@ Not in v1 scope, but candidates for future milestones:
 - fine-grained punctuation rules beyond current staging gates,
 - better bidi staging for complex mixed-direction paragraphs.
 
+### Line box vertical alignment (baseline centering)
+
+In GPU-first layout it is easy to accidentally center text by *glyph bounds* (what the renderer sees)
+instead of by the *line box* (what UI authors expect from CSS-like systems). The visible failure mode
+is “bottom-heavy” centering in fixed-height controls (tabs, buttons, pills).
+
+When a `line_height` is configured, the intended baseline placement is the common “half-leading”
+model used by CSS and GPUI:
+
+- `padding_top = (line_height - ascent - descent) / 2`
+- `baseline_y = padding_top + ascent`
+
+Until we have a single mechanism-level knob that guarantees “line box centering” regardless of the
+allocated height, ecosystem components may opt into the fixed line box behavior by setting both:
+
+- `line_height_px(line_height)`, and
+- `h_px(line_height)`
+
+This forces the text widget to paint inside a stable line box and avoids per-component “nudge” hacks.
+
 ## Guidance: choosing a wrap mode
 
 - Use `TextWrap::Word` for UI labels/buttons/tabs (prevents mid-token breaks).
@@ -104,10 +124,16 @@ GPUI (as used by Zed) historically used a pragmatic wrapper:
 - prefer breaks at word boundaries,
 - emergency break inside a long token when required.
 
+GPUI’s fixed line box baseline placement uses a “half-leading” formula:
+
+- `padding_top = (line_height - ascent - descent) / 2`
+- `baseline_y = padding_top + ascent`
+
 Evidence anchors (repo snapshots under `repo-ref/`):
 
 - `repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs`
 - `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs`
+- `repo-ref/zed/crates/gpui/src/text_system/line.rs`
 
 In Fret v1 we prefer UAX#14 / Parley break opportunities for `Word`, and we keep explicit modes for
 mid-token breaking (`WordBreak` / `Grapheme`) to avoid embedding policy into mechanism code.
