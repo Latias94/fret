@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextWrap};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{AnyElement, ElementKind, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -224,7 +224,8 @@ impl AlertTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_weight(FontWeight::MEDIUM)
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }

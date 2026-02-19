@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
@@ -771,7 +771,8 @@ impl SheetTitle {
             .font_semibold()
             .letter_spacing_em(-0.02)
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx)
     }
 }
@@ -809,6 +810,8 @@ impl SheetDescription {
             .line_height_px(line_height)
             .font_normal()
             .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx)
     }
 }

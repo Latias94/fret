@@ -278,7 +278,7 @@ pub fn list<H: UiHost>(
                             gap: Px(8.0),
                             padding: Edges::all(Px(0.0)),
                             justify: MainAlign::Start,
-                            align: CrossAlign::Center,
+                            align: CrossAlign::Start,
                             wrap: false,
                         },
                         move |cx| {
