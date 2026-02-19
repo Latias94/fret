@@ -12132,9 +12132,10 @@ fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json"]
 }
 
-fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 3] {
+fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 4] {
     [
         "tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
+        "tools/diag-scripts/ui-gallery-markdown-wrap-long-tokens-screenshots.json",
         "tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json",
         "tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json",
     ]

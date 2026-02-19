@@ -31,6 +31,14 @@ pub(in crate::ui) fn main() {
 ## Inline code
 
 Use `CodeEditorInteractionOptions::read_only()` for viewers.
+
+## Long tokens (wrap policy)
+
+This paragraph includes a long URL and a long path token. In narrow preview panels, these should
+wrap (break-words) instead of forcing horizontal overflow:
+
+- https://example.com/a/very/long/path/that/should/wrap/in/narrow/panels/without/overflow?query=some_really_long_value_without_spaces
+- C:\\Users\\SomeUserName\\Documents\\a-very-long-folder-name\\another-long-folder\\file_with_a_very_long_name_and_no_spaces.md
 ",
             )
         })

@@ -65,6 +65,8 @@ Known gaps:
 - Prose/UI copy (default): use `TextWrap::Word` (UI kit: `text_prose`).
 - Prose with long tokens (URLs/paths): use `TextWrap::WordBreak` (UI kit: `text_prose_break_words` or builder `.break_words()`).
 - Editor/code-like surfaces: use `TextWrap::Grapheme` when mid-token wrapping is explicitly desired (UI kit: `text_code_wrap`).
+- Markdown/document surfaces: default to `TextWrap::WordBreak` for paragraphs/headings to avoid long-token overflow
+  (e.g. `ecosystem/fret-markdown`).
 
 ## Work breakdown
 

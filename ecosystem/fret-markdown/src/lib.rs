@@ -305,7 +305,9 @@ fn render_rich_text_inline<H: UiHost>(
         letter_spacing_em: None,
     });
     props.color = Some(base.color);
-    props.wrap = TextWrap::Word;
+    // Markdown prose frequently contains long tokens (URLs, paths, identifiers). Default to a
+    // break-words policy to prevent horizontal overflow in narrow surfaces.
+    props.wrap = TextWrap::WordBreak;
     props.overflow = TextOverflow::Clip;
 
     Some(cx.selectable_text_props(props))
@@ -906,7 +908,9 @@ fn render_inline_token<H: UiHost>(
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.inline_code_fg),
-                wrap: TextWrap::None,
+                // Inline code participates in Markdown prose layout; allow break-words to avoid
+                // pathological overflow from long tokens (e.g. long identifiers / URLs).
+                wrap: TextWrap::WordBreak,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
             })]
@@ -959,6 +963,7 @@ fn render_inline_token<H: UiHost>(
                     line_height,
                     color,
                     style.strikethrough,
+                    TextWrap::WordBreak,
                     display_text.clone(),
                 )]
             });
@@ -975,6 +980,7 @@ fn render_inline_token<H: UiHost>(
         line_height,
         color,
         style.strikethrough,
+        TextWrap::WordBreak,
         Arc::<str>::from(raw_text),
     )
 }
@@ -988,6 +994,7 @@ fn render_inline_text_token<H: UiHost>(
     line_height: Option<Px>,
     color: fret_core::Color,
     strikethrough: bool,
+    wrap: TextWrap,
     text: Arc<str>,
 ) -> AnyElement {
     if !strikethrough {
@@ -1003,7 +1010,7 @@ fn render_inline_text_token<H: UiHost>(
                 letter_spacing_em: None,
             }),
             color: Some(color),
-            wrap: TextWrap::None,
+            wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
         });

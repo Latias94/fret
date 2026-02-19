@@ -139,6 +139,24 @@ Stage the work as:
 
 This sequencing keeps risk bounded while still converging on a simpler, more correct architecture.
 
+## Reference: GPUI (Zed) line wrapping approach (informative)
+
+GPUI (as used by Zed) ships a lightweight wrapper that:
+
+- defines a custom `is_word_char` character set (including many punctuation characters),
+- prefers wrapping at “word starts” (space → non-space transitions), but
+- falls back to breaking at the current character when a single token exceeds the wrap width.
+
+Evidence anchors (repo snapshots under `repo-ref/`):
+
+- `repo-ref/zed/crates/gpui/src/text_system/line_wrapper.rs` (wrap candidate selection + `is_word_char`)
+- `repo-ref/zed/crates/gpui/src/text_system/line_layout.rs` (wrap boundary computation over shaped glyphs)
+
+This approach is pragmatic for editor-first UIs, but it is inherently policy-heavy and requires
+maintaining a hand-curated character set. In Fret v1, we prefer using Parley/UAX#14 break
+opportunities for `TextWrap::Word`, and we use explicit modes (`WordBreak` / `Grapheme`) when
+authors want emergency mid-token breaks.
+
 ## Conformance & Regression Gates
 
 Add a dedicated set of wrap conformance strings that cover:

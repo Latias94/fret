@@ -10,9 +10,12 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
 - [ ] Create a minimal page/harness that demonstrates shrink-wrap + `TextWrap::Word` intrinsic sizing.
 - [x] Add a second repro for long-token prose (`URL-like-token-without-spaces`) where `WordBreak` is expected.
   - Implemented in `Text / Measured Bounds Overlay` (`apps/fret-ui-gallery/.../text/measure_overlay.rs`).
+- [x] Add a markdown preview repro for long URL/path tokens where `WordBreak` is expected.
+  - Implemented in `Markdown Editor v0 (source mode)` (`apps/fret-ui-gallery/.../editors/markdown.rs`).
 - [ ] Capture baseline diag bundles (native) for both cases.
   - [x] `tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json`
   - [x] `tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json`
+  - [x] `tools/diag-scripts/ui-gallery-markdown-wrap-long-tokens-screenshots.json`
 
 ## Intrinsic sizing implementation
 
@@ -38,6 +41,7 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
   - [x] `text_prose_break_words` (or equivalent) using `TextWrap::WordBreak`
   - [x] `text_code_wrap` using `TextWrap::Grapheme`
 - [ ] Update shadcn recipes where long-token body copy currently overflows horizontally.
+- [x] Update Markdown prose defaults to use `TextWrap::WordBreak` to avoid long-token overflow.
 - [ ] Add short authoring note to the docs page(s) that explain when to use each wrap mode.
 
 ## Follow-ups (separate feature)
