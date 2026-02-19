@@ -218,6 +218,31 @@ Evidence (single-script perf run, repeat=3):
 This suggests the “primary” macOS optimization target for resize-stress is paint-side traversal/caching rather than
 layout solving.
 
+### Update (2026-02-19): view-cache flags materially change the resize-stress profile on macOS
+
+When `FRET_UI_GALLERY_VIEW_CACHE=1` (and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`) is enabled, resize-stress becomes
+meaningfully cheaper on macOS M4. When disabled, layout solves for two roots dominate the worst frames.
+
+Evidence (repeat=3, warmup_frames=5, release build):
+
+- Without view-cache env (direct script run):
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - p95: total ≈ `13.16ms`, layout ≈ `11.28ms`, solve ≈ `5.46ms`
+  - Worst bundle: `target/fret-diag-perf-local/20260219-resize-stress/1771483332108-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Worst `top_layout_engine_solves` (from `triage.json`):
+    - `ui-gallery-view-cache-root` solve ≈ `3.07ms`
+    - `ui-gallery-nav-scroll` solve ≈ `1.97ms`
+
+- With view-cache env:
+  - p95: total ≈ `6.20ms`, layout ≈ `4.02ms`, solve ≈ `1.20ms`
+  - Worst bundle: `target/fret-diag-perf-local/20260219-resize-stress-view-cache/1771483421721-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Takeaway:
+
+- For “UI gallery as a perf harness”, resize-stress should be treated as a **view-cache-on** scenario by default.
+- Any remaining jank on macOS in view-cache-on mode should focus on paint/widget traversal and reducing layout request
+  work per root (not the solver itself).
+
 ### Finding (2026-02-19): reduce ElementRuntime lease overhead for observed deps
 
 `ElementHostWidget` consumes per-element “observed deps” (models + globals) during layout/paint/measure to drive
