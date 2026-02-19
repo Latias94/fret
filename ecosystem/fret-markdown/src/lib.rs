@@ -286,13 +286,25 @@ fn render_rich_text_inline<H: UiHost>(
     base: &InlineBaseStyle,
     pieces: &[InlinePiece],
 ) -> Option<AnyElement> {
-    let allow_link_color_only = components.link.is_none() && components.on_link_activate.is_none();
-
-    if !allow_link_color_only && pieces.iter().any(|p| p.style.link.is_some()) {
+    // If callers provide a custom link renderer, fall back to the tokenized inline-flow path so
+    // links can be represented as full declarative subtrees.
+    if components.link.is_some() && pieces.iter().any(|p| p.style.link.is_some()) {
         return None;
     }
 
-    let rich = build_rich_attributed_text(markdown_theme, pieces)?;
+    let (rich, link_spans) = build_rich_attributed_text(markdown_theme, pieces)?;
+    let interactive_spans: Vec<fret_ui::element::SelectableTextInteractiveSpan> =
+        if components.on_link_activate.is_some() {
+            link_spans
+                .into_iter()
+                .map(|s| fret_ui::element::SelectableTextInteractiveSpan {
+                    range: s.range,
+                    tag: s.href,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
     let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;
@@ -310,15 +322,53 @@ fn render_rich_text_inline<H: UiHost>(
     props.wrap = TextWrap::WordBreak;
     props.overflow = TextOverflow::Clip;
 
-    Some(cx.selectable_text_props(props))
+    if interactive_spans.is_empty() {
+        return Some(cx.selectable_text_props(props));
+    }
+
+    props.interactive_spans = Arc::from(interactive_spans);
+
+    let on_link_activate = components.on_link_activate.clone();
+    let full_text = props.rich.text.clone();
+    Some(cx.selectable_text_with_id_props(|cx, id| {
+        if let Some(on_link_activate) = on_link_activate {
+            cx.selectable_text_on_activate_span_for(
+                id,
+                Arc::new(move |host, action_cx, reason, activation| {
+                    let display = full_text
+                        .get(activation.range.clone())
+                        .unwrap_or_default()
+                        .trim_end()
+                        .to_string();
+                    on_link_activate(
+                        host,
+                        action_cx,
+                        reason,
+                        LinkInfo {
+                            href: activation.tag,
+                            text: Arc::<str>::from(display),
+                        },
+                    );
+                }),
+            );
+        }
+        props
+    }))
+}
+
+#[derive(Debug, Clone)]
+struct RichLinkSpan {
+    range: std::ops::Range<usize>,
+    href: Arc<str>,
 }
 
 fn build_rich_attributed_text(
     markdown_theme: MarkdownTheme,
     pieces: &[InlinePiece],
-) -> Option<AttributedText> {
+) -> Option<(AttributedText, Vec<RichLinkSpan>)> {
     let mut text = String::new();
     let mut spans: Vec<TextSpan> = Vec::new();
+    let mut link_spans: Vec<RichLinkSpan> = Vec::new();
 
     for p in pieces {
         let InlinePieceKind::Text(t) = &p.kind else {
@@ -328,7 +378,9 @@ fn build_rich_attributed_text(
             continue;
         }
 
+        let start = text.len();
         text.push_str(t);
+        let end = text.len();
 
         let run_weight = p.style.strong.then_some(FontWeight::SEMIBOLD);
         let run_slant = p.style.emphasis.then_some(TextSlant::Italic);
@@ -364,13 +416,25 @@ fn build_rich_attributed_text(
                 strikethrough: run_strikethrough,
             },
         });
+
+        if let Some(href) = p.style.link.clone()
+            && start < end
+        {
+            link_spans.push(RichLinkSpan {
+                range: start..end,
+                href,
+            });
+        }
     }
 
     if text.is_empty() {
         return None;
     }
 
-    Some(AttributedText::new(Arc::<str>::from(text), spans))
+    Some((
+        AttributedText::new(Arc::<str>::from(text), spans),
+        link_spans,
+    ))
 }
 
 fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {

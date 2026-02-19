@@ -504,7 +504,8 @@ fn rich_inline_builds_spans_for_inline_code_and_strikethrough() {
     let events = parse_events("a `code` ~~gone~~\n");
     let pieces = inline_pieces_from_events_unwrapped(&events);
 
-    let rich = build_rich_attributed_text(markdown_theme, &pieces).expect("expected rich text");
+    let (rich, _link_spans) =
+        build_rich_attributed_text(markdown_theme, &pieces).expect("expected rich text");
     assert!(rich.is_valid());
     assert_eq!(rich.text.as_ref(), "a code gone");
 
