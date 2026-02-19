@@ -1363,9 +1363,9 @@ impl Tabs {
                                 // content box (after list padding).
                                 //
                                 // In Fret, centering a `-1px` height delta produces a half-pixel
-                                // offset which can snap inconsistently and read as a 1px vertical
-                                // misalignment in the active highlight. Prefer an even delta so
-                                // the centered position lands on whole pixels.
+                                // offset which can snap inconsistently (esp. at non-integer scale
+                                // factors) and read as a 1px vertical misalignment. Prefer an even
+                                // delta so the centered position lands on whole pixels.
                                 let trigger_h = Px(
                                     (list_height.0 - list_padding.0 * 2.0 - 2.0).max(0.0),
                                 );
