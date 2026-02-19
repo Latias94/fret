@@ -5,6 +5,15 @@
 Deliverables:
 
 - ADR 0282 is updated to “executable” detail (capabilities, fallback chain, metadata semantics).
+
+## 2026-02-19 — Tracker alignment + minimal gate verification
+
+- Scope:
+  - Align workstream TODO status with the already-landed MF DX12 GPU copy prototype (EXTV2-native-105).
+  - Verify `fret-launch` builds/tests cleanly with minimal features.
+- Gates (Windows):
+  - `cargo check -p fret-launch --no-default-features`
+  - `cargo test -p fret-launch --no-default-features`
 - This workstream’s tracking docs exist and are linked:
   - `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
   - `docs/workstreams/external-texture-imports-v2-zero-low-copy-todo.md`
