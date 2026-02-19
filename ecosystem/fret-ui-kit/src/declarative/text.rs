@@ -191,6 +191,15 @@ pub fn text_base<H: UiHost>(
 ///
 /// This uses a larger baseline than `text_base` so examples like `typography-table` can match
 /// upstream web goldens (16px / 24px by default under the shadcn theme).
+///
+/// Wrapping notes:
+/// - This defaults to `TextWrap::Word` (wrap at word boundaries; do not break long tokens).
+/// - For body copy that may contain long URLs/paths/identifiers, prefer `TextWrap::WordBreak` so
+///   a single token cannot force horizontal overflow.
+/// - For editor-like surfaces that must always wrap even within tokens, prefer `TextWrap::Grapheme`.
+/// - `WordBreak`/`Grapheme` behave best when the parent provides a definite width (`w_full`,
+///   `Length::Fill`, `max_w`, etc.); in shrink-wrapped layouts they can legitimately measure
+///   narrower under min-content constraints.
 pub fn text_prose<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
