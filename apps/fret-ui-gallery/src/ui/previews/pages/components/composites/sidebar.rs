@@ -424,7 +424,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
 
         let inset = shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Sidebar Inset").into_element(cx),
+                shadcn::CardTitle::new("Sidebar Inset").into_element(cx)
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![
@@ -471,7 +471,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
                 let platform = shadcn::SidebarGroup::new([
-                    shadcn::SidebarGroupLabel::new("??????")
+                    shadcn::SidebarGroupLabel::new("المنصة")
                         .collapsed(false)
                         .into_element(cx),
                     shadcn::SidebarMenu::new([
@@ -480,7 +480,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                             rtl_selected.clone(),
                             &selected_value,
                             "playground",
-                            "????",
+                            "ساحة اللعب",
                             "lucide.square-terminal",
                             false,
                             Arc::from("ui-gallery-sidebar-rtl-item-playground"),
@@ -491,7 +491,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                             rtl_selected.clone(),
                             &selected_value,
                             "documentation",
-                            "???????",
+                            "الوثائق",
                             "lucide.book-open",
                             false,
                             Arc::from("ui-gallery-sidebar-rtl-item-documentation"),
@@ -502,7 +502,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                             rtl_selected.clone(),
                             &selected_value,
                             "settings",
-                            "?????????",
+                            "الإعدادات",
                             "lucide.settings-2",
                             false,
                             Arc::from("ui-gallery-sidebar-rtl-item-settings"),
@@ -514,12 +514,12 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 .into_element(cx);
 
                 let sidebar = shadcn::Sidebar::new([
-                    shadcn::SidebarHeader::new([shadcn::typography::small(cx, "?????? ???????")])
+                    shadcn::SidebarHeader::new([shadcn::typography::small(cx, "مؤسسة مثال")])
                         .into_element(cx),
                     shadcn::SidebarContent::new([platform])
                         .collapsed(false)
                         .into_element(cx),
-                    shadcn::SidebarFooter::new([shadcn::typography::small(cx, "??????")])
+                    shadcn::SidebarFooter::new([shadcn::typography::small(cx, "الدعم")])
                         .into_element(cx),
                 ])
                 .collapsed(false)

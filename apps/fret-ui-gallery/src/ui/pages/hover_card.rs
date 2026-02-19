@@ -6,6 +6,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         name: &'static str,
                         desc: &'static str,
                         test_id: &'static str| {
+        let muted_fg = cx.with_theme(|theme| theme.color_token("muted-foreground"));
+
         let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("VC").into_element(cx)])
             .refine_layout(
                 LayoutRefinement::default()
@@ -18,14 +20,27 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         let text = stack::vstack(
             cx,
             stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .layout(LayoutRefinement::default().flex_1().min_w_0())
                 .gap(Space::N1)
                 .items_start(),
             |cx| {
+                let description = ui::text(cx, desc)
+                    .w_full()
+                    .text_size_px(Px(14.0))
+                    .line_height_px(Px(20.0))
+                    .wrap(TextWrap::Word)
+                    .into_element(cx);
+                let joined = ui::text(cx, "Joined December 2021")
+                    .w_full()
+                    .text_size_px(Px(12.0))
+                    .line_height_px(Px(16.0))
+                    .text_color(ColorRef::Color(muted_fg))
+                    .wrap(TextWrap::Word)
+                    .into_element(cx);
                 vec![
                     shadcn::CardTitle::new(name).into_element(cx),
-                    shadcn::typography::p(cx, desc),
-                    shadcn::typography::muted(cx, "Joined December 2021"),
+                    description,
+                    joined,
                 ]
             },
         );
@@ -33,7 +48,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         let content = stack::hstack(
             cx,
             stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N4)
                 .items_start(),
             |_cx| vec![avatar, text],
@@ -259,14 +274,14 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::HoverCard::new(
-            shadcn::Button::new("??? ??????")
+            shadcn::Button::new("مرر هنا")
                 .variant(shadcn::ButtonVariant::Outline)
                 .test_id("ui-gallery-hover-card-rtl-trigger")
                 .into_element(cx),
             profile_card(
                 cx,
-                "????? ??????",
-                "??? ???? RTL ??????? ???????.",
+                "نموذج RTL",
+                "تحقق من محاذاة HoverCard تحت RTL.",
                 "ui-gallery-hover-card-rtl-content",
             ),
         )
