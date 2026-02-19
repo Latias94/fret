@@ -452,11 +452,8 @@ pub(in crate::ui) fn preview_markdown_editor_source(
 
     let link_gate_href: Arc<str> = Arc::<str>::from("https://example.com");
     let link_gate_last = cx
-        .app
-        .models()
-        .read(&markdown_link_gate_last_activation, |v| v.clone())
-        .ok()
-        .flatten();
+        .get_model_cloned(&markdown_link_gate_last_activation, Invalidation::Layout)
+        .unwrap_or_default();
     let link_gate = {
         let href = link_gate_href.clone();
         let activate_model = markdown_link_gate_last_activation.clone();
@@ -477,7 +474,6 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         let rich = fret_core::AttributedText::new(href.clone(), Arc::from([span]));
 
         let mut props = fret_ui::element::SelectableTextProps::new(rich);
-        props.layout.size.width = fret_ui::element::Length::Fill;
         props.wrap = fret_core::TextWrap::WordBreak;
         props.overflow = fret_core::TextOverflow::Clip;
         props.color = Some(theme.color_token("primary"));
@@ -502,6 +498,14 @@ pub(in crate::ui) fn preview_markdown_editor_source(
             })
             .test_id("ui-gallery-markdown-span-link-gate");
 
+        let link_row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .items_center()
+                .layout(LayoutRefinement::default().w_full()),
+            move |_cx| vec![link],
+        );
+
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -514,7 +518,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                         cx,
                         "Interactive span gate: click the link to exercise SelectableText span activation.",
                     ),
-                    link,
+                    link_row,
                 ];
                 if let Some(href) = link_gate_last.as_ref() {
                     out.push(

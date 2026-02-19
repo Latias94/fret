@@ -55,6 +55,16 @@
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_screenshot", "label": "markdown-span-link-gate-before", "timeout_frames": 240 },
 
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+      "delta_y": -160.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" } },
     {
       "type": "wait_until",
@@ -68,4 +78,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-
