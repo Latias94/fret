@@ -1009,6 +1009,73 @@ impl ElementHostWidget {
                     cx.bounds.size,
                 );
 
+                let mut interactive_span_bounds: Vec<
+                    crate::element::SelectableTextInteractiveSpanBounds,
+                > = Vec::new();
+                if !props.interactive_spans.is_empty() {
+                    let mut rects: Vec<fret_core::Rect> = Vec::new();
+                    for span in props.interactive_spans.iter() {
+                        let start = span.range.start.min(props.rich.text.len());
+                        let end = span.range.end.min(props.rich.text.len());
+                        if start >= end {
+                            continue;
+                        }
+                        if !props.rich.text.is_char_boundary(start)
+                            || !props.rich.text.is_char_boundary(end)
+                        {
+                            continue;
+                        }
+
+                        rects.clear();
+                        cx.services
+                            .selection_rects_clipped(blob, (start, end), clip, &mut rects);
+                        if rects.is_empty() {
+                            continue;
+                        }
+
+                        let mut x0 = f32::INFINITY;
+                        let mut y0 = f32::INFINITY;
+                        let mut x1 = f32::NEG_INFINITY;
+                        let mut y1 = f32::NEG_INFINITY;
+                        for r in rects.iter() {
+                            x0 = x0.min(r.origin.x.0);
+                            y0 = y0.min(r.origin.y.0);
+                            x1 = x1.max(r.origin.x.0 + r.size.width.0);
+                            y1 = y1.max(r.origin.y.0 + r.size.height.0);
+                        }
+                        if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite()
+                        {
+                            continue;
+                        }
+                        if x1 <= x0 || y1 <= y0 {
+                            continue;
+                        }
+
+                        interactive_span_bounds.push(
+                            crate::element::SelectableTextInteractiveSpanBounds {
+                                range: start..end,
+                                tag: span.tag.clone(),
+                                bounds_local: fret_core::Rect::new(
+                                    fret_core::Point::new(fret_core::Px(x0), fret_core::Px(y0)),
+                                    fret_core::Size::new(
+                                        fret_core::Px(x1 - x0),
+                                        fret_core::Px(y1 - y0),
+                                    ),
+                                ),
+                            },
+                        );
+                    }
+                }
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        state.interactive_span_bounds = interactive_span_bounds;
+                    },
+                );
+
                 let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
                 let mut rects: Vec<fret_core::Rect> = Vec::new();
 

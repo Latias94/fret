@@ -332,6 +332,159 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_records_interactive_span_bounds_after_paint() {
+    #[derive(Default)]
+    struct OffsetSelectionRectTextService {
+        base: super::super::FakeTextService,
+    }
+
+    impl fret_core::TextService for OffsetSelectionRectTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            fret_core::TextService::prepare(&mut self.base, input, constraints)
+        }
+
+        fn release(&mut self, blob: fret_core::TextBlobId) {
+            fret_core::TextService::release(&mut self.base, blob)
+        }
+
+        fn selection_rects_clipped(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            range: (usize, usize),
+            clip: fret_core::Rect,
+            out: &mut Vec<fret_core::Rect>,
+        ) {
+            let (start, end) = range;
+            if start >= end {
+                return;
+            }
+
+            let rect = fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(start as f32), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px((end - start) as f32), fret_core::Px(10.0)),
+            );
+
+            let ix0 = rect.origin.x.0.max(clip.origin.x.0);
+            let iy0 = rect.origin.y.0.max(clip.origin.y.0);
+            let ix1 =
+                (rect.origin.x.0 + rect.size.width.0).min(clip.origin.x.0 + clip.size.width.0);
+            let iy1 =
+                (rect.origin.y.0 + rect.size.height.0).min(clip.origin.y.0 + clip.size.height.0);
+
+            if ix1 <= ix0 || iy1 <= iy0 {
+                return;
+            }
+
+            out.push(fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(ix0), fret_core::Px(iy0)),
+                fret_core::Size::new(fret_core::Px(ix1 - ix0), fret_core::Px(iy1 - iy0)),
+            ));
+        }
+    }
+
+    impl fret_core::PathService for OffsetSelectionRectTextService {
+        fn prepare(
+            &mut self,
+            commands: &[fret_core::PathCommand],
+            style: fret_core::PathStyle,
+            constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            fret_core::PathService::prepare(&mut self.base, commands, style, constraints)
+        }
+
+        fn release(&mut self, path: fret_core::PathId) {
+            fret_core::PathService::release(&mut self.base, path)
+        }
+    }
+
+    impl fret_core::SvgService for OffsetSelectionRectTextService {
+        fn register_svg(&mut self, bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgService::register_svg(&mut self.base, bytes)
+        }
+
+        fn unregister_svg(&mut self, svg: fret_core::SvgId) -> bool {
+            fret_core::SvgService::unregister_svg(&mut self.base, svg)
+        }
+    }
+
+    impl fret_core::MaterialService for OffsetSelectionRectTextService {
+        fn register_material(
+            &mut self,
+            desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            fret_core::MaterialService::register_material(&mut self.base, desc)
+        }
+
+        fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
+            fret_core::MaterialService::unregister_material(&mut self.base, id)
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    let mut services = OffsetSelectionRectTextService::default();
+
+    let selectable_id: std::cell::RefCell<Option<crate::elements::GlobalElementId>> =
+        Default::default();
+
+    let text: Arc<str> = Arc::<str>::from("hello link world");
+    let rich = fret_core::AttributedText::new(
+        Arc::clone(&text),
+        Arc::from([fret_core::TextSpan {
+            len: text.len(),
+            shaping: Default::default(),
+            paint: Default::default(),
+        }]),
+    );
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-interactive-span-bounds",
+        |cx| {
+            let mut props = crate::element::SelectableTextProps::new(rich.clone());
+            props.interactive_spans = Arc::from([crate::element::SelectableTextInteractiveSpan {
+                range: 6..10,
+                tag: Arc::<str>::from("https://example.com"),
+            }]);
+            let el = cx.selectable_text_props(props);
+            *selectable_id.borrow_mut() = Some(el.id);
+            vec![el]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_id = selectable_id.borrow().expect("selectable text element id");
+    let spans = crate::elements::with_element_state(
+        &mut app,
+        window,
+        selectable_id,
+        crate::element::SelectableTextState::default,
+        |state| state.interactive_span_bounds.clone(),
+    );
+
+    assert_eq!(spans.len(), 1);
+    assert_eq!(spans[0].range, 6..10);
+    assert_eq!(spans[0].tag.as_ref(), "https://example.com");
+    assert_eq!(spans[0].bounds_local.origin.x, Px(6.0));
+    assert_eq!(spans[0].bounds_local.size.width, Px(4.0));
+}
+
+#[test]
 fn selectable_text_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
         let mut app = TestHost::new();

@@ -1307,6 +1307,14 @@ pub struct SelectableTextInteractiveSpan {
     pub tag: std::sync::Arc<str>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SelectableTextInteractiveSpanBounds {
+    pub range: std::ops::Range<usize>,
+    pub tag: std::sync::Arc<str>,
+    /// Span bounds in local widget coordinates (relative to the widget's bounds origin).
+    pub bounds_local: fret_core::Rect,
+}
+
 #[derive(Debug, Clone)]
 pub struct SelectableTextState {
     pub selection_anchor: usize,
@@ -1318,6 +1326,7 @@ pub struct SelectableTextState {
     pub pointer_down_pos: Option<fret_core::Point>,
     pub pending_span_activation: Option<crate::action::SelectableTextSpanActivation>,
     pub pending_span_click_count: u8,
+    pub interactive_span_bounds: Vec<SelectableTextInteractiveSpanBounds>,
 }
 
 impl Default for SelectableTextState {
@@ -1332,6 +1341,7 @@ impl Default for SelectableTextState {
             pointer_down_pos: None,
             pending_span_activation: None,
             pending_span_click_count: 0,
+            interactive_span_bounds: Vec::new(),
         }
     }
 }
