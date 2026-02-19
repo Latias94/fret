@@ -11,11 +11,11 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_core::scene::{
-    BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2, ColorSpace,
-    DitherMode, EffectChain, EffectMode, EffectQuality, EffectStep, GradientStop,
-    ImageSamplingHint, LinearGradient, MAX_STOPS, Paint, TileMode, UvRect, WarpMapEncodingV1,
+    BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2, DitherMode,
+    EffectChain, EffectMode, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
+    WarpMapEncodingV1,
 };
-use fret_core::{Color, Corners, Edges, ImageColorSpace, Point, Px};
+use fret_core::{Color, Corners, Edges, ImageColorSpace, Px};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -25,14 +25,6 @@ use fret_ui::element::{
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
 use fret_ui_shadcn as shadcn;
-
-fn clamp01(v: f32) -> f32 {
-    if v.is_finite() {
-        v.clamp(0.0, 1.0)
-    } else {
-        0.0
-    }
-}
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     Color {
@@ -49,24 +41,6 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     let g = ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5;
     let b = ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5;
     Color { r, g, b, a }
-}
-
-fn linear_gradient(stops: &[(f32, Color)], start: Point, end: Point) -> Paint {
-    let mut arr = [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
-    let mut count: u8 = 0;
-    for (i, (offset, color)) in stops.iter().copied().enumerate().take(MAX_STOPS) {
-        arr[i] = GradientStop::new(clamp01(offset), color);
-        count = (i as u8) + 1;
-    }
-
-    Paint::LinearGradient(LinearGradient {
-        start,
-        end,
-        tile_mode: TileMode::Clamp,
-        color_space: ColorSpace::Srgb,
-        stop_count: count,
-        stops: arr,
-    })
 }
 
 fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
@@ -159,24 +133,16 @@ fn lens_panel<H: UiHost>(
 ) -> AnyElement {
     let radius = Px(20.0);
     let mut outer_layout = LayoutStyle::default();
-    outer_layout.size.width = Length::Px(Px(340.0));
-    outer_layout.size.height = Length::Px(Px(240.0));
+    outer_layout.size.width = Length::Px(Px(320.0));
+    outer_layout.size.height = Length::Px(Px(220.0));
     outer_layout.overflow = Overflow::Clip;
-
-    let highlight = linear_gradient(
-        &[
-            (0.0, srgb(255, 255, 255, 0.10)),
-            (0.44, srgb(255, 255, 255, 0.02)),
-            (1.0, srgb(255, 255, 255, 0.00)),
-        ],
-        Point::new(Px(0.0), Px(0.0)),
-        Point::new(Px(520.0), Px(320.0)),
-    );
 
     cx.container(
         ContainerProps {
             layout: outer_layout,
             corner_radii: Corners::all(radius),
+            border: Edges::all(Px(1.0)),
+            border_color: Some(srgb(255, 255, 255, 0.24)),
             ..Default::default()
         },
         move |cx| {
@@ -196,32 +162,52 @@ fn lens_panel<H: UiHost>(
                     inner_layout.size.width = Length::Fill;
                     inner_layout.size.height = Length::Fill;
 
-                    let title = cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: label.clone(),
-                        style: None,
-                        color: Some(srgb(255, 255, 255, 0.92)),
-                        align: fret_core::TextAlign::Start,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                    });
-
-                    let inner = ContainerProps {
-                        layout: inner_layout,
-                        padding: Edges::all(Px(14.0)),
-                        background: Some(srgb(16, 18, 24, 0.08)),
-                        background_paint: Some(highlight),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(srgb(255, 255, 255, 0.22)),
-                        corner_radii: Corners::all(radius),
-                        ..Default::default()
-                    };
-
-                    vec![cx.container(inner, move |_cx| vec![title])]
+                    // Keep the lens body visually subtle: the effect itself should be the star.
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: inner_layout,
+                            background: Some(srgb(255, 255, 255, 0.028)),
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    )]
                 },
             );
 
-            vec![layer]
+            let mut label_layout = LayoutStyle::default();
+            label_layout.position = PositionStyle::Absolute;
+            label_layout.inset.left = Some(Px(12.0));
+            label_layout.inset.top = Some(Px(12.0));
+
+            let title = cx.text_props(TextProps {
+                layout: Default::default(),
+                text: label.clone(),
+                style: None,
+                color: Some(srgb(255, 255, 255, 0.92)),
+                align: fret_core::TextAlign::Start,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            });
+
+            let pill = cx.container(
+                ContainerProps {
+                    layout: label_layout,
+                    padding: Edges {
+                        left: Px(10.0),
+                        right: Px(10.0),
+                        top: Px(6.0),
+                        bottom: Px(6.0),
+                    },
+                    background: Some(srgb(10, 12, 18, 0.32)),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(srgb(255, 255, 255, 0.18)),
+                    corner_radii: Corners::all(Px(999.0)),
+                    ..Default::default()
+                },
+                move |_cx| vec![title],
+            );
+
+            vec![layer, pill]
         },
     )
 }
@@ -292,9 +278,12 @@ impl MvuProgram for LiquidGlassProgram {
         let warp_map_rgba = Arc::new(warp_map_rgba);
 
         Self::State {
+            // Important: keep these defaults stable because perf scripts/baselines assume them.
+            // - v1 baseline expects fake + v1 visible by default.
+            // - v2 script toggles fake/v1 off and v2 on deterministically.
             show_fake: app.models_mut().insert(true),
             show_warp: app.models_mut().insert(true),
-            show_warp_v2: app.models_mut().insert(true),
+            show_warp_v2: app.models_mut().insert(false),
             show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
@@ -308,8 +297,8 @@ impl MvuProgram for LiquidGlassProgram {
             warp_phase: app.models_mut().insert(vec![0.0]),
             warp_chroma_px: app.models_mut().insert(vec![2.0]),
 
-            // Default to "true refraction / displacement" rather than frosted blur.
-            blur_radius_px: app.models_mut().insert(vec![0.0]),
+            // Keep defaults stable: perf scripts/baselines assume a visible blur chain.
+            blur_radius_px: app.models_mut().insert(vec![16.0]),
             blur_downsample: app.models_mut().insert(vec![2.0]),
             saturation: app.models_mut().insert(vec![1.10]),
             brightness: app.models_mut().insert(vec![1.02]),
@@ -324,7 +313,7 @@ impl MvuProgram for LiquidGlassProgram {
         if matches!(message, Msg::Reset) {
             let _ = app.models_mut().update(&st.show_fake, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp, |v| *v = true);
-            let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = true);
+            let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -342,7 +331,7 @@ impl MvuProgram for LiquidGlassProgram {
                 .update(&st.warp_chroma_px, |v| *v = vec![2.0]);
             let _ = app
                 .models_mut()
-                .update(&st.blur_radius_px, |v| *v = vec![0.0]);
+                .update(&st.blur_radius_px, |v| *v = vec![16.0]);
             let _ = app
                 .models_mut()
                 .update(&st.blur_downsample, |v| *v = vec![2.0]);
@@ -499,19 +488,7 @@ fn view(
     };
     root_layout.position = PositionStyle::Relative;
 
-    let bg = linear_gradient(
-        &[
-            (0.0, srgb(10, 12, 18, 1.0)),
-            (0.38, srgb(21, 16, 46, 1.0)),
-            (0.70, srgb(6, 40, 44, 1.0)),
-            (1.0, srgb(10, 12, 18, 1.0)),
-        ],
-        viewport.origin,
-        Point::new(
-            Px(viewport.origin.x.0 + viewport.size.width.0),
-            Px(viewport.origin.y.0 + viewport.size.height.0),
-        ),
-    );
+    let bg = srgb(10, 12, 18, 1.0);
 
     let reset_stage = msg.cmd(Msg::Reset);
     let reset_inspector = msg.cmd(Msg::Reset);
@@ -521,7 +498,7 @@ fn view(
         .container(
             ContainerProps {
                 layout: root_layout,
-                background_paint: Some(bg),
+                background: Some(bg),
                 ..Default::default()
             },
             move |cx| {
