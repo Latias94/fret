@@ -5,7 +5,7 @@ Start: 2026-02-19
 
 ## M0 — Spec + regression map (1–2 days)
 
-- [ ] Confirm ADR 0251 scope and accept tokenization v1 rules for `TextWrap::Word`.
+- [x] Confirm ADR 0251 scope and accept tokenization v1 rules for `TextWrap::Word`.
 - [ ] Identify the top 5 UI Gallery pages affected by shrink-wrap + wrap (repros + expected).
 - [ ] Add/confirm at least 1 deterministic gate:
   - a unit test for intrinsic widths (preferred), and/or
@@ -13,7 +13,7 @@ Start: 2026-02-19
 
 ## M1 — True `min-content` for `TextWrap::Word` (core landing)
 
-- [ ] Implement “longest token width” measurement for `TextWrap::Word` intrinsic sizing.
+- [x] Implement “longest token width” measurement for `TextWrap::Word` intrinsic sizing.
 - [ ] Remove/relax UI-level placeholder-width normalization where it becomes redundant.
 - [ ] Add unit tests covering:
   - ASCII labels (no spaces),
@@ -34,4 +34,3 @@ Start: 2026-02-19
 
 - [ ] Design and land an explicit `line-clamp` contract (API + geometry rules).
 - [ ] Add conformance tests and/or web-vs-fret layout parity where applicable.
-

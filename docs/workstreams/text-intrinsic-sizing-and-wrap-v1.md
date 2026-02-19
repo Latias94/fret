@@ -31,11 +31,15 @@ Landings:
   - `TextWrap::WordBreak` allows breaking long tokens when needed.
   - `TextWrap::Grapheme` breaks between grapheme clusters.
 - Paint baseline alignment fixes to avoid double half-leading in fixed line boxes.
+- `TextWrap::Word` now participates in `min-content` intrinsic sizing by using a near-zero wrap width,
+  which yields “longest unbreakable segment” semantics when mid-token breaks are disabled.
 
 Known gaps:
 
-- `min-content` for `TextWrap::Word` is not yet the true “longest token width”.
-  Some UI layers still use a “placeholder width normalization” to avoid the worst regressions.
+- Tokenization rules for “unbreakable segments” under `TextWrap::Word` are not fully locked yet
+  (whitespace vs punctuation vs identifier-like candidates). We need cross-backend determinism.
+- UI-level placeholder-width normalization (`available.width == 0` as “unknown”) still exists and
+  should be audited for correctness and performance, but it is distinct from min/max-content probes.
 - Explicit multiline truncation (`line-clamp`) is not implemented (and must not be simulated via
   `wrap + ellipsis`).
 
@@ -68,4 +72,3 @@ See:
 - Authoring helpers: `ecosystem/fret-ui-kit/src/declarative/text.rs`,
   `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - Diag repro (example): `tools/diag-scripts/ui-gallery-shadcn-tabs-demo-screenshot.json`
-
