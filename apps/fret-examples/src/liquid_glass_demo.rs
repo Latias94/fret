@@ -157,20 +157,10 @@ fn lens_panel<H: UiHost>(
                     chain,
                     quality: EffectQuality::Auto,
                 },
-                move |cx| {
-                    let mut inner_layout = LayoutStyle::default();
-                    inner_layout.size.width = Length::Fill;
-                    inner_layout.size.height = Length::Fill;
-
-                    // Keep the lens body visually subtle: the effect itself should be the star.
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: inner_layout,
-                            background: Some(srgb(255, 255, 255, 0.028)),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::<AnyElement>::new(),
-                    )]
+                move |_cx| {
+                    // Do not draw any fill chrome inside the effect scope: any visible pixels
+                    // should come from the backdrop sampling semantics (warp/blur/adjust).
+                    Vec::<AnyElement>::new()
                 },
             );
 
