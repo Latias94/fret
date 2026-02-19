@@ -42,6 +42,8 @@ Mechanism layer (stable contract, `crates/`):
   - `TextWrap::WordBreak` is the explicit “break long tokens if needed” mode.
 - Decorations as rendering primitives (underline/strikethrough).
 - Interactive span activation routing (pointer + keyboard) as a mechanism-only capability.
+- Semantics correctness: selection ranges and inline spans are defined over `SemanticsNode::value`
+  and therefore require it to be present when those features are published.
 
 Ecosystem/policy layer (`ecosystem/`):
 
@@ -57,6 +59,8 @@ Ecosystem/policy layer (`ecosystem/`):
 ### A11y and diagnostics for interactive spans
 
 - `SelectableText` interactive spans do not currently surface per-span semantics nodes (e.g. role=link).
+- v1 provides metadata-only span hints via ADR 0283 (`SemanticsNode::inline_spans`), but this is not
+  yet mapped to platform accessibility navigation or span-level diagnostics selectors.
 - Diagnostics selectors are currently element-level (`test_id`, role+name, node id); span-level targeting
   requires additional mechanism.
 
@@ -107,4 +111,3 @@ Evidence anchors (repo snapshots under `repo-ref/`):
 
 In Fret v1 we prefer UAX#14 / Parley break opportunities for `Word`, and we keep explicit modes for
 mid-token breaking (`WordBreak` / `Grapheme`) to avoid embedding policy into mechanism code.
-

@@ -1,6 +1,6 @@
 # Text Interactive Spans v1 (Links, Hit-Testing, Decorations)
 
-Status: Draft
+Status: Active
 Owner: (unassigned)
 Start: 2026-02-19
 
@@ -71,8 +71,17 @@ reuses the same text services and geometry mapping surfaces.
 
 ## Current state / short-term mitigation
 
-- Markdown prose defaults to `TextWrap::WordBreak` for rich paragraphs to avoid long-token overflow.
-- The remaining v1 gap is interactive links inside rich paragraphs without tokenization.
+Implemented (2026-02-19):
+
+- `SelectableText` supports interactive span tags (pointer + keyboard activation).
+- Markdown rich paragraphs render links as underlined runs and use `TextWrap::WordBreak` so long
+  URLs/paths can wrap without tokenization.
+- Regression evidence exists as a `fretboard diag` suite and targeted unit tests.
+
+Remaining v1 gaps:
+
+- Semantics/a11y: spans are not represented as per-span semantics nodes with bounds.
+- Diagnostics selectors: span-level targeting is not yet available (node-level only).
 
 ## Work breakdown
 
@@ -80,8 +89,10 @@ See: `docs/workstreams/text-interactive-spans-v1-todo.md`.
 
 ## Evidence anchors
 
-- Markdown renderer (current tokenization fallback):
+ - Markdown renderer (rich paragraphs + interactive link spans):
   - `ecosystem/fret-markdown/src/lib.rs`
+- Inline span semantics metadata (v1):
+  - `docs/adr/0283-text-inline-spans-semantics-metadata-v1.md`
 - Text wrap semantics + intrinsic sizing:
   - `docs/adr/0251-text-intrinsic-sizing-min-max-content-v1.md`
   - `docs/workstreams/text-line-breaking-v1.md`
