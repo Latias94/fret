@@ -542,7 +542,12 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
             cx.stop_propagation();
         }
-        Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
+        Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button,
+            click_count,
+            ..
+        }) => {
             if *button != fret_core::MouseButton::Left {
                 return;
             }
@@ -551,37 +556,34 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
 
             const ACTIVATION_DRAG_THRESHOLD_PX: f32 = 4.0;
-            let (pending, click_count, anchor, caret, last_pos, down_pos) =
-                crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    this.element,
-                    crate::element::SelectableTextState::default,
-                    |state| {
-                        (
-                            state.pending_span_activation.clone(),
-                            state.pending_span_click_count,
-                            state.selection_anchor,
-                            state.caret,
-                            state.last_pointer_pos,
-                            state.pointer_down_pos,
-                        )
-                    },
-                );
+            let (pending, anchor, caret, down_pos) = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::SelectableTextState::default,
+                |state| {
+                    (
+                        state.pending_span_activation.clone(),
+                        state.selection_anchor,
+                        state.caret,
+                        state.pointer_down_pos,
+                    )
+                },
+            );
 
             if let Some(pending) = pending
-                && click_count == 1
+                && *click_count == 1
                 && anchor == caret
-                && let (Some(last_pos), Some(down_pos)) = (last_pos, down_pos)
+                && let Some(down_pos) = down_pos
             {
-                let dx = last_pos.x.0 - down_pos.x.0;
-                let dy = last_pos.y.0 - down_pos.y.0;
+                let dx = position.x.0 - down_pos.x.0;
+                let dy = position.y.0 - down_pos.y.0;
                 if (dx * dx + dy * dy)
                     <= (ACTIVATION_DRAG_THRESHOLD_PX * ACTIVATION_DRAG_THRESHOLD_PX)
                 {
                     let local = fret_core::Point::new(
-                        fret_core::Px(last_pos.x.0 - cx.bounds.origin.x.0),
-                        fret_core::Px(last_pos.y.0 - cx.bounds.origin.y.0),
+                        fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
+                        fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
                     );
                     let hit = this
                         .text_cache
@@ -608,9 +610,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                                     &'a mut Option<crate::widget::UiSourceLocation>,
                             }
 
-                            impl<H: UiHost> crate::action::UiActionHost
-                                for SelectableTextActivateSpanHookHost<'_, H>
-                            {
+                            impl<H: UiHost> crate::action::UiActionHost for SelectableTextActivateSpanHookHost<'_, H> {
                                 fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
                                     self.app.models_mut()
                                 }
@@ -631,11 +631,17 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                                     self.app.next_clipboard_token()
                                 }
 
-                                fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                                fn next_share_sheet_token(
+                                    &mut self,
+                                ) -> fret_runtime::ShareSheetToken {
                                     self.app.next_share_sheet_token()
                                 }
 
-                                fn record_transient_event(&mut self, cx: crate::action::ActionCx, key: u64) {
+                                fn record_transient_event(
+                                    &mut self,
+                                    cx: crate::action::ActionCx,
+                                    key: u64,
+                                ) {
                                     crate::elements::record_transient_event(
                                         &mut *self.app,
                                         cx.window,

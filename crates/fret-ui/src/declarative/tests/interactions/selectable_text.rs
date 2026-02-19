@@ -1073,6 +1073,177 @@ fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
 }
 
 #[test]
+fn selectable_text_interactive_span_activates_on_click() {
+    #[derive(Default)]
+    struct ByteIndexTextService {
+        last_len: usize,
+    }
+
+    impl TextService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            self.last_len = input.text().len();
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(self.last_len as f32), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn hit_test_point(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            point: Point,
+        ) -> fret_core::HitTestResult {
+            let idx = point.x.0.floor().max(0.0) as usize;
+            fret_core::HitTestResult {
+                index: idx.min(self.last_len),
+                affinity: fret_core::CaretAffinity::Downstream,
+            }
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for ByteIndexTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for ByteIndexTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for ByteIndexTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    let mut services = ByteIndexTextService::default();
+
+    let text = "hello link world";
+    let link_start = "hello ".len();
+    let link_end = link_start + "link".len();
+    let link_tag: Arc<str> = Arc::from("tag://link");
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-interactive-span-activate",
+        |cx| {
+            let rich = attributed_plain(text);
+            let link_tag = link_tag.clone();
+            vec![cx.selectable_text_with_id_props(|cx, id| {
+                cx.selectable_text_on_activate_span_for(
+                    id,
+                    Arc::new(|host, _cx, _reason, activation| {
+                        host.push_effect(Effect::ClipboardSetText {
+                            text: activation.tag.to_string(),
+                        });
+                    }),
+                );
+
+                let mut props = crate::element::SelectableTextProps::new(rich);
+                props.wrap = fret_core::TextWrap::None;
+                props.interactive_spans =
+                    Arc::from(vec![crate::element::SelectableTextInteractiveSpan {
+                        range: link_start..link_end,
+                        tag: link_tag,
+                    }]);
+                props
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + link_start as f32 + 1.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| { matches!(e, Effect::ClipboardSetText { text } if text == "tag://link") }),
+        "expected interactive span activation to push a clipboard effect"
+    );
+}
+
+#[test]
 fn selectable_text_sets_active_text_selection() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
