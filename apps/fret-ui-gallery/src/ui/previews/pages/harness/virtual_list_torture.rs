@@ -79,68 +79,59 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             cx.text_input(props)
         };
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .items_center(),
-            |cx| {
-                let jump_model = virtual_list_torture_jump.clone();
-                let scroll_for_jump = virtual_list_torture_scroll.clone();
-                let on_jump: fret_ui::action::OnActivate =
-                    Arc::new(move |host, action_cx, _reason| {
-                        let raw = host
-                            .models_mut()
-                            .get_cloned(&jump_model)
-                            .unwrap_or_default();
-                        let index = raw.trim().parse::<usize>().unwrap_or(0);
-                        scroll_for_jump
-                            .scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
-                        host.request_redraw(action_cx.window);
-                    });
+        doc_layout::wrap_controls_row(cx, theme, Space::N2, |cx| {
+            let jump_model = virtual_list_torture_jump.clone();
+            let scroll_for_jump = virtual_list_torture_scroll.clone();
+            let on_jump: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let raw = host
+                    .models_mut()
+                    .get_cloned(&jump_model)
+                    .unwrap_or_default();
+                let index = raw.trim().parse::<usize>().unwrap_or(0);
+                scroll_for_jump.scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+                host.request_redraw(action_cx.window);
+            });
 
-                let scroll_for_bottom = virtual_list_torture_scroll.clone();
-                let on_bottom: fret_ui::action::OnActivate =
-                    Arc::new(move |host, action_cx, _reason| {
-                        scroll_for_bottom.scroll_to_bottom();
-                        host.request_redraw(action_cx.window);
-                    });
+            let scroll_for_bottom = virtual_list_torture_scroll.clone();
+            let on_bottom: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    scroll_for_bottom.scroll_to_bottom();
+                    host.request_redraw(action_cx.window);
+                });
 
-                let edit_row_for_clear = virtual_list_torture_edit_row.clone();
-                let edit_text_for_clear = virtual_list_torture_edit_text.clone();
-                let on_clear_edit: fret_ui::action::OnActivate =
-                    Arc::new(move |host, action_cx, _reason| {
-                        let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
-                        let _ = host
-                            .models_mut()
-                            .update(&edit_text_for_clear, |v| v.clear());
-                        host.request_redraw(action_cx.window);
-                    });
+            let edit_row_for_clear = virtual_list_torture_edit_row.clone();
+            let edit_text_for_clear = virtual_list_torture_edit_text.clone();
+            let on_clear_edit: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&edit_text_for_clear, |v| v.clear());
+                    host.request_redraw(action_cx.window);
+                });
 
-                vec![
-                    jump_input,
-                    shadcn::Button::new("Jump")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id("ui-gallery-virtual-list-jump-button")
-                        .on_activate(on_jump)
-                        .into_element(cx),
-                    shadcn::Button::new("Bottom")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id("ui-gallery-virtual-list-bottom-button")
-                        .on_activate(on_bottom)
-                        .into_element(cx),
-                    shadcn::Button::new("Clear edit")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id("ui-gallery-virtual-list-clear-edit-button")
-                        .on_activate(on_clear_edit)
-                        .into_element(cx),
-                ]
-            },
-        )
+            vec![
+                jump_input,
+                shadcn::Button::new("Jump")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-jump-button")
+                    .on_activate(on_jump)
+                    .into_element(cx),
+                shadcn::Button::new("Bottom")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-bottom-button")
+                    .on_activate(on_bottom)
+                    .into_element(cx),
+                shadcn::Button::new("Clear edit")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-virtual-list-clear-edit-button")
+                    .on_activate(on_clear_edit)
+                    .into_element(cx),
+            ]
+        })
     });
 
     let editing_indicator = (!minimal_harness).then(|| {

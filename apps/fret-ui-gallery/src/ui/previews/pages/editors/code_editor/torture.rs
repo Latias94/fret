@@ -1,28 +1,6 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
 
-fn wrap_row_controls(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-    gap: Space,
-    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> AnyElement {
-    let gap = MetricRef::space(gap).resolve(theme);
-    let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
-    cx.flex(
-        fret_ui::element::FlexProps {
-            layout,
-            direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
-            justify: fret_ui::element::MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: true,
-        },
-        children,
-    )
-}
-
 pub(in crate::ui) fn preview_code_editor_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -214,7 +192,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                         ]
                     },
                 ),
-                wrap_row_controls(cx, theme, Space::N2, move |cx| {
+                doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                         let reset_handle = header_handle_controls.clone();
                         let preedit_handle = header_handle_controls.clone();
                         let clear_preedit_handle = header_handle_controls.clone();
@@ -391,7 +369,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                              } else {
                                  "Inlays: off"
                              }),
-                         ]
+                        ]
                     }),
                 stack::hstack(
                     cx,
