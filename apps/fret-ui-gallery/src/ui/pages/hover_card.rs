@@ -6,28 +6,47 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         name: &'static str,
                         desc: &'static str,
                         test_id: &'static str| {
-        shadcn::HoverCardContent::new(vec![
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
+        let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("VC").into_element(cx)])
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(Px(40.0))
+                    .h_px(Px(40.0))
+                    .flex_shrink_0(),
+            )
+            .into_element(cx);
+
+        let text = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .items_start(),
+            |cx| {
+                vec![
                     shadcn::CardTitle::new(name).into_element(cx),
-                    shadcn::CardDescription::new(desc).into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![shadcn::typography::muted(
-                    cx,
-                    "Joined December 2021",
-                )])
-                .into_element(cx),
-            ])
-            .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
-            .into_element(cx),
-        ])
-        .into_element(cx)
-        .test_id(test_id)
+                    shadcn::typography::p(cx, desc),
+                    shadcn::typography::muted(cx, "Joined December 2021"),
+                ]
+            },
+        );
+
+        let content = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N4)
+                .items_start(),
+            |_cx| vec![avatar, text],
+        );
+
+        shadcn::HoverCardContent::new(vec![content])
+            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .into_element(cx)
+            .test_id(test_id)
     };
 
     let demo = {
-        let trigger = shadcn::Button::new("Hover Here")
+        let trigger = shadcn::Button::new("@nextjs")
             .variant(shadcn::ButtonVariant::Link)
             .test_id("ui-gallery-hover-card-demo-trigger")
             .into_element(cx);
@@ -311,11 +330,11 @@ let delayed = shadcn::HoverCard::new(trigger, content)
                     r#"let trigger = shadcn::Button::new("Basic")
     .variant(shadcn::ButtonVariant::Outline)
     .into_element(cx);
-let content = shadcn::HoverCardContent::new(vec![/* card */]).into_element(cx);
+ let content = shadcn::HoverCardContent::new(vec![/* content */]).into_element(cx);
 
-shadcn::HoverCard::new(trigger, content)
-    .open_delay_frames(10)
-    .close_delay_frames(10)
+ shadcn::HoverCard::new(trigger, content)
+     .open_delay_frames(10)
+     .close_delay_frames(10)
     .into_element(cx);"#,
                 ),
             DocSection::new("Sides", sides)
