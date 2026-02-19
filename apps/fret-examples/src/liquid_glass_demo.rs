@@ -425,7 +425,7 @@ fn view(
         scale_px: Px(warp_scale_px.max(1.0)),
         phase,
         chromatic_aberration_px: Px(warp_chroma_px),
-        kind: BackdropWarpKindV1::Wave,
+        kind: BackdropWarpKindV1::LensReserved,
     };
     let warp_base = warp_base.sanitize();
 

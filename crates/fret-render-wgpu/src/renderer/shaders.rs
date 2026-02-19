@@ -2108,12 +2108,34 @@ fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
   let scale = max(params.scale_px, 1.0);
   let phase = params.phase;
 
-  // A deterministic, object-local warp field. Kind is reserved for future v1.x/v2 expansions.
+  // A deterministic, bounded warp field (portable to WebGPU/WGSL).
+  //
+  // The v1 surface intentionally keeps the vocabulary small. We provide:
+  // - a "Wave" field (cheap, periodic) with a radial falloff so it reads like a lens,
+  // - and a "LensReserved" analytic fallback which is more lens-like and less grid-regular.
   let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
   let t = (local / scale) + vec2<f32>(phase, phase);
-  let dx = sin(t.y * tau);
-  let dy = sin(t.x * tau);
-  return vec2<f32>(dx, dy) * s;
+
+  // Periodic "wave" (with falloff so the edges stay stable).
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  // Analytic lens-like field: radial + a tiny swirl component for "liquid" motion, with stronger falloff.
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
 }
 
 @fragment
@@ -2421,10 +2443,26 @@ fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
   let phase = params.phase;
 
   let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
   let t = (local / scale) + vec2<f32>(phase, phase);
-  let dx = sin(t.y * tau);
-  let dy = sin(t.x * tau);
-  return vec2<f32>(dx, dy) * s;
+
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
 }
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
@@ -3037,10 +3075,26 @@ fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
   let phase = params.phase;
 
   let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
   let t = (local / scale) + vec2<f32>(phase, phase);
-  let dx = sin(t.y * tau);
-  let dy = sin(t.x * tau);
-  return vec2<f32>(dx, dy) * s;
+
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
 }
 
 @fragment
@@ -3147,14 +3201,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   // Luma coefficients (linear-ish). This pass treats the stored texture encoding as "working space"
   // to stay consistent with other fullscreen passes.
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   return vec4<f32>(rgb * a, a);
@@ -3275,12 +3329,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   let clip = clip_alpha(pos.xy);
@@ -3384,12 +3438,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   let mdims_u = textureDimensions(mask_texture);
