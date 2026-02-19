@@ -2162,6 +2162,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         slant: Default::default(),
         line_height: Some(font_line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     };
     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
     let label_fg = theme.color_token("muted-foreground");
@@ -2878,6 +2879,7 @@ impl ContextMenu {
                         slant: Default::default(),
                         line_height: Some(font_line_height),
                         letter_spacing_em: None,
+                        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                     };
                     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
                     let label_fg = theme.color_token("muted-foreground");

@@ -468,6 +468,7 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -487,6 +488,7 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -510,6 +512,7 @@ pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
         line_height: Some(line_height),
         // new-york-v4: `tracking-widest`.
         letter_spacing_em: Some(0.10),
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 

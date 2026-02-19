@@ -2518,6 +2518,8 @@ pub fn render<H: UiHost + 'static>(
                                                         slant: Default::default(),
                                                         line_height: Some(Px(13.0 * 1.5)),
                                                         letter_spacing_em: None,
+                                                        vertical_placement:
+                                                            fret_core::TextVerticalPlacement::CenterMetricsBox,
                                                     };
                                                     let desc_style = TextStyle {
                                                         font: FontId::default(),
@@ -2526,6 +2528,8 @@ pub fn render<H: UiHost + 'static>(
                                                         slant: Default::default(),
                                                         line_height: Some(Px(13.0 * 1.4)),
                                                         letter_spacing_em: None,
+                                                        vertical_placement:
+                                                            fret_core::TextVerticalPlacement::CenterMetricsBox,
                                                     };
 
                                                     let title = cx.text_props(fret_ui::element::TextProps {

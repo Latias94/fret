@@ -251,6 +251,16 @@ impl UiBuilder<crate::ui::TextBox> {
     pub fn break_words(self) -> Self {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
+
+    /// Opt into "bounds-as-line-box" baseline placement for fixed-height controls.
+    ///
+    /// This is intended for single-line labels that should look vertically centered inside a
+    /// container whose height is larger than the natural line height.
+    pub fn line_box_in_bounds(mut self) -> Self {
+        self.inner.vertical_placement_override =
+            Some(fret_core::TextVerticalPlacement::BoundsAsLineBox);
+        self
+    }
 }
 
 impl UiBuilder<crate::ui::RawTextBox> {

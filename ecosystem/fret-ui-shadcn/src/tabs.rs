@@ -124,6 +124,7 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -1562,12 +1563,16 @@ impl Tabs {
                                                     .text_color(fg_ref.clone())
                                                     .nowrap();
                                                 if let Some(line_height) = style.line_height {
-                                                    // Match web baseline behavior by giving the label a fixed line box
-                                                    // height when a line-height is configured. This allows the text
-                                                    // host widget to apply CSS-like "half-leading" centering rather
-                                                    // than centering by the prepared glyph bounds, which can read as
-                                                    // slightly bottom-heavy in GPU-first layout.
-                                                    text = text.fixed_line_box_px(line_height);
+                                                    // Match web/GPUI baseline behavior in fixed-height controls by
+                                                    // treating the allocated bounds height as the effective line box.
+                                                    //
+                                                    // This opts into a "half-leading" baseline placement model for
+                                                    // the first line, but does not force the element height to equal
+                                                    // the configured line height.
+                                                    text = text
+                                                        .line_height_px(line_height)
+                                                        .h_full()
+                                                        .line_box_in_bounds();
                                                 }
                                                 if let Some(letter_spacing_em) =
                                                     style.letter_spacing_em

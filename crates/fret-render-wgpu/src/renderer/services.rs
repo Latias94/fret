@@ -71,6 +71,13 @@ impl fret_core::TextService for Renderer {
         let _ = self.text_system.selection_rects(blob, range, out);
     }
 
+    fn first_line_metrics(
+        &mut self,
+        blob: fret_core::TextBlobId,
+    ) -> Option<fret_core::TextLineMetrics> {
+        self.text_system.first_line_metrics(blob)
+    }
+
     fn selection_rects_clipped(
         &mut self,
         blob: fret_core::TextBlobId,

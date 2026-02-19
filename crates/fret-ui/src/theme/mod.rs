@@ -2575,6 +2575,7 @@ mod tests {
                     slant: TextSlant::Normal,
                     line_height: Some(Px(20.0)),
                     letter_spacing_em: None,
+                    vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                 },
             )]),
             ..ThemeConfig::default()

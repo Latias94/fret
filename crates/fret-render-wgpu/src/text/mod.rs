@@ -645,6 +645,8 @@ pub struct TextLine {
     /// Baseline Y for this line (y=0 at top of text box).
     pub y_baseline: Px,
     pub height: Px,
+    pub ascent: Px,
+    pub descent: Px,
     pub caret_stops: Vec<(usize, Px)>,
 }
 
@@ -2932,6 +2934,8 @@ impl TextSystem {
                             y_top: Px((line_top_px / scale).max(0.0)),
                             y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                             height: Px((line_height_px / scale).max(0.0)),
+                            ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
+                            descent: Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
                         });
 
@@ -3240,6 +3244,8 @@ impl TextSystem {
                                 y_top: Px((line_top_px / scale).max(0.0)),
                                 y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                                 height: Px((line_height_px / scale).max(0.0)),
+                                ascent: Px((unwrapped.ascent.max(0.0) / scale).max(0.0)),
+                                descent: Px((unwrapped.descent.max(0.0) / scale).max(0.0)),
                                 caret_stops,
                             });
 
@@ -4232,6 +4238,16 @@ impl TextSystem {
         Some(())
     }
 
+    pub fn first_line_metrics(&self, blob: TextBlobId) -> Option<fret_core::TextLineMetrics> {
+        let blob = self.blobs.get(blob)?;
+        let line = blob.shape.lines.first()?;
+        Some(fret_core::TextLineMetrics {
+            ascent: line.ascent,
+            descent: line.descent,
+            line_height: line.height,
+        })
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let entries = released_blob_cache_entries();
 
@@ -5125,6 +5141,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5151,6 +5169,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5189,6 +5209,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5217,6 +5239,8 @@ mod tests {
                 y_top: Px((i as f32) * 10.0),
                 y_baseline: Px(0.0),
                 height: Px(10.0),
+                ascent: Px(0.0),
+                descent: Px(0.0),
                 caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
             });
         }
@@ -5244,6 +5268,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
         };
         let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
@@ -6587,6 +6613,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops,
         };
 

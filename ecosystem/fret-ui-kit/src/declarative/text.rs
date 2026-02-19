@@ -281,6 +281,7 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         },
         line_height,
     )

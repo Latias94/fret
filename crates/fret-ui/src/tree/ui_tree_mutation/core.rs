@@ -65,6 +65,7 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
+        let view_cache_active = self.view_cache_active();
         let Some(n) = self.nodes.get_mut(node) else {
             return;
         };
@@ -73,10 +74,8 @@ impl<H: UiHost> UiTree<H> {
         if value {
             n.invalidation.paint = true;
         }
-        let should_mark_contained_cache_root_dirty = value
-            && self.view_cache_active()
-            && n.view_cache.enabled
-            && n.view_cache.contained_layout;
+        let should_mark_contained_cache_root_dirty =
+            value && view_cache_active && n.view_cache.enabled && n.view_cache.contained_layout;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,

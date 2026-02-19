@@ -887,6 +887,7 @@ pub struct TextBox {
     pub(crate) wrap: TextWrap,
     pub(crate) overflow: TextOverflow,
     pub(crate) align: TextAlign,
+    pub(crate) vertical_placement_override: Option<fret_core::TextVerticalPlacement>,
 }
 
 impl TextBox {
@@ -910,6 +911,7 @@ impl TextBox {
             wrap,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            vertical_placement_override: None,
         }
     }
 }
@@ -937,6 +939,7 @@ impl UiIntoElement for TextBox {
             wrap,
             overflow,
             align,
+            vertical_placement_override,
         } = self;
 
         let (mut style, mut layout, default_label_line_height, resolved_color) = {
@@ -980,6 +983,9 @@ impl UiIntoElement for TextBox {
         }
         if let Some(letter_spacing_em) = letter_spacing_em_override {
             style.letter_spacing_em = Some(letter_spacing_em);
+        }
+        if let Some(vertical_placement) = vertical_placement_override {
+            style.vertical_placement = vertical_placement;
         }
 
         // `TextPreset::Label` defaults to single-line text (Tailwind/shadcn `leading-none` label),

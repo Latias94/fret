@@ -110,6 +110,34 @@ pub enum TextAlign {
     End,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextVerticalPlacement {
+    /// Center the prepared text box (`TextMetrics.size.height`) within the allocated bounds.
+    ///
+    /// This is the historical Fret behavior and remains the default in v1.
+    #[default]
+    CenterMetricsBox,
+    /// Treat the allocated bounds height as the effective line box height for single-line text
+    /// and compute baseline placement via a CSS/GPUI-like "half-leading" model:
+    ///
+    /// - `padding_top = (bounds_h - ascent - descent) / 2`
+    /// - `baseline_y = padding_top + ascent`
+    ///
+    /// Notes:
+    /// - This mode is intended for fixed-height controls (tabs, pills, buttons) where authors
+    ///   want a stable baseline placement without per-component y-offset hacks.
+    /// - Implementations should fall back to `CenterMetricsBox` when line metrics are unavailable
+    ///   or the prepared text contains multiple lines.
+    BoundsAsLineBox,
+}
+
+impl TextVerticalPlacement {
+    fn is_center_metrics_box(v: &TextVerticalPlacement) -> bool {
+        *v == TextVerticalPlacement::CenterMetricsBox
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConstraints {
     pub max_width: Option<Px>,
@@ -148,6 +176,15 @@ pub struct TextStyle {
     /// Optional tracking (letter spacing) override, in EM.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
+    /// Controls how the prepared text is vertically placed inside an allocated bounds height.
+    ///
+    /// This is a mechanism-level knob intended for fixed-height controls. See
+    /// `TextVerticalPlacement` for details.
+    #[serde(
+        default,
+        skip_serializing_if = "TextVerticalPlacement::is_center_metrics_box"
+    )]
+    pub vertical_placement: TextVerticalPlacement,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
@@ -168,6 +205,7 @@ impl Default for TextStyle {
             slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         }
     }
 }
@@ -176,6 +214,13 @@ impl Default for TextStyle {
 pub struct TextMetrics {
     pub size: crate::Size,
     pub baseline: Px,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextLineMetrics {
+    pub ascent: Px,
+    pub descent: Px,
+    pub line_height: Px,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -598,6 +643,15 @@ pub trait TextService {
     ///
     /// Coordinate space: rects are relative to the text origin (x=0, y=0 at top of text box).
     fn selection_rects(&mut self, _blob: TextBlobId, _range: (usize, usize), _out: &mut Vec<Rect>) {
+    }
+
+    /// Best-effort first-line font extents for a prepared text blob.
+    ///
+    /// This is primarily intended for mechanism-level vertical placement policies in fixed-height
+    /// controls. Implementations should return `None` if the data is unavailable or expensive to
+    /// compute.
+    fn first_line_metrics(&mut self, _blob: TextBlobId) -> Option<TextLineMetrics> {
+        None
     }
 
     /// Computes selection rectangles and clips them to `clip` in the same coordinate space.

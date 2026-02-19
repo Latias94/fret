@@ -47,6 +47,7 @@ fn base_text_style(theme: &Theme) -> TextStyle {
         slant: TextSlant::Normal,
         line_height,
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 

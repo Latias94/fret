@@ -9,6 +9,40 @@ fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
     Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
 }
 
+fn compute_text_vertical_offset_and_baseline(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+    bounds_height: Px,
+    metrics: fret_core::TextMetrics,
+    vertical_placement: fret_core::TextVerticalPlacement,
+) -> (Px, Px) {
+    match vertical_placement {
+        fret_core::TextVerticalPlacement::CenterMetricsBox => (
+            compute_text_vertical_offset(bounds_height, metrics.size.height),
+            metrics.baseline,
+        ),
+        fret_core::TextVerticalPlacement::BoundsAsLineBox => {
+            let approx_single_line = metrics.size.height.0 <= 0.0
+                || services
+                    .first_line_metrics(blob)
+                    .is_some_and(|m| metrics.size.height.0 <= m.line_height.0 + 0.01);
+
+            if approx_single_line && let Some(line) = services.first_line_metrics(blob) {
+                let padding_top =
+                    Px(((bounds_height.0 - line.ascent.0 - line.descent.0) * 0.5).max(0.0));
+                let baseline =
+                    Px((padding_top.0 + line.ascent.0).clamp(0.0, bounds_height.0.max(0.0)));
+                (Px(0.0), baseline)
+            } else {
+                (
+                    compute_text_vertical_offset(bounds_height, metrics.size.height),
+                    metrics.baseline,
+                )
+            }
+        }
+    }
+}
+
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -598,11 +632,16 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset =
-                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
+                    cx.bounds.size.height,
+                    metrics,
+                    style.vertical_placement,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -788,11 +827,16 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset =
-                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
+                    cx.bounds.size.height,
+                    metrics,
+                    style.vertical_placement,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -1205,11 +1249,16 @@ impl ElementHostWidget {
                     }
                 }
 
-                let vertical_offset =
-                    compute_text_vertical_offset(cx.bounds.size.height, metrics.size.height);
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
+                    cx.bounds.size.height,
+                    metrics,
+                    style.vertical_placement,
+                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -1883,7 +1932,10 @@ impl ElementHostWidget {
 mod tests {
     use super::*;
 
-    use fret_core::{FontId, FontWeight, Px, TextStyle};
+    use fret_core::{
+        FontId, FontWeight, Px, Size, TextBlobId, TextLineMetrics, TextMetrics, TextStyle,
+        TextVerticalPlacement,
+    };
 
     #[test]
     fn text_vertical_offset_centers_metrics_in_bounds() {
@@ -1894,6 +1946,7 @@ mod tests {
             slant: Default::default(),
             line_height: Some(Px(16.0)),
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
 
         let _ = style;
@@ -1910,10 +1963,62 @@ mod tests {
             slant: Default::default(),
             line_height: Some(Px(12.0)),
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
 
         let _ = style;
         let offset = compute_text_vertical_offset(Px(12.0), Px(14.0));
         assert_eq!(offset, Px(0.0));
+    }
+
+    struct FakeTextService {
+        line: Option<TextLineMetrics>,
+    }
+
+    impl fret_core::TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            unimplemented!("not needed for this test")
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+
+        fn first_line_metrics(&mut self, _blob: TextBlobId) -> Option<TextLineMetrics> {
+            self.line
+        }
+    }
+
+    #[test]
+    fn bounds_as_line_box_baseline_uses_half_leading_in_bounds() {
+        let mut blobs: slotmap::SlotMap<TextBlobId, ()> = slotmap::SlotMap::with_key();
+        let blob = blobs.insert(());
+
+        let mut services = FakeTextService {
+            line: Some(TextLineMetrics {
+                ascent: Px(10.0),
+                descent: Px(4.0),
+                line_height: Px(16.0),
+            }),
+        };
+
+        let metrics = TextMetrics {
+            size: Size::new(Px(32.0), Px(16.0)),
+            baseline: Px(12.0),
+        };
+
+        let (offset, baseline) = compute_text_vertical_offset_and_baseline(
+            &mut services,
+            blob,
+            Px(20.0),
+            metrics,
+            TextVerticalPlacement::BoundsAsLineBox,
+        );
+
+        // bounds_h=20, ascent=10, descent=4 => padding_top=3, baseline=13
+        assert_eq!(offset, Px(0.0));
+        assert_eq!(baseline, Px(13.0));
     }
 }
