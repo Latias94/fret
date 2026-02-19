@@ -18,12 +18,8 @@ impl ElementHostWidget {
         };
 
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-            crate::elements::record_bounds_for_element(
-                &mut *cx.app,
-                window,
-                self.element,
-                cx.bounds,
-            );
+            cx.tree
+                .queue_layout_bounds_for_element(self.element, cx.bounds);
         }
 
         crate::elements::with_observed_deps_for_element(

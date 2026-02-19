@@ -248,6 +248,34 @@ Notes:
 - This change does not materially improve `ui-gallery-window-resize-stress-steady` on macOS, which is consistent
   with the resize-stress worst frames being dominated by other paint/layout root work rather than deps lookup.
 
+### Finding (2026-02-19): batch element bounds recording in layout
+
+During layout, `ElementHostWidget` records each element's bounds into `WindowElementState` so component-layer
+policies can query geometry cross-frame (anchors, container queries, etc).
+
+Previously we recorded bounds by calling `record_bounds_for_element(...)` inside each widget layout call, which
+leased `ElementRuntime` per node.
+
+Change:
+
+- Queue `(element, bounds)` records during layout and flush them once at the end of the final layout pass.
+
+Evidence (macOS M4, release, repeat=3; same suite prewarm + prelude + view-cache env):
+
+- Resize stress:
+  - Before: `target/fret-diag-perf-local/20260219-observed-deps-opt-v1/1771472958297-ui-gallery-window-resize-stress-steady/bundle.json`
+  - After: `target/fret-diag-perf-local/20260219-layout-bounds-batch-v1/1771474922781-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Diff highlights:
+    - `max.layout_roots_time_us`: `2773us -> 2670us` (`-3.7%`)
+    - `max.total_time_us`: `8176us -> 8106us` (`-0.9%`)
+
+- VirtualList torture:
+  - Before: `target/fret-diag-perf-local/20260219-observed-deps-opt-v1/1771472979963-ui-gallery-virtual-list-bottom-steady/bundle.json`
+  - After: `target/fret-diag-perf-local/20260219-layout-bounds-batch-v1/1771474943304-ui-gallery-virtual-list-bottom-steady/bundle.json`
+  - Diff highlights:
+    - `avg.layout_time_us`: `2303us -> 2164us` (`-6.0%`)
+    - `max.total_time_us`: `6147us -> 6027us` (`-2.0%`)
+
 ### Finding (2026-02-19): Batch visual-bounds recording to avoid per-node global borrows
 
 The paint pass records per-element “visual bounds” (post-`render_transform` AABB, ADR 0082) via

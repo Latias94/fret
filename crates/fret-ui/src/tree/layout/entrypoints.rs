@@ -61,6 +61,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.measure_cache_this_frame.clear();
+        self.scratch_bounds_records.clear();
 
         if pass_kind == LayoutPassKind::Final {
             self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
@@ -498,6 +499,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         if pass_kind == LayoutPassKind::Final {
+            self.flush_layout_bounds_records_if_needed(app);
             let (_, prepaint_elapsed) = fret_perf::measure_span(
                 layout_phase_time_enabled,
                 trace_layout,

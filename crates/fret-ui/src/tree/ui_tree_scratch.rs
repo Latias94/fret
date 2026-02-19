@@ -1,6 +1,38 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn queue_layout_bounds_for_element(
+        &mut self,
+        element: GlobalElementId,
+        bounds: Rect,
+    ) {
+        self.scratch_bounds_records.push((element, bounds));
+    }
+
+    pub(in crate::tree) fn flush_layout_bounds_records_if_needed(&mut self, app: &mut H) {
+        let Some(window) = self.window else {
+            self.scratch_bounds_records.clear();
+            return;
+        };
+        if self.scratch_bounds_records.is_empty() {
+            return;
+        }
+
+        let mut records = std::mem::take(&mut self.scratch_bounds_records);
+        crate::elements::with_window_state(app, window, |st| {
+            for (element, bounds) in records.drain(..) {
+                if st
+                    .current_bounds(element)
+                    .is_some_and(|existing| existing == bounds)
+                {
+                    continue;
+                }
+                st.record_bounds(element, bounds);
+            }
+        });
+        self.scratch_bounds_records = records;
+    }
+
     pub(crate) fn take_scratch_pending_invalidations(&mut self) -> HashMap<NodeId, u8> {
         std::mem::take(&mut self.scratch_pending_invalidations)
     }
