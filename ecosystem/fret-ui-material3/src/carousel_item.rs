@@ -165,6 +165,10 @@ impl CarouselItem {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
+            let chrome_test_id = self
+                .test_id
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{id}.chrome")));
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let interactive = self.on_activate.is_some();
                 let enabled = interactive && !self.disabled;
@@ -337,7 +341,10 @@ impl CarouselItem {
 
                         let children: Vec<AnyElement> =
                             std::iter::once(overlay).chain(content(cx)).collect();
-                        let container = cx.container(container, move |_cx| children);
+                        let mut container = cx.container(container, move |_cx| children);
+                        if let Some(test_id) = chrome_test_id.clone() {
+                            container = container.test_id(test_id);
+                        }
 
                         if let Some(opacity) = disabled_opacity {
                             let mut props = OpacityProps::default();
