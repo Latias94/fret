@@ -250,7 +250,12 @@ fn context_menu_cancel_open_item_pointer_up_handler(
             up.position,
             up.button,
         );
-        // 右键释放不应走 Pressable 默认激活链路。
+        // Right-button release should not go through the Pressable default activation path.
+        //
+        // Base UI opens via the `contextmenu` event and then installs a guarded `mouseup` listener
+        // to potentially cancel-open (after a delay). See:
+        // - `repo-ref/base-ui/packages/react/src/context-menu/trigger/ContextMenuTrigger.tsx`
+        // - `repo-ref/base-ui/packages/react/src/context-menu/trigger/ContextMenuTrigger.test.tsx`
         if up.button == fret_core::MouseButton::Right {
             PressablePointerUpResult::SkipActivate
         } else {
@@ -2586,7 +2591,8 @@ impl ContextMenu {
                         let _ = host.models_mut().update(&anchor_store_model, |map| {
                             map.insert(open_model_id, down.position);
                         });
-                        // Base UI: contextmenu 打开后 500ms 再允许 mouseup 触发 cancel-open。
+                        // Base UI: once opened, wait 500ms before allowing `mouseup` to cancel-open.
+                        // (`LONG_PRESS_DELAY = 500` in `ContextMenuTrigger.tsx`.)
                         if down.button == fret_core::MouseButton::Right {
                             context_menu_cancel_open_start(
                                 &cancel_open,
@@ -2595,7 +2601,7 @@ impl ContextMenu {
                                 down.pointer_id,
                                 down.position,
                             );
-                            // 在此期间持续收到 pointer move/up。
+                            // Capture pointer so we keep receiving move/up during the guard window.
                             host.capture_pointer();
                         }
                     }
@@ -5694,7 +5700,7 @@ mod tests {
             open.clone(),
         );
 
-        // 在原始锚点处右键抬起：应被忽略，不关闭菜单。
+        // Right mouseup at the original anchor should be ignored (do not close a freshly opened menu).
         ui.dispatch_event(
             &mut app,
             &mut services,
