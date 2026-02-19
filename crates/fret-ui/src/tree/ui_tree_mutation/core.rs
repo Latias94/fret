@@ -53,11 +53,24 @@ impl<H: UiHost> UiTree<H> {
         if value {
             n.invalidation.paint = true;
         }
+        let should_mark_contained_cache_root_dirty =
+            value && n.view_cache.enabled && n.view_cache.contained_layout;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
             n.invalidation.layout,
         );
+
+        if should_mark_contained_cache_root_dirty {
+            self.mark_cache_root_dirty(
+                node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        } else if !value {
+            self.dirty_cache_roots.remove(&node);
+            self.dirty_cache_root_reasons.remove(&node);
+        }
     }
 
     pub fn set_root(&mut self, root: NodeId) {

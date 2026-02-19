@@ -777,7 +777,11 @@ fn render_code_block_body<H: UiHost + 'static>(
                     let outer_layout = {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.height = Length::Auto;
+                        // `Scroll` children frequently use `Length::Fill` so they need a definite
+                        // viewport height. Using `max_height` alone yields an indefinite height
+                        // (auto) which can collapse or produce inconsistent layout.
+                        layout.size.height = Length::Px(max_height);
+                        layout.size.min_height = Some(max_height);
                         layout.size.max_height = Some(max_height);
                         layout.overflow = Overflow::Clip;
                         layout
@@ -1227,7 +1231,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
             layout: {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
-                layout.size.height = Length::Auto;
+                // Same rationale as the non-windowed path: nested scrollables need a definite
+                // viewport height, otherwise `Length::Fill` has no base to resolve against.
+                layout.size.height = Length::Px(max_height);
+                layout.size.min_height = Some(max_height);
                 layout.size.max_height = Some(max_height);
                 layout.overflow = Overflow::Clip;
                 layout
