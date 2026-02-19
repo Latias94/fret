@@ -584,6 +584,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -610,6 +611,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -629,6 +631,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -651,6 +654,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
             ],
         };
@@ -730,6 +734,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: underlay_list,
@@ -749,6 +754,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: underlay_item,
@@ -771,6 +777,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: modal_root,
@@ -790,6 +797,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -816,6 +824,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
             ],
         };
@@ -880,6 +889,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -899,6 +909,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -918,6 +929,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
             ],
         };
@@ -980,6 +992,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: dialog,
@@ -1018,6 +1031,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: description,
@@ -1037,6 +1051,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
             ],
         };
@@ -1110,6 +1125,7 @@ mod tests {
                     labelled_by: Vec::new(),
                     described_by: Vec::new(),
                     controls: Vec::new(),
+                    inline_spans: Vec::new(),
                 },
                 SemanticsNode {
                     id: modal_root,
