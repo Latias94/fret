@@ -235,6 +235,10 @@ impl UiBuilder<crate::ui::TextBox> {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
     }
 
+    /// Sets `TextWrap::WordBreak` and clips overflow.
+    ///
+    /// This matches Tailwind's `break-words` intent (prevent horizontal overflow by allowing
+    /// breaks inside long tokens such as URLs, paths, and identifiers).
     pub fn break_words(self) -> Self {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
@@ -269,6 +273,10 @@ impl UiBuilder<crate::ui::RawTextBox> {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
     }
 
+    /// Sets `TextWrap::WordBreak` and clips overflow.
+    ///
+    /// This matches Tailwind's `break-words` intent (prevent horizontal overflow by allowing
+    /// breaks inside long tokens such as URLs, paths, and identifiers).
     pub fn break_words(self) -> Self {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
