@@ -45,6 +45,7 @@ struct ScrollLayoutProbeKey {
 struct ScrollLayoutProbeCacheState {
     frame_id: FrameId,
     entries: Vec<(ScrollLayoutProbeKey, Size)>,
+    last_max_child: Size,
 }
 
 fn available_space_cache_key(space: AvailableSpace) -> u64 {
@@ -684,16 +685,19 @@ impl ElementHostWidget {
         // This keeps scroll probing stable across probe/final passes and avoids accidental
         // "infinite window" layouts (e.g. text reflowing as a single long line) during probes.
         let external_handle = props.scroll_handle.clone();
-        let handle = crate::elements::with_element_state(
+        let (handle, intrinsic_measure_cache) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::element::ScrollState::default,
             |state| {
-                external_handle
-                    .as_ref()
-                    .unwrap_or(&state.scroll_handle)
-                    .clone()
+                (
+                    external_handle
+                        .as_ref()
+                        .unwrap_or(&state.scroll_handle)
+                        .clone(),
+                    state.intrinsic_measure_cache,
+                )
             },
         );
 
@@ -740,17 +744,8 @@ impl ElementHostWidget {
                 scale_bits: cx.scale_factor.to_bits(),
             };
 
-            intrinsic_cached_max_child = crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                crate::element::ScrollState::default,
-                |state| {
-                    state
-                        .intrinsic_measure_cache
-                        .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child))
-                },
-            );
+            intrinsic_cached_max_child = intrinsic_measure_cache
+                .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child));
             // Safe fast path: only use intrinsic size caching as a substitute for measuring the
             // child when the child subtree does not need layout this frame.
             if !cx.tree.node_needs_layout(child) {
@@ -797,75 +792,68 @@ impl ElementHostWidget {
             && can_defer_probe_with_cached_children
             && children_layout_invalidated;
 
-        let mut defer_state = crate::elements::with_element_state(
-            &mut *cx.app,
-            window,
-            self.element,
-            ScrollDeferredUnboundedProbeState::default,
-            |state| *state,
-        );
-
         let stable_frames_required = scroll_defer_unbounded_probe_stable_frames();
-        let mut defer_this_frame = false;
-        if should_defer_unbounded_probe_on_resize {
-            defer_this_frame = true;
-            defer_state.kind = ScrollDeferredUnboundedProbeKind::Resize;
-            defer_state.stable_frames = 0;
-        } else {
-            match defer_state.kind {
-                ScrollDeferredUnboundedProbeKind::Resize => {
-                    if stable_frames_required == 0 {
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                        defer_state.stable_frames = 0;
-                    } else {
-                        defer_state.stable_frames = defer_state.stable_frames.saturating_add(1);
-                        if defer_state.stable_frames < stable_frames_required {
-                            defer_this_frame = true;
-                        } else {
-                            defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                            defer_state.stable_frames = 0;
-                        }
-                    }
-                }
-                ScrollDeferredUnboundedProbeKind::Invalidation => {
-                    // Under view-cache reconciliation, descendants can remain layout-invalidated
-                    // for multiple frames. Keep deferring while invalidated, and only allow the
-                    // expensive unbounded probe once the subtree stabilizes for a few frames.
-                    if !wants_unbounded_probe || !defer_probe_on_invalidation {
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                        defer_state.stable_frames = 0;
-                    } else if children_layout_invalidated {
-                        defer_this_frame = true;
-                        defer_state.stable_frames = 0;
-                    } else if stable_frames_required == 0 {
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                        defer_state.stable_frames = 0;
-                    } else {
-                        defer_state.stable_frames = defer_state.stable_frames.saturating_add(1);
-                        if defer_state.stable_frames < stable_frames_required {
-                            defer_this_frame = true;
-                        } else {
-                            defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                            defer_state.stable_frames = 0;
-                        }
-                    }
-                }
-                ScrollDeferredUnboundedProbeKind::None => {
-                    if should_defer_unbounded_probe_on_invalidation {
-                        defer_this_frame = true;
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
-                        defer_state.stable_frames = 0;
-                    }
-                }
-            }
-        }
-
-        crate::elements::with_element_state(
+        let (defer_state, defer_this_frame) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             ScrollDeferredUnboundedProbeState::default,
-            |state| *state = defer_state,
+            |state| {
+                let mut defer_this_frame = false;
+                if should_defer_unbounded_probe_on_resize {
+                    defer_this_frame = true;
+                    state.kind = ScrollDeferredUnboundedProbeKind::Resize;
+                    state.stable_frames = 0;
+                } else {
+                    match state.kind {
+                        ScrollDeferredUnboundedProbeKind::Resize => {
+                            if stable_frames_required == 0 {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else {
+                                state.stable_frames = state.stable_frames.saturating_add(1);
+                                if state.stable_frames < stable_frames_required {
+                                    defer_this_frame = true;
+                                } else {
+                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                    state.stable_frames = 0;
+                                }
+                            }
+                        }
+                        ScrollDeferredUnboundedProbeKind::Invalidation => {
+                            // Under view-cache reconciliation, descendants can remain layout-invalidated
+                            // for multiple frames. Keep deferring while invalidated, and only allow the
+                            // expensive unbounded probe once the subtree stabilizes for a few frames.
+                            if !wants_unbounded_probe || !defer_probe_on_invalidation {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else if children_layout_invalidated {
+                                defer_this_frame = true;
+                                state.stable_frames = 0;
+                            } else if stable_frames_required == 0 {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else {
+                                state.stable_frames = state.stable_frames.saturating_add(1);
+                                if state.stable_frames < stable_frames_required {
+                                    defer_this_frame = true;
+                                } else {
+                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                    state.stable_frames = 0;
+                                }
+                            }
+                        }
+                        ScrollDeferredUnboundedProbeKind::None => {
+                            if should_defer_unbounded_probe_on_invalidation {
+                                defer_this_frame = true;
+                                state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
+                                state.stable_frames = 0;
+                            }
+                        }
+                    }
+                }
+                (*state, defer_this_frame)
+            },
         );
 
         if defer_this_frame {
@@ -891,7 +879,7 @@ impl ElementHostWidget {
             avail_h: available_space_cache_key(child_constraints.available.height),
         };
         let frame_id = cx.app.frame_id();
-        let cached = crate::elements::with_element_state(
+        let (cached, last_max_child) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
@@ -901,10 +889,14 @@ impl ElementHostWidget {
                     state.frame_id = frame_id;
                     state.entries.clear();
                 }
-                state
+                let cached = state
                     .entries
                     .iter()
-                    .find_map(|(k, v)| (*k == key).then_some(*v))
+                    .find_map(|(k, v)| (*k == key).then_some(*v));
+                if let Some(cached) = cached {
+                    state.last_max_child = cached;
+                }
+                (cached, state.last_max_child)
             },
         );
 
@@ -913,16 +905,32 @@ impl ElementHostWidget {
         } else if let Some(cached) = cached {
             cached
         } else if defer_this_frame {
-            // Use the previous measured size as a best-effort estimate and avoid a deep measure
-            // walk on this frame.
-            let mut max_child = Size::new(Px(0.0), Px(0.0));
-            for &child in cx.children {
-                if let Some(child_size) = cx.tree.node_measured_size(child) {
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+            if last_max_child != Size::default() {
+                // Best-effort: reuse the last measured max-child size while deferring the expensive
+                // unbounded probe during interactive resize/unstable frames.
+                last_max_child
+            } else {
+                // Fallback: if we have no cached max-child size yet, scan the last measured child
+                // sizes and avoid a deep measure walk on this frame. Persist the result so future
+                // deferred frames can reuse it without scanning.
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    if let Some(child_size) = cx.tree.node_measured_size(child) {
+                        max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                        max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                    }
                 }
+                if max_child != Size::default() {
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        ScrollLayoutProbeCacheState::default,
+                        |state| state.last_max_child = max_child,
+                    );
+                }
+                max_child
             }
-            max_child
         } else if let Some(cached) = intrinsic_cached_max_child
             && cached != Size::default()
         {
@@ -953,6 +961,7 @@ impl ElementHostWidget {
                         state.entries.clear();
                     }
                     state.entries.push((key, max_child));
+                    state.last_max_child = max_child;
                 },
             );
 
