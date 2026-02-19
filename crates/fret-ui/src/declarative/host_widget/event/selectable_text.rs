@@ -1,6 +1,18 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 
+fn interactive_span_at_index<'a>(
+    spans: &'a [crate::element::SelectableTextInteractiveSpan],
+    idx: usize,
+) -> Option<&'a crate::element::SelectableTextInteractiveSpan> {
+    if spans.is_empty() {
+        return None;
+    }
+    spans
+        .iter()
+        .find(|s| s.range.contains(&idx) || (idx > 0 && s.range.contains(&(idx - 1))))
+}
+
 fn sync_active_text_selection<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -378,6 +390,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 |state| {
                     state.dragging = matches!(*button, fret_core::MouseButton::Left);
                     state.last_pointer_pos = Some(*position);
+                    state.pointer_down_pos = Some(*position);
                     state.preferred_x = None;
 
                     let hit = hit.unwrap_or(fret_core::HitTestResult {
@@ -421,6 +434,21 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                     state.selection_anchor = anchor;
                     state.caret = caret;
                     state.affinity = hit.affinity;
+
+                    state.pending_span_activation = None;
+                    state.pending_span_click_count = *click_count;
+                    if matches!(*button, fret_core::MouseButton::Left)
+                        && *click_count == 1
+                        && !modifiers.shift
+                        && let Some(span) =
+                            interactive_span_at_index(&props.interactive_spans, caret_at_point)
+                    {
+                        state.pending_span_activation =
+                            Some(crate::action::SelectableTextSpanActivation {
+                                tag: span.tag.clone(),
+                                range: span.range.clone(),
+                            });
+                    }
                 },
             );
 
@@ -432,7 +460,22 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
         }
         Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
-            cx.set_cursor_icon(fret_core::CursorIcon::Text);
+            let local = fret_core::Point::new(
+                fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
+                fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
+            );
+
+            let hit = this
+                .text_cache
+                .blob
+                .map(|blob| cx.services.hit_test_point(blob, local));
+
+            let cursor = hit
+                .and_then(|hit| interactive_span_at_index(&props.interactive_spans, hit.index))
+                .map(|_| fret_core::CursorIcon::Pointer)
+                .unwrap_or(fret_core::CursorIcon::Text);
+            cx.set_cursor_icon(cursor);
+
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -446,6 +489,27 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 return;
             }
 
+            const ACTIVATION_DRAG_THRESHOLD_PX: f32 = 4.0;
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::SelectableTextState::default,
+                |state| {
+                    if state.pending_span_activation.is_some()
+                        && let Some(down) = state.pointer_down_pos
+                    {
+                        let dx = position.x.0 - down.x.0;
+                        let dy = position.y.0 - down.y.0;
+                        if (dx * dx + dy * dy)
+                            > (ACTIVATION_DRAG_THRESHOLD_PX * ACTIVATION_DRAG_THRESHOLD_PX)
+                        {
+                            state.pending_span_activation = None;
+                        }
+                    }
+                },
+            );
+
             let dragging = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -456,16 +520,6 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             if !dragging {
                 return;
             }
-
-            let local = fret_core::Point::new(
-                fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
-                fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
-            );
-
-            let hit = this
-                .text_cache
-                .blob
-                .map(|blob| cx.services.hit_test_point(blob, local));
 
             if let Some(hit) = hit {
                 crate::elements::with_element_state(
@@ -494,6 +548,135 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
             if cx.captured == Some(cx.node) {
                 cx.release_pointer_capture();
+            }
+
+            const ACTIVATION_DRAG_THRESHOLD_PX: f32 = 4.0;
+            let (pending, click_count, anchor, caret, last_pos, down_pos) =
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        (
+                            state.pending_span_activation.clone(),
+                            state.pending_span_click_count,
+                            state.selection_anchor,
+                            state.caret,
+                            state.last_pointer_pos,
+                            state.pointer_down_pos,
+                        )
+                    },
+                );
+
+            if let Some(pending) = pending
+                && click_count == 1
+                && anchor == caret
+                && let (Some(last_pos), Some(down_pos)) = (last_pos, down_pos)
+            {
+                let dx = last_pos.x.0 - down_pos.x.0;
+                let dy = last_pos.y.0 - down_pos.y.0;
+                if (dx * dx + dy * dy)
+                    <= (ACTIVATION_DRAG_THRESHOLD_PX * ACTIVATION_DRAG_THRESHOLD_PX)
+                {
+                    let local = fret_core::Point::new(
+                        fret_core::Px(last_pos.x.0 - cx.bounds.origin.x.0),
+                        fret_core::Px(last_pos.y.0 - cx.bounds.origin.y.0),
+                    );
+                    let hit = this
+                        .text_cache
+                        .blob
+                        .map(|blob| cx.services.hit_test_point(blob, local));
+                    if let Some(hit) = hit
+                        && let Some(span) =
+                            interactive_span_at_index(&props.interactive_spans, hit.index)
+                        && span.tag.as_ref() == pending.tag.as_ref()
+                        && span.range == pending.range
+                    {
+                        let handler = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            this.element,
+                            crate::action::SelectableTextActionHooks::default,
+                            |hooks| hooks.on_activate_span.clone(),
+                        );
+                        if let Some(handler) = handler {
+                            struct SelectableTextActivateSpanHookHost<'a, H: UiHost> {
+                                app: &'a mut H,
+                                notify_requested: &'a mut bool,
+                                notify_requested_location:
+                                    &'a mut Option<crate::widget::UiSourceLocation>,
+                            }
+
+                            impl<H: UiHost> crate::action::UiActionHost
+                                for SelectableTextActivateSpanHookHost<'_, H>
+                            {
+                                fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                                    self.app.models_mut()
+                                }
+
+                                fn push_effect(&mut self, effect: fret_runtime::Effect) {
+                                    self.app.push_effect(effect);
+                                }
+
+                                fn request_redraw(&mut self, window: AppWindowId) {
+                                    self.app.request_redraw(window);
+                                }
+
+                                fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                                    self.app.next_timer_token()
+                                }
+
+                                fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                                    self.app.next_clipboard_token()
+                                }
+
+                                fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                                    self.app.next_share_sheet_token()
+                                }
+
+                                fn record_transient_event(&mut self, cx: crate::action::ActionCx, key: u64) {
+                                    crate::elements::record_transient_event(
+                                        &mut *self.app,
+                                        cx.window,
+                                        cx.target,
+                                        key,
+                                    );
+                                }
+
+                                #[track_caller]
+                                fn notify(&mut self, _cx: crate::action::ActionCx) {
+                                    *self.notify_requested = true;
+                                    if self.notify_requested_location.is_none() {
+                                        let caller = std::panic::Location::caller();
+                                        *self.notify_requested_location =
+                                            Some(crate::widget::UiSourceLocation {
+                                                file: caller.file(),
+                                                line: caller.line(),
+                                                column: caller.column(),
+                                            });
+                                    }
+                                }
+                            }
+
+                            let mut host = SelectableTextActivateSpanHookHost {
+                                app: &mut *cx.app,
+                                notify_requested: &mut cx.notify_requested,
+                                notify_requested_location: &mut cx.notify_requested_location,
+                            };
+
+                            handler(
+                                &mut host,
+                                crate::action::ActionCx {
+                                    window,
+                                    target: this.element,
+                                },
+                                crate::action::ActivateReason::Pointer,
+                                pending,
+                            );
+                        }
+                    }
+                }
             }
 
             let settings = cx
@@ -528,6 +711,9 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 |state| {
                     state.dragging = false;
                     state.last_pointer_pos = None;
+                    state.pointer_down_pos = None;
+                    state.pending_span_activation = None;
+                    state.pending_span_click_count = 0;
                 },
             );
             cx.invalidate_self(Invalidation::Paint);

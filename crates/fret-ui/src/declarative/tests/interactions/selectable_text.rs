@@ -168,6 +168,7 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
                                 wrap: fret_core::TextWrap::None,
                                 overflow: fret_core::TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                interactive_spans: std::sync::Arc::from([]),
                             })]
                         },
                     )]
@@ -992,6 +993,7 @@ fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
                     wrap: fret_core::TextWrap::None,
                     overflow: fret_core::TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    interactive_spans: std::sync::Arc::from([]),
                 }),
             ]
         },

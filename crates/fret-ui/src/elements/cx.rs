@@ -19,9 +19,9 @@ use crate::action::{
     OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
     OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
     OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
-    OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks,
-    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
-    TimerActionHooks,
+    OnRovingNavigate, OnRovingTypeahead, OnSelectableTextActivateSpan, OnTimer, OnWheel,
+    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult,
+    RovingActionHooks, SelectableTextActionHooks, TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -1614,6 +1614,39 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a component-owned activation handler for interactive spans in the current
+    /// selectable text element.
+    ///
+    /// This is a policy hook mechanism (ADR 0074): components decide what activation does
+    /// (open URL, dispatch command, etc.), while the runtime remains mechanism-only.
+    pub fn selectable_text_on_activate_span(&mut self, handler: OnSelectableTextActivateSpan) {
+        self.with_state(SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = Some(handler);
+        });
+    }
+
+    pub fn selectable_text_on_activate_span_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnSelectableTextActivateSpan,
+    ) {
+        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = Some(handler);
+        });
+    }
+
+    pub fn selectable_text_clear_on_activate_span(&mut self) {
+        self.with_state(SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = None;
+        });
+    }
+
+    pub fn selectable_text_clear_on_activate_span_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = None;
+        });
+    }
+
     /// Register a component-owned pointer down handler for the current pressable element.
     ///
     /// This is a policy hook mechanism (ADR 0074): components can opt into Radix-style "select on
@@ -2776,6 +2809,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
             cx.new_any_element(
                 id,
                 ElementKind::SelectableText(SelectableTextProps::new(rich)),
@@ -2785,9 +2819,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn selectable_text_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> SelectableTextProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
+            let props = f(cx, id);
+            cx.new_any_element(id, ElementKind::SelectableText(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
     pub fn selectable_text_props(&mut self, props: SelectableTextProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
             cx.new_any_element(id, ElementKind::SelectableText(props), Vec::new())
         })
     }

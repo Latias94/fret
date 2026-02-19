@@ -1472,6 +1472,7 @@ fn render_code_block_text<H: UiHost>(
                 wrap: text_wrap,
                 overflow,
                 align: fret_core::TextAlign::Start,
+                interactive_spans: std::sync::Arc::from([]),
             })]
         },
     );
