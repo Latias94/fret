@@ -286,6 +286,36 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
     )
 }
 
+/// Declarative helper intended for code-like inline text.
+///
+/// Defaults:
+/// - monospace font (`metric.font.mono_size` / `metric.font.mono_line_height`)
+/// - `TextWrap::Grapheme` so long tokens (paths/URLs/identifiers) can still wrap when needed
+pub fn text_code_wrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        TextStyle {
+            font: FontId::monospace(),
+            size: theme.metric_token("metric.font.mono_size"),
+            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+            ..Default::default()
+        }
+    };
+
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::Grapheme,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+    })
+}
+
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).
 pub fn text_prose_nowrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
