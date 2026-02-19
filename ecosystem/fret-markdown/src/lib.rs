@@ -1037,7 +1037,7 @@ fn render_inline_text_token<H: UiHost>(
                 letter_spacing_em: None,
             }),
             color: Some(color),
-            wrap: TextWrap::None,
+            wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
         });
