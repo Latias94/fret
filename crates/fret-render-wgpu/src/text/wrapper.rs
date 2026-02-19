@@ -1670,11 +1670,7 @@ mod tests {
             );
         }
 
-        let max_line_w = wrapped
-            .lines
-            .iter()
-            .map(|l| l.width)
-            .fold(0.0f32, f32::max);
+        let max_line_w = wrapped.lines.iter().map(|l| l.width).fold(0.0f32, f32::max);
         assert!(
             max_line_w > 0.0,
             "expected non-zero min-content width for non-empty text"
@@ -2066,6 +2062,7 @@ mod tests {
     #[serde(rename_all = "snake_case")]
     enum FixtureWrapMode {
         Word,
+        WordBreak,
         Grapheme,
     }
 
@@ -2091,6 +2088,7 @@ mod tests {
     fn wrap_mode_for_fixture(mode: FixtureWrapMode) -> TextWrap {
         match mode {
             FixtureWrapMode::Word => TextWrap::Word,
+            FixtureWrapMode::WordBreak => TextWrap::WordBreak,
             FixtureWrapMode::Grapheme => TextWrap::Grapheme,
         }
     }
@@ -2107,7 +2105,7 @@ mod tests {
         ));
         let suite: WrapFixtureSuite =
             serde_json::from_str(raw).expect("wrap conformance fixtures JSON");
-        assert_eq!(suite.schema_version, 1);
+        assert_eq!(suite.schema_version, 2);
 
         let mut shaper = shaper_with_bundled_fonts();
 
