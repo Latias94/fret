@@ -80,6 +80,121 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 return;
             }
 
+            if matches!(
+                key,
+                fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter
+            ) && !props.interactive_spans.is_empty()
+                && !modifiers.ctrl
+                && !modifiers.alt
+                && !modifiers.meta
+            {
+                let (anchor, caret) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.selection_anchor, state.caret),
+                );
+
+                if anchor == caret
+                    && let Some(span) = interactive_span_at_index(&props.interactive_spans, caret)
+                {
+                    let activation = crate::action::SelectableTextSpanActivation {
+                        tag: span.tag.clone(),
+                        range: span.range.clone(),
+                    };
+
+                    let handler = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::action::SelectableTextActionHooks::default,
+                        |hooks| hooks.on_activate_span.clone(),
+                    );
+
+                    if let Some(handler) = handler {
+                        struct SelectableTextActivateSpanHookHost<'a, H: UiHost> {
+                            app: &'a mut H,
+                            notify_requested: &'a mut bool,
+                            notify_requested_location:
+                                &'a mut Option<crate::widget::UiSourceLocation>,
+                        }
+
+                        impl<H: UiHost> crate::action::UiActionHost for SelectableTextActivateSpanHookHost<'_, H> {
+                            fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                                self.app.models_mut()
+                            }
+
+                            fn push_effect(&mut self, effect: fret_runtime::Effect) {
+                                self.app.push_effect(effect);
+                            }
+
+                            fn request_redraw(&mut self, window: AppWindowId) {
+                                self.app.request_redraw(window);
+                            }
+
+                            fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                                self.app.next_timer_token()
+                            }
+
+                            fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                                self.app.next_clipboard_token()
+                            }
+
+                            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                                self.app.next_share_sheet_token()
+                            }
+
+                            fn record_transient_event(
+                                &mut self,
+                                cx: crate::action::ActionCx,
+                                key: u64,
+                            ) {
+                                crate::elements::record_transient_event(
+                                    &mut *self.app,
+                                    cx.window,
+                                    cx.target,
+                                    key,
+                                );
+                            }
+
+                            #[track_caller]
+                            fn notify(&mut self, _cx: crate::action::ActionCx) {
+                                *self.notify_requested = true;
+                                if self.notify_requested_location.is_none() {
+                                    let caller = std::panic::Location::caller();
+                                    *self.notify_requested_location =
+                                        Some(crate::widget::UiSourceLocation {
+                                            file: caller.file(),
+                                            line: caller.line(),
+                                            column: caller.column(),
+                                        });
+                                }
+                            }
+                        }
+
+                        let mut host = SelectableTextActivateSpanHookHost {
+                            app: &mut *cx.app,
+                            notify_requested: &mut cx.notify_requested,
+                            notify_requested_location: &mut cx.notify_requested_location,
+                        };
+
+                        handler(
+                            &mut host,
+                            crate::action::ActionCx {
+                                window,
+                                target: this.element,
+                            },
+                            ActivateReason::Keyboard,
+                            activation,
+                        );
+
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+            }
+
             let handle_visual_line_home_end =
                 |this: &mut ElementHostWidget,
                  cx: &mut EventCx<'_, H>,
