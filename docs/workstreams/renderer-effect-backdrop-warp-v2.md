@@ -48,7 +48,7 @@ Add a new effect step variant to `fret-core::scene::EffectStep`:
 Where `BackdropWarpV2` extends v1 with a **bounded warp field source**:
 
 - `field: BackdropWarpFieldV2`
-  - `Procedural(BackdropWarpV1)` (compat)
+  - `Procedural` (uses `base` as the portable fallback field)
   - `ImageDisplacementMap { image: ImageId, uv: UvRect, sampling: ImageSamplingHint, encoding: WarpMapEncodingV1 }`
 
 Notes:
@@ -79,7 +79,7 @@ Deterministic degradation rules (ordered):
 
 1. If `EffectMode::FilterContent`: skip the warp step (no-op) and preserve the rest of the chain.
 2. If the image warp field is unavailable (missing image, unsupported sampling, budgets):
-   - degrade to `Procedural(BackdropWarpV1)` with the same strength clamp (or skip if `strength_px == 0`).
+   - degrade to `Procedural` with the same strength clamp (or skip if `strength_px == 0`).
 3. Under budget pressure:
    - disable chromatic aberration first,
    - then clamp/scale down displacement strength,
@@ -125,3 +125,5 @@ Related (v1):
 - Keep the toggle `test_id`s stable so `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json` remains robust.
 - Prefer a small “stage HUD” (always visible) over a large centered panel that occludes the backdrop.
 - Default the inspector to off; scripted perf baselines should not depend on inspector layout.
+- Keep the default lens visibility stable (fake + v1 visible, v2 hidden) so the v2 perf script can
+  deterministically toggle into the “v2 only” steady state.

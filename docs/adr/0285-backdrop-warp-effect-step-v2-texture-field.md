@@ -39,7 +39,7 @@ Add a new effect step variant to `fret-core::scene::EffectStep`:
 `BackdropWarpV2` extends the v1 surface with a bounded warp field source:
 
 - `field: BackdropWarpFieldV2`
-  - `Procedural(BackdropWarpV1)` (compat)
+  - `Procedural` (uses `base` as the portable fallback field)
   - `ImageDisplacementMap { image: ImageId, uv: UvRect, sampling: ImageSamplingHint, encoding: WarpMapEncodingV1 }`
 
 Where `WarpMapEncodingV1` is a small enum that defines how to decode sampled RGBA into a 2D
@@ -70,7 +70,7 @@ The step is only meaningful when used under `EffectMode::Backdrop`:
      - and ADR 0284 already requires `BackdropWarpV1` to be ignored under `FilterContent`.
      This keeps layering semantics consistent and avoids accidental “content-warp” behavior.
 2. If the warp field image is unavailable or unsupported:
-   - degrade to `Procedural(BackdropWarpV1)` (or skip if strength is zero).
+   - degrade to `Procedural` (or skip if strength is zero).
 3. Under budget pressure:
    - disable chromatic aberration,
    - then scale down displacement strength,
