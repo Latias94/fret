@@ -10,6 +10,12 @@ homepage.workspace = true
 documentation.workspace = true
 description = "WGPU backend implementation for Fret rendering."
 
+[features]
+default = []
+# Enables wasm-only WebGPU/Tint guardrail tests. Keep this off by default so wasm test runners that
+# don't provide browser WebGPU (e.g. node-based CI) can still run non-WebGPU wasm gates.
+wasm-webgpu-tests = []
+
 [dependencies]
 fret-render-core = { version = "0.1.0", path = "../fret-render-core" }
 fret-perf = { version = "0.1.0", path = "../fret-perf" }
