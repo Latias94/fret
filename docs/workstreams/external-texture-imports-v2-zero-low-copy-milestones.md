@@ -35,6 +35,16 @@ Exit criteria:
   - `crates/fret-launch/src/runner/windows_mf_video.rs` (`MfVideoNativeExternalImporter`)
   - `apps/fret-examples/src/external_video_imports_mf_demo.rs` (MF modes route through `push_native_external_import_update`)
 
+### Follow-ups (robustness + script stability)
+
+- Normalize canonicalized Windows paths for MF source resolution:
+  - strip verbatim prefixes (`\\?\\`, `\\?\\UNC\\`, `\\\\.\\`) before passing to MF APIs,
+  - still try `file://` URL variants deterministically for `MF_E_UNSUPPORTED_BYTESTREAM_TYPE`.
+  - Evidence: `crates/fret-launch/src/runner/windows_mf_video.rs` (`strip_windows_verbatim_prefix`, `source_reader_candidates`)
+- Stabilize the DX12 GPU-copy correctness script for short video sources:
+  - reduce the post-first-screenshot wait window to avoid crossing EOF on small clips.
+  - Evidence: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json`
+
 ## M1 — Metadata closure (portable)
 
 Deliverables:

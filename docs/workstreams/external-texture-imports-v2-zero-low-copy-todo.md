@@ -122,6 +122,9 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - When `FRET_MF_VIDEO_PATH` points to a directory, resolution is deterministic (sorted by name),
         and the loader tries candidates in order until one initializes successfully; if all fail,
         the error message includes the candidate count.
+      - Some Media Foundation source paths reject canonicalized “verbatim” Windows prefixes (`\\?\\`, `\\?\\UNC\\`,
+        `\\\\.\\`). The loader strips these prefixes deterministically before trying MF APIs, and still retries
+        deterministic `file://` URL variants on `MF_E_UNSUPPORTED_BYTESTREAM_TYPE`.
       - The MF SourceReader may still return a CPU-backed `IMFMediaBuffer` even when a DXGI device
         manager is configured, so the DX12 path cannot obtain an `IMFDXGIBuffer` and deterministically
         falls back to `CpuUpload`.
@@ -141,6 +144,8 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
   - Local verification (Windows DX12, 2026-02-17):
     - `FRET_WGPU_BACKEND=dx12 FRET_EXTV2_MF_DX12_GPU_COPY=1 FRET_MF_VIDEO_PATH=<dir_or_file> ... external_video_imports_mf_demo`
     - Run: `tools/diag-scripts/external-video-imports-mf-dx12-gpu-copy-correctness.json` via `fret-diag-export` and confirm screenshots show decoded video frames.
+    - Script note: the post-first-screenshot `wait_frames` window is intentionally short so small video clips don’t
+      cross EOF before bundle export.
 
 - [x] EXTV2-native-100 Land a native low/zero-copy ingestion path where supported:
       integrate platform-decoder produced frames via a capability-gated adapter, with deterministic

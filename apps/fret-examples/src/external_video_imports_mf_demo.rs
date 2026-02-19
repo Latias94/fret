@@ -257,6 +257,12 @@ fn record_engine_frame(
                 ..Default::default()
             });
 
+            if !st.target.is_registered() {
+                let _ = st
+                    .target
+                    .ensure_registered(renderer, view.clone(), st.target_px_size);
+            }
+
             st.target.push_update_with_fallbacks(
                 &mut update,
                 RenderTargetIngestStrategy::Owned,

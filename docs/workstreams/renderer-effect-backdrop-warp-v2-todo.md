@@ -77,3 +77,10 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       baseline available.
   - Evidence anchors:
     - `apps/fret-examples/src/liquid_glass_demo.rs`
+
+- [ ] BWARP2-demo-070 Improve “human-visible” demo quality (no contract changes):
+      reduce UI chrome occlusion (HUD/inspector), add a more diagnostic backdrop stage (high-frequency
+      shapes + text), and enable bounded dither by default to avoid obvious 8-bit banding in blur/adjust chains.
+  - Notes:
+    - Keep scripted perf/conformance anchors stable (`test_id`), even if the HUD becomes hideable.
+    - Treat `BackdropWarpV1` as a procedural baseline; v2 is the recommended “real” authoring surface.

@@ -59,8 +59,21 @@ const VIDEO_FILE_EXTS: &[&str] = &["mp4", "m4v", "mov", "wmv", "avi", "mkv", "we
 
 const MF_E_UNSUPPORTED_BYTESTREAM_TYPE: u32 = 0xC00D_36C4;
 
-fn file_url_from_canonical_path(path: &PathBuf) -> String {
-    let mut s = path.to_string_lossy().replace('\\', "/");
+fn strip_windows_verbatim_prefix(path: &str) -> &str {
+    if let Some(rest) = path.strip_prefix(r"\\?\") {
+        if let Some(unc) = rest.strip_prefix("UNC\\") {
+            return unc;
+        }
+        return rest;
+    }
+    if let Some(rest) = path.strip_prefix(r"\\.\") {
+        return rest;
+    }
+    path
+}
+
+fn file_url_from_canonical_path(path: &str) -> String {
+    let mut s = strip_windows_verbatim_prefix(path).replace('\\', "/");
     if s.len() >= 2 && s.as_bytes()[1] == b':' {
         s.insert(0, '/');
     }
@@ -107,7 +120,9 @@ fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
         for picked in entries {
             let picked = std::fs::canonicalize(&picked)
                 .with_context(|| format!("canonicalize({})", picked.display()))?;
-            out.push(picked.to_string_lossy().to_string());
+            let picked = picked.to_string_lossy().to_string();
+            let picked = strip_windows_verbatim_prefix(&picked).to_string();
+            out.push(picked.clone());
             out.push(file_url_from_canonical_path(&picked));
         }
 
@@ -116,11 +131,10 @@ fn source_reader_candidates(raw: &str) -> anyhow::Result<Vec<String>> {
 
     let path = std::fs::canonicalize(&path)
         .with_context(|| format!("canonicalize({})", path.display()))?;
-    tracing::info!(path = %path.display(), "using Media Foundation source file path");
-    Ok(vec![
-        path.to_string_lossy().to_string(),
-        file_url_from_canonical_path(&path),
-    ])
+    let path = path.to_string_lossy().to_string();
+    let path = strip_windows_verbatim_prefix(&path).to_string();
+    tracing::info!(path, "using Media Foundation source file path");
+    Ok(vec![path.clone(), file_url_from_canonical_path(&path)])
 }
 
 pub struct VideoFrame {
