@@ -170,6 +170,7 @@ Common adjacent pulls:
 - `fret-perf-optimization`: Perf optimization workflow: turn “jank” into a durable perf contract (tail vs typical), normalize suites, attribute worst bundles, and land reversible fixes with evidence.
 - `fret-perf-tracy-bridge`: Bridge perf gates (diag perf + bundles) with Tracy timeline profiling: reproduce worst bundles, capture traces, and correlate spans with bundle stats.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
+- `fret-material-source-alignment`: Align Fret components with upstream Material 3 (Expressive) references (spec + MUI + Compose Material3 + Base UI) and lock outcomes with targeted tests and `fretboard diag` scripts.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
 - `fret-boundary-checks`: Guardrails for crate boundary/portability refactors (layering, module-size drift, crate audit snapshot).
 - `fret-fixture-driven-harnesses`: Convert large test matrices into JSON fixtures + thin harnesses for reviewability and lower merge-conflict risk.

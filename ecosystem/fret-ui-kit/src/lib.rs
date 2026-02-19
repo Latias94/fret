@@ -355,3 +355,17 @@ mod ui_component_macro_tests {
         assert_into_element::<DummyRenderOnceComponent>();
     }
 }
+
+#[cfg(test)]
+mod default_semantics_tests {
+    #[test]
+    fn text_box_presets_have_expected_wrap_defaults() {
+        let sm = crate::ui::TextBox::new("sm", crate::ui::TextPreset::Sm);
+        assert_eq!(sm.wrap, fret_core::TextWrap::Word);
+        assert_eq!(sm.overflow, fret_core::TextOverflow::Clip);
+
+        let label = crate::ui::TextBox::new("label", crate::ui::TextPreset::Label);
+        assert_eq!(label.wrap, fret_core::TextWrap::None);
+        assert_eq!(label.overflow, fret_core::TextOverflow::Clip);
+    }
+}

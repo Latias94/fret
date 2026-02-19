@@ -777,7 +777,11 @@ fn render_code_block_body<H: UiHost + 'static>(
                     let outer_layout = {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.height = Length::Auto;
+                        // `Scroll` children frequently use `Length::Fill` so they need a definite
+                        // viewport height. Using `max_height` alone yields an indefinite height
+                        // (auto) which can collapse or produce inconsistent layout.
+                        layout.size.height = Length::Px(max_height);
+                        layout.size.min_height = Some(max_height);
                         layout.size.max_height = Some(max_height);
                         layout.overflow = Overflow::Clip;
                         layout
@@ -1227,7 +1231,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
             layout: {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
-                layout.size.height = Length::Auto;
+                // Same rationale as the non-windowed path: nested scrollables need a definite
+                // viewport height, otherwise `Length::Fill` has no base to resolve against.
+                layout.size.height = Length::Px(max_height);
+                layout.size.min_height = Some(max_height);
                 layout.size.max_height = Some(max_height);
                 layout.overflow = Overflow::Clip;
                 layout
@@ -1434,7 +1441,7 @@ fn render_code_block_text<H: UiHost>(
             let lines = line_count.max(1) as f32;
             Length::Px(Px(line_height.0 * lines))
         }
-        TextWrap::Word | TextWrap::Grapheme => Length::Auto,
+        TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => Length::Auto,
     };
     scroll_layout.overflow = Overflow::Clip;
 
@@ -1442,7 +1449,7 @@ fn render_code_block_text<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = match text_wrap {
             TextWrap::None => Length::Auto,
-            TextWrap::Word | TextWrap::Grapheme => Length::Fill,
+            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => Length::Fill,
         };
         layout
     };
@@ -1465,6 +1472,7 @@ fn render_code_block_text<H: UiHost>(
                 wrap: text_wrap,
                 overflow,
                 align: fret_core::TextAlign::Start,
+                interactive_spans: std::sync::Arc::from([]),
             })]
         },
     );

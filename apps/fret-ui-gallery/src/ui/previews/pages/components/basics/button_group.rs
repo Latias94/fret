@@ -303,6 +303,30 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         section(cx, "Split", body)
     };
 
+    let flex_1 = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Overview")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                .test_id("ui-gallery-button-group-flex1-overview")
+                .into(),
+            shadcn::Button::new("Analytics")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                .test_id("ui-gallery-button-group-flex1-analytics")
+                .into(),
+            shadcn::Button::new("Reports")
+                .variant(shadcn::ButtonVariant::Outline)
+                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                .test_id("ui-gallery-button-group-flex1-reports")
+                .into(),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-button-group-flex1");
+        section(cx, "Flex-1 items", body)
+    };
+
     let input = {
         let body = shadcn::ButtonGroup::new([
             shadcn::Input::new(search_value.clone())
@@ -486,6 +510,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 nested,
                 separator,
                 split,
+                flex_1,
                 input,
                 input_group,
                 dropdown,

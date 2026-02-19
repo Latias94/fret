@@ -911,6 +911,9 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1022,6 +1025,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1135,6 +1139,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    None,
                 );
 
                 (props, children)
@@ -1254,6 +1259,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    None,
                 );
 
                 (props, children)
@@ -1421,6 +1427,9 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1584,6 +1593,7 @@ impl ContextMenuContentRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1699,6 +1709,7 @@ impl ContextMenuContentRenderEnv {
                         pad_y,
                         radius_sm,
                         text_disabled,
+                        None,
                     )
                 },
             )
@@ -1819,6 +1830,7 @@ impl ContextMenuContentRenderEnv {
                         pad_y,
                         radius_sm,
                         text_disabled,
+                        None,
                     )
                 },
             )
@@ -1845,10 +1857,15 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
+    chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    vec![cx.container(
+    let child = cx.container(
         ContainerProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
@@ -1959,8 +1976,14 @@ fn menu_row_children<H: UiHost>(
                 move |_cx| row.clone(),
             )]
         },
-    )]
-    .into()
+    );
+
+    let mut chrome = child;
+    if let Some(test_id) = chrome_test_id {
+        chrome = chrome.test_id(test_id);
+    }
+
+    vec![chrome].into()
 }
 
 fn submenu_chevron_right_icon<H: UiHost>(
@@ -3079,6 +3102,9 @@ impl ContextMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
+                                                        let chrome_test_id = test_id
+                                                            .clone()
+                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let disabled = item.disabled
@@ -3252,16 +3278,17 @@ impl ContextMenu {
                                                                         has_submenu,
                                                                         None,
                                                                         disabled,
-                                                                    row_bg,
-                                                                    row_fg,
-                                                                    text_style.clone(),
-                                                                    font_size,
-                                                                    font_line_height,
-                                                                    pad_left,
-                                                                    pad_x,
-                                                                    pad_y,
-                                                                    radius_sm,
-                                                                    text_disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_left,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                        chrome_test_id.clone(),
                                                                     );
 
                                                                     (props, children)
@@ -3358,6 +3385,7 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
+                                                                        None,
                                                                     );
 
                                                                     let props = PressableProps {
@@ -3482,6 +3510,7 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
+                                                                        None,
                                                                     );
 
                                                                     let props = PressableProps {

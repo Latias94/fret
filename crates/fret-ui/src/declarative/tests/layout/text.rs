@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn text_word_wrap_does_not_force_zero_width_under_min_content_constraints() {
+fn text_word_wrap_uses_near_zero_wrap_width_under_min_content_constraints() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
     #[derive(Default)]
@@ -28,10 +28,15 @@ fn text_word_wrap_does_not_force_zero_width_under_min_content_constraints() {
         ) -> TextMetrics {
             self.measured.push(constraints);
             let base_w = (input.text().chars().count() as f32) * 10.0;
-            let w = constraints
-                .max_width
-                .map(|max| base_w.min(max.0))
-                .unwrap_or(base_w);
+            let w = match (constraints.wrap, constraints.max_width) {
+                (fret_core::TextWrap::Word, Some(max_w)) if max_w.0.abs() < 0.01 => input
+                    .text()
+                    .split_whitespace()
+                    .map(|seg| seg.chars().count() as f32 * 10.0)
+                    .fold(0.0f32, f32::max),
+                (_, Some(max_w)) => base_w.min(max_w.0.max(0.0)),
+                (_, None) => base_w,
+            };
             TextMetrics {
                 size: Size::new(Px(w), Px(10.0)),
                 baseline: Px(8.0),
@@ -105,14 +110,19 @@ fn text_word_wrap_does_not_force_zero_width_under_min_content_constraints() {
         LayoutSize::new(None, None),
         LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
     );
-    ui.measure_in(&mut app, &mut services, text, min_constraints, 1.0);
+    let size = ui.measure_in(&mut app, &mut services, text, min_constraints, 1.0);
 
     assert!(
-        !services.measured.iter().any(|c| {
+        size.width.0 > 0.01,
+        "expected min-content text measurement to produce a non-zero width; size={size:?}, measured={:?}",
+        services.measured
+    );
+    assert!(
+        services.measured.iter().any(|c| {
             matches!(c.wrap, fret_core::TextWrap::Word)
                 && c.max_width.is_some_and(|w| w.0.abs() < 0.01)
         }),
-        "expected TextWrap::Word not to force max_width=0.0 under min-content constraints; measured={:?}",
+        "expected TextWrap::Word to use a near-zero wrap width under min-content constraints; measured={:?}",
         services.measured
     );
 }

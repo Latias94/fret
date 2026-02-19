@@ -87,3 +87,32 @@ jobs:
           cargo check
           -p fret-authoring -p fret-imui -p fret-ui-kit --features imui
           --target wasm32-unknown-unknown
+
+  wasm_text_wrap:
+    name: Wasm Text Wrap Conformance (node)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (from rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.92"
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen-cli
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cargo test (wasm32-unknown-unknown, wrap fixtures only)
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+        run: >-
+          cargo test -p fret-render-wgpu --target wasm32-unknown-unknown
+          text_wrap_conformance_v1_fixtures_wasm

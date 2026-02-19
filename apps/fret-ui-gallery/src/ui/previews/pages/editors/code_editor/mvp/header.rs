@@ -93,33 +93,29 @@ pub(super) fn build_header(
                         ]
                     },
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
-                        vec![
-                            shadcn::Button::new("Load fonts…")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
-                                .into_element(cx),
-                            shadcn::Button::new("Dump layout…")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
-                                .into_element(cx),
-                            shadcn::Switch::new(soft_wrap_switch.clone())
-                                .test_id("ui-gallery-code-editor-mvp-soft-wrap")
-                                .a11y_label("Toggle soft wrap at 80 columns")
-                                .into_element(cx),
-                            cx.text(if soft_wrap_enabled {
-                                "Soft wrap: 80 cols"
-                            } else {
-                                "Soft wrap: off"
-                            }),
-                        ]
-                    },
-                ),
+                doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
+                    vec![
+                        shadcn::Button::new("Load fonts…")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                            .into_element(cx),
+                        shadcn::Button::new("Dump layout…")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
+                            .into_element(cx),
+                        shadcn::Switch::new(soft_wrap_switch.clone())
+                            .test_id("ui-gallery-code-editor-mvp-soft-wrap")
+                            .a11y_label("Toggle soft wrap at 80 columns")
+                            .into_element(cx),
+                        cx.text(if soft_wrap_enabled {
+                            "Soft wrap: 80 cols"
+                        } else {
+                            "Soft wrap: off"
+                        }),
+                    ]
+                }),
                 cx.keyed("word-boundary-gate", |cx| {
                     gates::word_boundary_gate(cx, theme, word_gate_handle.clone())
                 }),

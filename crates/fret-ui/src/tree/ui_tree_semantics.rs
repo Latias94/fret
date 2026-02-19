@@ -250,6 +250,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut labelled_by: Vec<NodeId> = Vec::new();
                 let mut described_by: Vec<NodeId> = Vec::new();
                 let mut controls: Vec<NodeId> = Vec::new();
+                let mut inline_spans: Vec<fret_core::SemanticsInlineSpan> = Vec::new();
                 let mut actions = fret_core::SemanticsActions {
                     focus: is_focusable || is_text_input,
                     invoke: false,
@@ -282,6 +283,7 @@ impl<H: UiHost> UiTree<H> {
                         labelled_by: &mut labelled_by,
                         described_by: &mut described_by,
                         controls: &mut controls,
+                        inline_spans: &mut inline_spans,
                     };
                     widget.semantics(&mut cx);
                 }
@@ -317,6 +319,7 @@ impl<H: UiHost> UiTree<H> {
                     labelled_by,
                     described_by,
                     controls,
+                    inline_spans,
                 });
 
                 if traverse_children {

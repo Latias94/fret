@@ -1,0 +1,196 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-switch-icons-state-matrix-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "switch", "icons", "state_matrix", "screenshots"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "switch" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-switch" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-00-off-idle" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-01-off-hover" },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-02-off-pressed" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-10-on-idle" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-11-on-hover" },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-12-on-pressed" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_right" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-13-on-focus-visible" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-20-disabled-idle" },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-00-off-idle" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-01-off-hover" },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-02-off-pressed" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-10-on-idle" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-11-on-hover" },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-12-on-pressed" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_right" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-13-on-focus-visible" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-20-disabled-idle" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-material3-switch-icons-state-matrix" }
+  ]
+}

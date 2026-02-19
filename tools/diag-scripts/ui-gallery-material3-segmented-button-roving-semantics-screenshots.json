@@ -1,0 +1,162 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-segmented-button-roving-semantics-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "segmented_button", "roving_focus", "semantics", "expressive", "screenshots"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "segmented" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-segmented-button" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-segmented-button" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-segmented-button" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single" },
+        "role": "radio_group"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-alpha" },
+        "role": "radio_button"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-alpha" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "m3-segmented-00-standard-idle" },
+    { "type": "capture_screenshot", "label": "m3-segmented-00-standard-idle" },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "m3-segmented-10-click-beta-selected" },
+    { "type": "capture_screenshot", "label": "m3-segmented-10-click-beta-selected" },
+
+    { "type": "press_key", "key": "arrow_right" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-alpha" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "end" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-beta" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "home" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-single-alpha" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-segmented-multi-alpha" },
+        "role": "checkbox"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-design-variant-toggle"
+      }
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "m3-segmented-90-expressive" },
+    { "type": "capture_screenshot", "label": "m3-segmented-90-expressive" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-material3-segmented-button-roving-semantics" }
+  ]
+}

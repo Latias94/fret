@@ -3115,6 +3115,9 @@ impl SidebarMenuSubButton {
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
         let test_id = self.test_id.clone();
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let href = self.href.clone();
         let target = self.target.clone();
         let rel = self.rel.clone();
@@ -3147,6 +3150,7 @@ impl SidebarMenuSubButton {
         let icon = self.icon;
         let active = self.active;
         let size = self.size;
+        let chrome_test_id = chrome_test_id.clone();
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
         } else {
@@ -3196,7 +3200,7 @@ impl SidebarMenuSubButton {
                 (fg, props, style, gap)
             };
 
-            vec![cx.container(props, move |cx| {
+            let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
                     gap,
@@ -3242,7 +3246,11 @@ impl SidebarMenuSubButton {
                     out.push(text.into_element(cx));
                     out
                 })]
-            })]
+            });
+            if let Some(test_id) = chrome_test_id {
+                chrome = chrome.test_id(test_id);
+            }
+            vec![chrome]
         });
 
         if let Some(href) = href_for_semantics {
@@ -3419,6 +3427,9 @@ impl SidebarMenuButton {
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
         let test_id = self.test_id.clone();
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let href = self.href.clone();
         let target = self.target.clone();
         let rel = self.rel.clone();
@@ -3453,6 +3464,7 @@ impl SidebarMenuButton {
         let variant = self.variant;
         let size = self.size;
         let expanded_progress = expanded_progress.clamp(0.0, 1.0);
+        let chrome_test_id = chrome_test_id.clone();
 
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
@@ -3526,7 +3538,7 @@ impl SidebarMenuButton {
                 (fg, props, inner_gap, label_style)
             };
 
-            vec![cx.container(props, move |cx| {
+            let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
                     gap: inner_gap,
@@ -3590,7 +3602,11 @@ impl SidebarMenuButton {
                     ));
                     out
                 })]
-            })]
+            });
+            if let Some(test_id) = chrome_test_id {
+                chrome = chrome.test_id(test_id);
+            }
+            vec![chrome]
         });
 
         if let Some(href) = href_for_semantics {

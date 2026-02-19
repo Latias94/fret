@@ -8,6 +8,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
@@ -726,71 +727,70 @@ impl Item {
         };
 
         if on_click.is_some() {
-            cx.pressable(
-                PressableProps {
+            control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_dispatch_command_if_enabled_opt(on_click);
+
+                let hovered = st.hovered && enabled;
+                let pressed = st.pressed && enabled;
+
+                let bg = if !enabled {
+                    base_bg
+                } else if pressed {
+                    Some(pressed_bg)
+                } else if hovered {
+                    Some(hover_bg)
+                } else {
+                    base_bg
+                };
+
+                let mut chrome = padding.clone().merge(ChromeRefinement {
+                    radius: Some(MetricRef::Px(radius)),
+                    border_width: Some(MetricRef::Px(Px(1.0))),
+                    ..Default::default()
+                });
+
+                if !user_bg_override {
+                    chrome.background = bg.map(ColorRef::Color);
+                }
+                if !user_border_override {
+                    chrome.border_color = Some(ColorRef::Color(border_color));
+                }
+                chrome = chrome.merge(user_chrome.clone());
+
+                let (chrome_props, inner_layout) = {
+                    let theme = Theme::global(&*cx.app);
+                    let mut chrome_props =
+                        decl_style::container_props(theme, chrome, LayoutRefinement::default());
+                    chrome_props.layout.size = pressable_size;
+                    let inner_layout =
+                        decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+                    (chrome_props, inner_layout)
+                };
+
+                let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled,
                     focus_ring: Some(focus_ring),
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_dispatch_command_if_enabled_opt(on_click);
+                };
 
-                    let hovered = st.hovered && enabled;
-                    let pressed = st.pressed && enabled;
-
-                    let bg = if !enabled {
-                        base_bg
-                    } else if pressed {
-                        Some(pressed_bg)
-                    } else if hovered {
-                        Some(hover_bg)
-                    } else {
-                        base_bg
-                    };
-
-                    let mut chrome = padding.clone().merge(ChromeRefinement {
-                        radius: Some(MetricRef::Px(radius)),
-                        border_width: Some(MetricRef::Px(Px(1.0))),
-                        ..Default::default()
-                    });
-
-                    if !user_bg_override {
-                        chrome.background = bg.map(ColorRef::Color);
-                    }
-                    if !user_border_override {
-                        chrome.border_color = Some(ColorRef::Color(border_color));
-                    }
-                    chrome = chrome.merge(user_chrome.clone());
-
-                    let (props, inner_layout) = {
-                        let theme = Theme::global(&*cx.app);
-                        let mut props =
-                            decl_style::container_props(theme, chrome, LayoutRefinement::default());
-                        props.layout.size = pressable_size;
-                        let inner_layout =
-                            decl_style::layout_style(theme, LayoutRefinement::default().w_full());
-                        (props, inner_layout)
-                    };
-
+                let children = children.clone();
+                (pressable_props, chrome_props, move |cx| {
                     let children = children.clone();
-                    vec![cx.container(props, move |cx| {
-                        let children = children.clone();
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: inner_layout,
-                                direction: fret_core::Axis::Horizontal,
-                                gap,
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: true,
-                            },
-                            move |_cx| (*children).clone(),
-                        )]
-                    })]
-                },
-            )
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: inner_layout,
+                            direction: fret_core::Axis::Horizontal,
+                            gap,
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: true,
+                        },
+                        move |_cx| (*children).clone(),
+                    )]
+                })
+            })
         } else {
             let mut chrome = padding.merge(ChromeRefinement {
                 radius: Some(MetricRef::Px(radius)),

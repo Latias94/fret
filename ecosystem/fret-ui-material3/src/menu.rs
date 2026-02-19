@@ -429,6 +429,11 @@ fn material_menu_item<H: UiHost>(
     set_size: usize,
     initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
+    let chrome_test_id = item
+        .test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
 
@@ -571,7 +576,11 @@ fn material_menu_item<H: UiHost>(
                     bottom: Px(0.0),
                 };
 
-                vec![cx.flex(row, move |_cx| vec![overlay, label_el])]
+                let mut chrome = cx.flex(row, move |_cx| vec![overlay, label_el]);
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 

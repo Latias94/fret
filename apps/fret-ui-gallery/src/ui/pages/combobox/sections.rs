@@ -389,7 +389,7 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> 
         shadcn::Combobox::new(models.rtl_value.clone(), models.rtl_open.clone())
             .a11y_label("Combobox RTL")
             .width(Px(260.0))
-            .placeholder("???? ???? ?????")
+            .placeholder("ابحث عن إطار عمل")
             .query_model(models.rtl_query.clone())
             .items([
                 shadcn::ComboboxItem::new("next", "Next.js"),

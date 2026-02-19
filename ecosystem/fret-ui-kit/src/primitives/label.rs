@@ -137,5 +137,6 @@ pub fn selectable_label<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        interactive_spans: Arc::from([]),
     })
 }

@@ -399,6 +399,10 @@ fn list_item<H: UiHost>(
             focus_ring_bounds: None,
         };
 
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
@@ -505,7 +509,7 @@ fn list_item<H: UiHost>(
                 row.gap = gap;
                 row.padding = padding;
 
-                let container = cx.container(
+                let mut container = cx.container(
                     ContainerProps {
                         background: selected_bg,
                         corner_radii,
@@ -542,6 +546,10 @@ fn list_item<H: UiHost>(
                         vec![overlay, content]
                     },
                 );
+
+                if let Some(test_id) = chrome_test_id {
+                    container = container.test_id(test_id);
+                }
 
                 vec![container]
             })

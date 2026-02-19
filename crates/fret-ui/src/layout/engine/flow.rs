@@ -6,11 +6,13 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
 use crate::widget::LayoutCx;
 use fret_core::{AppWindowId, NodeId, Px, Rect, Size};
-use taffy::geometry::{Line as TaffyLine, Rect as TaffyRect, Size as TaffySize};
+use taffy::geometry::{
+    Line as TaffyLine, Point as TaffyPoint, Rect as TaffyRect, Size as TaffySize,
+};
 use taffy::style::{
     AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
     GridTemplateComponent, JustifyContent, LengthPercentage, LengthPercentageAuto,
-    Position as TaffyPosition, Style,
+    Overflow as TaffyOverflow, Position as TaffyPosition, Style,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -991,6 +993,10 @@ fn style_for_item_in_parent<H: UiHost>(
 
     let mut style = Style {
         display,
+        overflow: TaffyPoint {
+            x: taffy_overflow(layout_style.overflow),
+            y: taffy_overflow(layout_style.overflow),
+        },
         position: taffy_position(layout_style.position),
         inset: taffy_rect_lpa_from_inset(scale_factor, layout_style.position, layout_style.inset),
         size: TaffySize {
@@ -1160,6 +1166,13 @@ fn passthrough_wrapper_child<H: UiHost>(
         _ => None,
     })
     .flatten()
+}
+
+fn taffy_overflow(overflow: crate::element::Overflow) -> TaffyOverflow {
+    match overflow {
+        crate::element::Overflow::Visible => TaffyOverflow::Visible,
+        crate::element::Overflow::Clip => TaffyOverflow::Hidden,
+    }
 }
 
 fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {

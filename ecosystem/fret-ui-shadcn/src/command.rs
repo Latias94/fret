@@ -1228,6 +1228,9 @@ impl CommandList {
                         let value_key = item.value.clone();
                         let label = item.label.clone();
                         let test_id = item.test_id.clone();
+                        let chrome_test_id = test_id
+                            .clone()
+                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                         let command = item.command;
                         let on_select = item.on_select.clone();
                         let children = item.children;
@@ -1258,7 +1261,11 @@ impl CommandList {
 
                                     let bg = (hovered || pressed).then_some(bg_hover);
                                     let props = ContainerProps {
-                                        layout: LayoutStyle::default(),
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        },
                                         padding: Edges {
                                             top: pad_y,
                                             right: pad_x,
@@ -1273,7 +1280,7 @@ impl CommandList {
                                         ..Default::default()
                                     };
 
-                                    vec![cx.container(props, move |cx| {
+                                    let child = cx.container(props, move |cx| {
                                         vec![cx.row(
                                             RowProps {
                                                 layout: LayoutStyle::default(),
@@ -1296,7 +1303,14 @@ impl CommandList {
                                                 }
                                             },
                                         )]
-                                    })]
+                                    });
+
+                                    let mut chrome = child;
+                                    if let Some(test_id) = chrome_test_id.clone() {
+                                        chrome = chrome.test_id(test_id);
+                                    }
+
+                                    vec![chrome]
                                 },
                             )
                         }));
@@ -2039,6 +2053,10 @@ impl CommandPalette {
                                 };
                                 Arc::<str>::from(id)
                             });
+                            let chrome_test_id = test_id_for_row
+                                .clone()
+                                .or_else(|| test_id.clone())
+                                .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
                             let mut row = cx.pressable(
                                 PressableProps {
@@ -2113,7 +2131,7 @@ impl CommandPalette {
                                         ..Default::default()
                                     };
 
-                                    vec![cx.container(props, move |cx| {
+                                    let child = cx.container(props, move |cx| {
                                         vec![cx.row(
                                             RowProps {
                                                 layout: {
@@ -2188,7 +2206,14 @@ impl CommandPalette {
                                                 }
                                             },
                                         )]
-                                    })]
+                                    });
+
+                                    let mut chrome = child;
+                                    if let Some(test_id) = chrome_test_id.clone() {
+                                        chrome = chrome.test_id(test_id);
+                                    }
+
+                                    vec![chrome]
                                 },
                             );
 

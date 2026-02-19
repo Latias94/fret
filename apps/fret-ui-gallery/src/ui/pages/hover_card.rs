@@ -6,28 +6,66 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         name: &'static str,
                         desc: &'static str,
                         test_id: &'static str| {
-        shadcn::HoverCardContent::new(vec![
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
+        let muted_fg = cx.with_theme(|theme| theme.color_token("muted-foreground"));
+        let desc_test_id: Arc<str> = Arc::from(format!("{test_id}-desc"));
+        let joined_test_id: Arc<str> = Arc::from(format!("{test_id}-joined"));
+
+        let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("VC").into_element(cx)])
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(Px(40.0))
+                    .h_px(Px(40.0))
+                    .flex_shrink_0(),
+            )
+            .into_element(cx);
+
+        let text = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().flex_1().min_w_0())
+                .gap(Space::N1)
+                .items_start(),
+            |cx| {
+                let description = ui::text(cx, desc)
+                    .w_full()
+                    .text_size_px(Px(14.0))
+                    .line_height_px(Px(20.0))
+                    .wrap(TextWrap::Word)
+                    .into_element(cx)
+                    .test_id(desc_test_id.clone());
+                let joined = ui::text(cx, "Joined December 2021")
+                    .w_full()
+                    .text_size_px(Px(12.0))
+                    .line_height_px(Px(16.0))
+                    .text_color(ColorRef::Color(muted_fg))
+                    .wrap(TextWrap::Word)
+                    .into_element(cx)
+                    .test_id(joined_test_id.clone());
+                vec![
                     shadcn::CardTitle::new(name).into_element(cx),
-                    shadcn::CardDescription::new(desc).into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new(vec![shadcn::typography::muted(
-                    cx,
-                    "Joined December 2021",
-                )])
-                .into_element(cx),
-            ])
-            .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
-            .into_element(cx),
-        ])
-        .into_element(cx)
-        .test_id(test_id)
+                    description,
+                    joined,
+                ]
+            },
+        );
+
+        let content = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N4)
+                .items_start(),
+            |_cx| vec![avatar, text],
+        );
+
+        shadcn::HoverCardContent::new(vec![content])
+            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .into_element(cx)
+            .test_id(test_id)
     };
 
     let demo = {
-        let trigger = shadcn::Button::new("Hover Here")
+        let trigger = shadcn::Button::new("@nextjs")
             .variant(shadcn::ButtonVariant::Link)
             .test_id("ui-gallery-hover-card-demo-trigger")
             .into_element(cx);
@@ -240,14 +278,14 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::HoverCard::new(
-            shadcn::Button::new("??? ??????")
+            shadcn::Button::new("مرر هنا")
                 .variant(shadcn::ButtonVariant::Outline)
                 .test_id("ui-gallery-hover-card-rtl-trigger")
                 .into_element(cx),
             profile_card(
                 cx,
-                "????? ??????",
-                "??? ???? RTL ??????? ???????.",
+                "نموذج RTL",
+                "تحقق من محاذاة HoverCard تحت RTL.",
                 "ui-gallery-hover-card-rtl-content",
             ),
         )
@@ -311,11 +349,11 @@ let delayed = shadcn::HoverCard::new(trigger, content)
                     r#"let trigger = shadcn::Button::new("Basic")
     .variant(shadcn::ButtonVariant::Outline)
     .into_element(cx);
-let content = shadcn::HoverCardContent::new(vec![/* card */]).into_element(cx);
+ let content = shadcn::HoverCardContent::new(vec![/* content */]).into_element(cx);
 
-shadcn::HoverCard::new(trigger, content)
-    .open_delay_frames(10)
-    .close_delay_frames(10)
+ shadcn::HoverCard::new(trigger, content)
+     .open_delay_frames(10)
+     .close_delay_frames(10)
     .into_element(cx);"#,
                 ),
             DocSection::new("Sides", sides)

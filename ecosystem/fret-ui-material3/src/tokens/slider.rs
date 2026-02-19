@@ -146,6 +146,54 @@ pub(crate) fn tick_mark_opacity(theme: &Theme, enabled: bool, active: bool) -> f
     theme.number_by_key(key).unwrap_or(0.38)
 }
 
+pub(crate) fn stop_indicator_size(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.slider.stop-indicator.size")
+        .unwrap_or(Px(4.0))
+}
+
+pub(crate) fn stop_indicator_shape(theme: &Theme) -> Corners {
+    theme
+        .corners_by_key("md.comp.slider.stop-indicator.shape")
+        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+}
+
+pub(crate) fn stop_indicator_trailing_space(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.slider.stop-indicator.trailing-space")
+        .unwrap_or(Px(4.0))
+}
+
+pub(crate) fn stop_indicator_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
+    let base = if selected {
+        theme
+            .color_by_key("md.comp.slider.stop-indicator.color-selected")
+            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"))
+    } else {
+        theme
+            .color_by_key("md.comp.slider.stop-indicator.color")
+            .or_else(|| theme.color_by_key("md.sys.color.on-secondary-container"))
+            .unwrap_or_else(|| theme.color_token("md.sys.color.on-secondary-container"))
+    };
+
+    let opacity = if !enabled {
+        theme
+            .number_by_key("md.comp.slider.disabled.stop-indicator.container.opacity")
+            .unwrap_or(0.38)
+    } else if selected {
+        theme
+            .number_by_key("md.comp.slider.active.stop-indicator.container.opacity")
+            .unwrap_or(1.0)
+    } else {
+        theme
+            .number_by_key("md.comp.slider.inactive.stop-indicator.container.opacity")
+            .unwrap_or(1.0)
+    };
+
+    alpha_mul(base, opacity)
+}
+
 pub(crate) fn active_track_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.slider.active.track.height")

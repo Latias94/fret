@@ -187,12 +187,21 @@ where
 #[derive(Debug, Clone)]
 pub struct CardHeader {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
 }
 
 impl CardHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
     }
 
     #[track_caller]
@@ -207,7 +216,7 @@ impl CardHeader {
             decl_style::container_props(
                 theme,
                 // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
-                ChromeRefinement::default().px(p),
+                ChromeRefinement::default().px(p).merge(self.chrome),
                 LayoutRefinement::default().w_full(),
             )
         };
@@ -228,7 +237,7 @@ impl CardHeader {
             let left_col = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .gap(Space::N2)
+                    .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().flex_1().min_w_0()),
                 move |_cx| left,
             );
@@ -377,6 +386,29 @@ mod tests {
             assert_eq!(padding.right, Px(0.0));
             assert_eq!(padding.bottom, py);
             assert_eq!(padding.left, Px(0.0));
+        });
+    }
+
+    #[test]
+    fn card_content_uses_px_only() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
+
+            let ElementKind::Container(ContainerProps { padding, .. }) = &el.kind else {
+                panic!("expected CardContent to be a container element");
+            };
+
+            assert_eq!(padding.top, Px(0.0));
+            assert_eq!(padding.bottom, Px(0.0));
+            assert_eq!(padding.left, padding.right);
+            assert!(padding.left.0 > 0.0);
         });
     }
 }

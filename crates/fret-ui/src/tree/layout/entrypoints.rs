@@ -1252,6 +1252,7 @@ impl<H: UiHost> UiTree<H> {
             );
             if let Some(node) = self.nodes.get_mut(root) {
                 node.view_cache_needs_rerender = true;
+                node.invalidation.layout = false;
             }
         }
     }

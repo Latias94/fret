@@ -104,6 +104,7 @@ so the default authoring story lives in ecosystem crates.
 - End-to-end demo wiring (effects → runner → render): `apps/fret-examples/src/components_gallery.rs`
 - Todo app “golden path” (shadcn + bootstrap): `apps/fret-examples/src/todo_demo.rs` (or `fretboard dev native --bin todo_demo`)
 - Starter todo template generator: `fretboard new todo --name my-todo` (uses `fret`; see `docs/examples/todo-app-golden-path.md`)
+- Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows), or add `--profile dev-fast` to `cargo run -p fret-demo --bin ...` commands.
 - shadcn surface smoke test (components + overlays): `apps/fret-examples/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
 - Docking + viewport + overlays conformance harness (ADR 0072): `apps/fret-examples/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
 - Plot demos (2D): `apps/fret-examples/src/plot_demo.rs` (or `cargo run -p fret-demo --bin plot_demo`; web: `apps/fret-demo-web` + `?demo=plot_demo`)

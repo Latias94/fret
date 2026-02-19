@@ -7,14 +7,13 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
 };
-
-use crate::layout as shadcn_layout;
 
 use crate::toggle::{ToggleSize, ToggleVariant};
 
@@ -83,6 +82,7 @@ pub struct ToggleGroupItem {
     children: Vec<AnyElement>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ToggleGroupItem {
@@ -92,6 +92,7 @@ impl std::fmt::Debug for ToggleGroupItem {
             .field("children_len", &self.children.len())
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .finish()
     }
 }
@@ -103,6 +104,7 @@ impl ToggleGroupItem {
             children: children.into_iter().collect(),
             disabled: false,
             a11y_label: None,
+            test_id: None,
         }
     }
 
@@ -113,6 +115,12 @@ impl ToggleGroupItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Optional diagnostics selector for the toggle item pressable root.
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 }
@@ -159,6 +167,7 @@ pub struct ToggleGroup {
     roving_focus: bool,
     orientation: ToggleGroupOrientation,
     loop_navigation: bool,
+    items_flex_1: bool,
     variant: ToggleVariant,
     size: ToggleSize,
     spacing: Space,
@@ -180,6 +189,7 @@ impl std::fmt::Debug for ToggleGroup {
             .field("roving_focus", &self.roving_focus)
             .field("orientation", &self.orientation)
             .field("loop_navigation", &self.loop_navigation)
+            .field("items_flex_1", &self.items_flex_1)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("spacing", &self.spacing)
@@ -201,6 +211,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_flex_1: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -223,6 +234,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_flex_1: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -243,6 +255,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_flex_1: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -270,6 +283,7 @@ impl ToggleGroup {
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
+            items_flex_1: false,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -301,6 +315,16 @@ impl ToggleGroup {
         self
     }
 
+    /// When `true`, each toggle item participates in flex growth (Tailwind-like `flex-1`).
+    ///
+    /// Notes:
+    /// - This should only be used when the parent layout provides a definite main-axis size.
+    /// - In auto-sized compositions, forcing `flex: 1` can trigger very deep layout recursion.
+    pub fn items_flex_1(mut self, flex_1: bool) -> Self {
+        self.items_flex_1 = flex_1;
+        self
+    }
+
     pub fn variant(mut self, variant: ToggleVariant) -> Self {
         self.variant = variant;
         self
@@ -313,6 +337,13 @@ impl ToggleGroup {
 
     pub fn spacing(mut self, spacing: Space) -> Self {
         self.spacing = spacing;
+        self
+    }
+
+    /// When enabled, items in a horizontal group use `flex-1` so their pressable bounds stretch to
+    /// fill the available width.
+    pub fn items_full_width(mut self, full_width: bool) -> Self {
+        self.items_flex_1 = full_width;
         self
     }
 
@@ -349,6 +380,7 @@ impl ToggleGroup {
         let roving_focus = self.roving_focus;
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
+        let items_flex_1 = self.items_flex_1;
         let variant = self.variant;
         let size_token = self.size;
         let spacing = self.spacing;
@@ -495,6 +527,8 @@ impl ToggleGroup {
                 ..Default::default()
             };
 
+            let inner_gap = MetricRef::space(Space::N1).resolve(&theme);
+
             let render_items = move |cx: &mut ElementContext<'_, H>| {
                 if roving_focus {
                     cx.roving_nav_apg();
@@ -568,7 +602,7 @@ impl ToggleGroup {
 
                     let value = item.value.clone();
                     let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
-                    let a11y = if model_single.is_some() {
+                    let mut a11y = if model_single.is_some() {
                         fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
                             a11y_label.clone(),
                             on,
@@ -579,86 +613,109 @@ impl ToggleGroup {
                             on,
                         )
                     };
+                    if let Some(test_id) = item.test_id.clone() {
+                        a11y.test_id = Some(test_id);
+                    }
                     let children = item.children;
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
-                    let pressable_layout = decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .min_h(item_h)
-                            .min_w_0()
-                            .flex_none(),
-                    );
+                    let pressable_layout = {
+                        let mut refinement = LayoutRefinement::default().min_h(item_h).min_w_0();
+                        if items_flex_1 && matches!(orientation, ToggleGroupOrientation::Horizontal)
+                        {
+                            refinement = refinement.flex_1();
+                        } else {
+                            refinement = refinement.flex_none();
+                        }
+                        decl_style::layout_style(&theme, refinement)
+                    };
 
                     let item_theme = theme.clone();
                     let item_background_override = item_background_override.clone();
                     let item_border_color_override = item_border_color_override.clone();
                     let default_item_background = default_item_background.clone();
                     let default_item_border_color = default_item_border_color.clone();
+                    let inner_gap = inner_gap;
 
                     out.push(cx.keyed(value.clone(), move |cx| {
-                        cx.pressable(
-                            PressableProps {
-                                layout: pressable_layout,
-                                enabled,
-                                focusable,
-                                focus_ring: Some(ring),
-                                a11y,
-                                ..Default::default()
-                            },
-                            move |cx, state| {
-                                if let Some(m) = model_single.as_ref() {
-                                    let model = m.clone();
-                                    let value = value.clone();
-                                    cx.pressable_add_on_activate(Arc::new(
-                                        move |host, _action_cx, _reason| {
-                                            let current =
-                                                host.models_mut().get_cloned(&model).flatten();
-                                            let next = if current
-                                                .as_ref()
-                                                .is_some_and(|cur| cur.as_ref() == value.as_ref())
-                                            {
-                                                None
-                                            } else {
-                                                Some(value.clone())
-                                            };
-                                            let _ = host.models_mut().update(&model, |v| *v = next);
+                        control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                            if let Some(m) = model_single.as_ref() {
+                                let model = m.clone();
+                                let value = value.clone();
+                                cx.pressable_add_on_activate(Arc::new(
+                                    move |host, _action_cx, _reason| {
+                                        let current =
+                                            host.models_mut().get_cloned(&model).flatten();
+                                        let next = if current
+                                            .as_ref()
+                                            .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                        {
+                                            None
+                                        } else {
+                                            Some(value.clone())
+                                        };
+                                        let _ = host.models_mut().update(&model, |v| *v = next);
+                                    },
+                                ));
+                            }
+                            if let Some(m) = model_multi.as_ref() {
+                                cx.pressable_toggle_vec_arc_str(m, value.clone());
+                            }
+
+                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                            states.set(WidgetState::Selected, on);
+
+                            let mut chrome_props = base_props;
+                            if let Some(bg) = resolve_override_slot_opt(
+                                item_background_override.as_ref(),
+                                &default_item_background,
+                                states,
+                            ) {
+                                chrome_props.background = Some(bg.resolve(&item_theme));
+                            }
+
+                            if let Some(border_color) = resolve_override_slot_opt(
+                                item_border_color_override.as_ref(),
+                                &default_item_border_color,
+                                states,
+                            ) {
+                                chrome_props.border_color = Some(border_color.resolve(&item_theme));
+                            }
+
+                            let content = move |cx: &mut ElementContext<'_, H>| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: {
+                                            let mut layout =
+                                                fret_ui::element::LayoutStyle::default();
+                                            layout.size.width = fret_ui::element::Length::Fill;
+                                            layout.size.height = fret_ui::element::Length::Fill;
+                                            layout
                                         },
-                                    ));
-                                }
-                                if let Some(m) = model_multi.as_ref() {
-                                    cx.pressable_toggle_vec_arc_str(m, value.clone());
-                                }
-
-                                let mut states = WidgetStates::from_pressable(cx, state, enabled);
-                                states.set(WidgetState::Selected, on);
-
-                                let mut props = base_props;
-                                if let Some(bg) = resolve_override_slot_opt(
-                                    item_background_override.as_ref(),
-                                    &default_item_background,
-                                    states,
-                                ) {
-                                    props.background = Some(bg.resolve(&item_theme));
-                                }
-
-                                if let Some(border_color) = resolve_override_slot_opt(
-                                    item_border_color_override.as_ref(),
-                                    &default_item_border_color,
-                                    states,
-                                ) {
-                                    props.border_color = Some(border_color.resolve(&item_theme));
-                                }
-                                props.layout.size = pressable_layout.size;
-
-                                vec![shadcn_layout::container_hstack_centered(
-                                    cx,
-                                    props,
-                                    Space::N1,
-                                    children,
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: inner_gap,
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Center,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| children,
                                 )]
-                            },
-                        )
+                            };
+
+                            (
+                                PressableProps {
+                                    layout: pressable_layout,
+                                    enabled,
+                                    focusable,
+                                    focus_ring: Some(ring),
+                                    a11y,
+                                    ..Default::default()
+                                },
+                                chrome_props,
+                                content,
+                            )
+                        })
                     }));
                 }
 

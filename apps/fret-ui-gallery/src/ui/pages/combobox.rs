@@ -254,15 +254,15 @@ stack::hstack(
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(
-                    "rust",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Combobox::new(value, open)
-        .placeholder("????")
-        .into_element(cx)
+                     "rust",
+                     r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+     shadcn::Combobox::new(value, open)
+         .placeholder("ابحث عن أمر")
+         .into_element(cx)
 })"#,
-                ),
-            DocSection::new("Notes", notes)
-                .description("Guidelines and parity notes for combobox recipes."),
+                 ),
+             DocSection::new("Notes", notes)
+                 .description("Guidelines and parity notes for combobox recipes."),
         ],
     );
 

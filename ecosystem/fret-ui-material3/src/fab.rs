@@ -26,7 +26,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
+};
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::fab as fab_tokens;
 
@@ -259,6 +261,8 @@ impl Fab {
                 let pointer_region = cx.named("pointer_region", |cx| {
                     let mut props = PointerRegionProps::default();
                     props.enabled = enabled;
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
                     cx.pointer_region(props, |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -455,7 +459,11 @@ impl Fab {
                             )
                         };
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

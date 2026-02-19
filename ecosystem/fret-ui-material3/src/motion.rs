@@ -12,6 +12,13 @@ pub fn ms_to_frames(ms: u32) -> u64 {
     (ms as u64 * 60).saturating_add(999) / 1000
 }
 
+pub const CUBIC_BEZIER_LINEAR: CubicBezier = CubicBezier {
+    x1: 0.0,
+    y1: 0.0,
+    x2: 1.0,
+    y2: 1.0,
+};
+
 /// Evaluate a CSS-like cubic-bezier easing curve at normalized time `t`.
 ///
 /// This returns `y` for an input `x = t` by numerically inverting the parametric bezier.
@@ -19,14 +26,7 @@ pub fn cubic_bezier_ease(bezier: CubicBezier, t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
 
     // Fast path for linear.
-    if bezier
-        == (CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        })
-    {
+    if bezier == CUBIC_BEZIER_LINEAR {
         return t;
     }
 

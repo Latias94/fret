@@ -212,6 +212,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
 
     let mut bin: Option<String> = None;
     let mut demo: Option<String> = None;
+    let mut cargo_profile: Option<String> = None;
     let mut choose = false;
     let mut hotpatch = false;
     let mut hotpatch_reload_only = false;
@@ -240,6 +241,12 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                 demo = Some(
                     it.next()
                         .ok_or_else(|| "--demo requires a value".to_string())?,
+                );
+            }
+            "--cargo-profile" | "--profile" => {
+                cargo_profile = Some(
+                    it.next()
+                        .ok_or_else(|| "--profile requires a value".to_string())?,
                 );
             }
             "--choose" => choose = true,
@@ -342,7 +349,20 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
 
         let mut cmd = Command::new("cargo");
-        cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
+        cmd.current_dir(&root).args(["run"]);
+
+        let default_profile = cfg!(windows).then_some("dev-fast");
+        if let Some(profile) = cargo_profile.as_deref().or(default_profile) {
+            #[cfg(windows)]
+            if cargo_profile.is_none() {
+                eprintln!(
+                    "Note: Windows default uses `--profile dev-fast` for faster builds (override with: --profile dev)."
+                );
+            }
+            cmd.args(["--profile", profile]);
+        }
+
+        cmd.args(["-p", "fret-demo"]);
 
         if dev_state_reset {
             cmd.env("FRET_DEV_STATE", "1");
@@ -461,7 +481,20 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     // When `--watch` is enabled, prefer `cargo build` + running the produced binary directly so we can
     // reliably terminate and restart the app process on Windows.
     let cargo_subcommand = if effective_watch { "build" } else { "run" };
-    cmd.args([cargo_subcommand, "-p", "fret-demo"]);
+    cmd.arg(cargo_subcommand);
+
+    let default_profile = cfg!(windows).then_some("dev-fast");
+    if let Some(profile) = cargo_profile.as_deref().or(default_profile) {
+        #[cfg(windows)]
+        if cargo_profile.is_none() {
+            eprintln!(
+                "Note: Windows default uses `--profile dev-fast` for faster builds (override with: --profile dev)."
+            );
+        }
+        cmd.args(["--profile", profile]);
+    }
+
+    cmd.args(["-p", "fret-demo"]);
     let mut cargo_features: Vec<&str> = Vec::new();
     if hotpatch || hotpatch_devserver_ws.is_some() {
         cargo_features.push("hotpatch");

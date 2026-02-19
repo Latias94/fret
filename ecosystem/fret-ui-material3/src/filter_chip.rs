@@ -35,7 +35,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
-    centered_fill, enforce_minimum_interactive_size, minimum_interactive_size,
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::filter_chip as filter_chip_tokens;
@@ -323,6 +323,8 @@ impl FilterChip {
                 let pointer_region = cx.named("pointer_region", |cx| {
                     let mut props = PointerRegionProps::default();
                     props.enabled = enabled;
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
                     cx.pointer_region(props, |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -553,7 +555,11 @@ impl FilterChip {
 
                         let chrome = cx.container(chrome, move |_cx| vec![overlay, content]);
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 

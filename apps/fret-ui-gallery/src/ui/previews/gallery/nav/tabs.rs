@@ -32,7 +32,7 @@ pub(in crate::ui) fn preview_tabs(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
             move |cx| vec![shadcn::typography::h4(cx, title), body],
         )
@@ -145,6 +145,53 @@ pub(in crate::ui) fn preview_tabs(
         });
         let body = centered(cx, group);
         section(cx, "Line", body)
+    };
+
+    let flex_1_triggers = {
+        let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
+            .list_full_width(true)
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+            .items([
+                shadcn::TabsItem::new(
+                    "overview",
+                    "Overview",
+                    [card_panel(
+                        cx,
+                        "Overview",
+                        "Stretch triggers via `flex-1` (`list_full_width=true`).",
+                        "This section is a control chrome fill regression gate.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-overview"),
+                shadcn::TabsItem::new(
+                    "analytics",
+                    "Analytics",
+                    [card_panel(
+                        cx,
+                        "Analytics",
+                        "Each trigger should keep hit/visual bounds aligned.",
+                        "Trigger chrome must fill the pressable box.",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-analytics"),
+                shadcn::TabsItem::new(
+                    "reports",
+                    "Reports",
+                    [card_panel(
+                        cx,
+                        "Reports",
+                        "Used by diag scripts for chrome bounds equality assertions.",
+                        "",
+                    )],
+                )
+                .trigger_test_id("ui-gallery-tabs-flex1-trigger-reports"),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-tabs-flex1");
+
+        let demo_shell = shell(cx, tabs);
+        let body = centered(cx, demo_shell);
+        section(cx, "Flex-1 triggers", body)
     };
 
     let vertical = {
@@ -338,7 +385,7 @@ pub(in crate::ui) fn preview_tabs(
                 .gap(Space::N6)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![demo, line, vertical, disabled, icons, rtl],
+            |_cx| vec![demo, line, flex_1_triggers, vertical, disabled, icons, rtl],
         ),
     ]
 }

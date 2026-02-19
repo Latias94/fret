@@ -60,6 +60,7 @@ pub(crate) struct UiGalleryModels {
 
     pub(crate) material3_checkbox: Model<bool>,
     pub(crate) material3_switch: Model<bool>,
+    pub(crate) material3_slider_value: Model<f32>,
     pub(crate) material3_radio_value: Model<Option<Arc<str>>>,
     pub(crate) material3_tabs_value: Model<Arc<str>>,
     pub(crate) material3_list_value: Model<Arc<str>>,
@@ -101,4 +102,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) code_editor_soft_wrap: Model<bool>,
     pub(crate) code_editor_folds: Model<bool>,
     pub(crate) code_editor_inlays: Model<bool>,
+
+    pub(crate) markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
 }

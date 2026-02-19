@@ -1123,6 +1123,11 @@ impl TaffyLayoutEngine {
         self.child_dedupe_set_scratch = child_dedupe_set_scratch;
     }
 
+    #[cfg(test)]
+    pub(crate) fn debug_style_for_node(&self, node: NodeId) -> Option<&taffy::Style> {
+        self.styles.get(node)
+    }
+
     #[stacksafe::stacksafe]
     pub fn compute_root_with_measure(
         &mut self,

@@ -815,7 +815,8 @@ impl DialogTitle {
             .font_semibold()
             .letter_spacing_em(-0.02)
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx);
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title

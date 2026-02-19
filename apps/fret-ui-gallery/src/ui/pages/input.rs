@@ -585,12 +585,13 @@ pub(super) fn preview_input(
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::Field::new([
-            shadcn::FieldLabel::new("????? API").into_element(cx),
+            shadcn::FieldLabel::new("مفتاح API").into_element(cx),
             shadcn::Input::new(rtl_value)
-                .a11y_label("????? API")
+                .a11y_label("مفتاح API")
                 .placeholder("sk-...")
                 .into_element(cx),
-            shadcn::FieldDescription::new("??????? ???? ???? ?????? ???? ???.").into_element(cx),
+            shadcn::FieldDescription::new("استخدم هذا المفتاح للوصول إلى واجهة برمجة التطبيقات.")
+                .into_element(cx),
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
@@ -841,21 +842,21 @@ shadcn::FieldGroup::new([
                 .description("Input + Field composition under an RTL direction provider.")
                 .code(
                     "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| {
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("????? API").into_element(cx),
+                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
+     cx,
+     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+     |cx| {
+         shadcn::Field::new([
+            shadcn::FieldLabel::new("مفتاح API").into_element(cx),
             shadcn::Input::new(model)
-                .a11y_label("????? API")
+                .a11y_label("مفتاح API")
                 .placeholder("sk-...")
                 .into_element(cx),
         ])
         .into_element(cx)
-    },
+     },
 );"#,
-                ),
+                 ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

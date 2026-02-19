@@ -42,6 +42,30 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-outline");
 
+    let full_width_items = shadcn::ToggleGroup::multiple_uncontrolled(["left"])
+        .variant(shadcn::ToggleVariant::Outline)
+        .items_full_width(true)
+        .refine_layout(LayoutRefinement::default().w_full())
+        .items([
+            text_item(cx, "left", "Left"),
+            text_item(cx, "center", "Center"),
+            text_item(cx, "right", "Right"),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-toggle-group-full-width-items");
+
+    let stretch = shadcn::ToggleGroup::single_uncontrolled(Some("left"))
+        .variant(shadcn::ToggleVariant::Outline)
+        .items_flex_1(true)
+        .refine_layout(LayoutRefinement::default().w_full())
+        .items([
+            text_item(cx, "left", "Left").test_id("ui-gallery-toggle-group-stretch-left"),
+            text_item(cx, "center", "Center").test_id("ui-gallery-toggle-group-stretch-center"),
+            text_item(cx, "right", "Right").test_id("ui-gallery-toggle-group-stretch-right"),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-toggle-group-stretch");
+
     let size = {
         let sm = shadcn::ToggleGroup::single_uncontrolled(Some("left"))
             .variant(shadcn::ToggleVariant::Outline)
@@ -148,7 +172,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Toggle Group docs order: Demo, Outline, Size, Spacing, Vertical, Disabled, RTL.",
+            "Preview follows shadcn Toggle Group docs order: Demo, Outline, Size, Spacing, Vertical, Disabled, RTL (plus a flex-1 regression gate section).",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -176,8 +200,33 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         shadcn::ToggleGroupItem::new("center", [cx.text("Center")]).a11y_label("Toggle Center"),
         shadcn::ToggleGroupItem::new("right", [cx.text("Right")]).a11y_label("Toggle Right"),
     ])
+                    .into_element(cx);"#,
+                ),
+            DocSection::new("Full Width Items", full_width_items)
+                .description("Stretched items (flex-1) to gate control-chrome fill invariants.")
+                .max_w(Px(560.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::multiple_uncontrolled(["left"])
+    .variant(shadcn::ToggleVariant::Outline)
+    .items_full_width(true)
+    .refine_layout(LayoutRefinement::default().w_full())
+    .items([
+        shadcn::ToggleGroupItem::new("left", [cx.text("Left")])
+            .a11y_label("Toggle Left")
+            .test_id("ui-gallery-toggle-group-stretch-left"),
+        shadcn::ToggleGroupItem::new("center", [cx.text("Center")])
+            .a11y_label("Toggle Center")
+            .test_id("ui-gallery-toggle-group-stretch-center"),
+        shadcn::ToggleGroupItem::new("right", [cx.text("Right")])
+            .a11y_label("Toggle Right")
+            .test_id("ui-gallery-toggle-group-stretch-right"),
+    ])
     .into_element(cx);"#,
                 ),
+            DocSection::new("Flex-1 items", stretch)
+                .description("Regression gate for hit/visual alignment under `flex-1` sizing.")
+                .max_w(Px(560.0)),
             DocSection::new("Size", size)
                 .description("Size presets for toolbar density.")
                 .max_w(Px(560.0))

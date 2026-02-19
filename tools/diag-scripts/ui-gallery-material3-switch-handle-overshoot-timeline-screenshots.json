@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-switch-handle-overshoot-timeline-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "switch", "handle", "overshoot", "timeline", "screenshots"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "switch" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-switch" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-00-off" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" } },
+
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-10-on-frame0" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-11-on-frame1" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-12-on-frame2" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-13-on-frame3" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-14-on-frame4" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-15-on-frame5" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-16-on-frame6" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-17-on-frame7" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-18-on-frame8" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-19-on-frame9" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-20-on-frame10" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-21-on-frame11" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-22-on-frame12" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-23-on-frame13" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-24-on-frame14" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-25-on-frame15" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-26-on-frame16" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-27-on-frame17" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-28-on-rest" },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" } },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-30-off-frame0" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-31-off-frame1" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-32-off-frame2" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-33-off-frame3" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-34-off-frame4" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-35-off-frame5" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-36-off-frame6" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-37-off-frame7" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-38-off-frame8" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-39-off-frame9" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-40-off-frame10" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-41-off-frame11" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-42-off-frame12" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-43-off-frame13" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-44-off-frame14" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-45-off-frame15" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-46-off-frame16" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-47-off-frame17" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "m3-switch-handle-overshoot-48-off-rest" },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" },
+        "checked": false
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-material3-switch-handle-overshoot-timeline" }
+  ]
+}
+
