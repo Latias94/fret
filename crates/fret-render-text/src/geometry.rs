@@ -283,6 +283,10 @@ pub trait TextLineGeometry {
     fn clusters(&self) -> &[TextLineCluster];
 }
 
+pub trait TextLineDecorationGeometry: TextLineGeometry {
+    fn y_baseline(&self) -> Px;
+}
+
 pub fn caret_rect_from_lines<L: TextLineGeometry>(
     lines: &[L],
     index: usize,
