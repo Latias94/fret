@@ -1,6 +1,7 @@
 use fret_core::TextSpan;
 use std::sync::Arc;
 
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct ResolvedSpan {
     pub start: usize,
@@ -11,11 +12,13 @@ pub struct ResolvedSpan {
     pub strikethrough: Option<ResolvedDecoration>,
 }
 
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct ResolvedDecoration {
     pub color: Option<fret_core::Color>,
 }
 
+#[doc(hidden)]
 pub fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<ResolvedSpan>> {
     if spans.is_empty() {
         return None;
@@ -107,6 +110,7 @@ fn clamp_span_end_to_char_boundary(text: &str, start: usize, desired_end: usize)
     up.max(start).min(text.len())
 }
 
+#[doc(hidden)]
 pub fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSpan]>> {
     if spans.is_empty() || text.is_empty() {
         return None;
@@ -146,6 +150,7 @@ pub fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[Te
     Some(Arc::<[TextSpan]>::from(out))
 }
 
+#[doc(hidden)]
 pub fn paint_span_for_text_range(
     spans: &[ResolvedSpan],
     range: &std::ops::Range<usize>,
