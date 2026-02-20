@@ -23,6 +23,16 @@ impl BundleSemanticsModeV1 {
             Some(_) => Self::All,
         }
     }
+
+    pub(super) fn from_env_or_default(default: BundleSemanticsModeV1) -> Self {
+        if std::env::var("FRET_DIAG_BUNDLE_SEMANTICS_MODE")
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty())
+        {
+            return Self::from_env();
+        }
+        default
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

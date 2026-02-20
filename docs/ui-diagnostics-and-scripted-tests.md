@@ -451,9 +451,9 @@ Semantics export:
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`: controls how often bundles include semantics snapshots.
-  - `all`: include semantics on every snapshot (default).
+  - `all`: include semantics on every snapshot (default for manual dumps).
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
-  - `last`: include semantics only on the last snapshot (useful for AI triage and very large UIs).
+  - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 

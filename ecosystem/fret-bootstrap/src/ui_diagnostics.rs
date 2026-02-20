@@ -8174,7 +8174,14 @@ impl UiDiagnosticsService {
         };
 
         let mut bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
-        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::from_env());
+        let default_semantics_mode = if is_script_dump {
+            bundle::BundleSemanticsModeV1::Last
+        } else {
+            bundle::BundleSemanticsModeV1::All
+        };
+        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::from_env_or_default(
+            default_semantics_mode,
+        ));
 
         let mut bundle_json_bytes: Option<u64> = None;
 
