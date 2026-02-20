@@ -74,6 +74,8 @@ Tracking format:
     - `crates/fret-render-wgpu/src/text/mod.rs`
       (`caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji`,
       `grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji`)
+    - `crates/fret-render-text/src/wrapper.rs`
+      (`none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster`)
 
 ## M3 — IME + editor-grade polish
 

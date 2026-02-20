@@ -519,6 +519,7 @@ fn wrap_none_ellipsis(
     if cut_end < text_len && cut_end > 0 {
         cut_end = trim_trailing_whitespace(text, cut_end);
         cut_end = clamp_to_char_boundary(text, cut_end);
+        cut_end = clamp_to_grapheme_boundary_down(text, cut_end);
     }
 
     // Shape the kept prefix so truncation doesn't depend on the discarded suffix (important for
@@ -529,6 +530,7 @@ fn wrap_none_ellipsis(
         let cut2 = cut_end_for_available(&text[..cut_end], &kept.clusters, available);
         if cut2 < cut_end {
             cut_end = clamp_to_char_boundary(text, trim_trailing_whitespace(text, cut2));
+            cut_end = clamp_to_grapheme_boundary_down(text, cut_end);
             kept = shape_prefix(shaper, text, base, spans, cut_end, scale);
         }
     }
@@ -1444,6 +1446,54 @@ mod tests {
 
         let (hit, _affinity) = wrapped.hit_test_x(0, 79.0);
         assert_eq!(hit, wrapped.kept_end);
+    }
+
+    #[test]
+    fn none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster() {
+        use std::collections::HashSet;
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let emoji = "👩‍👩‍👧‍👦";
+        let text = format!("{emoji}{emoji}{emoji}{emoji}{emoji} hello");
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text.as_str(), &base),
+            constraints,
+        );
+        assert!(
+            wrapped.kept_end < text.len(),
+            "expected ellipsis to truncate the text"
+        );
+
+        let mut boundaries: HashSet<usize> = HashSet::new();
+        boundaries.insert(0);
+        let mut cursor = 0usize;
+        for g in text.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.insert(cursor.min(text.len()));
+        }
+
+        assert!(
+            boundaries.contains(&wrapped.kept_end),
+            "expected ellipsis cut point to land on a grapheme boundary; kept_end={} text={text:?}",
+            wrapped.kept_end
+        );
     }
 
     #[test]
