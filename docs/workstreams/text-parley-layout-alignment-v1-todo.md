@@ -32,7 +32,7 @@ This is a living task list. Keep items small enough to land with a tight regress
 
 ## P3 — Platform text input (IME) robustness
 
-- [ ] Re-evaluate v1 “caret-anchored marked range” strictness for
+- [x] Re-evaluate v1 “caret-anchored marked range” strictness for
       `platform_text_input_replace_and_mark_text_in_range_utf16` (avoid false negatives for some
       IME behaviors).
-- [ ] Add targeted tests for UTF-16 composed-view mapping around preedit.
+- [x] Add targeted tests for UTF-16 composed-view mapping around preedit.

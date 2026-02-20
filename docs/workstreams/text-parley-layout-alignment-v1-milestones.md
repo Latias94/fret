@@ -45,6 +45,11 @@ Status: Done.
   - Evidence:
     - `crates/fret-render-wgpu/src/text/mod.rs` (cluster-driven multi-segment `selection_rects(_clipped)`)
     - `crates/fret-render-wgpu/src/text/mod.rs` (unit test gate: `mixed_direction_selection_rects_split_across_visual_runs`)
+- M3: Done.
+  - Evidence:
+    - `crates/fret-ui/src/text/input/widget.rs` (tolerant `platform_text_input_replace_and_mark_text_in_range_utf16`)
+    - `crates/fret-ui/src/text/area/widget.rs` (tolerant `platform_text_input_replace_and_mark_text_in_range_utf16`)
+    - `crates/fret-ui/src/tree/tests/platform_text_input.rs` (unit test gate: replacement-range commit + marked mismatch)
 
 ## M2 — Mixed-direction selection rectangles are segment-accurate
 
@@ -59,7 +64,6 @@ Exit criteria:
 - Add at least one focused unit test covering a mixed LTR/RTL selection range that produces
   multiple rects.
 
-Status: Not started.
 Status: Done.
 
 ## M3 — IME/platform query robustness (bounded)
@@ -75,4 +79,4 @@ Exit criteria:
   while keeping invariants documented and tested.
 - Add tests for at least one non-trivial IME-marked scenario.
 
-Status: Not started.
+Status: Done.

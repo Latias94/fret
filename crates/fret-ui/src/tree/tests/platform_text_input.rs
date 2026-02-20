@@ -400,3 +400,99 @@ fn platform_text_input_replace_and_mark_can_drive_caret_anchored_preedit() {
         fret_runtime::PlatformTextInputQueryResult::Range(None)
     );
 }
+
+#[test]
+fn platform_text_input_replace_and_mark_commits_using_original_replacement_range() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut input = crate::text_input::TextInput::new().with_text("abcd");
+    let style = crate::TextInputStyle {
+        padding: Edges::all(Px(0.0)),
+        ..Default::default()
+    };
+    input.set_chrome_style(style);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(input);
+    ui.add_child(root, text);
+    ui.set_root(root);
+    ui.set_focus(Some(text));
+
+    let mut services = PlatformTextTestServices::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(20.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    // Select "bc" (UTF-8 bytes [1,3)).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::SetTextSelection {
+            anchor: 1,
+            focus: 3,
+        },
+    );
+
+    // Start composition by replacing the selection, but tolerate a mismatched marked range.
+    assert!(ui.platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(1, 3),
+        "X",
+        Some(fret_runtime::Utf16Range::new(0, 1))
+    ));
+
+    let marked = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::MarkedTextRange,
+    );
+    assert_eq!(
+        marked,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            1, 2
+        )))
+    );
+
+    // Commit the composed text and ensure the original replacement range is applied.
+    assert!(ui.platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(1, 2),
+        "Z",
+        None
+    ));
+
+    let full = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::TextForRange {
+            range: fret_runtime::Utf16Range::new(0, 1000),
+        },
+    );
+    assert_eq!(
+        full,
+        fret_runtime::PlatformTextInputQueryResult::Text(Some("aZd".to_string()))
+    );
+
+    let marked = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::MarkedTextRange,
+    );
+    assert_eq!(
+        marked,
+        fret_runtime::PlatformTextInputQueryResult::Range(None)
+    );
+}

@@ -388,68 +388,67 @@ impl<H: UiHost> Widget<H> for TextArea {
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
     ) -> bool {
-        let Some(marked) = marked else {
-            return self.platform_text_input_replace_text_in_range_utf16(cx, range, text);
-        };
-
         let insert = if text.contains('\r') {
             crate::text_edit::normalize::newlines_to_lf(text)
         } else {
             text.to_string()
         };
-        let insert_utf16_len = fret_core::utf::utf8_byte_offset_to_utf16_offset(
-            insert.as_str(),
-            insert.len(),
-            fret_core::utf::UtfIndexClamp::Down,
-        );
-        let insert_utf16_len = u32::try_from(insert_utf16_len).unwrap_or(u32::MAX);
+
+        let commit_composition = |this: &mut Self, insert: &str| -> bool {
+            if insert.is_empty() {
+                this.clear_preedit();
+                this.text_dirty = true;
+                this.ensure_caret_visible = true;
+                return true;
+            }
+
+            let (start, end) = this.ime_replace_range.unwrap_or((this.caret, this.caret));
+            let mut edit = this.edit_state();
+            edit.set_selection_grapheme_clamped(start, end);
+            let _ = edit.replace_selection(insert);
+
+            this.affinity = fret_core::CaretAffinity::Downstream;
+            this.text_dirty = true;
+            this.ensure_caret_visible = true;
+            true
+        };
+
+        let Some(marked) = marked else {
+            if self.is_ime_composing() {
+                return commit_composition(self, insert.as_str());
+            }
+            return self.platform_text_input_replace_text_in_range_utf16(cx, range, text);
+        };
+
+        let marked = marked.normalized();
+        if marked.start == marked.end {
+            if self.is_ime_composing() {
+                return commit_composition(self, insert.as_str());
+            }
+            return self.platform_text_input_replace_text_in_range_utf16(cx, range, text);
+        }
 
         let r = range.normalized();
-        let expected_marked =
-            fret_runtime::Utf16Range::new(r.start, r.start.saturating_add(insert_utf16_len));
-        if marked.normalized() != expected_marked.normalized() {
-            // v1 preedit is always a single caret-anchored marked range.
-            return false;
-        }
 
-        if insert.is_empty() && marked.start == marked.end {
-            self.clear_preedit();
-            self.text_dirty = true;
-            self.ensure_caret_visible = true;
-            return true;
-        }
-
-        if self.is_ime_composing() {
-            let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
-            let preedit_len = self.preedit.len();
-            let (start, end) = crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
-                &self.text,
-                caret,
-                &self.preedit,
-                caret,
-                caret.saturating_add(preedit_len),
-            );
-            let current_marked = fret_runtime::Utf16Range::new(start, end).normalized();
-            if r != current_marked {
-                // v1 only supports replacing the current marked range during composition.
-                return false;
-            }
-        } else {
-            if r.start != r.end {
-                // v1 preedit is caret-anchored and cannot replace an arbitrary base range.
-                return false;
-            }
+        if !self.is_ime_composing() {
             // Starting composition: map the requested (UTF-16) replace range into base UTF-8 bytes.
-            let (start_base, _) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            let (a, b) = fret_core::utf::utf16_range_to_utf8_byte_range(
                 self.text.as_str(),
                 r.start as usize,
                 r.end as usize,
             );
+            let a = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, a);
+            let b = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, b);
+            let (start, end) = if a <= b { (a, b) } else { (b, a) };
 
-            self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, start_base);
-            self.selection_anchor = self.caret;
-
-            self.ime_replace_range = None;
+            self.caret = start;
+            self.selection_anchor = start;
+            self.ime_replace_range = (start != end).then_some((start, end));
+        } else {
+            // When already composing, tolerate unexpected replace ranges by treating the request as
+            // a whole-preedit update. This keeps IME integration robust without expanding the v1
+            // contract beyond a single caret-anchored marked range.
+            let _ = r;
         }
 
         self.preedit = insert;
