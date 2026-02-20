@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-calendar" }
+      }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery.calendar.basic:2026-05-27"
+        }
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2026-05-27" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 240,
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2026-05-27" }
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "page_down" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "page_up" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-calendar-may-2026-centering" },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-calendar-may-2026-centering"
+    }
+  ]
+}
