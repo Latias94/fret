@@ -1,3 +1,4 @@
+pub mod fallback_policy;
 pub mod geometry;
 pub mod parley_shaper;
 pub mod wrapper;
