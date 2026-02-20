@@ -8,7 +8,7 @@ use slotmap::SlotMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
-    sync::{Arc, OnceLock},
+    sync::Arc,
 };
 
 use fret_render_text::cache_keys::{
@@ -35,63 +35,6 @@ pub(crate) mod parley_shaper {
 
 pub(crate) mod wrapper {
     pub use fret_render_text::wrapper::*;
-}
-
-fn released_blob_cache_entries() -> usize {
-    static ENTRIES: OnceLock<usize> = OnceLock::new();
-    *ENTRIES.get_or_init(|| {
-        // Default: bounded on native builds. Retain recently released text blobs to reduce
-        // `Text::prepare` thrash when wrap widths oscillate (e.g. interactive resize jitter).
-        std::env::var("FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            // Allow disabling via env var (`0`).
-            .unwrap_or(default_released_blob_cache_entries())
-            .min(2048)
-    })
-}
-
-fn default_released_blob_cache_entries() -> usize {
-    // Keep wasm builds conservative; native builds get a bounded default to improve interactive
-    // resize and other width-jitter workloads.
-    #[cfg(target_arch = "wasm32")]
-    {
-        0
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        256
-    }
-}
-
-fn measure_shaping_cache_entries() -> usize {
-    static ENTRIES: OnceLock<usize> = OnceLock::new();
-    *ENTRIES.get_or_init(|| {
-        // Default: 4096 entries. This cache is the main defense against `TextService::measure`
-        // reshaping thrash when a layout pass touches many unique strings (common in editor
-        // surfaces) and when wrap widths churn during interactive resize.
-        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(4096)
-            .clamp(64, 65_536)
-    })
-}
-
-fn measure_shaping_cache_min_text_len_bytes() -> usize {
-    static MIN_BYTES: OnceLock<usize> = OnceLock::new();
-    *MIN_BYTES.get_or_init(|| {
-        // Default: cache only "meaningfully expensive" paragraphs (e.g. long editor lines).
-        //
-        // Short UI labels (menus/tabs/buttons) are typically cheap to shape, and caching every
-        // distinct label can bloat the cache and degrade cache locality across long-lived
-        // reuse-launch perf suites.
-        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(128)
-            .min(1_048_576)
-    })
 }
 
 #[derive(Debug, Clone)]
@@ -1290,7 +1233,8 @@ impl TextSystem {
 
         let parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
 
-        let measure_shaping_entries = measure_shaping_cache_entries();
+        let measure_shaping_entries =
+            fret_render_text::cache_tuning::measure_shaping_cache_entries();
         let fallback_policy = TextFallbackPolicyV1::new(&parley_shaper);
 
         let mut out = Self {
@@ -2703,7 +2647,8 @@ impl TextSystem {
         };
 
         let metrics = if let Some(max_width) = max_width_for_fast {
-            let allow_shaping_cache = text.len() >= measure_shaping_cache_min_text_len_bytes();
+            let allow_shaping_cache = text.len()
+                >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
 
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
@@ -2759,7 +2704,7 @@ impl TextSystem {
                         .is_some();
                     if !existed {
                         self.measure_shaping_fifo.push_back(shaping_key.clone());
-                        let limit = measure_shaping_cache_entries();
+                        let limit = fret_render_text::cache_tuning::measure_shaping_cache_entries();
                         while self.measure_shaping_fifo.len() > limit {
                             let Some(evict) = self.measure_shaping_fifo.pop_front() else {
                                 break;
@@ -2907,7 +2852,8 @@ impl TextSystem {
         };
 
         let metrics = if let Some(max_width) = max_width_for_fast {
-            let allow_shaping_cache = rich.text.len() >= measure_shaping_cache_min_text_len_bytes();
+            let allow_shaping_cache = rich.text.len()
+                >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
 
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
@@ -2970,7 +2916,7 @@ impl TextSystem {
                         .is_some();
                     if !existed {
                         self.measure_shaping_fifo.push_back(shaping_key.clone());
-                        let limit = measure_shaping_cache_entries();
+                        let limit = fret_render_text::cache_tuning::measure_shaping_cache_entries();
                         while self.measure_shaping_fifo.len() > limit {
                             let Some(evict) = self.measure_shaping_fifo.pop_front() else {
                                 break;
@@ -3169,7 +3115,7 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let entries = released_blob_cache_entries();
+        let entries = fret_render_text::cache_tuning::released_blob_cache_entries();
 
         let Some(b) = self.blobs.get_mut(blob) else {
             return;
