@@ -11,6 +11,7 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use fret_render_text::cache_keys::{TextMeasureKey, TextMeasureShapingKey, hash_text};
 pub(crate) use fret_render_text::effective_text_scale_factor;
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
@@ -1055,52 +1056,6 @@ fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     out
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextMeasureKey {
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    max_width_bits: Option<u32>,
-    wrap: TextWrap,
-    overflow: TextOverflow,
-    scale_bits: u32,
-}
-
-impl TextMeasureKey {
-    fn new(style: &TextStyle, constraints: TextConstraints, font_stack_key: u64) -> Self {
-        let max_width_bits = match constraints.wrap {
-            // `TextWrap::None` does not change shaping results based on width; callers clamp or
-            // apply overflow policy at higher levels. Normalize away width so repeated measurements
-            // (e.g. layout engine intrinsic probes) can reuse cached metrics.
-            TextWrap::None => None,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
-                constraints.max_width.map(|w| w.0.to_bits())
-            }
-        };
-        Self {
-            font: style.font.clone(),
-            font_stack_key,
-            size_bits: style.size.0.to_bits(),
-            weight: style.weight.0,
-            slant: match style.slant {
-                TextSlant::Normal => 0,
-                TextSlant::Italic => 1,
-                TextSlant::Oblique => 2,
-            },
-            line_height_bits: style.line_height.map(|px| px.0.to_bits()),
-            letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
-            max_width_bits,
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            scale_bits: constraints.scale_factor.to_bits(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 struct TextMeasureEntry {
     text_hash: u64,
@@ -1108,21 +1063,6 @@ struct TextMeasureEntry {
     text: Arc<str>,
     spans: Option<Arc<[TextSpan]>>,
     metrics: TextMetrics,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextMeasureShapingKey {
-    text_hash: u64,
-    text_len: usize,
-    spans_shaping_key: u64,
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    scale_bits: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -1133,12 +1073,6 @@ struct TextMeasureShapingEntry {
     baseline_px: f32,
     line_height_px: f32,
     clusters: Arc<[parley_shaper::ShapedCluster]>,
-}
-
-fn hash_text(text: &str) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    text.hash(&mut hasher);
-    hasher.finish()
 }
 
 fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
