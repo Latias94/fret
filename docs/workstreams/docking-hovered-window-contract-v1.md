@@ -66,6 +66,27 @@ Local snapshot (optional): `repo-ref/imgui`
 - Fallback heuristic in core when backends can’t provide hovered viewport:
   - `repo-ref/imgui/imgui.cpp` (`FindHoveredViewportFromPlatformWindowStack`)
 
+### Upstream heuristic details (for “BestEffort” parity)
+
+Dear ImGui’s fallback `FindHoveredViewportFromPlatformWindowStack()` is intentionally limited:
+
+- It only considers ImGui-owned platform windows (foreign OS windows are invisible to ImGui).
+- It excludes viewports flagged `NoInputs` (peek-behind) and minimized viewports.
+- It chooses the candidate with the greatest `LastFocusedStampCount`, which is maintained via
+  `Platform_GetWindowFocus` in `UpdateViewportsNewFrame()`.
+
+Evidence anchors:
+
+- Fallback search + exclusion rules: `repo-ref/imgui/imgui.cpp:16642`
+- Focus stamp maintenance: `repo-ref/imgui/imgui.cpp:16678`
+
+Fret mapping:
+
+- “BestEffort” may use a similar approach (rect contains cursor + focus stamp) *only* when
+  `ui.window_hover_detection` is not `Reliable`.
+- “Reliable” must be backed by platform APIs (z-order traversal / window-under-cursor query) and
+  must honor `prefer_not` / click-through payload semantics.
+
 ## Definitions
 
 ### “Hovered window” (Fret)
@@ -147,6 +168,11 @@ Contract expectation:
 
 - A reliable hover provider should naturally “peek behind” click-through windows.
 - Diagnostics must expose whether transparent payload was applied to the active dock drag session.
+  - In Fret, this is applied via `WindowRequest::SetStyle` facets (`mouse`, `opacity`) while the follow loop is active.
+
+In addition, while following the cursor the runner may request a temporary `WindowZLevel::AlwaysOnTop`
+(capability-gated) to keep the moving payload visible above other app windows (ImGui-style). This is
+also applied via `WindowRequest::SetStyle` and patched back to `Normal` when follow stops.
 
 ## Platform implementation plan (avoid heuristics)
 

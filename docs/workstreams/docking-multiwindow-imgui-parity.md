@@ -45,6 +45,55 @@ These non-normative anchors are useful when matching “multi-viewports” hand 
 - Transparent payload option:
   - `repo-ref/imgui/imgui.h:2515` (`ImGuiIO::ConfigDockingTransparentPayload`)
 
+## Key ImGui mechanics to match (multi-viewports + docking)
+
+This section records the non-normative upstream behavior that most directly informs Fret’s
+runner/backend responsibilities. It exists to avoid re-inventing heuristics.
+
+### Hovered viewport selection: backend-first, heuristic fallback
+
+In Dear ImGui, the *preferred* path is backend-provided hovered viewport:
+
+- Backend sets `io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport` and calls
+  `io.AddMouseViewportEvent(viewport_id)`.
+- Backend should ideally ignore viewports with `ImGuiViewportFlags_NoInputs` when reporting hovered
+  viewport, so a moving “payload” viewport can be skipped (peek-behind).
+
+If the backend cannot provide hovered viewport reliably, core falls back to a heuristic search:
+
+- `ImGui::FindHoveredViewportFromPlatformWindowStack()` scans `g.Viewports`, excludes viewports with
+  `ImGuiViewportFlags_NoInputs` and `ImGuiViewportFlags_IsMinimized`, and picks the candidate with
+  the highest `LastFocusedStampCount` (a proxy for platform z-order).
+  - Anchor: `repo-ref/imgui/imgui.cpp:16642`
+- `UpdateViewportsNewFrame()` maintains focus stamps using `Platform_GetWindowFocus` when platform
+  windows exist.
+  - Anchor: `repo-ref/imgui/imgui.cpp:16678`
+
+Implication for Fret:
+
+- Prefer a platform-backed “window under cursor” provider when `ui.window_hover_detection=Reliable`.
+- If the platform cannot supply hovered window, explicitly treat the result as `BestEffort` and use
+  a bounded fallback (e.g. “focus stamp + window rect contains point”), mirroring ImGui’s intent.
+
+### “Peek behind moving window”: NoInputs + transparent payload
+
+ImGui’s moving-window paths explicitly mention toggling `NoInputs` after moving has started to
+detect what is behind the moving window (useful for docking):
+
+- Anchor: `repo-ref/imgui/imgui.cpp:5538`
+
+Additionally, `ImGuiViewportFlags_NoInputs` is documented as “mouse pass through so we can drag
+this window while peeking behind it”:
+
+- Anchor: `repo-ref/imgui/imgui.h:4060`
+
+Implication for Fret:
+
+- The runner should be able to mark the moving DockFloating window as click-through (mouse
+  passthrough) during follow, and hover selection should naturally skip it.
+- The runner should separately control z-order (e.g. temporary always-on-top) so the moving payload
+  stays visible without preventing “peek behind”.
+
 ## Scope
 
 In scope:
@@ -132,6 +181,8 @@ Evidence anchors:
     `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
     `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
+  - Note: the follow loop also requests a temporary `WindowZLevel::AlwaysOnTop` (capability-gated) so the moving window stays
+    visible above other app windows. This is applied via `WindowRequest::SetStyle` and patched back to `Normal` when follow stops.
 
 ## Cross-platform gaps (common failure modes)
 

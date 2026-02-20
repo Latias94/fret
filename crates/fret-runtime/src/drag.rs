@@ -60,10 +60,33 @@ pub struct DragSession {
     /// If set, requests the runner to treat this drag as a "move the OS window" interaction for
     /// the given window id, while still allowing cross-window docking hover/drop routing.
     pub follow_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: OS window currently being moved by the runner for this drag
+    /// session (ImGui-style "follow window" multi-viewport behavior).
+    ///
+    /// This is intentionally diagnostics-only: it does not request follow behavior; it records
+    /// what the runner is currently doing.
+    pub moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: when [`Self::moving_window`] is set, the window considered
+    /// "under" the moving window at the current cursor position.
+    ///
+    /// This exists to support ImGui-style terminology where `HoveredWindow` and
+    /// `HoveredWindowUnderMovingWindow` can differ during a viewport drag. Fret currently keeps
+    /// `current_window` as the runner-selected hover/drop target; this field makes it possible to
+    /// gate and evolve "peek-behind" behavior without reinterpreting `current_window`.
+    pub window_under_moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: which mechanism was used to select
+    /// [`Self::window_under_moving_window`].
+    pub window_under_moving_window_source: WindowUnderCursorSource,
     /// Best-effort diagnostics hint: true when the runner has applied an ImGui-style "transparent
-    /// payload" treatment to the moving dock window (e.g. click-through/NoInputs while following
-    /// the cursor).
+    /// payload" treatment to the moving dock window (e.g. reduced opacity and/or click-through
+    /// mouse passthrough while following the cursor).
     pub transparent_payload_applied: bool,
+    /// Best-effort diagnostics hint: true when the runner successfully applied click-through
+    /// mouse passthrough to the moving dock window while transparent payload is enabled.
+    ///
+    /// This is a result signal (applied by the OS/window backend), not a request. When false,
+    /// the runner either did not attempt passthrough or the platform/backend rejected it.
+    pub transparent_payload_mouse_passthrough_applied: bool,
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
     pub window_under_cursor_source: WindowUnderCursorSource,
@@ -92,7 +115,11 @@ impl DragSession {
             position: start_position,
             cursor_grab_offset: None,
             follow_window: None,
+            moving_window: None,
+            window_under_moving_window: None,
+            window_under_moving_window_source: WindowUnderCursorSource::Unknown,
             transparent_payload_applied: false,
+            transparent_payload_mouse_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
             dragging: false,
             phase: DragPhase::Starting,
@@ -119,7 +146,11 @@ impl DragSession {
             position: start_position,
             cursor_grab_offset: None,
             follow_window: None,
+            moving_window: None,
+            window_under_moving_window: None,
+            window_under_moving_window_source: WindowUnderCursorSource::Unknown,
             transparent_payload_applied: false,
+            transparent_payload_mouse_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
             dragging: false,
             phase: DragPhase::Starting,

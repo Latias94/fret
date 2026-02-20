@@ -1553,11 +1553,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     let allow_follow = caps.ui.window_set_outer_position
                                         == fret_runtime::WindowSetOuterPositionQuality::Reliable;
                                     if allow_follow {
+                                        let mut always_on_top_applied = false;
                                         if caps.ui.window_z_level
                                             != fret_runtime::WindowZLevelQuality::None
                                             && let Some(state) = self.windows.get(new_window)
                                         {
                                             state.window.set_window_level(WindowLevel::AlwaysOnTop);
+                                            always_on_top_applied = true;
                                         }
 
                                         self.dock_tearoff_follow = Some(super::DockTearoffFollow {
@@ -1567,7 +1569,8 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             manual_follow: true,
                                             last_outer_pos: None,
                                             transparent_payload_applied: false,
-                                            always_on_top_applied: false,
+                                            mouse_passthrough_applied: false,
+                                            always_on_top_applied,
                                         });
                                         // Do not call `drag_window()` here. ImGui drives multi-viewport
                                         // window movement by updating the platform window position in
@@ -1607,6 +1610,26 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                         WindowRequest::SetOuterPosition { window, position } => {
                             if let Some(state) = self.windows.get(window) {
+                                #[cfg(target_os = "windows")]
+                                {
+                                    // On Windows, winit's `Position::Logical` is monitor-local.
+                                    // Convert to absolute physical pixels to make scripted window
+                                    // placement deterministic across multi-monitor setups.
+                                    let scale = state.window.scale_factor().max(0.000_001);
+                                    let x = (position.x as f64 * scale).round() as i32;
+                                    let y = (position.y as f64 * scale).round() as i32;
+                                    if let Some(hwnd) = Self::hwnd_for_window(state.window.as_ref())
+                                    {
+                                        let _ = super::win32::set_window_outer_position(hwnd, x, y);
+                                    } else {
+                                        state.window.set_outer_position(
+                                            winit::dpi::Position::Physical(
+                                                winit::dpi::PhysicalPosition::new(x, y),
+                                            ),
+                                        );
+                                    }
+                                }
+                                #[cfg(not(target_os = "windows"))]
                                 state
                                     .window
                                     .set_outer_position(winit::dpi::Position::Logical(
@@ -1647,10 +1670,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 if let Some(mouse) = style.mouse {
                                     let passthrough =
                                         matches!(mouse, fret_runtime::MousePolicy::Passthrough);
-                                    let _ = super::window::set_window_mouse_passthrough(
+                                    let dock_drag_pointer_id = self.dock_drag_pointer_id();
+                                    let applied = super::window::set_window_mouse_passthrough(
                                         state.window.as_ref(),
                                         passthrough,
                                     );
+                                    if let Some(follow) = self.dock_tearoff_follow.as_mut()
+                                        && follow.window == window
+                                    {
+                                        follow.mouse_passthrough_applied = passthrough && applied;
+                                        if let Some(pointer_id) = dock_drag_pointer_id
+                                            && let Some(drag) = self.app.drag_mut(pointer_id)
+                                            && drag.source_window == follow.source_window
+                                        {
+                                            drag.transparent_payload_mouse_passthrough_applied =
+                                                passthrough && applied;
+                                        }
+                                    }
                                 }
                                 if let Some(opacity) = style.opacity {
                                     let _ = super::window::set_window_opacity(

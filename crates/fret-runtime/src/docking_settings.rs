@@ -44,6 +44,15 @@ pub struct DockingInteractionSettings {
     ///
     /// Default is `false` to keep multi-window behavior conservative across platforms/backends.
     pub transparent_payload_during_follow: bool,
+    /// Optional ImGui-style "follow window" behavior during docking drags.
+    ///
+    /// When enabled, docking interactions may request the runner to treat certain dock drags as a
+    /// "move the OS window" gesture (while still allowing cross-window hover/drop routing).
+    ///
+    /// This is intentionally conservative by default: runners vary in how reliable it is to move
+    /// OS windows at high frequency, and the UX depends on also supporting "peek behind the moving
+    /// window" hover semantics.
+    pub follow_window_during_drag: bool,
     /// Alpha multiplier for the tear-off payload window while following the cursor.
     ///
     /// ImGui uses `0.50` for `ConfigDockingTransparentPayload`.
@@ -62,6 +71,7 @@ impl Default for DockingInteractionSettings {
             dock_hint_scale_inner: 1.0,
             dock_hint_scale_outer: 1.0,
             transparent_payload_during_follow: false,
+            follow_window_during_drag: false,
             transparent_payload_alpha: 0.5,
         }
     }

@@ -558,6 +558,21 @@ fn script_v2_roundtrip_dock_drag_transparent_payload_applied_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_drag_transparent_payload_mouse_passthrough_applied_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_transparent_payload_mouse_passthrough_applied_is", "applied": true }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_dock_drag_window_under_cursor_source_is_predicate() {
     assert_script_v2_roundtrip(
         r#"{
@@ -566,6 +581,51 @@ fn script_v2_roundtrip_dock_drag_window_under_cursor_source_is_predicate() {
     {
       "type": "assert",
       "predicate": { "kind": "dock_drag_window_under_cursor_source_is", "source": "platform" }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_drag_moving_window_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_moving_window_is", "window": { "kind": "last_seen" } }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_drag_window_under_moving_window_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_window_under_moving_window_is", "window": { "kind": "first_seen" } }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_drag_window_under_moving_window_source_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_window_under_moving_window_source_is", "source": "platform" }
     }
   ]
 }"#,
