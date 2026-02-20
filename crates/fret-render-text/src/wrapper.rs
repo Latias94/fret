@@ -1,4 +1,4 @@
-use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
+use crate::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
 use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
@@ -6,7 +6,7 @@ use unicode_segmentation::UnicodeSegmentation;
 const ELLIPSIS: &str = "\u{2026}";
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct WrappedLayout {
+pub struct WrappedLayout {
     pub text_len: usize,
     pub kept_end: usize,
     pub line_ranges: Vec<Range<usize>>,
@@ -32,12 +32,12 @@ impl WrappedLayout {
     }
 }
 
-pub(crate) fn wrap_with_constraints(
+pub fn wrap_with_constraints(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = super::effective_text_scale_factor(constraints.scale_factor);
+    let scale = crate::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),
@@ -99,12 +99,12 @@ pub(crate) fn wrap_with_constraints(
 /// Wraps text for measurement only.
 ///
 /// The returned `lines[*].glyphs` is intentionally empty to avoid per-glyph work in layout.
-pub(crate) fn wrap_with_constraints_measure_only(
+pub fn wrap_with_constraints_measure_only(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = super::effective_text_scale_factor(constraints.scale_factor);
+    let scale = crate::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),

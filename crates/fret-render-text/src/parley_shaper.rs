@@ -14,8 +14,8 @@ use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::sync::Arc;
 
-use super::FontCatalogEntryMetadata;
-use super::FontVariableAxisMetadata;
+use crate::FontCatalogEntryMetadata;
+use crate::FontVariableAxisMetadata;
 
 fn env_disables_system_fonts() -> bool {
     let Ok(raw) = std::env::var("FRET_TEXT_SYSTEM_FONTS") else {
@@ -44,7 +44,7 @@ fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ParleyGlyph {
+pub struct ParleyGlyph {
     pub id: u32,
     pub x: f32,
     pub y: f32,
@@ -58,7 +58,7 @@ pub(crate) struct ParleyGlyph {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ShapedCluster {
+pub struct ShapedCluster {
     pub text_range: Range<usize>,
     pub x0: f32,
     pub x1: f32,
@@ -66,7 +66,7 @@ pub(crate) struct ShapedCluster {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ShapedLineLayout {
+pub struct ShapedLineLayout {
     pub width: f32,
     pub ascent: f32,
     pub descent: f32,
@@ -76,7 +76,7 @@ pub(crate) struct ShapedLineLayout {
     pub clusters: Vec<ShapedCluster>,
 }
 
-pub(crate) struct ParleyShaper {
+pub struct ParleyShaper {
     fcx: FontContext,
     lcx: LayoutContext<[u8; 4]>,
     layout: Layout<[u8; 4]>,
@@ -245,8 +245,7 @@ impl ParleyShaper {
         self.invalidate_catalog_caches();
     }
 
-    #[cfg(test)]
-    #[allow(dead_code)]
+    #[doc(hidden)]
     pub fn new_without_system_fonts() -> Self {
         let mut out = Self::default();
         out.disable_system_fonts();
@@ -444,12 +443,12 @@ impl ParleyShaper {
         added
     }
 
-    pub fn system_font_rescan_seed(&self) -> Option<super::SystemFontRescanSeed> {
+    pub fn system_font_rescan_seed(&self) -> Option<crate::SystemFontRescanSeed> {
         if !self.system_fonts_enabled {
             return None;
         }
 
-        Some(super::SystemFontRescanSeed {
+        Some(crate::SystemFontRescanSeed {
             registered_font_blobs: self
                 .registered_font_blobs
                 .iter()
@@ -460,7 +459,7 @@ impl ParleyShaper {
 
     pub fn apply_system_font_rescan_result(
         &mut self,
-        result: super::SystemFontRescanResult,
+        result: crate::SystemFontRescanResult,
     ) -> bool {
         if !self.system_fonts_enabled {
             return false;
@@ -1162,9 +1161,7 @@ fn font_features_for_settings(features: &[fret_core::TextFontFeatureSetting]) ->
     by_tag.into_values().collect::<Vec<_>>()
 }
 
-pub(super) fn run_system_font_rescan(
-    seed: super::SystemFontRescanSeed,
-) -> super::SystemFontRescanResult {
+pub fn run_system_font_rescan(seed: crate::SystemFontRescanSeed) -> crate::SystemFontRescanResult {
     let mut shaper = ParleyShaper::new();
     shaper.fcx.collection =
         parley::fontique::Collection::new(parley::fontique::CollectionOptions {
@@ -1179,7 +1176,7 @@ pub(super) fn run_system_font_rescan(
 
     let all_font_names = shaper.all_font_names();
     let all_font_catalog_entries = shaper.all_font_catalog_entries();
-    super::SystemFontRescanResult {
+    crate::SystemFontRescanResult {
         collection: shaper.fcx.collection,
         all_font_names,
         all_font_catalog_entries,

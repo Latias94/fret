@@ -17,7 +17,7 @@ Tracking format:
 
 - [x] TPU-render-001 Ensure empty strings produce non-zero `TextMetrics` and caret rect height.
   - Evidence:
-    - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+    - `crates/fret-render-text/src/parley_shaper.rs`
     - `crates/fret-render-wgpu/src/text/mod.rs` (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
 
 - [x] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).

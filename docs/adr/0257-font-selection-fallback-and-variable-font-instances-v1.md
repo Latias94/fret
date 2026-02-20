@@ -49,12 +49,12 @@ Current Fret evidence anchors:
   (`TextSystem::set_text_locale`), seeded by runners:
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
   - `crates/fret-launch/src/runner/web/gfx_init.rs`
-- Parley/fontique family resolution: `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`resolve_family_id`,
+- Parley/fontique family resolution: `crates/fret-render-text/src/parley_shaper.rs` (`resolve_family_id`,
   `set_generic_family_ids`, `add_fonts`).
 - Picker metadata global (axes + monospace hint): `crates/fret-runtime/src/font_catalog.rs`
   (`FontCatalogMetadata`, `FontCatalogEntry`) populated by the runner when refreshing the catalog.
 - Variable font instance identity in glyph keys and rasterization:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variation_key_from_normalized_coords`, Swash `normalized_coords(...)`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variable_font_weight_changes_face_key_and_raster_output`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (synthesis: `synthesis_skew_participates_in_face_key_and_raster_output`)
@@ -238,7 +238,7 @@ See `docs/audits/font-system-parley-zed-xilem-2026-02.md` for a focused comparis
 - Public axis surface:
   - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle.axes`, `TextFontAxisSetting`)
 - Parley style mapping:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`StyleProperty::FontVariations`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`StyleProperty::FontVariations`)
 - Cache keys and conformance tests:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`spans_shaping_fingerprint`,
     `variable_font_axis_overrides_participate_in_face_key_and_raster_output`)

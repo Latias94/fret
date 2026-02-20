@@ -25,7 +25,7 @@ Fret currently shapes via **Parley** and enumerates/selects fonts via **fontique
 Key anchors:
 
 - Renderer text + fallback injection: `crates/fret-render-wgpu/src/text/mod.rs`
-- Parley/fontique integration + family metadata: `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+- Parley/fontique integration + family metadata: `crates/fret-render-text/src/parley_shaper.rs`
 - Font bootstrap + `TextFontStackKey` invalidation: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
 
 ## Upstream patterns (repo-ref)

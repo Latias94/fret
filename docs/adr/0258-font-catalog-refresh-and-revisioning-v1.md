@@ -106,7 +106,7 @@ Current knobs:
   - `crates/fret-runtime/src/font_bootstrap.rs` (`apply_font_catalog_update_with_metadata`)
   - `crates/fret-runtime/src/font_catalog.rs` (revision semantics docs)
 - Renderer enumeration caching (reduces refresh cost):
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`all_font_names_cache`, `all_font_catalog_entries_cache`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`all_font_names_cache`, `all_font_catalog_entries_cache`)
 
 ## Workstream tracking
 

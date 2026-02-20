@@ -144,7 +144,7 @@ The runner should allow toggling these tiers via crate features (e.g. `fret-laun
    - Resolved (2026-02-11): the renderer uses Parley/fontique as the single source of truth for family resolution and
      generic stack injection, and no longer bridges a separate fontdb implementation.
    - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::set_font_families`, `font_stack_key`,
-     `reset_caches_for_font_change`), `crates/fret-render-wgpu/src/text/parley_shaper.rs` (family resolution +
+     `reset_caches_for_font_change`), `crates/fret-render-text/src/parley_shaper.rs` (family resolution +
      generic family injection).
 
 3) Emoji policy:

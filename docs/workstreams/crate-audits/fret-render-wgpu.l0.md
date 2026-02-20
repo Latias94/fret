@@ -45,7 +45,7 @@ Evidence anchors:
 - `renderer/` — render planning, passes, GPU resources, shader sources, render-scene plumbing
   - Files: `crates/fret-render-wgpu/src/renderer/*`
 - `text/` — shaping + wrapping + fallback policy and glyph/cache management
-  - Files: `crates/fret-render-wgpu/src/text/mod.rs`, `crates/fret-render-wgpu/src/text/wrapper.rs`, `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - Files: `crates/fret-render-wgpu/src/text/mod.rs`, `crates/fret-render-text/src/wrapper.rs`, `crates/fret-render-text/src/parley_shaper.rs`
 - `svg*` — SVG rasterization and caches
   - Files: `crates/fret-render-wgpu/src/svg.rs`, `crates/fret-render-wgpu/src/svg_cache.rs`, `crates/fret-render-wgpu/src/svg_cache/*` (if present)
 - `surface/targets/images` — surface/config, render targets, image upload/storage

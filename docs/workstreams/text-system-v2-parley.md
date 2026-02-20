@@ -38,7 +38,7 @@ Supported (mechanism-level):
   - `font` (semantic `FontId`), `weight`, `slant`, `letter_spacing_em`
   - OpenType features (e.g. `calt`, `liga`, `ss01`) via `TextShapingStyle.features`
   - Variable font axes (e.g. `wght`, `wdth`) via `TextShapingStyle.axes`
-  - Evidence: `crates/fret-core/src/text/mod.rs`, `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - Evidence: `crates/fret-core/src/text/mod.rs`, `crates/fret-render-text/src/parley_shaper.rs`
   - Behavior gates (bundled fonts; no system dependency):
     - `crates/fret-render-wgpu/src/text/mod.rs`
       (`open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fixture`)
@@ -67,7 +67,7 @@ Supported:
 - Word wrap is Parley-driven paragraph line breaking (`TextWrap::Word`):
   - this is the baseline for self-drawn UI text wrapping,
   - conformance fixtures lock the behavior for key edge cases (CJK punctuation, identifiers, etc.).
-  - Evidence: `crates/fret-render-wgpu/src/text/parley_shaper.rs`, `crates/fret-render-wgpu/src/text/wrapper.rs`,
+  - Evidence: `crates/fret-render-text/src/parley_shaper.rs`, `crates/fret-render-text/src/wrapper.rs`,
     `docs/workstreams/text-line-breaking-v1.md`
 
 ### Geometry queries (editor-grade correctness baseline)
@@ -364,11 +364,11 @@ Legend:
   - caret stops
   - hit-testing
   - span-aware paint assignment
-  - Evidence: `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
-    `crates/fret-render-wgpu/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render-wgpu/src/text/mod.rs`
+  - Evidence: `crates/fret-render-text/src/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
+    `crates/fret-render-text/src/wrapper.rs` (`hit_test_x`), `crates/fret-render-wgpu/src/text/mod.rs`
     (`caret_stops_for_slice`, `paint_span_for_text_range`).
   - Tests: `crates/fret-render-wgpu/src/text/mod.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
-    `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+    `crates/fret-render-text/src/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
 - [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
@@ -469,9 +469,9 @@ Legend:
       (`sanitize_spans_treats_feature_overrides_as_non_noop`)
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
-    `crates/fret-render-wgpu/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
+    `crates/fret-render-text/src/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
-  - Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+  - Evidence: `crates/fret-render-text/src/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [x] Unit conformance: OpenType feature toggles are behavior-visible (not only key-visible).
   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs`
@@ -498,7 +498,7 @@ Legend:
 - 2026-01-13: ADR 0142 added (design locked), worktree created.
 - 2026-01-13: ADR 0143 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
-- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render-wgpu/src/text/parley_shaper.rs`).
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render-text/src/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).

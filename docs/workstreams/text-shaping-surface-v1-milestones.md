@@ -35,7 +35,7 @@ Evidence anchors (M0):
 - API surface:
   - `crates/fret-core/src/text/mod.rs` (`TextFontFeatureSetting`, `TextShapingStyle.features`)
 - Parley mapping + canonicalization:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`font_features_for_settings`)
 - Shaping key participation:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)
 - Behavior conformance gates:

@@ -1,0 +1,23 @@
+[package]
+name = "fret-render-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Renderer-owned Parley text shaping and wrapping utilities for Fret."
+
+[dependencies]
+fret-core = { version = "0.1.0", path = "../fret-core" }
+parley.workspace = true
+read-fonts.workspace = true
+unicode-script.workspace = true
+unicode-segmentation.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }

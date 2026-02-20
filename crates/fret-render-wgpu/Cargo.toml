@@ -18,6 +18,7 @@ wasm-webgpu-tests = []
 
 [dependencies]
 fret-render-core = { version = "0.1.0", path = "../fret-render-core" }
+fret-render-text = { version = "0.1.0", path = "../fret-render-text" }
 fret-perf = { version = "0.1.0", path = "../fret-perf" }
 
 wgpu.workspace = true

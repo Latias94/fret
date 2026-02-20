@@ -61,7 +61,7 @@ Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-
 
 - Renderer text system + fallback injection + keys:
   - `crates/fret-render-wgpu/src/text/mod.rs`
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - `crates/fret-render-text/src/parley_shaper.rs`
 - Runtime globals for pickers + invalidation:
   - `crates/fret-runtime/src/font_catalog.rs`
   - `crates/fret-runtime/src/font_bootstrap.rs`
@@ -83,7 +83,7 @@ Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-
 - Diagnostics: `fallback_policy_key` + a fallback policy snapshot are recorded to help interpret font traces.
 - Variable font instance coordinates are carried end-to-end (shaping → glyph keys → Swash rasterization) with a
   deterministic fixture test:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variation_key_from_normalized_coords`, Swash `normalized_coords(...)`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variable_font_weight_changes_face_key_and_raster_output`)
 - Locale is plumbed into shaping to unlock fontique script+locale fallbacks on system-font builds:
@@ -92,7 +92,7 @@ Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-
   - `crates/fret-launch/src/runner/web/gfx_init.rs` (seed renderer locale on adopt)
 - Font catalog metadata is available as a runner-populated global for pickers/diagnostics:
   - `crates/fret-runtime/src/font_catalog.rs` (`FontCatalogMetadata`, `FontCatalogEntry`)
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyShaper::all_font_catalog_entries`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`ParleyShaper::all_font_catalog_entries`)
 - Font selection/fallback is now auditable in diag bundles when tofu/missing glyphs occur:
   - `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::font_trace_snapshot`)
@@ -131,7 +131,7 @@ Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-
 
 3) Font enumeration caching + metadata is best-effort.
    - Renderer caches enumeration and case-insensitive family lookups (invalidate on `add_fonts`):
-     - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`all_font_names_cache`,
+     - `crates/fret-render-text/src/parley_shaper.rs` (`all_font_names_cache`,
        `all_font_catalog_entries_cache`, `family_id_cache_lower`)
    - `all_font_names()` and `all_font_catalog_entries()` remain best-effort snapshots (platform-dependent).
    - Desktop startup populates picker catalog asynchronously by default to avoid UI-thread stalls

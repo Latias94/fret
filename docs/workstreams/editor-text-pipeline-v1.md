@@ -76,8 +76,8 @@ Without a careful integration, the editor will regress into:
 - Renderer text system expects prepared blobs per string:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::prepare`, `prepare_attributed`)
 - UI text wrap is renderer-owned and Parley-driven for `TextWrap::Word`:
-  - `crates/fret-render-wgpu/src/text/wrapper.rs`
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - `crates/fret-render-text/src/wrapper.rs`
+  - `crates/fret-render-text/src/parley_shaper.rs`
 
 ## Capability Snapshot (2026-02-16)
 
@@ -89,7 +89,7 @@ easy to audit.
 
 | Area | Capability | Status | Evidence / Notes |
 | --- | --- | --- | --- |
-| Shaping engine | Parley shaping + metrics | Supported | `crates/fret-render-wgpu/src/text/parley_shaper.rs` |
+| Shaping engine | Parley shaping + metrics | Supported | `crates/fret-render-text/src/parley_shaper.rs` |
 | OpenType features | `calt`/`liga`/`ssXX` etc via `TextShapingStyle.features` | Supported (best-effort) | Unknown tags are ignored by the resolved face; keep it deterministic via tests (glyph + `TextWrap::Word` behavior gates in `crates/fret-render-wgpu/src/text/mod.rs`). |
 | Variable axes | `wght`/`wdth` etc via `TextShapingStyle.axes` | Supported (best-effort) | Same “best-effort” contract as features. |
 | Rich text shaping | per-span font/weight/slant/letter spacing overrides | Supported | `crates/fret-core/src/text/mod.rs` (`TextSpan.shaping`) |
