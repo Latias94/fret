@@ -20,10 +20,12 @@ Tracking format:
     - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
     - `crates/fret-render-wgpu/src/text/mod.rs` (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
 
-- [ ] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).
-  - Candidate evidence locations:
-    - `crates/fret-ui/src/text/input/`
+- [x] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).
+  - Evidence:
+    - `crates/fret-ui/src/text/input/tests.rs`
+      (`text_input_caret_is_visible_even_when_backend_reports_zero_height_metrics_for_empty_text`)
     - `crates/fret-ui/src/text/area/tests.rs`
+      (`caret_is_visible_even_when_backend_reports_zero_height_caret_rect`)
 
 - [ ] TPU-render-002 Decide and document the renderer contract for selection/preedit rect height:
   - Option A: renderer guarantees `height > 0` for all returned rects,
@@ -58,4 +60,3 @@ Tracking format:
   - caret affinity near line breaks
   - selection rect segmentation rules
   - hit-test around grapheme clusters
-
