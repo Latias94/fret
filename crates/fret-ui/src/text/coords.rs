@@ -37,3 +37,18 @@ pub(crate) fn compute_text_vertical_offset_and_baseline(
         }
     }
 }
+
+pub(crate) fn compute_first_line_box_top_and_height(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+    baseline: Px,
+    fallback_height: Px,
+) -> (Px, Px) {
+    if let Some(line) = services.first_line_metrics(blob) {
+        let top = Px((baseline.0 - line.ascent.0).max(0.0));
+        let height = line.line_height.max(Px(1.0));
+        (top, height)
+    } else {
+        (Px(0.0), fallback_height.max(Px(1.0)))
+    }
+}

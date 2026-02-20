@@ -218,26 +218,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         let inner = self.content_bounds();
 
         if bs == be {
-            let metrics = self.metrics?;
-            let mut caret = cx
+            let caret = cx
                 .services
                 .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
-            if caret.size.height.0 <= 0.0 {
-                if let Some(line) = cx.services.first_line_metrics(blob) {
-                    let top = Px((metrics.baseline.0 - line.ascent.0).max(0.0));
-                    caret.origin.y = top;
-                    caret.size.height = line.line_height.max(Px(1.0));
-                } else {
-                    let line_height = self
-                        .text_style
-                        .line_height
-                        .unwrap_or(Px(self.text_style.size.0 * 1.2))
-                        .max(Px(1.0));
-                    let top = Px((metrics.baseline.0 - line_height.0 * 0.8).max(0.0));
-                    caret.origin.y = top;
-                    caret.size.height = line_height;
-                }
-            }
             let rect = Rect::new(
                 fret_core::Point::new(
                     inner.origin.x + caret.origin.x - self.offset_x,

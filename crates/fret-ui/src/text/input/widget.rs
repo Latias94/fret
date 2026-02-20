@@ -1537,11 +1537,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .map(|blob| cx.services.caret_x(blob, b))
                 .unwrap_or(Px(0.0));
 
-            let (selection_top, selection_height) = if let Some(blob) = self.text_blob
-                && let Some(line) = cx.services.first_line_metrics(blob)
-            {
-                let top = Px((baseline.0 - line.ascent.0).max(0.0));
-                (top, line.line_height.max(Px(1.0)))
+            let (selection_top, selection_height) = if let Some(blob) = self.text_blob {
+                crate::text::coords::compute_first_line_box_top_and_height(
+                    cx.services.text(),
+                    blob,
+                    baseline,
+                    text_height,
+                )
             } else {
                 (Px(0.0), text_height.max(Px(1.0)))
             };

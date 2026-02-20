@@ -39,9 +39,12 @@ Tracking format:
 
 ## M1 — Coordinate mapping unification
 
-- [ ] TPU-ui-010 Inventory all “baseline/vertical placement” math in `fret-ui` and collapse onto one helper.
-  - Evidence start:
-    - `crates/fret-ui/src/text/coords.rs`
+- [x] TPU-ui-010 Inventory all “baseline/vertical placement” math in `fret-ui` and collapse onto one helper.
+  - Evidence:
+    - `crates/fret-ui/src/text/coords.rs` (`compute_text_vertical_offset_and_baseline`,
+      `compute_first_line_box_top_and_height`)
+    - `crates/fret-ui/src/text/input/input.rs` (caret placement uses the helper)
+    - `crates/fret-ui/src/text/input/widget.rs` (selection box uses the helper)
 
 - [ ] TPU-ui-011 Verify hit-testing and selection mapping use the same content→box transform across widgets.
   - Target widgets:

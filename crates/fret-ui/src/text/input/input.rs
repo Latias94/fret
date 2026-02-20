@@ -387,17 +387,15 @@ impl TextInput {
             )
         };
 
-        let (caret_top, caret_height) = if let Some(blob) = self.text_blob
-            && let Some(line) = cx.services.first_line_metrics(blob)
-        {
-            let top = Px((baseline.0 - line.ascent.0).max(0.0));
-            let height = line.line_height.max(Px(1.0));
-            (top, height)
+        let (caret_top, caret_height) = if let Some(blob) = self.text_blob {
+            crate::text::coords::compute_first_line_box_top_and_height(
+                cx.services.text(),
+                blob,
+                baseline,
+                metrics.size.height.max(Px(16.0)),
+            )
         } else {
-            // Avoid shrinking the caret below a typical single-line minimum even when the backend
-            // reports small or zero-height metrics (e.g. empty strings).
-            let height = metrics.size.height.max(Px(16.0));
-            (Px(0.0), height)
+            (Px(0.0), metrics.size.height.max(Px(16.0)))
         };
 
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
