@@ -11,12 +11,10 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use read_fonts::tables::name::NameId;
-use read_fonts::{FontRef, TableProvider as _};
-
 pub(crate) use fret_render_text::effective_text_scale_factor;
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_stack::GenericFamilyInjectionState;
+use fret_render_text::font_trace::{FontTraceFamilyResolved, FontTraceState};
 use fret_render_text::geometry::{
     metrics_for_uniform_lines, metrics_from_wrapped_lines, shaped_line_visual_x_bounds_px,
 };
@@ -87,77 +85,6 @@ fn measure_shaping_cache_min_text_len_bytes() -> usize {
             .unwrap_or(128)
             .min(1_048_576)
     })
-}
-
-fn font_trace_record_all() -> bool {
-    static FLAG: OnceLock<bool> = OnceLock::new();
-    *FLAG.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_ALL")
-            .ok()
-            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
-    })
-}
-
-fn font_trace_entries_limit() -> usize {
-    static LIMIT: OnceLock<usize> = OnceLock::new();
-    *LIMIT.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(64)
-            .min(4096)
-    })
-}
-
-fn font_trace_max_text_bytes() -> usize {
-    static LIMIT: OnceLock<usize> = OnceLock::new();
-    *LIMIT.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_MAX_TEXT_BYTES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(256)
-            .clamp(16, 16 * 1024)
-    })
-}
-
-fn truncate_text_preview(text: &str, max_bytes: usize) -> String {
-    if max_bytes == 0 || text.len() <= max_bytes {
-        return text.to_string();
-    }
-
-    let mut end = max_bytes.min(text.len());
-    while end > 0 && !text.is_char_boundary(end) {
-        end = end.saturating_sub(1);
-    }
-    let mut out = text[..end].to_string();
-    out.push('…');
-    out
-}
-
-fn classify_trace_family(
-    requested: &fret_core::FontId,
-    family: &str,
-    common_fallback_lower: &HashSet<String>,
-) -> fret_core::RendererTextFontTraceFamilyClass {
-    let is_common = common_fallback_lower.contains(&family.trim().to_ascii_lowercase());
-    match requested {
-        fret_core::FontId::Family(name) => {
-            if name.eq_ignore_ascii_case(family) {
-                fret_core::RendererTextFontTraceFamilyClass::Requested
-            } else if is_common {
-                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
-            } else {
-                fret_core::RendererTextFontTraceFamilyClass::SystemFallback
-            }
-        }
-        _ => {
-            if is_common {
-                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
-            } else {
-                fret_core::RendererTextFontTraceFamilyClass::Unknown
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -1395,8 +1322,7 @@ pub struct TextSystem {
 
     glyph_atlas_epoch: u64,
 
-    font_trace_active: bool,
-    font_trace_entries: VecDeque<fret_core::RendererTextFontTraceEntry>,
+    font_trace: FontTraceState,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1440,8 +1366,7 @@ impl TextSystem {
     }
 
     pub fn begin_frame_diagnostics(&mut self) {
-        self.font_trace_active = true;
-        self.font_trace_entries.clear();
+        self.font_trace.begin_frame();
 
         self.perf_frame_cache_resets = 0;
         self.perf_frame_blob_cache_hits = 0;
@@ -1461,10 +1386,7 @@ impl TextSystem {
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextFontTraceSnapshot {
-        fret_core::RendererTextFontTraceSnapshot {
-            frame_id,
-            entries: self.font_trace_entries.iter().cloned().collect(),
-        }
+        self.font_trace.snapshot(frame_id)
     }
 
     pub fn diagnostics_snapshot(
@@ -1735,8 +1657,7 @@ impl TextSystem {
 
             glyph_atlas_epoch: 1,
 
-            font_trace_active: false,
-            font_trace_entries: VecDeque::new(),
+            font_trace: FontTraceState::default(),
         };
 
         let _ = out.apply_font_families_inner(&out.fallback_policy.font_family_config.clone());
@@ -2959,31 +2880,7 @@ impl TextSystem {
         constraints: TextConstraints,
         shape: &Arc<TextShape>,
     ) {
-        if !self.font_trace_active {
-            return;
-        }
-
-        let record_all = font_trace_record_all();
-        if !record_all && shape.missing_glyphs == 0 {
-            return;
-        }
-
-        let max_entries = font_trace_entries_limit();
-        if max_entries == 0 {
-            return;
-        }
-
-        let max_text_bytes = font_trace_max_text_bytes();
-        let text_preview = truncate_text_preview(text, max_text_bytes);
-
-        let mut common_fallback_lower: HashSet<String> = HashSet::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            for f in &self.fallback_policy.common_fallback_candidates {
-                common_fallback_lower.insert(f.trim().to_ascii_lowercase());
-            }
-        }
-
-        let mut families: Vec<fret_core::RendererTextFontTraceFamilyUsage> =
+        let mut families: Vec<FontTraceFamilyResolved> =
             Vec::with_capacity(shape.font_faces.len().max(1));
         for usage in shape.font_faces.iter() {
             let family = self
@@ -2994,35 +2891,20 @@ impl TextSystem {
                         usage.font_data_id, usage.face_index
                     )
                 });
-
-            let class = classify_trace_family(&style.font, &family, &common_fallback_lower);
-
-            families.push(fret_core::RendererTextFontTraceFamilyUsage {
+            families.push(FontTraceFamilyResolved {
                 family,
                 glyphs: usage.glyphs,
                 missing_glyphs: usage.missing_glyphs,
-                class,
             });
         }
-
-        let entry = fret_core::RendererTextFontTraceEntry {
-            text_preview,
-            text_len_bytes: text.len().min(u32::MAX as usize) as u32,
-            font: style.font.clone(),
-            font_size: style.size,
-            scale_factor: constraints.scale_factor,
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            max_width: constraints.max_width,
-            locale_bcp47: self.fallback_policy.locale_bcp47.clone(),
-            missing_glyphs: shape.missing_glyphs,
+        self.font_trace.maybe_record(
+            text,
+            style,
+            constraints,
+            &self.fallback_policy,
+            shape.missing_glyphs,
             families,
-        };
-
-        self.font_trace_entries.push_back(entry);
-        while self.font_trace_entries.len() > max_entries {
-            self.font_trace_entries.pop_front();
-        }
+        );
     }
 
     fn decoration_metrics_for_shape(
@@ -3083,46 +2965,10 @@ impl TextSystem {
         }
 
         let font_data = self.font_data_by_face.get(&(font_data_id, face_index))?;
-        let face = FontRef::from_index(font_data.data.data(), face_index).ok()?;
-        let name_table = face.name().ok()?;
-        let string_data = name_table.string_data();
-
-        let mut best: Option<(i32, String)> = None;
-        for record in name_table.name_record() {
-            let name_id = record.name_id();
-            let is_typographic_family = name_id == NameId::new(16);
-            let is_family = name_id == NameId::new(1);
-            if !is_typographic_family && !is_family {
-                continue;
-            }
-
-            let Ok(value) = record.string(string_data).map(|s| s.to_string()) else {
-                continue;
-            };
-            let value = value.trim().to_string();
-            if value.is_empty() {
-                continue;
-            }
-
-            let mut score: i32 = 0;
-            score += if is_typographic_family { 200 } else { 180 };
-            if record.is_unicode() {
-                score += 10;
-            }
-            // Prefer Windows + en-US when available.
-            if record.platform_id() == 3 && record.language_id() == 0x0409 {
-                score += 5;
-            }
-            // Prefer shorter strings if otherwise tied.
-            score -= (value.len() as i32).min(128);
-
-            match &best {
-                Some((best_score, _)) if *best_score >= score => {}
-                _ => best = Some((score, value)),
-            }
-        }
-
-        let (_, name) = best?;
+        let name = fret_render_text::font_names::best_family_name_from_font_bytes(
+            font_data.data.data(),
+            face_index,
+        )?;
         self.font_face_family_name_cache
             .insert((font_data_id, face_index), name.clone());
         Some(name)

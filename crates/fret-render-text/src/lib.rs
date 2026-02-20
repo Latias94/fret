@@ -1,5 +1,7 @@
 pub mod fallback_policy;
+pub mod font_names;
 pub mod font_stack;
+pub mod font_trace;
 pub mod geometry;
 pub mod parley_shaper;
 pub mod wrapper;
