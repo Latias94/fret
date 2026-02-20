@@ -1242,18 +1242,13 @@ impl<H: UiHost> Widget<H> for TextInput {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
-        // `TextSystem` returns zero-height metrics for empty strings (no shaped lines). Text inputs
-        // want stable line metrics even when the field is empty (caret/placeholder alignment),
-        // so measure a single space as a fallback.
-        let measure_text = if self.text.is_empty() {
-            " "
-        } else {
-            self.text.as_str()
-        };
+        // Text inputs want stable line metrics even when the field is empty (caret/placeholder
+        // alignment). Measure the actual text first, then fall back to a single space if the text
+        // backend reports degenerate metrics.
         let mut metrics =
             cx.services
                 .text()
-                .measure_str(measure_text, &self.style, base_constraints);
+                .measure_str(self.text.as_str(), &self.style, base_constraints);
         if metrics.size.height.0 <= 0.01 {
             metrics = cx
                 .services
