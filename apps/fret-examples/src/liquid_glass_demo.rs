@@ -350,6 +350,7 @@ fn view(
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
     let theme = Theme::global(&*cx.app).snapshot();
+    let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
 
     let show_fake_model = st.show_fake.clone();
@@ -669,7 +670,7 @@ fn view(
                             hud_layout.inset.left = Some(Px(16.0));
                             hud_layout.overflow = Overflow::Clip;
 
-                            let mut hud_bg = theme.color_token("card");
+                            let mut hud_bg = theme_stage.color_token("card");
                             hud_bg.a = (hud_bg.a * 0.92).clamp(0.0, 1.0);
                             let hud = cx.container(
                                 ContainerProps {
@@ -677,7 +678,7 @@ fn view(
                                     padding: Edges::all(Px(12.0)),
                                     background: Some(hud_bg),
                                     border: Edges::all(Px(1.0)),
-                                    border_color: Some(theme.color_token("border")),
+                                    border_color: Some(theme_stage.color_token("border")),
                                     corner_radii: Corners::all(Px(12.0)),
                                     ..Default::default()
                                 },

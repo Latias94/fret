@@ -153,8 +153,35 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - macOS/iOS: AVFoundation decode -> CPU upload into a renderer-owned texture (`CpuUpload` effective), with full metadata attribution.
   - Ceiling uplift (capability-gated, optional follow-up):
     - shared-allocation via IOSurface-backed renderer-owned textures (classifies as `Owned`), or a future backend-supported external-handle import.
-  - Evidence anchors (scaffolding landed):
-    - `crates/fret-launch/src/runner/apple_avfoundation_video.rs` (`AvfVideoNativeExternalImporter`)
+  - Evidence anchors (macOS CPU upload adapter + demo landed):
+    - `crates/fret-launch/src/runner/apple_avfoundation_video.rs` (`AvfVideoNativeExternalImporter`, `AvfVideoReader`)
+    - `apps/fret-examples/src/external_video_imports_avf_demo.rs` (`ExternalVideoImportsMode::AvfVideoCpuUpload`)
+    - Correctness script:
+      - `tools/diag-scripts/external-video-imports-avf-cpu-upload-correctness.json`
+    - Perf script:
+      - `tools/diag-scripts/external-video-imports-avf-cpu-upload-perf-steady.json`
+    - Perf stress script (run with `FRET_AVF_PACING=0`):
+      - `tools/diag-scripts/external-video-imports-avf-cpu-upload-perf-stress.json`
+    - Perf baseline (macOS, Apple M4 Pro):
+      - `docs/workstreams/perf-baselines/external-video-imports-avf-cpu-upload.macos-m4pro.v1.json`
+    - Perf stress baseline (macOS, Apple M4 Pro; renderer thresholds only):
+      - `docs/workstreams/perf-baselines/external-video-imports-avf-cpu-upload-stress.macos-m4pro.v1.json`
+  - Local verification (macOS, 2026-02-20):
+    - Start a devtools WS hub (token can be fixed for repeatable scripts):
+      - `FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-devtools-ws`
+    - Run the demo:
+      - `FRET_DIAG_SCREENSHOTS=1 FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> FRET_AVF_VIDEO_PATH=<dir_or_file> cargo run -p fret-demo --features devtools-ws --bin external_video_imports_avf_demo`
+      - Pacing (optional, on by default in the demo):
+        - `FRET_AVF_PACING=0` to disable (decode/upload every frame; stress path).
+        - `FRET_AVF_TARGET_FPS=30` to override the pacing target fps.
+      - Press `I` to toggle into AVFoundation mode (or use the script).
+    - List sessions and run the correctness script:
+      - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --list-sessions --token <token>`
+      - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --script tools/diag-scripts/external-video-imports-avf-cpu-upload-correctness.json --token <token> --session-id <id> --out-dir target/fret-diag-avf/exports`
+    - Inspect perf in the exported bundle:
+      - `cargo run -p fretboard -- diag stats target/fret-diag-avf/exports/<ts>-bundle --sort time --top 20`
+  - Remaining:
+    - iOS: the adapter still returns `Unsupported` (TODO: enable AVFoundation + CPU upload on iOS behind the same shape).
 
 - [~] EXTV2-native-130 M2A: wire a real native frame source on Android (MediaCodec):
       capability-gated `NativeExternalTextureFrame` adapter with deterministic fallback to copy paths.

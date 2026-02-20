@@ -3,7 +3,9 @@ use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
-use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
+use fret_core::text::{
+    FontWeight, TextConstraints, TextOverflow, TextStyle, TextVerticalPlacement, TextWrap,
+};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{Renderer, WgpuContext};
 use std::time::{Duration, Instant};
@@ -688,6 +690,7 @@ impl WinitAppDriver for EffectsDemoDriver {
                     slant: fret_core::text::TextSlant::Normal,
                     line_height: Some(Px(16.0)),
                     letter_spacing_em: None,
+                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(w - pad * 2.0)),

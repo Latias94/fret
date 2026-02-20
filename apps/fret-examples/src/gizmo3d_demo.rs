@@ -2,7 +2,9 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
-use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
+use fret_core::text::{
+    FontWeight, TextConstraints, TextOverflow, TextStyle, TextVerticalPlacement, TextWrap,
+};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
@@ -182,6 +184,7 @@ impl ViewGizmoLabelCache {
             slant: fret_core::text::TextSlant::Normal,
             line_height: Some(Px(14.0)),
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
         let constraints = TextConstraints {
             max_width: None,
@@ -4243,6 +4246,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     slant: fret_core::text::TextSlant::Normal,
                     line_height: Some(Px(16.0)),
                     letter_spacing_em: None,
+                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(bounds.size.width.0 - 24.0)),
@@ -4433,6 +4437,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     slant: fret_core::text::TextSlant::Normal,
                     line_height: Some(Px(14.0)),
                     letter_spacing_em: None,
+                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(340.0)),

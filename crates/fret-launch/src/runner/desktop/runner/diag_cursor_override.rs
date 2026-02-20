@@ -121,11 +121,11 @@ impl DiagCursorScreenPosOverride {
                     })
                     .map(|p| (p.x, p.y));
                 #[cfg(not(target_os = "windows"))]
-                let origin = {
+                let origin = (|| {
                     let outer = state.window.outer_position().ok()?;
                     let deco = state.window.surface_position();
                     Some(super::window::client_origin_screen(outer, deco)).map(|p| (p.x, p.y))
-                };
+                })();
                 let Some((origin_x, origin_y)) = origin else {
                     return false;
                 };

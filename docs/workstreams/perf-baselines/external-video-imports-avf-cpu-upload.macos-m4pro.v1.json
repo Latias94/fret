@@ -1,0 +1,102 @@
+{
+  "generated_unix_ms": 1771587571359,
+  "headroom_pct": 20,
+  "kind": "perf_baseline",
+  "out_path": "docs/workstreams/perf-baselines/external-video-imports-avf-cpu-upload.macos-m4pro.v1.json",
+  "repeat": 5,
+  "rows": [
+    {
+      "measured_max": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 83,
+        "frame_p95_total_time_us": 97,
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "renderer_encode_scene_us": 8,
+        "renderer_encoder_finish_us": 393,
+        "renderer_prepare_svg_us": 2,
+        "renderer_prepare_text_us": 7,
+        "renderer_record_passes_us": 77,
+        "renderer_upload_us": 255,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 83,
+        "top_total_time_us": 97
+      },
+      "measured_p90": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 83,
+        "frame_p95_total_time_us": 97,
+        "renderer_encode_scene_us": 8,
+        "renderer_encoder_finish_us": 393,
+        "renderer_prepare_svg_us": 2,
+        "renderer_prepare_text_us": 7,
+        "renderer_record_passes_us": 77,
+        "renderer_upload_us": 255,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 83,
+        "top_total_time_us": 97
+      },
+      "measured_p95": {
+        "frame_p95_layout_engine_solve_time_us": 0,
+        "frame_p95_layout_time_us": 83,
+        "frame_p95_total_time_us": 97,
+        "renderer_encode_scene_us": 8,
+        "renderer_encoder_finish_us": 393,
+        "renderer_prepare_svg_us": 2,
+        "renderer_prepare_text_us": 7,
+        "renderer_record_passes_us": 77,
+        "renderer_upload_us": 255,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 83,
+        "top_total_time_us": 97
+      },
+      "script": "tools/diag-scripts/external-video-imports-avf-cpu-upload-perf-steady.json",
+      "threshold_seed": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": 0,
+        "top_layout_time_us": 83,
+        "top_total_time_us": 97
+      },
+      "threshold_seed_source": {
+        "frame_p95_layout_engine_solve_time_us": null,
+        "frame_p95_layout_time_us": null,
+        "frame_p95_total_time_us": null,
+        "top_layout_engine_solve_time_us": "max",
+        "top_layout_time_us": "max",
+        "top_total_time_us": "max"
+      },
+      "thresholds": {
+        "max_frame_p95_layout_us": null,
+        "max_frame_p95_solve_us": null,
+        "max_frame_p95_total_us": null,
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_renderer_encode_scene_us": 10,
+        "max_renderer_encoder_finish_us": 472,
+        "max_renderer_prepare_svg_us": 3,
+        "max_renderer_prepare_text_us": 9,
+        "max_renderer_record_passes_us": 93,
+        "max_renderer_upload_us": 306,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 100,
+        "max_top_solve_us": 0,
+        "max_top_total_us": 117,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_seed_policy": {
+    "default_seed": "max",
+    "rules": [],
+    "schema_version": 1
+  },
+  "warmup_frames": 5
+}

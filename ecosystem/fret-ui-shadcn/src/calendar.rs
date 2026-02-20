@@ -692,6 +692,8 @@ impl Calendar {
                             let close_on_select = close_on_select.clone();
                             let caption_month_value_prev = caption_month_value.clone();
                             let caption_year_value_prev = caption_year_value.clone();
+                            let test_id_prefix_for_header = test_id_prefix.clone();
+                            let test_id_prefix_for_days = test_id_prefix.clone();
 
                             let header = cx.keyed("shadcn.calendar.header", move |cx| {
                                 let nav_enabled = !disable_navigation;
@@ -715,11 +717,15 @@ impl Calendar {
                                 let caption_year_value_for_next = caption_year_value_prev.clone();
 
                                 let month_model_prev = month_model_header.clone();
+                                let prev_test_id = test_id_prefix_for_header
+                                    .as_ref()
+                                    .map(|p| Arc::<str>::from(format!("{p}.nav-prev")));
                                 let prev = calendar_nav_icon_button(
                                     cx,
                                     "Go to the Previous Month",
                                     day_size,
                                     prev_icon,
+                                    prev_test_id,
                                     prev_enabled,
                                     move |host| {
                                         if disable_navigation {
@@ -757,11 +763,15 @@ impl Calendar {
                                     },
                                 );
                                 let month_model_next = month_model_header.clone();
+                                let next_test_id = test_id_prefix_for_header
+                                    .as_ref()
+                                    .map(|p| Arc::<str>::from(format!("{p}.nav-next")));
                                 let next = calendar_nav_icon_button(
                                     cx,
                                     "Go to the Next Month",
                                     day_size,
                                     next_icon,
+                                    next_test_id,
                                     next_enabled,
                                     move |host| {
                                         if disable_navigation {
@@ -1210,7 +1220,7 @@ impl Calendar {
                                             focus_date.is_some_and(|d| d == day.date),
                                             day_size,
                                             row_bottom_gap,
-                                            test_id_prefix.as_ref(),
+                                            test_id_prefix_for_days.as_ref(),
                                             &selected_model,
                                             required,
                                             close_on_select.clone(),
@@ -1364,6 +1374,7 @@ fn calendar_multi_month_view<H: UiHost>(
             "Go to the Previous Month",
             day_size,
             prev_icon,
+            None,
             prev_enabled,
             move |host| {
                 if disable_navigation {
@@ -1382,6 +1393,7 @@ fn calendar_multi_month_view<H: UiHost>(
             "Go to the Next Month",
             day_size,
             next_icon,
+            None,
             next_enabled,
             move |host| {
                 if disable_navigation {
@@ -1986,6 +1998,7 @@ fn calendar_nav_icon_button<H: UiHost>(
     label: &'static str,
     button_size_px: Px,
     icon: fret_icons::IconId,
+    test_id: Option<Arc<str>>,
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
@@ -1999,7 +2012,7 @@ fn calendar_nav_icon_button<H: UiHost>(
         }),
     );
 
-    crate::button::Button::new(label)
+    let button = crate::button::Button::new(label)
         .variant(crate::button::ButtonVariant::Ghost)
         .size(crate::button::ButtonSize::IconSm)
         .children([icon])
@@ -2010,8 +2023,15 @@ fn calendar_nav_icon_button<H: UiHost>(
                 .w_px(MetricRef::Px(button_size_px))
                 .h_px(MetricRef::Px(button_size_px)),
         )
-        .on_activate(Arc::new(move |host, _acx, _reason| on_activate(host)))
-        .into_element(cx)
+        .on_activate(Arc::new(move |host, _acx, _reason| on_activate(host)));
+
+    let button = if let Some(test_id) = test_id {
+        button.test_id(test_id)
+    } else {
+        button
+    };
+
+    button.into_element(cx)
 }
 
 fn calendar_centered_text_cell<H: UiHost>(
@@ -2266,6 +2286,8 @@ fn calendar_day_cell<H: UiHost>(
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()
+                        .w_full()
+                        .text_align(fret_core::TextAlign::Center)
                         .text_color(ColorRef::Color(if disabled {
                             muted_fg
                         } else if today && !selected {

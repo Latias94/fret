@@ -146,7 +146,7 @@ pub(super) fn presets(
             shadcn::Button::new(label)
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                .refine_layout(LayoutRefinement::default().flex_1())
                 .on_activate(Arc::new(move |host, _acx, _reason| {
                     let new_date = today + time::Duration::days(days);
                     let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
@@ -159,50 +159,26 @@ pub(super) fn presets(
 
     let calendar = shadcn::Calendar::new(presets_month.clone(), presets_selected.clone())
         .test_id_prefix("ui-gallery.calendar.presets")
+        .fixed_weeks(true)
         .cell_size(Px(38.0))
         .refine_style(ChromeRefinement::default().p(Space::N0))
         .into_element(cx);
 
-    let footer = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
-            vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
-                        vec![
-                            preset_button(cx, "Today", 0),
-                            preset_button(cx, "Tomorrow", 1),
-                            preset_button(cx, "In 3 days", 3),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
-                        vec![
-                            preset_button(cx, "In a week", 7),
-                            preset_button(cx, "In 2 weeks", 14),
-                        ]
-                    },
-                ),
-            ]
-        },
-    );
+    let footer_buttons = vec![
+        preset_button(cx, "Today", 0),
+        preset_button(cx, "Tomorrow", 1),
+        preset_button(cx, "In 3 days", 3),
+        preset_button(cx, "In a week", 7),
+        preset_button(cx, "In 2 weeks", 14),
+    ];
 
     let card = shadcn::Card::new(vec![
         shadcn::CardContent::new(vec![calendar]).into_element(cx),
-        shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        shadcn::CardFooter::new(footer_buttons)
+            .border_top(true)
+            .wrap(true)
+            .gap(Space::N2)
+            .into_element(cx),
     ])
     .size(shadcn::CardSize::Sm)
     .refine_layout(

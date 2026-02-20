@@ -1234,7 +1234,8 @@ fn ui_app_create_window_state<S>(
     ui.set_window(window);
     ui.set_debug_enabled(
         std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
-            || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
+            || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty()),
     );
 
     #[cfg(feature = "ui-app-command-palette")]

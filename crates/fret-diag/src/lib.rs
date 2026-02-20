@@ -6945,6 +6945,12 @@ See: `docs/tracy.md`.\n";
             let mut measured_max_run_paint_cache_hit_test_only_replay_allowed_max: u64 = 0;
             let mut measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: u64 =
                 0;
+            let mut measured_max_renderer_encode_scene_us: u64 = 0;
+            let mut measured_max_renderer_upload_us: u64 = 0;
+            let mut measured_max_renderer_record_passes_us: u64 = 0;
+            let mut measured_max_renderer_encoder_finish_us: u64 = 0;
+            let mut measured_max_renderer_prepare_text_us: u64 = 0;
+            let mut measured_max_renderer_prepare_svg_us: u64 = 0;
 
             let mut worst_bundle: Option<(u64, PathBuf)> = None;
 
@@ -6978,6 +6984,12 @@ See: `docs/tracy.md`.\n";
                     run_paint_cache_hit_test_only_replay_allowed_max,
                     run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                 ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, warmup_frames)?;
+                let renderer_encode_scene_us = report.max_renderer_encode_scene_us;
+                let renderer_upload_us = report.max_renderer_upload_us;
+                let renderer_record_passes_us = report.max_renderer_record_passes_us;
+                let renderer_encoder_finish_us = report.max_renderer_encoder_finish_us;
+                let renderer_prepare_text_us = report.max_renderer_prepare_text_us;
+                let renderer_prepare_svg_us = report.max_renderer_prepare_svg_us;
 
                 measured_max_top_total_us = measured_max_top_total_us.max(top_total);
                 measured_max_top_layout_us = measured_max_top_layout_us.max(top_layout);
@@ -6994,6 +7006,18 @@ See: `docs/tracy.md`.\n";
                 measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
                     measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
                         .max(run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max);
+                measured_max_renderer_encode_scene_us =
+                    measured_max_renderer_encode_scene_us.max(renderer_encode_scene_us);
+                measured_max_renderer_upload_us =
+                    measured_max_renderer_upload_us.max(renderer_upload_us);
+                measured_max_renderer_record_passes_us =
+                    measured_max_renderer_record_passes_us.max(renderer_record_passes_us);
+                measured_max_renderer_encoder_finish_us =
+                    measured_max_renderer_encoder_finish_us.max(renderer_encoder_finish_us);
+                measured_max_renderer_prepare_text_us =
+                    measured_max_renderer_prepare_text_us.max(renderer_prepare_text_us);
+                measured_max_renderer_prepare_svg_us =
+                    measured_max_renderer_prepare_svg_us.max(renderer_prepare_svg_us);
 
                 if top_total > worst_bundle.as_ref().map(|(t, _)| *t).unwrap_or(0) {
                     worst_bundle = Some((top_total, bundle_path));
@@ -7009,6 +7033,12 @@ See: `docs/tracy.md`.\n";
                 "max_pointer_move_global_changes": apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct),
                 "min_run_paint_cache_hit_test_only_replay_allowed_max": apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct),
                 "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct),
+                "max_renderer_encode_scene_us": apply_perf_baseline_headroom(measured_max_renderer_encode_scene_us, perf_baseline_headroom_pct),
+                "max_renderer_upload_us": apply_perf_baseline_headroom(measured_max_renderer_upload_us, perf_baseline_headroom_pct),
+                "max_renderer_record_passes_us": apply_perf_baseline_headroom(measured_max_renderer_record_passes_us, perf_baseline_headroom_pct),
+                "max_renderer_encoder_finish_us": apply_perf_baseline_headroom(measured_max_renderer_encoder_finish_us, perf_baseline_headroom_pct),
+                "max_renderer_prepare_text_us": apply_perf_baseline_headroom(measured_max_renderer_prepare_text_us, perf_baseline_headroom_pct),
+                "max_renderer_prepare_svg_us": apply_perf_baseline_headroom(measured_max_renderer_prepare_svg_us, perf_baseline_headroom_pct),
             });
 
             let measured_max = serde_json::json!({
@@ -7020,6 +7050,12 @@ See: `docs/tracy.md`.\n";
                 "pointer_move_snapshots_with_global_changes": measured_max_pointer_move_global_changes,
                 "run_paint_cache_hit_test_only_replay_allowed_max": measured_max_run_paint_cache_hit_test_only_replay_allowed_max,
                 "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                "renderer_encode_scene_us": measured_max_renderer_encode_scene_us,
+                "renderer_upload_us": measured_max_renderer_upload_us,
+                "renderer_record_passes_us": measured_max_renderer_record_passes_us,
+                "renderer_encoder_finish_us": measured_max_renderer_encoder_finish_us,
+                "renderer_prepare_text_us": measured_max_renderer_prepare_text_us,
+                "renderer_prepare_svg_us": measured_max_renderer_prepare_svg_us,
             });
 
             let row = serde_json::json!({
@@ -7202,6 +7238,12 @@ See: `docs/tracy.md`.\n";
                 max_pointer_move_global_changes,
                 min_run_paint_cache_hit_test_only_replay_allowed_max,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                max_renderer_encode_scene_us: None,
+                max_renderer_upload_us: None,
+                max_renderer_record_passes_us: None,
+                max_renderer_encoder_finish_us: None,
+                max_renderer_prepare_text_us: None,
+                max_renderer_prepare_svg_us: None,
             };
             let perf_baseline = perf_baseline_path
                 .clone()
@@ -8129,6 +8171,30 @@ See: `docs/tracy.md`.\n";
                                     run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                     perf_baseline_headroom_pct,
                                 );
+                            let thr_renderer_encode_scene_us = apply_perf_baseline_headroom(
+                                report.max_renderer_encode_scene_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_renderer_upload_us = apply_perf_baseline_headroom(
+                                report.max_renderer_upload_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_renderer_record_passes_us = apply_perf_baseline_headroom(
+                                report.max_renderer_record_passes_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_renderer_encoder_finish_us = apply_perf_baseline_headroom(
+                                report.max_renderer_encoder_finish_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_renderer_prepare_text_us = apply_perf_baseline_headroom(
+                                report.max_renderer_prepare_text_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_renderer_prepare_svg_us = apply_perf_baseline_headroom(
+                                report.max_renderer_prepare_svg_us,
+                                perf_baseline_headroom_pct,
+                            );
 
                             perf_baseline_rows.push(serde_json::json!({
                                 "script": script_key.clone(),
@@ -8141,6 +8207,12 @@ See: `docs/tracy.md`.\n";
                                     "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                     "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
                                     "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                    "renderer_encode_scene_us": report.max_renderer_encode_scene_us,
+                                    "renderer_upload_us": report.max_renderer_upload_us,
+                                    "renderer_record_passes_us": report.max_renderer_record_passes_us,
+                                    "renderer_encoder_finish_us": report.max_renderer_encoder_finish_us,
+                                    "renderer_prepare_text_us": report.max_renderer_prepare_text_us,
+                                    "renderer_prepare_svg_us": report.max_renderer_prepare_svg_us,
                                 },
                                 "measured_p90": {
                                     "top_total_time_us": p90_total,
@@ -8171,6 +8243,12 @@ See: `docs/tracy.md`.\n";
                                     "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                                     "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
                                     "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                    "max_renderer_encode_scene_us": thr_renderer_encode_scene_us,
+                                    "max_renderer_upload_us": thr_renderer_upload_us,
+                                    "max_renderer_record_passes_us": thr_renderer_record_passes_us,
+                                    "max_renderer_encoder_finish_us": thr_renderer_encoder_finish_us,
+                                    "max_renderer_prepare_text_us": thr_renderer_prepare_text_us,
+                                    "max_renderer_prepare_svg_us": thr_renderer_prepare_svg_us,
                                 },
                             }));
                         }
@@ -8359,6 +8437,24 @@ See: `docs/tracy.md`.\n";
                                 pointer_move_snapshots_with_global_changes,
                                 run_paint_cache_hit_test_only_replay_allowed_max,
                                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                report.max_renderer_encode_scene_us,
+                                report.max_renderer_encode_scene_us,
+                                report.max_renderer_encode_scene_us,
+                                report.max_renderer_upload_us,
+                                report.max_renderer_upload_us,
+                                report.max_renderer_upload_us,
+                                report.max_renderer_record_passes_us,
+                                report.max_renderer_record_passes_us,
+                                report.max_renderer_record_passes_us,
+                                report.max_renderer_encoder_finish_us,
+                                report.max_renderer_encoder_finish_us,
+                                report.max_renderer_encoder_finish_us,
+                                report.max_renderer_prepare_text_us,
+                                report.max_renderer_prepare_text_us,
+                                report.max_renderer_prepare_text_us,
+                                report.max_renderer_prepare_svg_us,
+                                report.max_renderer_prepare_svg_us,
+                                report.max_renderer_prepare_svg_us,
                                 Some(bundle_path.as_path()),
                                 Some(0),
                                 None,
@@ -8409,6 +8505,12 @@ See: `docs/tracy.md`.\n";
                     Vec::with_capacity(repeat);
                 let mut runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Vec<u64> =
                     Vec::with_capacity(repeat);
+                let mut runs_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_renderer_upload_us: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_renderer_record_passes_us: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_renderer_encoder_finish_us: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_renderer_prepare_svg_us: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf, u64)> = None;
                 let mut script_worst_layout: Option<(u64, PathBuf, u64)> = None;
@@ -8906,6 +9008,12 @@ See: `docs/tracy.md`.\n";
                         .push(run_paint_cache_hit_test_only_replay_allowed_max);
                     runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
                         .push(run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max);
+                    runs_renderer_encode_scene_us.push(report.max_renderer_encode_scene_us);
+                    runs_renderer_upload_us.push(report.max_renderer_upload_us);
+                    runs_renderer_record_passes_us.push(report.max_renderer_record_passes_us);
+                    runs_renderer_encoder_finish_us.push(report.max_renderer_encoder_finish_us);
+                    runs_renderer_prepare_text_us.push(report.max_renderer_prepare_text_us);
+                    runs_renderer_prepare_svg_us.push(report.max_renderer_prepare_svg_us);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "frames_considered": report.snapshots_considered,
@@ -9535,6 +9643,62 @@ See: `docs/tracy.md`.\n";
                             .iter()
                             .max()
                             .unwrap_or(&0);
+                    let max_renderer_encode_scene_us =
+                        *runs_renderer_encode_scene_us.iter().max().unwrap_or(&0);
+                    let max_renderer_upload_us =
+                        *runs_renderer_upload_us.iter().max().unwrap_or(&0);
+                    let max_renderer_record_passes_us =
+                        *runs_renderer_record_passes_us.iter().max().unwrap_or(&0);
+                    let max_renderer_encoder_finish_us =
+                        *runs_renderer_encoder_finish_us.iter().max().unwrap_or(&0);
+                    let max_renderer_prepare_text_us =
+                        *runs_renderer_prepare_text_us.iter().max().unwrap_or(&0);
+                    let max_renderer_prepare_svg_us =
+                        *runs_renderer_prepare_svg_us.iter().max().unwrap_or(&0);
+
+                    let mut sorted_renderer_encode_scene_us = runs_renderer_encode_scene_us.clone();
+                    sorted_renderer_encode_scene_us.sort_unstable();
+                    let p90_renderer_encode_scene_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_us, 0.90);
+                    let p95_renderer_encode_scene_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_encode_scene_us, 0.95);
+
+                    let mut sorted_renderer_upload_us = runs_renderer_upload_us.clone();
+                    sorted_renderer_upload_us.sort_unstable();
+                    let p90_renderer_upload_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_upload_us, 0.90);
+                    let p95_renderer_upload_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_upload_us, 0.95);
+
+                    let mut sorted_renderer_record_passes_us =
+                        runs_renderer_record_passes_us.clone();
+                    sorted_renderer_record_passes_us.sort_unstable();
+                    let p90_renderer_record_passes_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_record_passes_us, 0.90);
+                    let p95_renderer_record_passes_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_record_passes_us, 0.95);
+
+                    let mut sorted_renderer_encoder_finish_us =
+                        runs_renderer_encoder_finish_us.clone();
+                    sorted_renderer_encoder_finish_us.sort_unstable();
+                    let p90_renderer_encoder_finish_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_encoder_finish_us, 0.90);
+                    let p95_renderer_encoder_finish_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_encoder_finish_us, 0.95);
+
+                    let mut sorted_renderer_prepare_text_us = runs_renderer_prepare_text_us.clone();
+                    sorted_renderer_prepare_text_us.sort_unstable();
+                    let p90_renderer_prepare_text_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_prepare_text_us, 0.90);
+                    let p95_renderer_prepare_text_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_prepare_text_us, 0.95);
+
+                    let mut sorted_renderer_prepare_svg_us = runs_renderer_prepare_svg_us.clone();
+                    sorted_renderer_prepare_svg_us.sort_unstable();
+                    let p90_renderer_prepare_svg_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.90);
+                    let p95_renderer_prepare_svg_us =
+                        percentile_nearest_rank_sorted(&sorted_renderer_prepare_svg_us, 0.95);
                     let pointer_move_frames_present = runs_json.iter().any(|run| {
                         run.get("pointer_move_frames_present")
                             .and_then(|v| v.as_bool())
@@ -9646,6 +9810,30 @@ See: `docs/tracy.md`.\n";
                                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 perf_baseline_headroom_pct,
                             );
+                        let thr_renderer_encode_scene_us = apply_perf_baseline_headroom(
+                            max_renderer_encode_scene_us,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_renderer_upload_us = apply_perf_baseline_headroom(
+                            max_renderer_upload_us,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_renderer_record_passes_us = apply_perf_baseline_headroom(
+                            max_renderer_record_passes_us,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_renderer_encoder_finish_us = apply_perf_baseline_headroom(
+                            max_renderer_encoder_finish_us,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_renderer_prepare_text_us = apply_perf_baseline_headroom(
+                            max_renderer_prepare_text_us,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_renderer_prepare_svg_us = apply_perf_baseline_headroom(
+                            max_renderer_prepare_svg_us,
+                            perf_baseline_headroom_pct,
+                        );
 
                         perf_baseline_rows.push(serde_json::json!({
                             "script": script_key.clone(),
@@ -9661,6 +9849,12 @@ See: `docs/tracy.md`.\n";
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                                 "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
                                 "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                "renderer_encode_scene_us": max_renderer_encode_scene_us,
+                                "renderer_upload_us": max_renderer_upload_us,
+                                "renderer_record_passes_us": max_renderer_record_passes_us,
+                                "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
+                                "renderer_prepare_text_us": max_renderer_prepare_text_us,
+                                "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
                             },
                             "measured_p90": {
                                 "top_total_time_us": p90_total,
@@ -9669,6 +9863,12 @@ See: `docs/tracy.md`.\n";
                                 "frame_p95_total_time_us": p90_frame_p95_total,
                                 "frame_p95_layout_time_us": p90_frame_p95_layout,
                                 "frame_p95_layout_engine_solve_time_us": p90_frame_p95_solve,
+                                "renderer_encode_scene_us": p90_renderer_encode_scene_us,
+                                "renderer_upload_us": p90_renderer_upload_us,
+                                "renderer_record_passes_us": p90_renderer_record_passes_us,
+                                "renderer_encoder_finish_us": p90_renderer_encoder_finish_us,
+                                "renderer_prepare_text_us": p90_renderer_prepare_text_us,
+                                "renderer_prepare_svg_us": p90_renderer_prepare_svg_us,
                             },
                             "measured_p95": {
                                 "top_total_time_us": p95_total,
@@ -9677,6 +9877,12 @@ See: `docs/tracy.md`.\n";
                                 "frame_p95_total_time_us": p95_frame_p95_total,
                                 "frame_p95_layout_time_us": p95_frame_p95_layout,
                                 "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
+                                "renderer_encode_scene_us": p95_renderer_encode_scene_us,
+                                "renderer_upload_us": p95_renderer_upload_us,
+                                "renderer_record_passes_us": p95_renderer_record_passes_us,
+                                "renderer_encoder_finish_us": p95_renderer_encoder_finish_us,
+                                "renderer_prepare_text_us": p95_renderer_prepare_text_us,
+                                "renderer_prepare_svg_us": p95_renderer_prepare_svg_us,
                             },
                             "threshold_seed": {
                                 "top_total_time_us": seed_total_value,
@@ -9706,6 +9912,12 @@ See: `docs/tracy.md`.\n";
                                 "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                                 "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
                                 "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                "max_renderer_encode_scene_us": thr_renderer_encode_scene_us,
+                                "max_renderer_upload_us": thr_renderer_upload_us,
+                                "max_renderer_record_passes_us": thr_renderer_record_passes_us,
+                                "max_renderer_encoder_finish_us": thr_renderer_encoder_finish_us,
+                                "max_renderer_prepare_text_us": thr_renderer_prepare_text_us,
+                                "max_renderer_prepare_svg_us": thr_renderer_prepare_svg_us,
                             },
                         }));
                     }
@@ -9801,6 +10013,36 @@ See: `docs/tracy.md`.\n";
                             PerfThresholdAggregate::Max => max_frame_p95_solve,
                             PerfThresholdAggregate::P90 => p90_frame_p95_solve,
                             PerfThresholdAggregate::P95 => p95_frame_p95_solve,
+                        };
+                        let observed_renderer_encode_scene_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_encode_scene_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_encode_scene_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_encode_scene_us,
+                        };
+                        let observed_renderer_upload_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_upload_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_upload_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_upload_us,
+                        };
+                        let observed_renderer_record_passes_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_record_passes_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_record_passes_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_record_passes_us,
+                        };
+                        let observed_renderer_encoder_finish_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_encoder_finish_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_encoder_finish_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_encoder_finish_us,
+                        };
+                        let observed_renderer_prepare_text_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_prepare_text_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_prepare_text_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_prepare_text_us,
+                        };
+                        let observed_renderer_prepare_svg_us = match perf_threshold_agg {
+                            PerfThresholdAggregate::Max => max_renderer_prepare_svg_us,
+                            PerfThresholdAggregate::P90 => p90_renderer_prepare_svg_us,
+                            PerfThresholdAggregate::P95 => p95_renderer_prepare_svg_us,
                         };
                         let row = serde_json::json!({
                             "script": script_key.clone(),
@@ -9921,6 +10163,24 @@ See: `docs/tracy.md`.\n";
                             max_pointer_move_global_changes,
                             max_run_paint_cache_hit_test_only_replay_allowed_max,
                             max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            observed_renderer_encode_scene_us,
+                            max_renderer_encode_scene_us,
+                            p95_renderer_encode_scene_us,
+                            observed_renderer_upload_us,
+                            max_renderer_upload_us,
+                            p95_renderer_upload_us,
+                            observed_renderer_record_passes_us,
+                            max_renderer_record_passes_us,
+                            p95_renderer_record_passes_us,
+                            observed_renderer_encoder_finish_us,
+                            max_renderer_encoder_finish_us,
+                            p95_renderer_encoder_finish_us,
+                            observed_renderer_prepare_text_us,
+                            max_renderer_prepare_text_us,
+                            p95_renderer_prepare_text_us,
+                            observed_renderer_prepare_svg_us,
+                            max_renderer_prepare_svg_us,
+                            p95_renderer_prepare_svg_us,
                             script_worst
                                 .as_ref()
                                 .map(|(_us, bundle, _run)| bundle.as_path()),
@@ -11080,19 +11340,25 @@ pub(crate) fn triage_json_from_stats(
 
     let worst_row = report.top.first();
     let worst = worst_row.map(|row| {
-        json!({
-            "window": row.window,
-            "tick_id": row.tick_id,
-            "frame_id": row.frame_id,
-            "timestamp_unix_ms": row.timestamp_unix_ms,
-            "total_time_us": row.total_time_us,
-            "layout_time_us": row.layout_time_us,
-            "prepaint_time_us": row.prepaint_time_us,
-            "paint_time_us": row.paint_time_us,
-            "layout_observation_record_time_us": row.layout_observation_record_time_us,
-            "layout_observation_record_models_items": row.layout_observation_record_models_items,
-            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
-            "paint_observation_record_time_us": row.paint_observation_record_time_us,
+	        json!({
+	            "window": row.window,
+	            "tick_id": row.tick_id,
+	            "frame_id": row.frame_id,
+	            "timestamp_unix_ms": row.timestamp_unix_ms,
+	            "total_time_us": row.total_time_us,
+	            "layout_time_us": row.layout_time_us,
+	            "prepaint_time_us": row.prepaint_time_us,
+	            "paint_time_us": row.paint_time_us,
+	            "renderer_encode_scene_us": row.renderer_encode_scene_us,
+	            "renderer_upload_us": row.renderer_upload_us,
+	            "renderer_record_passes_us": row.renderer_record_passes_us,
+	            "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
+	            "renderer_prepare_text_us": row.renderer_prepare_text_us,
+	            "renderer_prepare_svg_us": row.renderer_prepare_svg_us,
+	            "layout_observation_record_time_us": row.layout_observation_record_time_us,
+	            "layout_observation_record_models_items": row.layout_observation_record_models_items,
+	            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
+	            "paint_observation_record_time_us": row.paint_observation_record_time_us,
             "paint_text_prepare_time_us": row.paint_text_prepare_time_us,
             "paint_text_prepare_calls": row.paint_text_prepare_calls,
             "invalidation_walk_calls": row.invalidation_walk_calls,
@@ -16707,28 +16973,31 @@ mod tests {
         std::fs::create_dir_all(&root).expect("create temp root");
 
         let bundle = serde_json::json!({
-            "schema_version": 1,
-            "windows": [{
+        "schema_version": 1,
+        "windows": [{
+            "window": 1,
+            "events": [],
+            "snapshots": [{
+                "schema_version": 1,
+                "tick_id": 1,
+                "frame_id": 1,
                 "window": 1,
-                "events": [],
-                "snapshots": [{
-                    "schema_version": 1,
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "window": 1,
-                    "timestamp_unix_ms": 123,
-                    "debug": { "stats": {
-                        "layout_time_us": 10_000,
-                        "prepaint_time_us": 0,
-                        "paint_time_us": 0,
-                        "layout_engine_solves": 1,
-                        "layout_engine_solve_time_us": 7_000,
-                        "layout_observation_record_time_us": 3_000,
-                        "layout_observation_record_models_items": 100,
+                "timestamp_unix_ms": 123,
+                "debug": { "stats": {
+                    "layout_time_us": 10_000,
+                    "prepaint_time_us": 0,
+                    "paint_time_us": 0,
+                    "layout_engine_solves": 1,
+                    "layout_engine_solve_time_us": 7_000,
+                    "layout_observation_record_time_us": 3_000,
+                    "layout_observation_record_models_items": 100,
                         "layout_observation_record_globals_items": 0,
                         "paint_text_prepare_time_us": 2_500,
                         "paint_text_prepare_calls": 10,
                         "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_upload_us": 123,
+                        "renderer_record_passes_us": 45,
+                        "renderer_encoder_finish_us": 67,
                         "renderer_text_atlas_upload_bytes": 2_000_000,
                     } }
                 }]
@@ -16759,6 +17028,31 @@ mod tests {
         assert!(codes.contains(&"layout.solve_heavy"));
         assert!(codes.contains(&"paint.text_prepare_churn"));
         assert!(codes.contains(&"renderer.upload_churn"));
+
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_upload_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            123
+        );
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_record_passes_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            45
+        );
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_encoder_finish_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            67
+        );
 
         assert_eq!(
             triage
@@ -20023,6 +20317,12 @@ mod tests {
                 max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+                max_renderer_encode_scene_us: None,
+                max_renderer_upload_us: None,
+                max_renderer_record_passes_us: None,
+                max_renderer_encoder_finish_us: None,
+                max_renderer_prepare_text_us: None,
+                max_renderer_prepare_svg_us: None,
             },
             PerfThresholds::default(),
             99,
@@ -20046,6 +20346,24 @@ mod tests {
             true,
             1999,
             1499,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -20077,6 +20395,12 @@ mod tests {
                 max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+                max_renderer_encode_scene_us: None,
+                max_renderer_upload_us: None,
+                max_renderer_record_passes_us: None,
+                max_renderer_encoder_finish_us: None,
+                max_renderer_prepare_text_us: None,
+                max_renderer_prepare_svg_us: None,
             },
             PerfThresholds::default(),
             101,
@@ -20101,6 +20425,24 @@ mod tests {
             2001,
             1501,
             2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             Some(Path::new("bundle.json")),
