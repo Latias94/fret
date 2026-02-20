@@ -86,6 +86,8 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
     let mut out_windows: Vec<Value> = Vec::new();
     let mut total_snapshots: u64 = 0;
     let mut total_unique_test_ids: HashSet<String> = HashSet::new();
+    let mut total_snapshots_with_semantics: u64 = 0;
+    let mut total_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -95,11 +97,26 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             .map_or(&[][..], |v| v);
         total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
 
+        let mut window_snapshots_with_semantics: u64 = 0;
+        let mut window_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
+        for s in snaps {
+            if snapshot_semantics_nodes(s).is_some() {
+                window_snapshots_with_semantics = window_snapshots_with_semantics.saturating_add(1);
+                total_snapshots_with_semantics = total_snapshots_with_semantics.saturating_add(1);
+            }
+            if let Some(fp) = s.get("semantics_fingerprint").and_then(|v| v.as_u64()) {
+                window_unique_semantics_fingerprints.insert(fp);
+                total_unique_semantics_fingerprints.insert(fp);
+            }
+        }
+
         let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
         else {
             out_windows.push(json!({
                 "window": window_id,
                 "snapshots_total": snaps.len(),
+                "snapshots_with_semantics_total": window_snapshots_with_semantics,
+                "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
                 "considered_frame_id": null,
                 "considered_timestamp_unix_ms": null,
                 "semantics_nodes_total": 0,
@@ -145,6 +162,8 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
         out_windows.push(json!({
             "window": window_id,
             "snapshots_total": snaps.len(),
+            "snapshots_with_semantics_total": window_snapshots_with_semantics,
+            "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
             "considered_frame_id": frame_id,
             "considered_timestamp_unix_ms": ts,
             "semantics_nodes_total": semantics_nodes_total,
@@ -162,6 +181,8 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
         "windows_total": windows.len(),
         "snapshots_total": total_snapshots,
         "total_unique_test_ids": total_unique_test_ids.len(),
+        "snapshots_with_semantics_total": total_snapshots_with_semantics,
+        "unique_semantics_fingerprints_total": total_unique_semantics_fingerprints.len(),
         "windows": out_windows,
     }))
 }
