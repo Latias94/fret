@@ -34,9 +34,14 @@ unsafe extern "system" {
     fn GetAsyncKeyState(vKey: i32) -> i16;
     fn MonitorFromPoint(pt: Point, dwFlags: u32) -> isize;
     fn GetMonitorInfoW(hMonitor: isize, lpmi: *mut MonitorInfo) -> i32;
+    fn EnumWindows(
+        lpEnumFunc: unsafe extern "system" fn(isize, isize) -> i32,
+        lParam: isize,
+    ) -> i32;
     fn WindowFromPoint(point: Point) -> isize;
     fn GetAncestor(hwnd: isize, ga_flags: u32) -> isize;
     fn GetWindow(hwnd: isize, cmd: u32) -> isize;
+    fn GetTopWindow(hwnd: isize) -> isize;
     fn GetWindowRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
     fn ClientToScreen(hwnd: isize, lp_point: *mut Point) -> i32;
     fn GetWindowLongW(hwnd: isize, index: i32) -> i32;
@@ -64,6 +69,7 @@ const LWA_ALPHA: u32 = 0x0000_0002;
 const HWND_TOP: isize = 0;
 const SWP_NOMOVE: u32 = 0x0002;
 const SWP_NOSIZE: u32 = 0x0001;
+const SWP_NOZORDER: u32 = 0x0004;
 const SWP_SHOWWINDOW: u32 = 0x0040;
 
 pub(super) fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
@@ -90,13 +96,71 @@ pub(super) fn window_under_cursor_root(screen_pos: PhysicalPosition<f64>) -> Opt
     if hwnd == 0 {
         return None;
     }
-    let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
-    if root == 0 { Some(hwnd) } else { Some(root) }
+    Some(root_hwnd(hwnd))
 }
 
 pub(super) fn next_window_in_z_order(hwnd: isize) -> Option<isize> {
     let next = unsafe { GetWindow(hwnd, GW_HWNDNEXT) };
     if next == 0 { None } else { Some(next) }
+}
+
+pub(super) fn root_hwnd(hwnd: isize) -> isize {
+    if hwnd == 0 {
+        return 0;
+    }
+    let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
+    if root == 0 { hwnd } else { root }
+}
+
+pub(super) fn top_window() -> Option<isize> {
+    let hwnd = unsafe { GetTopWindow(0) };
+    if hwnd == 0 { None } else { Some(hwnd) }
+}
+
+pub(super) fn enum_windows_z_order() -> Vec<isize> {
+    unsafe extern "system" fn callback(hwnd: isize, lparam: isize) -> i32 {
+        if hwnd == 0 || lparam == 0 {
+            return 1;
+        }
+        // SAFETY: `lparam` is a pointer to a live `Vec<isize>` owned by `enum_windows_z_order`.
+        let out = unsafe { &mut *(lparam as *mut Vec<isize>) };
+        out.push(hwnd);
+        1
+    }
+
+    let mut out: Vec<isize> = Vec::new();
+    // SAFETY: Win32 calls `callback` synchronously; we pass a valid pointer for the duration of
+    // the call.
+    unsafe {
+        let _ = EnumWindows(callback, (&mut out as *mut Vec<isize>) as isize);
+    }
+    out
+}
+
+pub(super) fn screen_pos_in_hwnd(hwnd: isize, screen_pos: PhysicalPosition<f64>) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+    let mut rect = Rect::default();
+    let ok = unsafe { GetWindowRect(hwnd, &mut rect) };
+    if ok == 0 {
+        return false;
+    }
+    let x = screen_pos.x;
+    let y = screen_pos.y;
+    x >= rect.left as f64 && y >= rect.top as f64 && x < rect.right as f64 && y < rect.bottom as f64
+}
+
+pub(super) fn window_rect_screen_for_hwnd(hwnd: isize) -> Option<(i32, i32, i32, i32)> {
+    if hwnd == 0 {
+        return None;
+    }
+    let mut rect = Rect::default();
+    let ok = unsafe { GetWindowRect(hwnd, &mut rect) };
+    if ok == 0 {
+        return None;
+    }
+    Some((rect.left, rect.top, rect.right, rect.bottom))
 }
 
 pub(super) fn decoration_offset_for_hwnd(hwnd: isize) -> Option<winit::dpi::PhysicalPosition<i32>> {
@@ -122,6 +186,18 @@ pub(super) fn decoration_offset_for_hwnd(hwnd: isize) -> Option<winit::dpi::Phys
         client.x.saturating_sub(outer.left),
         client.y.saturating_sub(outer.top),
     ))
+}
+
+pub(super) fn client_origin_screen_for_hwnd(hwnd: isize) -> Option<PhysicalPosition<f64>> {
+    if hwnd == 0 {
+        return None;
+    }
+    let mut client = Point { x: 0, y: 0 };
+    let ok = unsafe { ClientToScreen(hwnd, &mut client) };
+    if ok == 0 {
+        return None;
+    }
+    Some(PhysicalPosition::new(client.x as f64, client.y as f64))
 }
 
 pub(super) fn set_window_mouse_passthrough(hwnd: isize, enabled: bool) {
@@ -186,6 +262,25 @@ pub(super) fn raise_hwnd_to_front(hwnd: isize) -> bool {
         ) != 0;
         let _ = SetForegroundWindow(hwnd);
         ok
+    }
+}
+
+pub(super) fn set_window_outer_position(hwnd: isize, x: i32, y: i32) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+
+    unsafe {
+        // Best-effort: move in *virtual desktop* physical coordinates without changing z-order.
+        SetWindowPos(
+            hwnd,
+            0,
+            x,
+            y,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW,
+        ) != 0
     }
 }
 

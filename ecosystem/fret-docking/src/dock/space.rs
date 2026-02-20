@@ -3054,7 +3054,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
             .is_some();
 
-        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point, bool)> = None;
+        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
         let mut start_dock_tabs_drag: Option<(Point, DockTabsDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
@@ -3117,6 +3117,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let allow_tear_off_for_panel =
                     |source_window: fret_core::AppWindowId, panel: &PanelKey| -> bool {
                         if !allow_tear_off {
+                            return false;
+                        }
+
+                        // Once a panel lives in a DockFloating OS window, dragging it out-of-bounds
+                        // should behave like a cross-window drag/drop (or window move), not a new
+                        // tear-off into yet another OS window. This keeps multi-window tab drags
+                        // stable and avoids creating chains of one-panel windows.
+                        if crate::runtime::is_dock_floating_os_window(app, source_window)
+                            && dock.graph.collect_panels_in_window(source_window).len() == 1
+                        {
                             return false;
                         }
 
@@ -3672,7 +3682,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         // If this tab is already in an in-window floating container, prefer moving
                                         // the floating window itself by dragging the tab (imgui/egui parity).
                                         // Hold Alt to force the dock drag behavior (tear-off / docking previews).
-                                        if let Some(layout_root) = layout_root
+                                        // When this OS window has no dock root (multi-window
+                                        // tear-off), dragging a tab should initiate a dock drag so
+                                        // the user can re-dock into another window. Treat the
+                                        // floating content as the window root for interaction
+                                        // purposes, rather than allowing the inner floating rect
+                                        // to be moved around.
+                                        if root.is_some()
+                                            && let Some(layout_root) = layout_root
                                             && root != Some(layout_root)
                                             && !modifiers.alt
                                             && let Some(entry) = dock
@@ -3772,10 +3789,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     && !tab_overflow_button_rect(theme.clone(), tab_bar)
                                         .contains(*position)
                                 {
-                                    // If the tab bar belongs to an in-window floating container, prefer moving the
-                                    // floating window itself over starting a "tabs group" dock drag.
-                                    if let Some(floating) = self
-                                        .find_floating_container_for_tabs(&dock.graph, tabs_node)
+                                    let is_dedicated_floating_window =
+                                        dock.graph.window_root(self.window).is_none();
+
+                                    // If the tab bar belongs to an in-window floating container,
+                                    // prefer moving the floating window itself over starting a
+                                    // "tabs group" dock drag.
+                                    //
+                                    // Exception: when this OS window has no dock root and only
+                                    // hosts floating content (the multi-window tear-off case),
+                                    // dragging the tab bar should start a dock tabs drag so the
+                                    // user can re-dock by dropping into another window.
+                                    if !is_dedicated_floating_window
+                                        && let Some(floating) = self.find_floating_container_for_tabs(
+                                            &dock.graph,
+                                            tabs_node,
+                                        )
                                         && let Some(entry) = dock
                                             .graph
                                             .floating_windows(self.window)
@@ -4249,17 +4278,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         let wants_dock_previews = docking_interaction_settings
                                             .drag_inversion
                                             .wants_dock_previews(*modifiers);
-                                        let last_tab_in_source_tabs = dock
-                                            .graph
-                                            .find_panel_in_window(self.window, &pending.panel)
-                                            .and_then(|(tabs_node, _)| match dock.graph.node(tabs_node)
-                                            {
-                                                Some(DockNode::Tabs { tabs, .. }) => Some(tabs.len() == 1),
-                                                _ => None,
-                                            })
-                                            .unwrap_or(false);
-                                        let follow_window =
-                                            dock.graph.windows().len() > 1 && last_tab_in_source_tabs;
                                         if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
                                             .is_some_and(|v| !v.is_empty())
                                         {
@@ -4289,7 +4307,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
-                                            follow_window,
                                         ));
                                         request_pointer_capture = Some(None);
                                     }
@@ -5681,8 +5698,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
             request_focus = panel_nodes.get(&panel).copied();
         }
 
-        if let Some((start, payload, position, follow_window)) = start_dock_drag {
+        if let Some((start, payload, position)) = start_dock_drag {
             let grab_offset = payload.grab_offset;
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let follow_enabled = settings.follow_window_during_drag
+                || std::env::var_os("FRET_DOCK_FOLLOW_WINDOW_DURING_DRAG")
+                    .is_some_and(|v| !v.is_empty());
+            let follow_this_window =
+                follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
@@ -5691,16 +5718,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 payload,
             );
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
+                if follow_this_window {
+                    drag.follow_window = Some(self.window);
+                }
                 drag.position = position;
                 drag.dragging = true;
                 drag.cursor_grab_offset = Some(grab_offset);
-                if follow_window {
-                    drag.follow_window = Some(self.window);
-                }
             }
         }
         if let Some((start, payload, position)) = start_dock_tabs_drag {
             let grab_offset = payload.grab_offset;
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let follow_enabled = settings.follow_window_during_drag
+                || std::env::var_os("FRET_DOCK_FOLLOW_WINDOW_DURING_DRAG")
+                    .is_some_and(|v| !v.is_empty());
+            let follow_this_window =
+                follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_TABS,
@@ -5709,6 +5746,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 payload,
             );
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
+                if follow_this_window {
+                    drag.follow_window = Some(self.window);
+                }
                 drag.position = position;
                 drag.dragging = true;
                 drag.cursor_grab_offset = Some(grab_offset);

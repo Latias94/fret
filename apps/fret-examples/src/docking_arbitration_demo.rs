@@ -35,6 +35,11 @@ use std::sync::{Arc, Mutex};
 
 type ViewportKey = (AppWindowId, RenderTargetId);
 
+// Keep these in sync with `fret-docking` floating chrome constants. This harness duplicates
+// the geometry in order to keep diagnostics anchors stable without reaching into crate-private
+// helpers.
+const DOCKING_ARBITRATION_FLOATING_BORDER_PX: f32 = 1.0;
+const DOCKING_ARBITRATION_FLOATING_TITLE_H_PX: f32 = 22.0;
 const DOCKING_ARBITRATION_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const DOCKING_ARBITRATION_SPLIT_HANDLE_ANCHOR_SIZE: Px = Px(12.0);
@@ -232,9 +237,24 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
-                let anchor_for_rect = |tabs_rect: Rect| {
-                    let x = tabs_rect.origin.x.0 + 16.0;
-                    let y = tabs_rect.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+                let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
+                    let (x0, y0) = if floating {
+                        (
+                            tabs_rect.origin.x.0 + DOCKING_ARBITRATION_FLOATING_BORDER_PX,
+                            tabs_rect.origin.y.0
+                                + DOCKING_ARBITRATION_FLOATING_BORDER_PX
+                                + DOCKING_ARBITRATION_FLOATING_TITLE_H_PX,
+                        )
+                    } else {
+                        (tabs_rect.origin.x.0, tabs_rect.origin.y.0)
+                    };
+
+                    let x = if floating {
+                        x0 + (tabs_rect.size.width.0 * 0.2).clamp(48.0, 96.0)
+                    } else {
+                        x0 + 16.0
+                    };
+                    let y = y0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
                     (x, y)
                 };
 
@@ -247,7 +267,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         split_handle_hit_thickness,
                         panel,
                     ) {
-                        return Some(anchor_for_rect(tabs_rect));
+                        return Some(anchor_for_rect(tabs_rect, false));
                     }
                 }
 
@@ -260,7 +280,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         split_handle_hit_thickness,
                         panel,
                     ) {
-                        return Some(anchor_for_rect(tabs_rect));
+                        return Some(anchor_for_rect(tabs_rect, true));
                     }
                 }
 

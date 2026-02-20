@@ -1,4 +1,37 @@
 use super::*;
+use std::fmt;
+
+fn diag_dock_drag_trace(args: fmt::Arguments<'_>) {
+    use std::{
+        io::Write as _,
+        sync::{Mutex, OnceLock},
+    };
+
+    if std::env::var_os("FRET_DOCK_DRAG_TRACE").is_none() {
+        return;
+    }
+
+    static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+    let file = LOG_FILE.get_or_init(|| {
+        let out_dir = std::env::var_os("FRET_DIAG_DIR")
+            .filter(|v| !v.is_empty())
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("target").join("fret-diag"));
+        let _ = std::fs::create_dir_all(&out_dir);
+        let path = out_dir.join("dock_drag_runtime_trace.log");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(path)
+            .expect("open dock_drag_runtime_trace.log");
+        Mutex::new(file)
+    });
+    let Ok(mut file) = file.lock() else {
+        return;
+    };
+    let _ = writeln!(file, "{}", args);
+}
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn deliver_window_event_now(
@@ -135,10 +168,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let moving_window = self
+        let mut moving_window = self
             .dock_tearoff_follow
             .filter(|follow| follow.source_window == drag_source_window)
-            .map(|follow| follow.window);
+            .map(|follow| follow.window)
+            .or_else(|| {
+                matches!(
+                    drag_kind,
+                    fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+                )
+                .then_some(drag_source_window)
+                .filter(|w| self.main_window.is_some_and(|main| *w != main))
+            });
         let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.transparent_payload_applied
         });
@@ -148,14 +189,51 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
+            let diag_cursor_override_recent = self
+                .diag_last_cursor_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
             if allow_window_under_cursor {
-                let hit = if reliable_window_under_cursor {
-                    self.window_under_cursor_platform(screen_pos, Some(moving_window))
-                } else {
-                    self.window_under_cursor_best_effort(screen_pos, Some(moving_window))
-                };
-                window_under_moving_window_source = hit.source;
-                window_under_moving_window = hit.window.filter(|w| *w != moving_window);
+                // When scripted diagnostics inject cursor overrides in window-client coordinates,
+                // the simulated cursor may temporarily drift outside the moving window while the
+                // runner is also updating OS window positions (tear-off follow).
+                //
+                // Prefer sampling a few stable points inside the moving window to recover the
+                // "window under moving window" result that an OS cursor would report.
+                let mut candidates = Vec::with_capacity(3);
+                candidates.push(screen_pos);
+                if diag_cursor_override_recent {
+                    if let Some(clamped) =
+                        self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
+                    {
+                        candidates.push(clamped);
+                    }
+                    if let Some((origin, size)) = self.window_client_rect_screen(moving_window) {
+                        candidates.push(winit::dpi::PhysicalPosition::new(
+                            origin.x + (size.width as f64) * 0.5,
+                            origin.y + (size.height as f64) * 0.5,
+                        ));
+                    }
+                }
+
+                for candidate in candidates {
+                    let hit = if reliable_window_under_cursor {
+                        self.window_under_cursor_platform(candidate, Some(moving_window))
+                    } else {
+                        self.window_under_cursor_best_effort(candidate, Some(moving_window))
+                    };
+                    if matches!(
+                        window_under_moving_window_source,
+                        fret_runtime::WindowUnderCursorSource::Unknown
+                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
+                    {
+                        window_under_moving_window_source = hit.source;
+                    }
+                    if let Some(w) = hit.window.filter(|w| *w != moving_window) {
+                        window_under_moving_window_source = hit.source;
+                        window_under_moving_window = Some(w);
+                        break;
+                    }
+                }
             }
         }
         let hovered = if reliable_window_under_cursor {
@@ -195,13 +273,41 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     hit.window
                 })
         };
-        let hovered = hovered.or_else(|| {
-            // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
-            // when the cursor is outside all windows so the UI can react before mouse-up.
-            (drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
-                .then_some(drag_source_window)
-                .filter(|w| self.windows.contains_key(*w))
+
+        // If the runner is actively moving a dock tear-off window (follow mode), prefer routing
+        // hover to the window under the moving window. This is the ImGui-style
+        // `HoveredWindowUnderMovingWindow` behavior needed to dock back into an overlapped window
+        // while the payload window remains under the cursor.
+        let follow_active = self.dock_tearoff_follow.is_some_and(|follow| {
+            follow.source_window == drag_source_window && follow.manual_follow
         });
+        let hovered =
+            if follow_active && allow_window_under_cursor && window_under_moving_window.is_some() {
+                window_under_cursor_source = window_under_moving_window_source;
+                window_under_moving_window
+            } else {
+                hovered
+            };
+
+        // Note: we intentionally keep `hovered` as the OS-selected window under the cursor.
+        // `window_under_moving_window` is reported separately so diagnostics (and future policy)
+        // can distinguish "HoveredWindow" vs "HoveredWindowUnderMovingWindow" (ImGui terminology).
+
+        // When the cursor is outside all windows, prefer latching to whichever window we were
+        // already hovering. This makes scripted cross-window drags deterministic even if the
+        // last injected cursor position overshoots the intended target window.
+        let hovered = hovered
+            .or_else(|| {
+                self.internal_drag_hover_window
+                    .filter(|w| self.windows.contains_key(*w))
+            })
+            .or_else(|| {
+                // Fallback: keep delivering `InternalDrag::Over` to the source window so the UI
+                // can react before mouse-up (tear-off / out-of-bounds heuristics).
+                (drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
+                    .then_some(drag_source_window)
+                    .filter(|w| self.windows.contains_key(*w))
+            });
         if hovered != self.internal_drag_hover_window {
             if let Some(prev) = self.internal_drag_hover_window.take() {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
@@ -229,6 +335,61 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pos) = self.local_pos_for_window(current, screen_pos) else {
             return false;
         };
+
+        // Best-effort diagnostics: ensure `moving_window` is set for dock drags inside a non-main
+        // window even if the drag source window differs from the hovered window (can happen under
+        // overlap + scripted injection).
+        if moving_window.is_none()
+            && matches!(
+                drag_kind,
+                fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+            )
+            && self.main_window.is_some_and(|main| current != main)
+        {
+            moving_window = Some(current);
+            window_under_moving_window = None;
+            window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
+            if allow_window_under_cursor {
+                let diag_cursor_override_recent = self
+                    .diag_last_cursor_override_tick
+                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+                let mut candidates = Vec::with_capacity(3);
+                candidates.push(screen_pos);
+                if diag_cursor_override_recent {
+                    if let Some(clamped) =
+                        self.clamp_screen_pos_to_window_client(current, screen_pos)
+                    {
+                        candidates.push(clamped);
+                    }
+                    if let Some((origin, size)) = self.window_client_rect_screen(current) {
+                        candidates.push(winit::dpi::PhysicalPosition::new(
+                            origin.x + (size.width as f64) * 0.5,
+                            origin.y + (size.height as f64) * 0.5,
+                        ));
+                    }
+                }
+
+                for candidate in candidates {
+                    let hit = if reliable_window_under_cursor {
+                        self.window_under_cursor_platform(candidate, Some(current))
+                    } else {
+                        self.window_under_cursor_best_effort(candidate, Some(current))
+                    };
+                    if matches!(
+                        window_under_moving_window_source,
+                        fret_runtime::WindowUnderCursorSource::Unknown
+                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
+                    {
+                        window_under_moving_window_source = hit.source;
+                    }
+                    if let Some(w) = hit.window.filter(|w| *w != current) {
+                        window_under_moving_window_source = hit.source;
+                        window_under_moving_window = Some(w);
+                        break;
+                    }
+                }
+            }
+        }
 
         if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
             && std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some()
@@ -271,6 +432,39 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.window_under_moving_window_source = window_under_moving_window_source;
         }
 
+        #[cfg(target_os = "windows")]
+        let moving_rect = moving_window
+            .and_then(|w| self.windows.get(w))
+            .and_then(|state| Self::hwnd_for_window(state.window.as_ref()))
+            .and_then(super::win32::window_rect_screen_for_hwnd);
+        #[cfg(target_os = "windows")]
+        let main_rect = self
+            .main_window
+            .and_then(|w| self.windows.get(w))
+            .and_then(|state| Self::hwnd_for_window(state.window.as_ref()))
+            .and_then(super::win32::window_rect_screen_for_hwnd);
+        #[cfg(not(target_os = "windows"))]
+        let moving_rect: Option<(i32, i32, i32, i32)> = None;
+        #[cfg(not(target_os = "windows"))]
+        let main_rect: Option<(i32, i32, i32, i32)> = None;
+
+        diag_dock_drag_trace(format_args!(
+            "[hover] tick={} pointer={:?} kind={:?} src={:?} cur={:?} moving={:?} under_moving={:?} cursor_src={:?} under_src={:?} screen=({:.1},{:.1}) moving_rect={:?} main_rect={:?}",
+            self.tick_id.0,
+            pointer_id,
+            drag_kind,
+            drag_source_window,
+            current,
+            moving_window,
+            window_under_moving_window,
+            window_under_cursor_source,
+            window_under_moving_window_source,
+            screen_pos.x,
+            screen_pos.y,
+            moving_rect,
+            main_rect,
+        ));
+
         self.internal_drag_hover_pos = Some(pos);
         self.dispatch_internal_drag_event(current, pointer_id, InternalDragKind::Over, pos);
         true
@@ -311,10 +505,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let moving_window = self
+        let mut moving_window = self
             .dock_tearoff_follow
             .filter(|follow| follow.source_window == drag_source_window)
-            .map(|follow| follow.window);
+            .map(|follow| follow.window)
+            .or_else(|| {
+                matches!(
+                    drag_kind,
+                    fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+                )
+                .then_some(drag_source_window)
+                .filter(|w| self.main_window.is_some_and(|main| *w != main))
+            });
         let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.transparent_payload_applied
         });
@@ -324,17 +526,48 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
+            let diag_cursor_override_recent = self
+                .diag_last_cursor_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
             if allow_window_under_cursor {
-                let hit = if reliable_window_under_cursor {
-                    self.window_under_cursor_platform(screen_pos, Some(moving_window))
-                } else {
-                    self.window_under_cursor_best_effort(screen_pos, Some(moving_window))
-                };
-                window_under_moving_window_source = hit.source;
-                window_under_moving_window = hit.window.filter(|w| *w != moving_window);
+                let mut candidates = Vec::with_capacity(3);
+                candidates.push(screen_pos);
+                if diag_cursor_override_recent {
+                    if let Some(clamped) =
+                        self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
+                    {
+                        candidates.push(clamped);
+                    }
+                    if let Some((origin, size)) = self.window_client_rect_screen(moving_window) {
+                        candidates.push(winit::dpi::PhysicalPosition::new(
+                            origin.x + (size.width as f64) * 0.5,
+                            origin.y + (size.height as f64) * 0.5,
+                        ));
+                    }
+                }
+
+                for candidate in candidates {
+                    let hit = if reliable_window_under_cursor {
+                        self.window_under_cursor_platform(candidate, Some(moving_window))
+                    } else {
+                        self.window_under_cursor_best_effort(candidate, Some(moving_window))
+                    };
+                    if matches!(
+                        window_under_moving_window_source,
+                        fret_runtime::WindowUnderCursorSource::Unknown
+                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
+                    {
+                        window_under_moving_window_source = hit.source;
+                    }
+                    if let Some(w) = hit.window.filter(|w| *w != moving_window) {
+                        window_under_moving_window_source = hit.source;
+                        window_under_moving_window = Some(w);
+                        break;
+                    }
+                }
             }
         }
-        let target = if reliable_window_under_cursor {
+        let mut target = if reliable_window_under_cursor {
             let mut out = None;
             if allow_window_under_cursor {
                 let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
@@ -390,6 +623,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 })
             })
         };
+        // Keep drop routing consistent with hover routing: when a dock-floating OS window is
+        // following the cursor, prefer the window under the moving window so overlap cases can
+        // dock back without requiring transparent payload / mouse passthrough.
+        if matches!(
+            drag_kind,
+            fret_app::DRAG_KIND_DOCK_PANEL | fret_runtime::DRAG_KIND_DOCK_TABS
+        ) && moving_window.is_some()
+            && window_under_moving_window.is_some()
+        {
+            target = window_under_moving_window;
+            window_under_cursor_source = window_under_moving_window_source;
+        }
+
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
         let target = target.unwrap_or(drag_source_window);
@@ -403,6 +649,58 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pos) = pos else {
             return false;
         };
+
+        if moving_window.is_none()
+            && matches!(
+                drag_kind,
+                fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+            )
+            && self.main_window.is_some_and(|main| target != main)
+        {
+            moving_window = Some(target);
+            window_under_moving_window = None;
+            window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
+            if allow_window_under_cursor {
+                let diag_cursor_override_recent = self
+                    .diag_last_cursor_override_tick
+                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+                let mut candidates = Vec::with_capacity(3);
+                candidates.push(screen_pos);
+                if diag_cursor_override_recent {
+                    if let Some(clamped) =
+                        self.clamp_screen_pos_to_window_client(target, screen_pos)
+                    {
+                        candidates.push(clamped);
+                    }
+                    if let Some((origin, size)) = self.window_client_rect_screen(target) {
+                        candidates.push(winit::dpi::PhysicalPosition::new(
+                            origin.x + (size.width as f64) * 0.5,
+                            origin.y + (size.height as f64) * 0.5,
+                        ));
+                    }
+                }
+
+                for candidate in candidates {
+                    let hit = if reliable_window_under_cursor {
+                        self.window_under_cursor_platform(candidate, Some(target))
+                    } else {
+                        self.window_under_cursor_best_effort(candidate, Some(target))
+                    };
+                    if matches!(
+                        window_under_moving_window_source,
+                        fret_runtime::WindowUnderCursorSource::Unknown
+                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
+                    {
+                        window_under_moving_window_source = hit.source;
+                    }
+                    if let Some(w) = hit.window.filter(|w| *w != target) {
+                        window_under_moving_window_source = hit.source;
+                        window_under_moving_window = Some(w);
+                        break;
+                    }
+                }
+            }
+        }
 
         if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
             && target != drag_source_window
@@ -433,6 +731,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.window_under_moving_window = window_under_moving_window;
             d.window_under_moving_window_source = window_under_moving_window_source;
         }
+        diag_dock_drag_trace(format_args!(
+            "[drop] tick={} pointer={:?} kind={:?} src={:?} target={:?} moving={:?} under_moving={:?} cursor_src={:?} under_src={:?}",
+            self.tick_id.0,
+            pointer_id,
+            drag_kind,
+            drag_source_window,
+            target,
+            moving_window,
+            window_under_moving_window,
+            window_under_cursor_source,
+            window_under_moving_window_source,
+        ));
 
         self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);
 

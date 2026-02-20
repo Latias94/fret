@@ -1610,6 +1610,26 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                         WindowRequest::SetOuterPosition { window, position } => {
                             if let Some(state) = self.windows.get(window) {
+                                #[cfg(target_os = "windows")]
+                                {
+                                    // On Windows, winit's `Position::Logical` is monitor-local.
+                                    // Convert to absolute physical pixels to make scripted window
+                                    // placement deterministic across multi-monitor setups.
+                                    let scale = state.window.scale_factor().max(0.000_001);
+                                    let x = (position.x as f64 * scale).round() as i32;
+                                    let y = (position.y as f64 * scale).round() as i32;
+                                    if let Some(hwnd) = Self::hwnd_for_window(state.window.as_ref())
+                                    {
+                                        let _ = super::win32::set_window_outer_position(hwnd, x, y);
+                                    } else {
+                                        state.window.set_outer_position(
+                                            winit::dpi::Position::Physical(
+                                                winit::dpi::PhysicalPosition::new(x, y),
+                                            ),
+                                        );
+                                    }
+                                }
+                                #[cfg(not(target_os = "windows"))]
                                 state
                                     .window
                                     .set_outer_position(winit::dpi::Position::Logical(

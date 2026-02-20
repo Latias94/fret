@@ -757,21 +757,32 @@ impl UiDiagnosticsService {
         current_window: AppWindowId,
         target: Option<&UiWindowTargetV1>,
     ) -> Option<AppWindowId> {
+        let first_seen = self
+            .known_windows
+            .iter()
+            .copied()
+            .min_by_key(|w| w.data().as_ffi());
+        let last_seen = self
+            .known_windows
+            .iter()
+            .copied()
+            .max_by_key(|w| w.data().as_ffi());
         match target.copied().unwrap_or(UiWindowTargetV1::Current) {
             UiWindowTargetV1::Current => Some(current_window),
-            UiWindowTargetV1::FirstSeen => self.known_windows.first().copied(),
+            UiWindowTargetV1::FirstSeen => first_seen,
             UiWindowTargetV1::FirstSeenOther => self
                 .known_windows
                 .iter()
                 .copied()
-                .find(|w| *w != current_window),
-            UiWindowTargetV1::LastSeen => self.known_windows.last().copied(),
+                .filter(|w| *w != current_window)
+                .min_by_key(|w| w.data().as_ffi()),
+            UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
-                .rev()
                 .copied()
-                .find(|w| *w != current_window),
+                .filter(|w| *w != current_window)
+                .max_by_key(|w| w.data().as_ffi()),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
@@ -838,6 +849,52 @@ impl UiDiagnosticsService {
                 }
                 _ => {}
             }
+
+            // Avoid migrating a newly started script before any per-window state is established.
+            // The first few steps typically establish window geometry and must run consistently.
+            if active.next_step == 0 {
+                return Some(active.anchor_window);
+            }
+
+            // Before a step caches any per-window state (pointer session / v2 step state), we may
+            // still need to "pin" execution to a specific window to avoid migration loops.
+            //
+            // Example: a window-targeted drag step (`drag_pointer_until`) can be repeatedly stolen
+            // by any window that happens to be producing frames. If the step keeps handing off to
+            // its intended window without ever initializing playback, timeouts may never decrement
+            // and tooling can hang waiting for `script.result.json` to complete.
+            //
+            // Prefer a stable window when the step targets:
+            // - `first_seen` (use the script's `anchor_window`)
+            // - `window_ffi` (resolve directly)
+            //
+            // Leave other relative targets (last_seen/other) migratable until per-window state is
+            // established; those depend on `known_windows`, which is maintained at runtime.
+            let step_window_target: Option<&UiWindowTargetV1> = match step {
+                UiActionStepV2::Click { window, .. }
+                | UiActionStepV2::PointerDown { window, .. }
+                | UiActionStepV2::PointerMove { window, .. }
+                | UiActionStepV2::PointerUp { window, .. }
+                | UiActionStepV2::DragPointer { window, .. }
+                | UiActionStepV2::DragPointerUntil { window, .. }
+                | UiActionStepV2::DragTo { window, .. }
+                | UiActionStepV2::SetWindowInnerSize { window, .. }
+                | UiActionStepV2::SetWindowOuterPosition { window, .. }
+                | UiActionStepV2::SetCursorInWindow { window, .. }
+                | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+                | UiActionStepV2::SetMouseButtons { window, .. }
+                | UiActionStepV2::RaiseWindow { window, .. }
+                | UiActionStepV2::WaitUntil { window, .. }
+                | UiActionStepV2::Assert { window, .. } => window.as_ref(),
+                _ => None,
+            };
+            match step_window_target.copied() {
+                Some(UiWindowTargetV1::FirstSeen) => return Some(active.anchor_window),
+                Some(UiWindowTargetV1::WindowFfi { window }) => {
+                    return Some(AppWindowId::from(KeyData::from_ffi(window)));
+                }
+                _ => {}
+            }
         }
 
         if let Some(session) = active.pointer_session.as_ref() {
@@ -848,6 +905,95 @@ impl UiDiagnosticsService {
             V2StepState::DragPointerUntil(state) => Some(state.playback.window),
             V2StepState::DragTo(state) => state.playback.as_ref().map(|p| p.window),
             _ => None,
+        }
+    }
+
+    fn active_step_window_target(active: &ActiveScript) -> Option<UiWindowTargetV1> {
+        let step = active.steps.get(active.next_step)?;
+        let step_window_target: Option<&UiWindowTargetV1> = match step {
+            UiActionStepV2::Click { window, .. }
+            | UiActionStepV2::PointerDown { window, .. }
+            | UiActionStepV2::PointerMove { window, .. }
+            | UiActionStepV2::PointerUp { window, .. }
+            | UiActionStepV2::DragPointer { window, .. }
+            | UiActionStepV2::DragPointerUntil { window, .. }
+            | UiActionStepV2::DragTo { window, .. }
+            | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowOuterPosition { window, .. }
+            | UiActionStepV2::SetCursorInWindow { window, .. }
+            | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+            | UiActionStepV2::SetMouseButtons { window, .. }
+            | UiActionStepV2::RaiseWindow { window, .. }
+            | UiActionStepV2::WaitUntil { window, .. }
+            | UiActionStepV2::Assert { window, .. } => window.as_ref(),
+            _ => None,
+        };
+        step_window_target.copied()
+    }
+
+    fn remap_script_per_window_state_for_migration(
+        active: &mut ActiveScript,
+        new_window: AppWindowId,
+        allow_remap_captured_drag: bool,
+    ) {
+        if let Some(session) = active.pointer_session.as_mut() {
+            session.window = new_window;
+        }
+        if let Some(state) = active.v2_step_state.as_mut() {
+            match state {
+                V2StepState::DragPointer(state) => state.window = new_window,
+                V2StepState::DragPointerUntil(state) => {
+                    // Avoid splitting a captured-pointer gesture across windows. `drag_pointer_until`
+                    // is allowed to "hold" the drag across frames; once we've emitted a down/move
+                    // segment, keep injecting into the original playback window unless the runner
+                    // has migrated the captured drag to a different window (ImGui-style tear-off).
+                    if (!state.down_issued && state.playback.frame == 0)
+                        || allow_remap_captured_drag
+                    {
+                        state.playback.window = new_window;
+                    }
+                }
+                V2StepState::DragTo(state) => {
+                    if let Some(playback) = state.playback.as_mut() {
+                        playback.window = new_window;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn can_migrate_for_current_target(active: &ActiveScript) -> bool {
+        if !matches!(
+            Self::active_step_window_target(active),
+            Some(UiWindowTargetV1::Current)
+        ) {
+            return false;
+        }
+
+        // Avoid splitting a captured-pointer gesture across windows. After a drag step has issued
+        // a pointer down, migrating execution to a different window would cause the corresponding
+        // pointer up to land in the wrong window and leave the original runtime drag state stuck.
+        match active.v2_step_state.as_ref() {
+            None => true,
+            Some(V2StepState::DragPointerUntil(state))
+                if state.step_index == active.next_step
+                    && !state.down_issued
+                    && state.playback.frame == 0 =>
+            {
+                true
+            }
+            Some(V2StepState::DragPointer(state))
+                if state.step_index == active.next_step && state.frame == 0 =>
+            {
+                true
+            }
+            Some(V2StepState::DragTo(state))
+                if state.step_index == active.next_step && state.playback.is_none() =>
+            {
+                true
+            }
+            _ => false,
         }
     }
 
@@ -1333,10 +1479,20 @@ impl UiDiagnosticsService {
             && let Some(script) = self.pending_script.take()
         {
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
+            // Prefer a deterministic anchor window when starting a script. The trigger touch can
+            // be observed by any window, and multi-window apps may produce frames in a different
+            // order across runs. Using the smallest observed window key (best-effort "first
+            // created") keeps `first_seen` window targets stable for scripts.
+            let anchor_window = self
+                .known_windows
+                .iter()
+                .copied()
+                .min_by_key(|w| w.data().as_ffi())
+                .unwrap_or(window);
             let mut active_script = ActiveScript {
                 steps: script.steps,
                 run_id,
-                anchor_window: window,
+                anchor_window,
                 next_step: 0,
                 event_log: Vec::new(),
                 event_log_dropped: 0,
@@ -1374,12 +1530,12 @@ impl UiDiagnosticsService {
                     bundle_dir: None,
                 },
             );
-            self.active_scripts.insert(window, active_script);
+            self.active_scripts.insert(anchor_window, active_script);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id,
                 updated_unix_ms: unix_ms_now(),
-                window: Some(window.data().as_ffi()),
+                window: Some(anchor_window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(0),
                 reason_code: None,
@@ -1391,6 +1547,8 @@ impl UiDiagnosticsService {
                     .map(|p| display_path(&self.cfg.out_dir, p)),
                 last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
+            app.request_redraw(anchor_window);
+            app.push_effect(Effect::RequestAnimationFrame(anchor_window));
         }
 
         // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
@@ -1399,25 +1557,71 @@ impl UiDiagnosticsService {
         // active script to whichever window is currently being driven.
         if !self.active_scripts.contains_key(&window) && self.active_scripts.len() == 1 {
             if let Some((&other_window, other_active)) = self.active_scripts.iter().next() {
-                let preferred = Self::preferred_window_for_active_script(other_active);
-                let dock_drag_current_window = app
-                    .find_drag_pointer_id(|d| {
-                        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                            || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-                            && d.dragging
-                    })
-                    .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.current_window));
-                let allow_migrate_for_dock_drag = dock_drag_current_window == Some(window);
+                let allow_migrate_for_current_target =
+                    Self::can_migrate_for_current_target(other_active);
+                let preferred: Option<AppWindowId> = if allow_migrate_for_current_target {
+                    None
+                } else {
+                    Self::preferred_window_for_active_script(other_active)
+                };
+                let allow_migrate_for_unobserved_preferred =
+                    preferred.is_some_and(|w| !self.per_window.contains_key(&w));
+                let dock_drag = dock_drag_runtime_state(app, self.known_windows.as_slice());
+                let dock_drag_source_window = dock_drag.as_ref().map(|drag| drag.source_window);
+                let allow_migrate_for_dock_drag = dock_drag_source_window == Some(window);
 
-                if preferred.is_none() || preferred == Some(window) || allow_migrate_for_dock_drag {
+                // Note: do not use `dock_drag.current_window` for migration decisions. Hover can
+                // legitimately change during a captured-pointer gesture; `dock_drag.source_window`
+                // is the stable ownership signal.
+
+                if preferred.is_none()
+                    || preferred == Some(window)
+                    || allow_migrate_for_dock_drag
+                    || allow_migrate_for_current_target
+                    || allow_migrate_for_unobserved_preferred
+                {
                     if let Some(mut active) = self.active_scripts.remove(&other_window) {
-                        if allow_migrate_for_dock_drag {
-                            if let Some(session) = active.pointer_session.as_mut() {
-                                session.window = window;
-                            }
+                        if allow_migrate_for_current_target
+                            || allow_migrate_for_unobserved_preferred
+                            || allow_migrate_for_dock_drag
+                        {
+                            let allow_remap_captured_drag = allow_migrate_for_dock_drag;
+                            Self::remap_script_per_window_state_for_migration(
+                                &mut active,
+                                window,
+                                allow_remap_captured_drag,
+                            );
                         }
                         self.active_scripts.insert(window, active);
+                    } else {
+                        tracing::debug!(
+                            target: "ui_diag_script",
+                            "script migrate requested but no active script found"
+                        );
                     }
+                } else {
+                    let step_window_target = match Self::active_step_window_target(other_active) {
+                        Some(UiWindowTargetV1::Current) => Some("current"),
+                        Some(UiWindowTargetV1::FirstSeen) => Some("first_seen"),
+                        Some(UiWindowTargetV1::FirstSeenOther) => Some("first_seen_other"),
+                        Some(UiWindowTargetV1::LastSeen) => Some("last_seen"),
+                        Some(UiWindowTargetV1::LastSeenOther) => Some("last_seen_other"),
+                        Some(UiWindowTargetV1::WindowFfi { .. }) => Some("window_ffi"),
+                        None => None,
+                    };
+                    tracing::debug!(
+                        target: "ui_diag_script",
+                        from_window_ffi = other_window.data().as_ffi(),
+                        to_window_ffi = window.data().as_ffi(),
+                        preferred_window_ffi = preferred.map(|w| w.data().as_ffi()),
+                        dock_drag_source_window_ffi = dock_drag_source_window
+                            .map(|w| w.data().as_ffi()),
+                        allow_migrate_for_unobserved_preferred,
+                        allow_migrate_for_dock_drag,
+                        step_index = other_active.next_step as u32,
+                        step_window_target,
+                        "script migration skipped"
+                    );
                 }
             };
         }
@@ -1508,45 +1712,83 @@ impl UiDiagnosticsService {
             active.last_reported_unix_ms = now_unix_ms;
         }
 
-        if let Some(pointer_id) = active.pending_cancel_cross_window_drag.take() {
-            if let Some(drag) = app.drag(pointer_id)
-                && (drag.cross_window_hover
+        if let Some(mut pending) = active.pending_cancel_cross_window_drag.take() {
+            let pointer_id = pending.pointer_id;
+            let step_index = active.next_step.min(u32::MAX as usize) as u32;
+            let mut canceled_any = false;
+
+            if let Some(drag) = app.drag(pointer_id) {
+                if drag.cross_window_hover
                     || drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
-            {
-                let step_index = active.next_step.min(u32::MAX as usize) as u32;
+                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                {
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "diag.cancel_drag".to_string(),
+                            step_index: Some(step_index),
+                            note: Some(format!(
+                                "pointer_id={} kind={:?} cross_window_hover={}",
+                                pointer_id.0, drag.kind, drag.cross_window_hover
+                            )),
+                            bundle_dir: None,
+                        },
+                    );
+                    app.cancel_drag(pointer_id);
+                    canceled_any = true;
+                }
+            }
+
+            if !canceled_any {
+                // Fallback: cancel any active dock drags. Some scripted sequences migrate across
+                // windows while a captured-pointer gesture is active; if the release is delivered
+                // to a different window, the original drag session can remain stuck. Prefer
+                // deterministically clearing dock drag state over hanging the suite.
+                let mut canceled: Vec<PointerId> = Vec::new();
+                while let Some(id) = app.find_drag_pointer_id(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                }) {
+                    app.cancel_drag(id);
+                    canceled.push(id);
+                }
+
                 push_script_event_log(
                     &mut active,
                     &self.cfg,
                     UiScriptEventLogEntryV1 {
                         unix_ms: unix_ms_now(),
-                        kind: "diag.cancel_drag".to_string(),
+                        kind: if canceled.is_empty() {
+                            "diag.cancel_drag.skip".to_string()
+                        } else {
+                            "diag.cancel_drag.fallback".to_string()
+                        },
                         step_index: Some(step_index),
                         note: Some(format!(
-                            "pointer_id={} kind={:?} cross_window_hover={}",
-                            pointer_id.0, drag.kind, drag.cross_window_hover
-                        )),
-                        bundle_dir: None,
-                    },
-                );
-                app.cancel_drag(pointer_id);
-            } else {
-                let step_index = active.next_step.min(u32::MAX as usize) as u32;
-                push_script_event_log(
-                    &mut active,
-                    &self.cfg,
-                    UiScriptEventLogEntryV1 {
-                        unix_ms: unix_ms_now(),
-                        kind: "diag.cancel_drag.skip".to_string(),
-                        step_index: Some(step_index),
-                        note: Some(format!(
-                            "pointer_id={} drag_present={}",
+                            "pointer_id={} drag_present={} canceled={:?}",
                             pointer_id.0,
-                            app.drag(pointer_id).is_some()
+                            app.drag(pointer_id).is_some(),
+                            canceled.iter().map(|id| id.0).collect::<Vec<_>>(),
                         )),
                         bundle_dir: None,
                     },
                 );
+
+                canceled_any = !canceled.is_empty();
+            }
+
+            // Retry cancellation for a bounded number of frames. Some runners update drag session
+            // state after input dispatch; a one-shot cancel can miss the window where the drag
+            // becomes visible.
+            if canceled_any {
+                // Keep cleared.
+            } else {
+                pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+                if pending.remaining_frames > 0 {
+                    active.pending_cancel_cross_window_drag = Some(pending);
+                }
             }
         }
 
@@ -2429,7 +2671,8 @@ impl UiDiagnosticsService {
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(predicate_window));
-                            let dock_drag_runtime = dock_drag_runtime_state(app);
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
                             let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
 
                             if let Some(snapshot) = semantics_snapshot {
@@ -2675,7 +2918,8 @@ impl UiDiagnosticsService {
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
                                 .and_then(|svc| svc.snapshot(predicate_window));
-                            let dock_drag_runtime = dock_drag_runtime_state(app);
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
                             let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
 
                             if let Some(snapshot) = semantics_snapshot {
@@ -2746,9 +2990,11 @@ impl UiDiagnosticsService {
                 click_count,
                 modifiers,
             } => {
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
+                if let Some(target_window) = self.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    target_window.as_ref(),
+                ) {
                     if target_window != window {
                         handoff_to = Some(target_window);
                         output
@@ -4021,9 +4267,8 @@ impl UiDiagnosticsService {
                                 session.position.x.0,
                                 session.position.y.0,
                             );
-                            let _ = write_mouse_buttons_override_window_v1(
+                            let _ = write_mouse_buttons_override_all_windows_v1(
                                 &self.cfg.out_dir,
-                                session.window,
                                 match session.button {
                                     UiMouseButtonV1::Left => Some(false),
                                     _ => None,
@@ -4037,7 +4282,8 @@ impl UiDiagnosticsService {
                                     _ => None,
                                 },
                             );
-                            active.pending_cancel_cross_window_drag = Some(pointer_id);
+                            active.pending_cancel_cross_window_drag =
+                                Some(PendingCancelCrossWindowDrag::new(pointer_id));
                             push_script_event_log(
                                 &mut active,
                                 &self.cfg,
@@ -4088,9 +4334,11 @@ impl UiDiagnosticsService {
                 });
 
                 if !step_has_state {
-                    if let Some(target_window) =
-                        self.resolve_window_target(window, target_window.as_ref())
-                    {
+                    if let Some(target_window) = self.resolve_window_target_for_active_step(
+                        window,
+                        anchor_window,
+                        target_window.as_ref(),
+                    ) {
                         if target_window != window {
                             handoff_to = Some(target_window);
                             output
@@ -4252,7 +4500,8 @@ impl UiDiagnosticsService {
                         drag_playback_last_position(&state).y.0,
                     );
                     if done {
-                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
+                        active.pending_cancel_cross_window_drag =
+                            Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
                         if let Some(ui) = ui {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
@@ -4299,9 +4548,11 @@ impl UiDiagnosticsService {
                 });
 
                 if !step_has_state {
-                    if let Some(target_window) =
-                        self.resolve_window_target(window, target_window.as_ref())
-                    {
+                    if let Some(target_window) = self.resolve_window_target_for_active_step(
+                        window,
+                        anchor_window,
+                        target_window.as_ref(),
+                    ) {
                         if target_window != window {
                             handoff_to = Some(target_window);
                             output
@@ -4361,13 +4612,24 @@ impl UiDiagnosticsService {
                     // window temporarily starved redraw callbacks), hand off back to the playback
                     // window before emitting any more input.
                     if state.playback.window != window {
-                        handoff_to = Some(state.playback.window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(state.playback.window));
-                        output.request_redraw = true;
-                        active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
-                        // Window-targeted: migrate before evaluating predicates or injecting input.
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        if state.remaining_frames == 0 {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-drag_pointer_until-timeout"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("drag_pointer_until_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            handoff_to = Some(state.playback.window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(state.playback.window));
+                            output.request_redraw = true;
+                            active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                            // Window-targeted: migrate before evaluating predicates or injecting input.
+                        }
                     } else {
                         // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
                         // previous frame), release immediately.
@@ -4399,7 +4661,8 @@ impl UiDiagnosticsService {
                             .global::<fret_runtime::WindowInputContextService>()
                             .and_then(|svc| svc.snapshot(window));
                         let predicate_ok = if let Some(snapshot) = semantics_snapshot {
-                            let dock_drag_runtime = dock_drag_runtime_state(app);
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
                             eval_predicate(
                                 snapshot,
                                 window_bounds,
@@ -4460,7 +4723,28 @@ impl UiDiagnosticsService {
                                         state.playback.button,
                                         release_pos,
                                     ));
-                                    active.pending_cancel_cross_window_drag = Some(PointerId(0));
+                                    let _ = write_mouse_buttons_override_all_windows_v1(
+                                        &self.cfg.out_dir,
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Left => Some(false),
+                                            _ => None,
+                                        },
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Right => Some(false),
+                                            _ => None,
+                                        },
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Middle => Some(false),
+                                            _ => None,
+                                        },
+                                    );
+                                    let drag_pointer_id = dock_drag_pointer_id_best_effort(
+                                        app,
+                                        self.known_windows.as_slice(),
+                                    )
+                                    .unwrap_or(PointerId(0));
+                                    active.pending_cancel_cross_window_drag =
+                                        Some(PendingCancelCrossWindowDrag::new(drag_pointer_id));
                                     active.v2_step_state = None;
                                     active.next_step = active.next_step.saturating_add(1);
                                     if self.cfg.script_auto_dump {
@@ -5052,7 +5336,8 @@ impl UiDiagnosticsService {
                     let input_ctx = app
                         .global::<fret_runtime::WindowInputContextService>()
                         .and_then(|svc| svc.snapshot(window));
-                    let dock_drag_runtime = dock_drag_runtime_state(app);
+                    let dock_drag_runtime =
+                        dock_drag_runtime_state(app, self.known_windows.as_slice());
                     if eval_predicate(
                         snapshot,
                         window_bounds,
@@ -5148,7 +5433,8 @@ impl UiDiagnosticsService {
                     let input_ctx = app
                         .global::<fret_runtime::WindowInputContextService>()
                         .and_then(|svc| svc.snapshot(window));
-                    let dock_drag_runtime = dock_drag_runtime_state(app);
+                    let dock_drag_runtime =
+                        dock_drag_runtime_state(app, self.known_windows.as_slice());
                     let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
@@ -5990,7 +6276,8 @@ impl UiDiagnosticsService {
                     );
                     output.request_redraw = true;
                     if done {
-                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
+                        active.pending_cancel_cross_window_drag =
+                            Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         if self.cfg.script_auto_dump {
@@ -9509,7 +9796,7 @@ struct ActiveScript {
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     pointer_session: Option<V2PointerSessionState>,
-    pending_cancel_cross_window_drag: Option<PointerId>,
+    pending_cancel_cross_window_drag: Option<PendingCancelCrossWindowDrag>,
     last_reported_step: Option<usize>,
     last_reported_unix_ms: u64,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
@@ -9522,6 +9809,29 @@ struct ActiveScript {
     overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PendingCancelCrossWindowDrag {
+    pointer_id: PointerId,
+    remaining_frames: u32,
+}
+
+impl PendingCancelCrossWindowDrag {
+    // This exists as a diagnostics-only escape hatch: when scripted playback migrates across
+    // windows during a captured-pointer drag, the synthetic `PointerUp` can land in a different
+    // window than the corresponding `PointerDown`. That can leave a dock drag session stuck.
+    //
+    // Keep the retry window bounded so we don't accidentally cancel *future* drags started by
+    // later script steps.
+    const RETRY_FRAMES: u32 = 12;
+
+    fn new(pointer_id: PointerId) -> Self {
+        Self {
+            pointer_id,
+            remaining_frames: Self::RETRY_FRAMES,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -16663,6 +16973,7 @@ fn pick_best_match<'a>(
 #[derive(Clone, Copy, Debug)]
 struct DockDragRuntimeState {
     dragging: bool,
+    source_window: AppWindowId,
     current_window: AppWindowId,
     moving_window: Option<AppWindowId>,
     window_under_moving_window: Option<AppWindowId>,
@@ -16672,24 +16983,61 @@ struct DockDragRuntimeState {
     window_under_cursor_source: fret_runtime::WindowUnderCursorSource,
 }
 
-fn dock_drag_runtime_state(app: &fret_app::App) -> Option<DockDragRuntimeState> {
-    let pointer_id = app.find_drag_pointer_id(|d| {
+fn dock_drag_pointer_id_best_effort(
+    app: &fret_app::App,
+    known_windows: &[AppWindowId],
+) -> Option<PointerId> {
+    if let Some(pointer_id) = app.find_drag_pointer_id(|d| {
         (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
             || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
             && d.dragging
-    })?;
-    let drag = app.drag(pointer_id)?;
-    Some(DockDragRuntimeState {
-        dragging: drag.dragging,
-        current_window: drag.current_window,
-        moving_window: drag.moving_window,
-        window_under_moving_window: drag.window_under_moving_window,
-        window_under_moving_window_source: drag.window_under_moving_window_source,
-        transparent_payload_applied: drag.transparent_payload_applied,
-        transparent_payload_mouse_passthrough_applied: drag
-            .transparent_payload_mouse_passthrough_applied,
-        window_under_cursor_source: drag.window_under_cursor_source,
-    })
+    }) {
+        return Some(pointer_id);
+    }
+
+    let store = app.global::<fret_runtime::WindowInteractionDiagnosticsStore>()?;
+    for window in known_windows.iter().rev().copied() {
+        let docking = store.docking_latest_for_window(window)?;
+        if let Some(drag) = docking.dock_drag
+            && drag.dragging
+        {
+            // `docking_latest_for_window` is intentionally stable across frames, which makes it
+            // useful for debugging but also means it can be stale. Only treat it as authoritative
+            // when the drag session is still present in the live `App` drag registry.
+            if app.drag(drag.pointer_id).is_some() {
+                return Some(drag.pointer_id);
+            }
+        }
+    }
+
+    None
+}
+
+fn dock_drag_runtime_state(
+    app: &fret_app::App,
+    known_windows: &[AppWindowId],
+) -> Option<DockDragRuntimeState> {
+    if let Some(pointer_id) = dock_drag_pointer_id_best_effort(app, known_windows)
+        && let Some(drag) = app.drag(pointer_id)
+    {
+        return Some(DockDragRuntimeState {
+            dragging: drag.dragging,
+            source_window: drag.source_window,
+            current_window: drag.current_window,
+            moving_window: drag.moving_window,
+            window_under_moving_window: drag.window_under_moving_window,
+            window_under_moving_window_source: drag.window_under_moving_window_source,
+            transparent_payload_applied: drag.transparent_payload_applied,
+            transparent_payload_mouse_passthrough_applied: drag
+                .transparent_payload_mouse_passthrough_applied,
+            window_under_cursor_source: drag.window_under_cursor_source,
+        });
+    }
+
+    // If the drag session cannot be found in `App`, treat it as inactive. The per-window docking
+    // diagnostics store may retain stale "latest" snapshots across frames (by design), which is
+    // useful for debugging but unsuitable as a source of truth for scripted gates.
+    None
 }
 
 fn dock_drag_window_under_cursor_source_is(
@@ -17467,18 +17815,28 @@ fn resolve_window_target_from_known_windows(
     known_windows: &[AppWindowId],
     target: UiWindowTargetV1,
 ) -> Option<AppWindowId> {
+    let first_seen = known_windows
+        .iter()
+        .copied()
+        .min_by_key(|w| w.data().as_ffi());
+    let last_seen = known_windows
+        .iter()
+        .copied()
+        .max_by_key(|w| w.data().as_ffi());
     match target {
         UiWindowTargetV1::Current => Some(current_window),
-        UiWindowTargetV1::FirstSeen => known_windows.first().copied(),
-        UiWindowTargetV1::FirstSeenOther => {
-            known_windows.iter().copied().find(|w| *w != current_window)
-        }
-        UiWindowTargetV1::LastSeen => known_windows.last().copied(),
+        UiWindowTargetV1::FirstSeen => first_seen,
+        UiWindowTargetV1::FirstSeenOther => known_windows
+            .iter()
+            .copied()
+            .filter(|w| *w != current_window)
+            .min_by_key(|w| w.data().as_ffi()),
+        UiWindowTargetV1::LastSeen => last_seen,
         UiWindowTargetV1::LastSeenOther => known_windows
             .iter()
-            .rev()
             .copied()
-            .find(|w| *w != current_window),
+            .filter(|w| *w != current_window)
+            .max_by_key(|w| w.data().as_ffi()),
         UiWindowTargetV1::WindowFfi { window } => {
             let want = AppWindowId::from(KeyData::from_ffi(window));
             known_windows.contains(&want).then_some(want)
@@ -18171,6 +18529,30 @@ fn write_mouse_buttons_override_window_v1(
     middle: Option<bool>,
 ) -> Result<(), std::io::Error> {
     let mut payload = format!("schema_version=1\nwindow={}\n", window.data().as_ffi());
+    if let Some(v) = left {
+        payload.push_str(&format!("left={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = right {
+        payload.push_str(&format!("right={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = middle {
+        payload.push_str(&format!("middle={}\n", if v { 1 } else { 0 }));
+    }
+    let text_path = out_dir.join("mouse_buttons.override.txt");
+    let trigger_path = out_dir.join("mouse_buttons.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)?;
+    Ok(())
+}
+
+fn write_mouse_buttons_override_all_windows_v1(
+    out_dir: &Path,
+    left: Option<bool>,
+    right: Option<bool>,
+    middle: Option<bool>,
+) -> Result<(), std::io::Error> {
+    let mut payload = "schema_version=1\n".to_string();
     if let Some(v) = left {
         payload.push_str(&format!("left={}\n", if v { 1 } else { 0 }));
     }

@@ -190,4 +190,3 @@ pub fn dock_graph_signature_for_window(
         fingerprint64,
     }
 }
-

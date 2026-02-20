@@ -205,6 +205,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     left_mouse_down: bool,
     dock_tearoff_follow: Option<DockTearoffFollow>,
     dock_floating_windows: HashSet<fret_core::AppWindowId>,
+    dock_drag_pointer_capture: Option<(fret_core::PointerId, fret_core::AppWindowId)>,
 
     tick_id: TickId,
     frame_id: FrameId,
@@ -705,11 +706,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        let _ = window;
         self.left_mouse_down
-            || self
-                .windows
-                .get(window)
-                .is_some_and(|w| w.platform.input.pressed_buttons.left)
     }
 }
 

@@ -262,6 +262,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
                 self.route_internal_drag_hover_from_cursor();
                 let _ = self.update_dock_tearoff_follow();
+                self.sync_dock_drag_pointer_capture();
                 self.drain_effects(event_loop);
             }
             DeviceEvent::Button {
@@ -1104,6 +1105,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let _ = self.update_dock_tearoff_follow();
 
+                let dock_drag_capture = self
+                    .dock_drag_pointer_id()
+                    .and_then(|pointer_id| {
+                        self.app
+                            .drag(pointer_id)
+                            .map(|d| (pointer_id, d.source_window))
+                    })
+                    .filter(|(_pointer_id, window)| self.windows.contains_key(*window));
+
                 if let Some(token) = external_drag_token {
                     let paths = self.external_drop.paths(token).unwrap_or(&[]);
                     let kind = ExternalDragKind::OverFiles(fret_runner_winit::external_drag_files(
@@ -1117,9 +1127,49 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
 
                 for evt in mapped {
-                    self.deliver_window_event_now(app_window, &evt);
+                    let mut delivered = false;
+                    if let Some((dock_pointer_id, dock_source_window)) = dock_drag_capture
+                        && dock_source_window != app_window
+                    {
+                        if let Event::Pointer(fret_core::PointerEvent::Move {
+                            pointer_id,
+                            position: _,
+                            buttons,
+                            modifiers,
+                            pointer_type,
+                        }) = &evt
+                            && *pointer_id == dock_pointer_id
+                        {
+                            let pos = self
+                                .cursor_screen_pos
+                                .and_then(|screen| {
+                                    self.local_pos_for_window(dock_source_window, screen)
+                                })
+                                .or_else(|| {
+                                    self.windows
+                                        .get(dock_source_window)
+                                        .map(|w| w.platform.input.cursor_pos)
+                                })
+                                .unwrap_or(pos);
+                            self.deliver_window_event_now(
+                                dock_source_window,
+                                &Event::Pointer(fret_core::PointerEvent::Move {
+                                    pointer_id: *pointer_id,
+                                    position: pos,
+                                    buttons: *buttons,
+                                    modifiers: *modifiers,
+                                    pointer_type: *pointer_type,
+                                }),
+                            );
+                            delivered = true;
+                        }
+                    }
+                    if !delivered {
+                        self.deliver_window_event_now(app_window, &evt);
+                    }
                 }
 
+                self.sync_dock_drag_pointer_capture();
                 self.route_internal_drag_hover_from_cursor();
                 self.drain_effects(event_loop);
             }
@@ -1142,6 +1192,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     #[cfg(target_os = "macos")]
                     self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
                 }
+
+                self.sync_dock_drag_pointer_capture();
+
+                let dock_drag_capture = self
+                    .dock_drag_pointer_id()
+                    .and_then(|pointer_id| {
+                        self.app
+                            .drag(pointer_id)
+                            .map(|d| (pointer_id, d.source_window))
+                    })
+                    .filter(|(_pointer_id, window)| self.windows.contains_key(*window));
+                let dock_drag_capture_pos = self.cursor_screen_pos;
 
                 let mut saw_left_down = false;
                 let mut saw_left_up = false;
@@ -1198,7 +1260,81 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
 
                 for evt in mapped {
-                    self.deliver_window_event_now(app_window, &evt);
+                    let mut delivered = false;
+                    if let Some((dock_pointer_id, dock_source_window)) = dock_drag_capture
+                        && dock_source_window != app_window
+                    {
+                        match &evt {
+                            Event::Pointer(fret_core::PointerEvent::Up {
+                                pointer_id,
+                                position: _,
+                                button,
+                                modifiers,
+                                is_click,
+                                click_count,
+                                pointer_type,
+                            }) if *pointer_id == dock_pointer_id => {
+                                let pos = dock_drag_capture_pos
+                                    .and_then(|screen| {
+                                        self.local_pos_for_window(dock_source_window, screen)
+                                    })
+                                    .or_else(|| {
+                                        self.windows
+                                            .get(dock_source_window)
+                                            .map(|w| w.platform.input.cursor_pos)
+                                    })
+                                    .unwrap_or_default();
+                                self.deliver_window_event_now(
+                                    dock_source_window,
+                                    &Event::Pointer(fret_core::PointerEvent::Up {
+                                        pointer_id: *pointer_id,
+                                        position: pos,
+                                        button: *button,
+                                        modifiers: *modifiers,
+                                        is_click: *is_click,
+                                        click_count: *click_count,
+                                        pointer_type: *pointer_type,
+                                    }),
+                                );
+                                delivered = true;
+                            }
+                            Event::Pointer(fret_core::PointerEvent::Down {
+                                pointer_id,
+                                position: _,
+                                button,
+                                modifiers,
+                                click_count,
+                                pointer_type,
+                            }) if *pointer_id == dock_pointer_id => {
+                                let pos = dock_drag_capture_pos
+                                    .and_then(|screen| {
+                                        self.local_pos_for_window(dock_source_window, screen)
+                                    })
+                                    .or_else(|| {
+                                        self.windows
+                                            .get(dock_source_window)
+                                            .map(|w| w.platform.input.cursor_pos)
+                                    })
+                                    .unwrap_or_default();
+                                self.deliver_window_event_now(
+                                    dock_source_window,
+                                    &Event::Pointer(fret_core::PointerEvent::Down {
+                                        pointer_id: *pointer_id,
+                                        position: pos,
+                                        button: *button,
+                                        modifiers: *modifiers,
+                                        click_count: *click_count,
+                                        pointer_type: *pointer_type,
+                                    }),
+                                );
+                                delivered = true;
+                            }
+                            _ => {}
+                        }
+                    }
+                    if !delivered {
+                        self.deliver_window_event_now(app_window, &evt);
+                    }
                 }
                 self.drain_effects(event_loop);
             }

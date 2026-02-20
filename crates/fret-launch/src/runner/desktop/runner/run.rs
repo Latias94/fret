@@ -91,6 +91,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             left_mouse_down: false,
             dock_tearoff_follow: None,
             dock_floating_windows: HashSet::new(),
+            dock_drag_pointer_capture: None,
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_environment_poll_at: now,

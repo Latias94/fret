@@ -171,6 +171,7 @@ pub struct DockingSettingsV1 {
     pub dock_hint_scale_inner: f32,
     pub dock_hint_scale_outer: f32,
     pub transparent_payload_during_follow: bool,
+    pub follow_window_during_drag: bool,
     pub transparent_payload_alpha: f32,
 }
 
@@ -182,6 +183,7 @@ impl Default for DockingSettingsV1 {
             dock_hint_scale_inner: 1.0,
             dock_hint_scale_outer: 1.0,
             transparent_payload_during_follow: false,
+            follow_window_during_drag: false,
             transparent_payload_alpha: 0.5,
         }
     }
@@ -264,6 +266,7 @@ impl SettingsFileV1 {
             dock_hint_scale_inner,
             dock_hint_scale_outer,
             transparent_payload_during_follow: self.docking.transparent_payload_during_follow,
+            follow_window_during_drag: self.docking.follow_window_during_drag,
             transparent_payload_alpha,
             ..Default::default()
         }
@@ -460,6 +463,17 @@ mod tests {
             settings
                 .docking_interaction_settings()
                 .transparent_payload_during_follow
+        );
+    }
+
+    #[test]
+    fn docking_follow_window_during_drag_is_forwarded() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.follow_window_during_drag = true;
+        assert!(
+            settings
+                .docking_interaction_settings()
+                .follow_window_during_drag
         );
     }
 

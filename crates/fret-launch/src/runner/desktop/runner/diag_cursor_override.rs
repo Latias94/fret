@@ -14,6 +14,10 @@ pub(super) struct DiagCursorScreenPosOverride {
     request_path: PathBuf,
     trigger_path: PathBuf,
     last_trigger_mtime: Option<SystemTime>,
+    last_window: Option<AppWindowId>,
+    last_kind: Option<CursorOverrideKindV1>,
+    last_local_px: Option<(f64, f64)>,
+    last_screen_pos: Option<PhysicalPosition<f64>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,8 +35,18 @@ fn win32_decoration_offset_for_window(
     let RawWindowHandle::Win32(handle) = handle.as_raw() else {
         return None;
     };
-    let hwnd = handle.hwnd.get();
+    let hwnd = super::win32::root_hwnd(handle.hwnd.get());
     super::win32::decoration_offset_for_hwnd(hwnd)
+}
+
+#[cfg(target_os = "windows")]
+fn win32_client_origin_screen_for_window(window: &dyn Window) -> Option<PhysicalPosition<f64>> {
+    let handle = window.window_handle().ok()?;
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return None;
+    };
+    let hwnd = super::win32::root_hwnd(handle.hwnd.get());
+    super::win32::client_origin_screen_for_hwnd(hwnd)
 }
 
 impl DiagCursorScreenPosOverride {
@@ -52,6 +66,10 @@ impl DiagCursorScreenPosOverride {
             request_path: out_dir.join("cursor_screen_pos.override.txt"),
             trigger_path: out_dir.join("cursor_screen_pos.touch"),
             last_trigger_mtime: None,
+            last_window: None,
+            last_kind: None,
+            last_local_px: None,
+            last_screen_pos: None,
         })
     }
 
@@ -76,7 +94,16 @@ impl DiagCursorScreenPosOverride {
         };
 
         let screen_pos = match kind {
-            CursorOverrideKindV1::WindowClientPhysical => {
+            CursorOverrideKindV1::ScreenPhysical => {
+                self.last_window = None;
+                self.last_kind = Some(kind);
+                self.last_local_px = None;
+                let p = PhysicalPosition::new(x_px, y_px);
+                self.last_screen_pos = Some(p);
+                p
+            }
+            CursorOverrideKindV1::WindowClientPhysical
+            | CursorOverrideKindV1::WindowClientLogical => {
                 let Some(window_ffi) = window_ffi else {
                     return false;
                 };
@@ -84,38 +111,86 @@ impl DiagCursorScreenPosOverride {
                 let Some(state) = runner.windows.get(window) else {
                     return false;
                 };
-                let Ok(outer) = state.window.outer_position() else {
-                    return false;
-                };
                 #[cfg(target_os = "windows")]
-                let deco = win32_decoration_offset_for_window(state.window.as_ref())
-                    .unwrap_or_else(|| state.window.surface_position());
+                let origin = win32_client_origin_screen_for_window(state.window.as_ref())
+                    .or_else(|| {
+                        let outer = state.window.outer_position().ok()?;
+                        let deco = win32_decoration_offset_for_window(state.window.as_ref())
+                            .unwrap_or_else(|| state.window.surface_position());
+                        Some(super::window::client_origin_screen(outer, deco))
+                    })
+                    .map(|p| (p.x, p.y));
                 #[cfg(not(target_os = "windows"))]
-                let deco = state.window.surface_position();
-                let origin = super::window::client_origin_screen(outer, deco);
-                PhysicalPosition::new(origin.x + x_px, origin.y + y_px)
+                let origin = {
+                    let outer = state.window.outer_position().ok()?;
+                    let deco = state.window.surface_position();
+                    Some(super::window::client_origin_screen(outer, deco)).map(|p| (p.x, p.y))
+                };
+                let Some((origin_x, origin_y)) = origin else {
+                    return false;
+                };
+
+                // Diagnostics scripts typically inject pointer events in window-client coordinates.
+                // When the runner also moves OS windows (tear-off follow), using the *current* window
+                // origin would incorrectly drag the simulated cursor along with the moving window.
+                //
+                // To better approximate an OS cursor in screen space, treat consecutive window-client
+                // overrides as *relative motion* deltas and integrate them into the previous screen
+                // position when possible.
+                let can_integrate_base =
+                    self.last_window == Some(window) && self.last_kind == Some(kind);
+
+                let (dx, dy) = if let Some((last_x, last_y)) = self.last_local_px
+                    && can_integrate_base
+                {
+                    (x_px - last_x, y_px - last_y)
+                } else {
+                    (0.0, 0.0)
+                };
+
+                // Heuristic: only integrate small, stepwise updates. Large jumps are typically
+                // "absolute" cursor placements (e.g. pointer-down targeting a node) and should
+                // snap to the window's current origin.
+                let max_delta_px = 256.0;
+                let can_integrate =
+                    can_integrate_base && dx.abs() <= max_delta_px && dy.abs() <= max_delta_px;
+
+                let (dx_screen, dy_screen) = match kind {
+                    CursorOverrideKindV1::WindowClientPhysical => (dx, dy),
+                    CursorOverrideKindV1::WindowClientLogical => {
+                        let scale = state.window.scale_factor().max(0.000_001);
+                        (dx * scale, dy * scale)
+                    }
+                    CursorOverrideKindV1::ScreenPhysical => unreachable!(),
+                };
+
+                let pos = if can_integrate
+                    && let Some(prev) = self.last_screen_pos
+                    && self.last_local_px.is_some()
+                {
+                    PhysicalPosition::new(prev.x + dx_screen, prev.y + dy_screen)
+                } else {
+                    match kind {
+                        CursorOverrideKindV1::WindowClientPhysical => {
+                            PhysicalPosition::new(origin_x + x_px, origin_y + y_px)
+                        }
+                        CursorOverrideKindV1::WindowClientLogical => {
+                            let scale = state.window.scale_factor().max(0.000_001);
+                            PhysicalPosition::new(
+                                origin_x + (x_px * scale),
+                                origin_y + (y_px * scale),
+                            )
+                        }
+                        CursorOverrideKindV1::ScreenPhysical => unreachable!(),
+                    }
+                };
+
+                self.last_window = Some(window);
+                self.last_kind = Some(kind);
+                self.last_local_px = Some((x_px, y_px));
+                self.last_screen_pos = Some(pos);
+                pos
             }
-            CursorOverrideKindV1::WindowClientLogical => {
-                let Some(window_ffi) = window_ffi else {
-                    return false;
-                };
-                let window = AppWindowId::from(KeyData::from_ffi(window_ffi));
-                let Some(state) = runner.windows.get(window) else {
-                    return false;
-                };
-                let Ok(outer) = state.window.outer_position() else {
-                    return false;
-                };
-                #[cfg(target_os = "windows")]
-                let deco = win32_decoration_offset_for_window(state.window.as_ref())
-                    .unwrap_or_else(|| state.window.surface_position());
-                #[cfg(not(target_os = "windows"))]
-                let deco = state.window.surface_position();
-                let origin = super::window::client_origin_screen(outer, deco);
-                let scale = state.window.scale_factor().max(0.000_001);
-                PhysicalPosition::new(origin.x + (x_px * scale), origin.y + (y_px * scale))
-            }
-            CursorOverrideKindV1::ScreenPhysical => PhysicalPosition::new(x_px, y_px),
         };
 
         runner.cursor_screen_pos = Some(screen_pos);
