@@ -28,7 +28,7 @@ webview-wry = ["dep:fret-webview", "dep:fret-webview-wry", "fret-webview-wry/wry
 fret-app = { version = "0.1.0", path = "../fret-app" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
-fret-render = { version = "0.1.0", package = "fret-render-wgpu", path = "../fret-render-wgpu" }
+fret-render = { version = "0.1.0", path = "../fret-render" }
 fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
 anyhow.workspace = true
 bytemuck.workspace = true

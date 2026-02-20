@@ -2271,7 +2271,7 @@ dependencies = [
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
- "fret-render-wgpu",
+ "fret-render",
  "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",

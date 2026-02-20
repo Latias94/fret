@@ -4,9 +4,13 @@
 //! historical `fret-render` crate name stable while we split backend implementations into
 //! explicit crates.
 
+#[cfg(feature = "backend-wgpu")]
 pub use fret_render_wgpu::*;
 
-#[cfg(test)]
+#[cfg(not(any(feature = "backend-wgpu")))]
+compile_error!("fret-render requires at least one backend feature enabled (e.g. `backend-wgpu`).");
+
+#[cfg(all(test, feature = "backend-wgpu"))]
 mod tests {
     use super::*;
 
