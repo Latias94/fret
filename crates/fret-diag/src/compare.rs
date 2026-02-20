@@ -1412,6 +1412,12 @@ pub(super) struct PerfThresholds {
     pub(super) max_pointer_move_global_changes: Option<u64>,
     pub(super) min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64>,
     pub(super) max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
+    pub(super) max_renderer_encode_scene_us: Option<u64>,
+    pub(super) max_renderer_upload_us: Option<u64>,
+    pub(super) max_renderer_record_passes_us: Option<u64>,
+    pub(super) max_renderer_encoder_finish_us: Option<u64>,
+    pub(super) max_renderer_prepare_text_us: Option<u64>,
+    pub(super) max_renderer_prepare_svg_us: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -1431,6 +1437,12 @@ impl PerfThresholds {
             || self
                 .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
                 .is_some()
+            || self.max_renderer_encode_scene_us.is_some()
+            || self.max_renderer_upload_us.is_some()
+            || self.max_renderer_record_passes_us.is_some()
+            || self.max_renderer_encoder_finish_us.is_some()
+            || self.max_renderer_prepare_text_us.is_some()
+            || self.max_renderer_prepare_svg_us.is_some()
     }
 }
 
@@ -1553,6 +1565,24 @@ pub(super) fn read_perf_baseline_file(
                 .and_then(|m| {
                     m.get("max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
                 })
+                .and_then(|v| v.as_u64()),
+            max_renderer_encode_scene_us: t
+                .and_then(|m| m.get("max_renderer_encode_scene_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_upload_us: t
+                .and_then(|m| m.get("max_renderer_upload_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_record_passes_us: t
+                .and_then(|m| m.get("max_renderer_record_passes_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_encoder_finish_us: t
+                .and_then(|m| m.get("max_renderer_encoder_finish_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_prepare_text_us: t
+                .and_then(|m| m.get("max_renderer_prepare_text_us"))
+                .and_then(|v| v.as_u64()),
+            max_renderer_prepare_svg_us: t
+                .and_then(|m| m.get("max_renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64()),
         };
 
@@ -1706,6 +1736,24 @@ pub(super) fn scan_perf_threshold_failures(
     max_pointer_move_global_changes: u64,
     max_run_paint_cache_hit_test_only_replay_allowed: u64,
     max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch: u64,
+    observed_renderer_encode_scene_us: u64,
+    max_renderer_encode_scene_us: u64,
+    p95_renderer_encode_scene_us: u64,
+    observed_renderer_upload_us: u64,
+    max_renderer_upload_us: u64,
+    p95_renderer_upload_us: u64,
+    observed_renderer_record_passes_us: u64,
+    max_renderer_record_passes_us: u64,
+    p95_renderer_record_passes_us: u64,
+    observed_renderer_encoder_finish_us: u64,
+    max_renderer_encoder_finish_us: u64,
+    p95_renderer_encoder_finish_us: u64,
+    observed_renderer_prepare_text_us: u64,
+    max_renderer_prepare_text_us: u64,
+    p95_renderer_prepare_text_us: u64,
+    observed_renderer_prepare_svg_us: u64,
+    max_renderer_prepare_svg_us: u64,
+    p95_renderer_prepare_svg_us: u64,
     evidence_bundle_total: Option<&Path>,
     evidence_run_index_total: Option<u64>,
     evidence_bundle_layout: Option<&Path>,
@@ -1765,6 +1813,28 @@ pub(super) fn scan_perf_threshold_failures(
     ) = resolve_threshold(
         cli.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
         baseline.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+    );
+    let (threshold_renderer_encode_scene, source_renderer_encode_scene) = resolve_threshold(
+        cli.max_renderer_encode_scene_us,
+        baseline.max_renderer_encode_scene_us,
+    );
+    let (threshold_renderer_upload, source_renderer_upload) =
+        resolve_threshold(cli.max_renderer_upload_us, baseline.max_renderer_upload_us);
+    let (threshold_renderer_record_passes, source_renderer_record_passes) = resolve_threshold(
+        cli.max_renderer_record_passes_us,
+        baseline.max_renderer_record_passes_us,
+    );
+    let (threshold_renderer_encoder_finish, source_renderer_encoder_finish) = resolve_threshold(
+        cli.max_renderer_encoder_finish_us,
+        baseline.max_renderer_encoder_finish_us,
+    );
+    let (threshold_renderer_prepare_text, source_renderer_prepare_text) = resolve_threshold(
+        cli.max_renderer_prepare_text_us,
+        baseline.max_renderer_prepare_text_us,
+    );
+    let (threshold_renderer_prepare_svg, source_renderer_prepare_svg) = resolve_threshold(
+        cli.max_renderer_prepare_svg_us,
+        baseline.max_renderer_prepare_svg_us,
     );
 
     if let Some(threshold_us) = threshold_total
@@ -1934,6 +2004,116 @@ pub(super) fn scan_perf_threshold_failures(
             }));
         }
     }
+
+    if let Some(threshold_us) = threshold_renderer_encode_scene
+        && observed_renderer_encode_scene_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_encode_scene_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_encode_scene,
+            "actual_us": observed_renderer_encode_scene_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_encode_scene_us,
+            "actual_p95_us": p95_renderer_encode_scene_us,
+            "outlier_suspected": p95_renderer_encode_scene_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_renderer_upload
+        && observed_renderer_upload_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_upload_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_upload,
+            "actual_us": observed_renderer_upload_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_upload_us,
+            "actual_p95_us": p95_renderer_upload_us,
+            "outlier_suspected": p95_renderer_upload_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_renderer_record_passes
+        && observed_renderer_record_passes_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_record_passes_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_record_passes,
+            "actual_us": observed_renderer_record_passes_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_record_passes_us,
+            "actual_p95_us": p95_renderer_record_passes_us,
+            "outlier_suspected": p95_renderer_record_passes_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_renderer_encoder_finish
+        && observed_renderer_encoder_finish_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_encoder_finish_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_encoder_finish,
+            "actual_us": observed_renderer_encoder_finish_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_encoder_finish_us,
+            "actual_p95_us": p95_renderer_encoder_finish_us,
+            "outlier_suspected": p95_renderer_encoder_finish_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_renderer_prepare_text
+        && observed_renderer_prepare_text_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_prepare_text_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_prepare_text,
+            "actual_us": observed_renderer_prepare_text_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_prepare_text_us,
+            "actual_p95_us": p95_renderer_prepare_text_us,
+            "outlier_suspected": p95_renderer_prepare_text_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+    if let Some(threshold_us) = threshold_renderer_prepare_svg
+        && observed_renderer_prepare_svg_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "renderer_prepare_svg_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_renderer_prepare_svg,
+            "actual_us": observed_renderer_prepare_svg_us,
+            "actual_aggregate": observed_agg.as_str(),
+            "actual_max_us": max_renderer_prepare_svg_us,
+            "actual_p95_us": p95_renderer_prepare_svg_us,
+            "outlier_suspected": p95_renderer_prepare_svg_us <= threshold_us,
+            "script": script,
+            "sort": sort.as_str(),
+            "evidence_bundle": evidence_bundle.clone(),
+            "evidence_run_index": evidence_run_index,
+        }));
+    }
+
     if let Some(threshold) = threshold_min_run_paint_cache_hit_test_only_replay_allowed
         && max_run_paint_cache_hit_test_only_replay_allowed < threshold
     {
