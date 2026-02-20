@@ -6265,6 +6265,158 @@ mod tests {
     }
 
     #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_keycap_emoji() {
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "1️⃣ hello";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let mut boundaries: Vec<usize> = Vec::new();
+        boundaries.push(0);
+        let mut cursor = 0usize;
+        for g in content.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.push(cursor.min(content.len()));
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        let mut last_x = 0.0_f32;
+        for idx in boundaries {
+            assert!(
+                content.is_char_boundary(idx),
+                "expected grapheme boundary to be a char boundary: idx={idx}"
+            );
+            let x = text.caret_x(blob, idx).expect("caret_x");
+            assert!(
+                x.0.is_finite(),
+                "expected caret_x to be finite for idx={idx}, got {x:?}"
+            );
+            assert!(
+                x.0 + 0.01 >= last_x,
+                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
+            );
+            last_x = x.0;
+
+            let rect = text
+                .caret_rect(blob, idx, CaretAffinity::Downstream)
+                .expect("caret rect");
+            assert!(
+                rect.origin.x.0.is_finite()
+                    && rect.origin.y.0.is_finite()
+                    && rect.size.width.0.is_finite()
+                    && rect.size.height.0.is_finite(),
+                "expected caret rect to be finite; idx={idx} rect={rect:?}"
+            );
+            assert!(
+                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
+                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
+            );
+        }
+
+        text.release(blob);
+    }
+
+    #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_regional_indicator_flag() {
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "🇺🇸 hello";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let mut boundaries: Vec<usize> = Vec::new();
+        boundaries.push(0);
+        let mut cursor = 0usize;
+        for g in content.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.push(cursor.min(content.len()));
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        let mut last_x = 0.0_f32;
+        for idx in boundaries {
+            assert!(
+                content.is_char_boundary(idx),
+                "expected grapheme boundary to be a char boundary: idx={idx}"
+            );
+            let x = text.caret_x(blob, idx).expect("caret_x");
+            assert!(
+                x.0.is_finite(),
+                "expected caret_x to be finite for idx={idx}, got {x:?}"
+            );
+            assert!(
+                x.0 + 0.01 >= last_x,
+                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
+            );
+            last_x = x.0;
+
+            let rect = text
+                .caret_rect(blob, idx, CaretAffinity::Downstream)
+                .expect("caret rect");
+            assert!(
+                rect.origin.x.0.is_finite()
+                    && rect.origin.y.0.is_finite()
+                    && rect.size.width.0.is_finite()
+                    && rect.size.height.0.is_finite(),
+                "expected caret rect to be finite; idx={idx} rect={rect:?}"
+            );
+            assert!(
+                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
+                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
+            );
+        }
+
+        text.release(blob);
+    }
+
+    #[test]
     fn grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji() {
         use std::collections::HashSet;
         use unicode_segmentation::UnicodeSegmentation as _;

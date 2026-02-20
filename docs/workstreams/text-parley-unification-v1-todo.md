@@ -76,6 +76,8 @@ Tracking format:
   - Evidence start:
     - `crates/fret-render-wgpu/src/text/mod.rs`
       (`caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji`,
+      `caret_rects_are_non_degenerate_at_grapheme_boundaries_for_keycap_emoji`,
+      `caret_rects_are_non_degenerate_at_grapheme_boundaries_for_regional_indicator_flag`,
       `grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji`)
     - `crates/fret-render-text/src/wrapper.rs`
       (`none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster`)
