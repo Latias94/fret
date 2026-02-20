@@ -55,7 +55,7 @@ Scripted repros (existing; not exhaustive):
 - `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
 - `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json`
 - `tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json`
-- `tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json`
+- `tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json` (barrier blocks underlay click + escape focus restore)
 - `tools/diag-scripts/ui-gallery-overlay-torture.json`
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (dialog open snapshot)
 
@@ -80,4 +80,4 @@ Invariants:
 ## Audit checklist (dimension-driven)
 
 - [ ] `M` Document close reasons and focus restore policy (reason → outcome).
-- [ ] `G` Keep a diag script gating: escape close + focus restore + underlay block.
+- [x] `G` Keep a diag script gating: escape close + focus restore + underlay block.

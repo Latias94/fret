@@ -35,6 +35,11 @@ pub fn interpolated_label_text_style(
     }
 
     let size = lerp_px(large.size, small.size, progress);
+    let vertical_placement = if is_floated(progress) {
+        small.vertical_placement
+    } else {
+        large.vertical_placement
+    };
     let line_height = match (large.line_height, small.line_height) {
         (Some(a), Some(b)) => Some(lerp_px(a, b, progress)),
         (Some(a), None) => Some(a),
@@ -55,6 +60,7 @@ pub fn interpolated_label_text_style(
         slant: large.slant,
         line_height,
         letter_spacing_em,
+        vertical_placement,
     })
 }
 

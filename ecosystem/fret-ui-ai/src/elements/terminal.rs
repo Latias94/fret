@@ -18,6 +18,7 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -410,6 +411,7 @@ impl TerminalTitle {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.sm_line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(fg),
             wrap: TextWrap::None,
@@ -610,7 +612,7 @@ impl TerminalCopyButton {
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
 
-        cx.pressable_with_id_props(move |cx, st, id| {
+        centered_fixed_chrome_pressable_with_id_props(cx, move |cx, st, id| {
             let copied = feedback.lock().copied;
             let label: Arc<str> = if copied {
                 Arc::<str>::from("Copied")
@@ -700,58 +702,58 @@ impl TerminalCopyButton {
             };
             let icon = decl_icon::icon_with(cx, icon_id, Some(Px(14.0)), Some(ColorRef::Color(fg)));
 
-            let mut content_props = ContainerProps::default();
-            content_props.layout.size.width = Length::Px(size);
-            content_props.layout.size.height = Length::Px(size);
-            content_props.layout.flex.shrink = 0.0;
-            content_props.background = Some(bg);
-            content_props.corner_radii =
+            let mut chrome_props = ContainerProps::default();
+            chrome_props.layout.size.width = Length::Px(size);
+            chrome_props.layout.size.height = Length::Px(size);
+            chrome_props.layout.flex.shrink = 0.0;
+            chrome_props.background = Some(bg);
+            chrome_props.corner_radii =
                 fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
-            content_props.border = Edges::all(Px(0.0));
-            content_props.padding = Edges::all(Px(0.0));
+            chrome_props.border = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0));
 
-            let content = cx.container(content_props, move |cx| {
-                vec![stack::hstack(
+            (pressable, chrome_props, move |cx| {
+                let row = stack::hstack(
                     cx,
                     stack::HStackProps::default()
                         .items_center()
                         .justify_center()
                         .layout(LayoutRefinement::default().w_full().h_full()),
                     move |_cx| vec![icon],
-                )]
-            });
+                );
 
-            let marker = copied_marker_test_id.clone().and_then(|marker_id| {
-                copied.then(|| {
-                    cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(0.0)),
-                                height: Length::Px(Px(0.0)),
+                let marker = copied_marker_test_id.clone().and_then(|marker_id| {
+                    copied.then(|| {
+                        cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Px(Px(0.0)),
+                                    height: Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        text: Arc::<str>::from(""),
-                        style: None,
-                        color: None,
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
+                            text: Arc::<str>::from(""),
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                        })
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .test_id(marker_id),
+                        )
                     })
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Group)
-                            .test_id(marker_id),
-                    )
-                })
-            });
+                });
 
-            let mut children = vec![content];
-            if let Some(marker) = marker {
-                children.push(marker);
-            }
-            (pressable, children)
+                let mut children = vec![row];
+                if let Some(marker) = marker {
+                    children.push(marker);
+                }
+                children
+            })
         })
     }
 }
@@ -786,7 +788,7 @@ impl TerminalClearButton {
         let theme = Theme::global(&*cx.app).clone();
 
         let test_id = self.test_id;
-        cx.pressable_with_id_props(move |cx, st, _id| {
+        centered_fixed_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
             cx.pressable_on_activate({
                 let on_clear = on_clear.clone();
                 Arc::new(move |host, action_cx, _reason| {
@@ -822,17 +824,17 @@ impl TerminalClearButton {
             );
 
             let size = Px(28.0);
-            let mut content_props = ContainerProps::default();
-            content_props.layout.size.width = Length::Px(size);
-            content_props.layout.size.height = Length::Px(size);
-            content_props.layout.flex.shrink = 0.0;
-            content_props.background = Some(bg);
-            content_props.corner_radii =
+            let mut chrome_props = ContainerProps::default();
+            chrome_props.layout.size.width = Length::Px(size);
+            chrome_props.layout.size.height = Length::Px(size);
+            chrome_props.layout.flex.shrink = 0.0;
+            chrome_props.background = Some(bg);
+            chrome_props.corner_radii =
                 fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
-            content_props.border = Edges::all(Px(0.0));
-            content_props.padding = Edges::all(Px(0.0));
+            chrome_props.border = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0));
 
-            let content = cx.container(content_props, move |cx| {
+            (pressable, chrome_props, move |cx| {
                 vec![stack::hstack(
                     cx,
                     stack::HStackProps::default()
@@ -841,9 +843,7 @@ impl TerminalClearButton {
                         .layout(LayoutRefinement::default().w_full().h_full()),
                     move |_cx| vec![icon],
                 )]
-            });
-
-            (pressable, vec![content])
+            })
         })
     }
 }
@@ -945,6 +945,7 @@ impl TerminalContent {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.sm_line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(zinc_100()),
             wrap: TextWrap::Grapheme,

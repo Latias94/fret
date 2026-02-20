@@ -1,5 +1,11 @@
 # Material 3 / Expressive Alignment (TODO)
 
+Expressive-focused planning (fearless refactor + TODO + milestones) lives in:
+
+- `docs/workstreams/material3-expressive-alignment-v1-refactor-plan.md`
+- `docs/workstreams/material3-expressive-alignment-v1-todo.md`
+- `docs/workstreams/material3-expressive-alignment-v1-milestones.md`
+
 
 ## Upstream references (non-normative)
 

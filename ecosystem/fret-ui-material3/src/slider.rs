@@ -761,6 +761,11 @@ pub fn slider<H: UiHost>(
             tick_active_opacity,
             tick_inactive_color,
             tick_inactive_opacity,
+            stop_indicator_size,
+            stop_indicator_shape,
+            stop_indicator_trailing_space,
+            stop_indicator_color,
+            stop_indicator_color_selected,
         ) = {
             let theme = Theme::global(&*cx.app);
             (
@@ -774,6 +779,11 @@ pub fn slider<H: UiHost>(
                 slider_tokens::tick_mark_opacity(theme, enabled, true),
                 slider_tokens::tick_mark_color(theme, enabled, false),
                 slider_tokens::tick_mark_opacity(theme, enabled, false),
+                slider_tokens::stop_indicator_size(theme),
+                slider_tokens::stop_indicator_shape(theme),
+                slider_tokens::stop_indicator_trailing_space(theme),
+                slider_tokens::stop_indicator_color(theme, enabled, false),
+                slider_tokens::stop_indicator_color(theme, enabled, true),
             )
         };
 
@@ -909,6 +919,9 @@ pub fn slider<H: UiHost>(
                         ));
 
                         for i in 0..tick_count {
+                            if (rtl && i == 0) || (!rtl && i == tick_count - 1) {
+                                continue;
+                            }
                             let tick_t = if tick_count <= 1 {
                                 0.0
                             } else {
@@ -945,6 +958,47 @@ pub fn slider<H: UiHost>(
                                 corner_radii: tick_shape,
                             });
                         }
+                    }
+                }
+
+                if with_tick_marks {
+                    let size = Px(stop_indicator_size
+                        .0
+                        .min(bounds.size.width.0)
+                        .min(bounds.size.height.0)
+                        .max(0.0));
+                    if size.0 > 0.0 {
+                        let center_y = Px(track_y.0 + track_h.0 * 0.5);
+                        let x_center = if rtl {
+                            bounds.origin.x.0 + stop_indicator_trailing_space.0 + size.0 * 0.5
+                        } else {
+                            bounds.origin.x.0 + bounds.size.width.0
+                                - stop_indicator_trailing_space.0
+                                - size.0 * 0.5
+                        };
+                        let x = Px((x_center - size.0 * 0.5).clamp(
+                            bounds.origin.x.0,
+                            bounds.origin.x.0 + bounds.size.width.0 - size.0,
+                        ));
+                        let y = Px((center_y.0 - size.0 * 0.5).clamp(
+                            bounds.origin.y.0,
+                            bounds.origin.y.0 + bounds.size.height.0 - size.0,
+                        ));
+                        let selected = if rtl { t <= 1e-6 } else { t >= 1.0 - 1e-6 };
+                        let color = if selected {
+                            stop_indicator_color_selected
+                        } else {
+                            stop_indicator_color
+                        };
+                        let rect = Rect::new(fret_core::Point::new(x, y), Size::new(size, size));
+                        p.scene().push(fret_core::SceneOp::Quad {
+                            order: DrawOrder(1),
+                            rect,
+                            background: fret_core::Paint::Solid(color),
+                            border: Edges::all(Px(0.0)),
+                            border_paint: fret_core::Paint::TRANSPARENT,
+                            corner_radii: stop_indicator_shape,
+                        });
                     }
                 }
 
@@ -1735,6 +1789,11 @@ pub fn range_slider<H: UiHost>(
             tick_active_opacity,
             tick_inactive_color,
             tick_inactive_opacity,
+            stop_indicator_size,
+            stop_indicator_shape,
+            stop_indicator_trailing_space,
+            stop_indicator_color,
+            stop_indicator_color_selected,
         ) = {
             let theme = Theme::global(&*cx.app);
             (
@@ -1748,6 +1807,11 @@ pub fn range_slider<H: UiHost>(
                 slider_tokens::tick_mark_opacity(theme, enabled, true),
                 slider_tokens::tick_mark_color(theme, enabled, false),
                 slider_tokens::tick_mark_opacity(theme, enabled, false),
+                slider_tokens::stop_indicator_size(theme),
+                slider_tokens::stop_indicator_shape(theme),
+                slider_tokens::stop_indicator_trailing_space(theme),
+                slider_tokens::stop_indicator_color(theme, enabled, false),
+                slider_tokens::stop_indicator_color(theme, enabled, true),
             )
         };
 
@@ -1869,6 +1933,9 @@ pub fn range_slider<H: UiHost>(
                         ));
 
                         for i in 0..tick_count {
+                            if i == 0 || i == tick_count - 1 {
+                                continue;
+                            }
                             let tick_t = if tick_count <= 1 {
                                 0.0
                             } else {
@@ -1900,6 +1967,54 @@ pub fn range_slider<H: UiHost>(
                                 corner_radii: tick_shape,
                             });
                         }
+                    }
+                }
+
+                if with_tick_marks {
+                    let size = Px(stop_indicator_size
+                        .0
+                        .min(bounds.size.width.0)
+                        .min(bounds.size.height.0)
+                        .max(0.0));
+                    if size.0 > 0.0 {
+                        let center_y = Px(track_y.0 + track_h.0 * 0.5);
+                        let left_center =
+                            bounds.origin.x.0 + stop_indicator_trailing_space.0 + size.0 * 0.5;
+                        let right_center = bounds.origin.x.0 + bounds.size.width.0
+                            - stop_indicator_trailing_space.0
+                            - size.0 * 0.5;
+
+                        let left_selected = t_left <= 1e-6;
+                        let right_selected = t_right >= 1.0 - 1e-6;
+
+                        let mut draw_stop = |center_x: f32, selected: bool| {
+                            let x = Px((center_x - size.0 * 0.5).clamp(
+                                bounds.origin.x.0,
+                                bounds.origin.x.0 + bounds.size.width.0 - size.0,
+                            ));
+                            let y = Px((center_y.0 - size.0 * 0.5).clamp(
+                                bounds.origin.y.0,
+                                bounds.origin.y.0 + bounds.size.height.0 - size.0,
+                            ));
+                            let color = if selected {
+                                stop_indicator_color_selected
+                            } else {
+                                stop_indicator_color
+                            };
+                            let rect =
+                                Rect::new(fret_core::Point::new(x, y), Size::new(size, size));
+                            p.scene().push(fret_core::SceneOp::Quad {
+                                order: DrawOrder(1),
+                                rect,
+                                background: fret_core::Paint::Solid(color),
+                                border: Edges::all(Px(0.0)),
+                                border_paint: fret_core::Paint::TRANSPARENT,
+                                corner_radii: stop_indicator_shape,
+                            });
+                        };
+
+                        draw_stop(left_center, left_selected);
+                        draw_stop(right_center, right_selected);
                     }
                 }
 

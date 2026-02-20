@@ -16,6 +16,9 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::primitives::checkbox::{
+    CheckedState, checked_state_from_optional_bool, toggle_optional_bool,
+};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -27,7 +30,9 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{
+    centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
+};
 use crate::tokens::checkbox as checkbox_tokens;
 
 #[derive(Debug, Clone, Default)]
@@ -81,12 +86,18 @@ impl CheckboxStyle {
 
 #[derive(Clone)]
 pub struct Checkbox {
-    checked: Model<bool>,
+    model: CheckboxModel,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_activate: Option<OnActivate>,
     style: CheckboxStyle,
+}
+
+#[derive(Clone)]
+enum CheckboxModel {
+    Bool(Model<bool>),
+    OptionalBool(Model<Option<bool>>),
 }
 
 impl std::fmt::Debug for Checkbox {
@@ -104,7 +115,22 @@ impl std::fmt::Debug for Checkbox {
 impl Checkbox {
     pub fn new(checked: Model<bool>) -> Self {
         Self {
-            checked,
+            model: CheckboxModel::Bool(checked),
+            disabled: false,
+            a11y_label: None,
+            test_id: None,
+            on_activate: None,
+            style: CheckboxStyle::default(),
+        }
+    }
+
+    /// Creates a checkbox bound to an optional boolean model.
+    ///
+    /// This maps `None` to the indeterminate/mixed outcome, matching Radix and Compose's
+    /// tri-state checkbox semantics.
+    pub fn new_optional(checked: Model<Option<bool>>) -> Self {
+        Self {
+            model: CheckboxModel::OptionalBool(checked),
             disabled: false,
             a11y_label: None,
             test_id: None,
@@ -152,12 +178,19 @@ impl Checkbox {
 
                 cx.key_add_on_key_down_for(pressable_id, consume_enter_key_handler());
 
-                let checked_model_for_toggle = self.checked.clone();
+                let model_for_toggle = self.model.clone();
                 let enabled_for_toggle = enabled;
                 let user_activate = self.on_activate.clone();
                 cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
                     if enabled_for_toggle {
-                        let _ = host.update_model(&checked_model_for_toggle, |v| *v = !*v);
+                        match &model_for_toggle {
+                            CheckboxModel::Bool(model) => {
+                                let _ = host.update_model(model, |v| *v = !*v);
+                            }
+                            CheckboxModel::OptionalBool(model) => {
+                                let _ = host.update_model(model, |v| *v = toggle_optional_bool(*v));
+                            }
+                        }
                         host.request_redraw(action_cx.window);
                     }
                     if let Some(h) = user_activate.as_ref() {
@@ -165,9 +198,16 @@ impl Checkbox {
                     }
                 }));
 
-                let checked = cx
-                    .get_model_copied(&self.checked, Invalidation::Layout)
-                    .unwrap_or(false);
+                let checked_state = match &self.model {
+                    CheckboxModel::Bool(model) => CheckedState::from(
+                        cx.get_model_copied(model, Invalidation::Layout)
+                            .unwrap_or(false),
+                    ),
+                    CheckboxModel::OptionalBool(model) => checked_state_from_optional_bool(
+                        cx.get_model_cloned(model, Invalidation::Layout)
+                            .unwrap_or(None),
+                    ),
+                };
 
                 let (corner_radii, layout, focus_ring) = {
                     let theme = Theme::global(&*cx.app);
@@ -192,7 +232,7 @@ impl Checkbox {
                         role: Some(SemanticsRole::Checkbox),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
-                        checked: Some(checked),
+                        checked: checked_state.to_semantics_checked(),
                         ..Default::default()
                     },
                     layout,
@@ -216,12 +256,20 @@ impl Checkbox {
                         let is_hovered = enabled && st.hovered;
                         let is_focused = enabled && st.focused && focus_visible;
 
-                        let checked = cx
-                            .get_model_copied(&self.checked, Invalidation::Paint)
-                            .unwrap_or(false);
+                        let checked_state = match &self.model {
+                            CheckboxModel::Bool(model) => CheckedState::from(
+                                cx.get_model_copied(model, Invalidation::Paint)
+                                    .unwrap_or(false),
+                            ),
+                            CheckboxModel::OptionalBool(model) => checked_state_from_optional_bool(
+                                cx.get_model_cloned(model, Invalidation::Paint)
+                                    .unwrap_or(None),
+                            ),
+                        };
+                        let selected = checked_state.is_on();
 
                         let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                        if checked {
+                        if selected {
                             states |= WidgetStates::SELECTED;
                         }
 
@@ -237,7 +285,7 @@ impl Checkbox {
                             let theme = Theme::global(&*cx.app);
 
                             let mut chrome =
-                                checkbox_tokens::chrome(theme, checked, enabled, interaction);
+                                checkbox_tokens::chrome(theme, selected, enabled, interaction);
                             let token_container_bg = chrome.container_bg;
                             chrome.container_bg = resolve_override_slot_opt_with(
                                 self.style.container_background.as_ref(),
@@ -262,12 +310,12 @@ impl Checkbox {
 
                             let state_layer_target = checkbox_tokens::state_layer_target_opacity(
                                 theme,
-                                checked,
+                                selected,
                                 enabled,
                                 interaction,
                             );
                             let state_layer_color =
-                                checkbox_tokens::state_layer_color(theme, checked, interaction);
+                                checkbox_tokens::state_layer_color(theme, selected, interaction);
                             let state_layer_color = resolve_override_slot_with(
                                 self.style.state_layer_color.as_ref(),
                                 states,
@@ -276,7 +324,7 @@ impl Checkbox {
                             );
 
                             let ripple_base_opacity =
-                                checkbox_tokens::pressed_state_layer_opacity(theme, checked);
+                                checkbox_tokens::pressed_state_layer_opacity(theme, selected);
                             let config = material_pressable_indication_config(
                                 theme,
                                 Some(Px(size.state_layer.0 * 0.5)),
@@ -304,10 +352,14 @@ impl Checkbox {
                             false,
                         );
 
-                        let content = checkbox_content(cx, size, chrome);
+                        let content = checkbox_content(cx, size, checked_state, chrome);
                         let chrome = material_checkbox_chrome(cx, size, vec![overlay, content]);
 
-                        vec![centered_fill(cx, chrome)]
+                        vec![centered_fill_with_chrome_test_id(
+                            cx,
+                            pressable_props.a11y.test_id.as_ref(),
+                            chrome,
+                        )]
                     })
                 });
 
@@ -349,9 +401,10 @@ fn material_checkbox_chrome<H: UiHost>(
 fn checkbox_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: CheckboxSizeTokens,
+    checked_state: CheckedState,
     chrome: CheckboxChrome,
 ) -> AnyElement {
-    let box_el = checkbox_box(cx, size, chrome);
+    let box_el = checkbox_box(cx, size, checked_state, chrome);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.size.width = Length::Px(size.state_layer);
@@ -374,6 +427,7 @@ fn checkbox_content<H: UiHost>(
 fn checkbox_box<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: CheckboxSizeTokens,
+    checked_state: CheckedState,
     chrome: CheckboxChrome,
 ) -> AnyElement {
     let corner_radii = Corners::all(size.container_corner);
@@ -389,12 +443,12 @@ fn checkbox_box<H: UiHost>(
 
     cx.container(props, move |cx| {
         if chrome.container_bg.is_some() {
-            let icon = material_icon(
-                cx,
-                &fret_icons::ids::ui::CHECK,
-                size.icon,
-                chrome.icon_color,
-            );
+            let icon_id = if checked_state.is_indeterminate() {
+                &fret_icons::ids::ui::MINUS
+            } else {
+                &fret_icons::ids::ui::CHECK
+            };
+            let icon = material_icon(cx, icon_id, size.icon, chrome.icon_color);
             let mut layout = fret_ui::element::LayoutStyle::default();
             layout.size.width = Length::Fill;
             layout.size.height = Length::Fill;

@@ -620,6 +620,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         });
 
         snapshot.nodes.push(SemanticsNode {
@@ -640,6 +641,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         });
 
         let picked = best_bounds_for_test_id(&snapshot, "webview-surface").expect("must pick");

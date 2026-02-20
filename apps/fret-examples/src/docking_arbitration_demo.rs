@@ -27,6 +27,7 @@ use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::stack::{VStackProps, vstack};
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
+use serde_json::json;
 use slotmap::KeyData;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,6 +35,11 @@ use std::sync::{Arc, Mutex};
 
 type ViewportKey = (AppWindowId, RenderTargetId);
 
+// Keep these in sync with `fret-docking` floating chrome constants. This harness duplicates
+// the geometry in order to keep diagnostics anchors stable without reaching into crate-private
+// helpers.
+const DOCKING_ARBITRATION_FLOATING_BORDER_PX: f32 = 1.0;
+const DOCKING_ARBITRATION_FLOATING_TITLE_H_PX: f32 = 22.0;
 const DOCKING_ARBITRATION_TAB_BAR_H: Px = Px(28.0);
 const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 const DOCKING_ARBITRATION_SPLIT_HANDLE_ANCHOR_SIZE: Px = Px(12.0);
@@ -181,6 +187,14 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ) -> Option<Rect> {
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
+                    DockNode::Floating { child } => tabs_rect_for_panel(
+                        graph,
+                        *child,
+                        rect,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ),
                     DockNode::Split {
                         axis,
                         children,
@@ -223,18 +237,54 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
-                let root = dock.graph.window_root(window)?;
-                let tabs_rect = tabs_rect_for_panel(
-                    &dock.graph,
-                    root,
-                    bounds,
-                    split_handle_gap,
-                    split_handle_hit_thickness,
-                    panel,
-                )?;
-                let x = tabs_rect.origin.x.0 + 16.0;
-                let y = tabs_rect.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
-                Some((x, y))
+                let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
+                    let (x0, y0) = if floating {
+                        (
+                            tabs_rect.origin.x.0 + DOCKING_ARBITRATION_FLOATING_BORDER_PX,
+                            tabs_rect.origin.y.0
+                                + DOCKING_ARBITRATION_FLOATING_BORDER_PX
+                                + DOCKING_ARBITRATION_FLOATING_TITLE_H_PX,
+                        )
+                    } else {
+                        (tabs_rect.origin.x.0, tabs_rect.origin.y.0)
+                    };
+
+                    let x = if floating {
+                        x0 + (tabs_rect.size.width.0 * 0.2).clamp(48.0, 96.0)
+                    } else {
+                        x0 + 16.0
+                    };
+                    let y = y0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+                    (x, y)
+                };
+
+                if let Some(root) = dock.graph.window_root(window) {
+                    if let Some(tabs_rect) = tabs_rect_for_panel(
+                        &dock.graph,
+                        root,
+                        bounds,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ) {
+                        return Some(anchor_for_rect(tabs_rect, false));
+                    }
+                }
+
+                for floating in dock.graph.floating_windows(window) {
+                    if let Some(tabs_rect) = tabs_rect_for_panel(
+                        &dock.graph,
+                        floating.floating,
+                        floating.rect,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ) {
+                        return Some(anchor_for_rect(tabs_rect, true));
+                    }
+                }
+
+                None
             }
 
             let viewport_left = PanelKey::new("demo.viewport.left");
@@ -1442,6 +1492,13 @@ impl DockingArbitrationDriver {
                 return;
             }
 
+            // Only seed a baseline root for the main window. Tear-off windows should start from
+            // the docking runtime's state (often an in-window floating payload hosted by a new OS
+            // window), and multi-window restore will populate roots once all windows exist.
+            if Some(window) != main_window {
+                return;
+            }
+
             fn tabs_for_panel(
                 graph: &mut fret_core::DockGraph,
                 panel: PanelKey,
@@ -1456,7 +1513,8 @@ impl DockingArbitrationDriver {
                 graph: &mut fret_core::DockGraph,
                 children: Vec<fret_core::DockNodeId>,
             ) -> fret_core::DockNodeId {
-                let fractions = vec![1.0; children.len()];
+                let denom = (children.len().max(1) as f32).max(1.0);
+                let fractions = vec![1.0 / denom; children.len()];
                 graph.insert_node(DockNode::Split {
                     axis: fret_core::Axis::Horizontal,
                     children,
@@ -1519,10 +1577,18 @@ impl DockingArbitrationDriver {
                     let row3 = row_split(&mut dock.graph, row3);
                     let controls = tabs_for_panel(&mut dock.graph, controls_panel);
 
+                    let root_weights = [1.0f32, 1.0f32, 1.0f32, 0.8f32];
+                    let root_sum: f32 = root_weights.iter().copied().sum();
+                    let root_fractions: Vec<f32> = if root_sum.is_finite() && root_sum > 0.0 {
+                        root_weights.iter().map(|w| w / root_sum).collect()
+                    } else {
+                        vec![0.25; 4]
+                    };
+
                     let root = dock.graph.insert_node(DockNode::Split {
                         axis: fret_core::Axis::Vertical,
                         children: vec![row1, row2, row3, controls],
-                        fractions: vec![1.0, 1.0, 1.0, 0.8],
+                        fractions: root_fractions,
                     });
                     dock.graph.set_window_root(window, root);
                 }
@@ -1782,6 +1848,17 @@ impl WinitAppDriver for DockingArbitrationDriver {
     fn init(&mut self, app: &mut App, main_window: AppWindowId) {
         self.main_window = Some(main_window);
         self.docking_runtime = Some(DockingRuntime::new(main_window));
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.set_app_snapshot_provider(Some(Arc::new(|_app, _window| {
+                Some(json!({
+                    "env": {
+                        "FRET_DOCK_ARB_PRESET": std::env::var("FRET_DOCK_ARB_PRESET").ok(),
+                        "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": std::env::var("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").ok(),
+                        "FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD": std::env::var("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").ok(),
+                    }
+                }))
+            })));
+        });
         self.logical_windows
             .insert(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string());
         self.sync_dev_state_models(app);
@@ -2219,6 +2296,27 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
                 |store, app| store.begin_frame(window, app.frame_id()),
             );
+            let (dock_graph_stats, dock_graph_signature) =
+                app.with_global_mut_untracked(DockManager::default, |dock, _app| {
+                    (
+                        fret_docking::dock::dock_graph_stats_for_window(&dock.graph, window),
+                        fret_docking::dock::dock_graph_signature_for_window(&dock.graph, window),
+                    )
+                });
+            app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |store, app| {
+                    store.record_docking(
+                        window,
+                        app.frame_id(),
+                        fret_runtime::DockingInteractionDiagnostics {
+                            dock_graph_stats: Some(dock_graph_stats),
+                            dock_graph_signature: Some(dock_graph_signature),
+                            ..Default::default()
+                        },
+                    );
+                },
+            );
         }
 
         scene.clear();
@@ -2254,41 +2352,9 @@ impl WinitAppDriver for DockingArbitrationDriver {
         }
 
         if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            let mut flush_rounds: u32 = 0;
-            loop {
-                flush_rounds = flush_rounds.saturating_add(1);
-                if flush_rounds > 128 {
-                    break;
-                }
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
-
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                let _ = state.ui.dispatch_command(app, services, &command);
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
-
-                if !applied_any_command {
-                    break;
-                }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
-
+            // Let the runner apply effects (including commands) through the normal effect pipeline.
+            // Synchronous command flushing can stall pointer-heavy scripted drags and cause
+            // `fretboard diag run` to time out waiting for script progress.
             state.ui.request_semantics_snapshot();
             let mut frame =
                 fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);

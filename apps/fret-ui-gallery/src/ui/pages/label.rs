@@ -99,10 +99,10 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .layout(max_w.clone()),
             |cx| {
                 vec![
-                    shadcn::Label::new("????? ??????").into_element(cx),
+                    shadcn::Label::new("الاسم الكامل").into_element(cx),
                     shadcn::Input::new(rtl_name)
-                        .placeholder("???? ???")
-                        .a11y_label("????? ??????")
+                        .placeholder("اكتب هنا")
+                        .a11y_label("الاسم الكامل")
                         .into_element(cx),
                 ]
             },
@@ -145,13 +145,13 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .code(
                     "rust",
                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| {
-        shadcn::Label::new("????? ??????").into_element(cx);
-        shadcn::Input::new(model).a11y_label("????? ??????").into_element(cx);
-    },
-);"#,
+     cx,
+     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+     |cx| {
+        shadcn::Label::new("الاسم الكامل").into_element(cx);
+        shadcn::Input::new(model).a11y_label("الاسم الكامل").into_element(cx);
+     },
+ );"#,
                 ),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],

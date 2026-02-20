@@ -532,6 +532,31 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Click an interactive span (by `tag`) inside a `SelectableText` target after its computed
+    /// span bounds remain stable for `stable_frames`.
+    ///
+    /// This is intended for rich text surfaces where the clickable region is smaller than the
+    /// semantics node bounds (e.g. link spans inside a paragraph), and where clicking the center
+    /// of the node can miss the span.
+    ClickSelectableTextSpanStable {
+        target: UiSelectorV1,
+        tag: String,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Wait until a target's semantics bounds have remained stable for `stable_frames`.
     ///
     /// This is useful for overlays/virtualized surfaces where measured bounds can jump across
@@ -576,6 +601,8 @@ pub enum UiActionStepV2 {
     TypeTextInto {
         target: UiSelectorV1,
         text: String,
+        #[serde(default)]
+        clear_before_type: bool,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
@@ -1081,6 +1108,27 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when both targets exist and their bounds match within `eps_px`.
+    ///
+    /// This is primarily used to gate “hit box vs visual chrome” regressions where a pressable
+    /// can stretch but an inner chrome surface must continue to fill the same box.
+    BoundsApproxEqual {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their bounds centers match within `eps_px`.
+    ///
+    /// This is primarily used to gate “stretched hit box + centered fixed chrome” contracts where
+    /// the interactive surface can grow via flex/grid/min touch target, but the inner visual chrome
+    /// remains fixed-size and centered.
+    BoundsCenterApproxEqual {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsNonOverlapping {
         a: UiSelectorV1,
         b: UiSelectorV1,
@@ -1140,14 +1188,36 @@ pub enum UiPredicateV1 {
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
     },
+    /// True when the latest docking diagnostics report an active dock drag whose runner-owned
+    /// moving window matches `window`.
+    ///
+    /// This is intended for ImGui-style multi-window docking where a torn-off window follows the
+    /// cursor while dragging.
+    DockDragMovingWindowIs {
+        window: UiWindowTargetV1,
+    },
+    /// True when the latest docking diagnostics report an active dock drag whose
+    /// "window under moving window" matches `window`.
+    ///
+    /// This allows scripts to gate "peek-behind" selection paths without reinterpreting
+    /// `dock_drag_current_window_is` (which remains the runner's primary hover/drop routing
+    /// target).
+    DockDragWindowUnderMovingWindowIs {
+        window: UiWindowTargetV1,
+    },
     /// True when the latest docking diagnostics report an active dock drag session.
     DockDragActiveIs {
         active: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
-    /// "transparent payload" applied to the moving window (e.g. click-through/NoInputs while the
-    /// dock-floating window follows the cursor).
+    /// "transparent payload" applied to the moving window (e.g. reduced opacity and/or
+    /// click-through mouse passthrough while the dock-floating window follows the cursor).
     DockDragTransparentPayloadAppliedIs {
+        applied: bool,
+    },
+    /// True when the latest docking diagnostics report that the runner successfully applied
+    /// click-through mouse passthrough for the moving window during transparent payload.
+    DockDragTransparentPayloadMousePassthroughAppliedIs {
         applied: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session whose hovered-window
@@ -1167,6 +1237,21 @@ pub enum UiPredicateV1 {
     /// - `heuristic_rects`
     /// - `unknown`
     DockDragWindowUnderCursorSourceIs {
+        source: String,
+    },
+    /// True when the latest docking diagnostics report a dock drag session whose
+    /// "window under moving window" selection source matches `source`.
+    ///
+    /// Supported sources:
+    /// - `platform`: any OS-backed platform hover provider
+    /// - `platform_win32`
+    /// - `platform_macos`
+    /// - `latched`
+    /// - `heuristic`: any heuristic fallback
+    /// - `heuristic_z_order`
+    /// - `heuristic_rects`
+    /// - `unknown`
+    DockDragWindowUnderMovingWindowSourceIs {
         source: String,
     },
     /// True when the latest docking diagnostics report an active in-window floating drag session.
@@ -2066,6 +2151,63 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::RunnerAccessibilityActivated
+        ));
+    }
+
+    #[test]
+    fn predicate_bounds_approx_equal_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsApproxEqual {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 1.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_approx_equal",
+                "a": { "kind": "test_id", "id": "a" },
+                "b": { "kind": "test_id", "id": "b" },
+                "eps_px": 1.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::BoundsApproxEqual { .. }));
+    }
+
+    #[test]
+    fn predicate_bounds_center_approx_equal_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::BoundsCenterApproxEqual {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 1.0,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "bounds_center_approx_equal",
+                "a": { "kind": "test_id", "id": "a" },
+                "b": { "kind": "test_id", "id": "b" },
+                "eps_px": 1.0
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::BoundsCenterApproxEqual { .. }
         ));
     }
 }

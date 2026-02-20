@@ -7,14 +7,14 @@
     { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-4-done" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
       "timeout_frames": 60
     },
     { "type": "capture_bundle", "label": "todo-after-add" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-4-done" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_bundle", "label": "todo-after-toggle-done" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-4-remove" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-remove" } },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_bundle", "label": "todo-after-remove" }
   ]

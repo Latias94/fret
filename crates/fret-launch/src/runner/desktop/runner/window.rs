@@ -68,6 +68,7 @@ pub(super) struct DockTearoffFollow {
     pub(super) manual_follow: bool,
     pub(super) last_outer_pos: Option<PhysicalPosition<i32>>,
     pub(super) transparent_payload_applied: bool,
+    pub(super) mouse_passthrough_applied: bool,
     pub(super) always_on_top_applied: bool,
 }
 
@@ -215,7 +216,26 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
+    let hwnd = window
+        .window_handle()
+        .ok()
+        .and_then(|h| match h.as_raw() {
+            RawWindowHandle::Win32(handle) => Some(handle.hwnd.get()),
+            _ => None,
+        })
+        .unwrap_or(0);
+
+    if super::win32::raise_hwnd_to_front(hwnd) {
+        return true;
+    }
+
+    window.focus_window();
+    true
+}
+
+#[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
 pub(super) fn bring_window_to_front(window: &dyn Window, _sender: Option<&dyn Window>) -> bool {
     window.focus_window();
     true
@@ -519,12 +539,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     #[cfg(target_os = "windows")]
-    fn hwnd_for_window(window: &dyn Window) -> Option<isize> {
+    pub(super) fn hwnd_for_window(window: &dyn Window) -> Option<isize> {
         let handle = window.window_handle().ok()?;
         let RawWindowHandle::Win32(handle) = handle.as_raw() else {
             return None;
         };
-        Some(handle.hwnd.get())
+        Some(super::win32::root_hwnd(handle.hwnd.get()))
     }
 
     #[cfg(target_os = "windows")]
@@ -559,12 +579,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             if prefer_not_hwnd.is_some_and(|p| p == hwnd) {
                 if let Some(&window) = hwnd_to_window.get(&hwnd)
-                    && self.screen_pos_in_window(window, screen_pos)
+                    && super::win32::screen_pos_in_hwnd(hwnd, screen_pos)
                 {
                     fallback = Some(window);
                 }
             } else if let Some(&window) = hwnd_to_window.get(&hwnd)
-                && self.screen_pos_in_window(window, screen_pos)
+                && super::win32::screen_pos_in_hwnd(hwnd, screen_pos)
             {
                 return Some(window);
             }
@@ -573,6 +593,35 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 break;
             };
             hwnd = next;
+        }
+
+        // If we only managed to hit the preferred-not window, retry using a full top-level z-order
+        // walk. Some window relationships (e.g. owned/topmost windows) can cause a `GW_HWNDNEXT`
+        // walk rooted at `WindowFromPoint` to miss windows in a different z-order band.
+        if fallback.is_some() && prefer_not_hwnd.is_some() {
+            // Prefer enumerating all top-level windows in z-order; this is more reliable than
+            // `GetTopWindow + GW_HWNDNEXT` for crossing z-order bands.
+            let ordered = super::win32::enum_windows_z_order();
+            for hwnd in ordered {
+                if hwnd == 0 {
+                    continue;
+                }
+
+                if prefer_not_hwnd.is_some_and(|p| p == hwnd) {
+                    if let Some(&window) = hwnd_to_window.get(&hwnd)
+                        && super::win32::screen_pos_in_hwnd(hwnd, screen_pos)
+                    {
+                        fallback = Some(window);
+                    }
+                    continue;
+                }
+
+                if let Some(&window) = hwnd_to_window.get(&hwnd)
+                    && super::win32::screen_pos_in_hwnd(hwnd, screen_pos)
+                {
+                    return Some(window);
+                }
+            }
         }
 
         fallback
@@ -813,10 +862,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // `Window::surface_position()` is defined as the decoration offset from the outer
         // window position to the client/surface origin (ImGui-style multi-viewport contract).
         // Convert it to a screen-space client origin before adding a local cursor position.
-        let outer = state.window.outer_position().ok()?;
-        let deco = state.window.surface_position();
+        #[cfg(target_os = "windows")]
+        let origin = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::client_origin_screen_for_hwnd)
+            .or_else(|| {
+                let outer = state.window.outer_position().ok()?;
+                let deco = Self::hwnd_for_window(state.window.as_ref())
+                    .and_then(super::win32::decoration_offset_for_hwnd)
+                    .unwrap_or_else(|| state.window.surface_position());
+                Some(client_origin_screen(outer, deco))
+            })?;
+        #[cfg(not(target_os = "windows"))]
+        let origin = {
+            let outer = state.window.outer_position().ok()?;
+            let deco = state.window.surface_position();
+            client_origin_screen(outer, deco)
+        };
         let scale = state.window.scale_factor();
-        let origin = client_origin_screen(outer, deco);
         let x = origin.x + state.platform.input.cursor_pos.x.0 as f64 * scale;
         let y = origin.y + state.platform.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
@@ -830,12 +892,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get(window) else {
             return false;
         };
-        let Ok(outer) = state.window.outer_position() else {
-            return false;
-        };
-        let deco = state.window.surface_position();
+        #[cfg(target_os = "windows")]
+        let origin = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::client_origin_screen_for_hwnd)
+            .or_else(|| {
+                let outer = state.window.outer_position().ok()?;
+                let deco = Self::hwnd_for_window(state.window.as_ref())
+                    .and_then(super::win32::decoration_offset_for_hwnd)
+                    .unwrap_or_else(|| state.window.surface_position());
+                Some(client_origin_screen(outer, deco))
+            });
+        #[cfg(not(target_os = "windows"))]
+        let origin = state
+            .window
+            .outer_position()
+            .ok()
+            .map(|outer| client_origin_screen(outer, state.window.surface_position()));
         let size = state.window.surface_size();
-        screen_pos_in_client(client_origin_screen(outer, deco), size, screen_pos)
+        origin.is_some_and(|origin| screen_pos_in_client(origin, size, screen_pos))
     }
 
     pub(super) fn local_pos_for_window(
@@ -844,12 +918,75 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
     ) -> Option<Point> {
         let state = self.windows.get(window)?;
-        let outer = state.window.outer_position().ok()?;
-        let deco = state.window.surface_position();
+        #[cfg(target_os = "windows")]
+        let origin = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::client_origin_screen_for_hwnd)
+            .or_else(|| {
+                let outer = state.window.outer_position().ok()?;
+                let deco = Self::hwnd_for_window(state.window.as_ref())
+                    .and_then(super::win32::decoration_offset_for_hwnd)
+                    .unwrap_or_else(|| state.window.surface_position());
+                Some(client_origin_screen(outer, deco))
+            })?;
+        #[cfg(not(target_os = "windows"))]
+        let origin = {
+            let outer = state.window.outer_position().ok()?;
+            let deco = state.window.surface_position();
+            client_origin_screen(outer, deco)
+        };
         Some(local_pos_for_screen_pos(
-            client_origin_screen(outer, deco),
+            origin,
             state.window.scale_factor(),
             screen_pos,
+        ))
+    }
+
+    pub(super) fn window_client_rect_screen(
+        &self,
+        window: fret_core::AppWindowId,
+    ) -> Option<(
+        winit::dpi::PhysicalPosition<f64>,
+        winit::dpi::PhysicalSize<u32>,
+    )> {
+        let state = self.windows.get(window)?;
+        #[cfg(target_os = "windows")]
+        let origin = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::client_origin_screen_for_hwnd)
+            .or_else(|| {
+                let outer = state.window.outer_position().ok()?;
+                let deco = Self::hwnd_for_window(state.window.as_ref())
+                    .and_then(super::win32::decoration_offset_for_hwnd)
+                    .unwrap_or_else(|| state.window.surface_position());
+                Some(client_origin_screen(outer, deco))
+            })?;
+        #[cfg(not(target_os = "windows"))]
+        let origin = {
+            let outer = state.window.outer_position().ok()?;
+            let deco = state.window.surface_position();
+            client_origin_screen(outer, deco)
+        };
+        let size = state.window.surface_size();
+        Some((origin, size))
+    }
+
+    pub(super) fn clamp_screen_pos_to_window_client(
+        &self,
+        window: fret_core::AppWindowId,
+        screen_pos: PhysicalPosition<f64>,
+    ) -> Option<PhysicalPosition<f64>> {
+        let (origin, size) = self.window_client_rect_screen(window)?;
+        if size.width == 0 || size.height == 0 {
+            return None;
+        }
+        // Clamp to the inclusive interior to avoid points right on the boundary (which can be
+        // sensitive to rounding and platform hit-test behavior).
+        let min_x = origin.x + 1.0;
+        let min_y = origin.y + 1.0;
+        let max_x = origin.x + (size.width as f64) - 1.0;
+        let max_y = origin.y + (size.height as f64) - 1.0;
+        Some(PhysicalPosition::new(
+            screen_pos.x.clamp(min_x, max_x),
+            screen_pos.y.clamp(min_y, max_y),
         ))
     }
 

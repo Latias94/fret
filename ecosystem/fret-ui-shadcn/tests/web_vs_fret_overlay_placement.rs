@@ -173,6 +173,7 @@ fn shadcn_text_style(size: Px, line_height: Px, weight: FontWeight) -> TextStyle
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 

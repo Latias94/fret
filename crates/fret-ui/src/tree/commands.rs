@@ -252,12 +252,18 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        app.with_global_mut(
-            fret_runtime::WindowCommandActionAvailabilityService::default,
-            |svc, _app| {
-                svc.set_snapshot(window, snapshot);
-            },
-        );
+        let needs_update = app
+            .global::<fret_runtime::WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_none_or(|prev| prev != &snapshot);
+        if needs_update {
+            app.with_global_mut(
+                fret_runtime::WindowCommandActionAvailabilityService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, snapshot);
+                },
+            );
+        }
     }
 
     #[stacksafe::stacksafe]

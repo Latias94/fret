@@ -1,0 +1,86 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-context-menu-item-chrome-fill",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "context menu" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-context-menu" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-context-menu" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-context-menu" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" }
+    },
+    {
+      "type": "click",
+      "button": "right",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-context-menu-basic-profile.chrome"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" },
+        "b": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile.chrome" },
+        "eps_px": 1.0
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-context-menu-item-chrome-fill" }
+  ]
+}
+

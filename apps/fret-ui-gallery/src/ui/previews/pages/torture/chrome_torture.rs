@@ -3,7 +3,7 @@ use crate::ui::doc_layout::{self, DocSection};
 
 pub(in crate::ui) fn preview_chrome_torture(
     cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
+    theme: &Theme,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     dialog_glass_open: Model<bool>,
@@ -49,34 +49,32 @@ pub(in crate::ui) fn preview_chrome_torture(
                 |cx| {
                     let mut out: Vec<AnyElement> = Vec::new();
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Button::new("One")
-                                    .test_id("ui-gallery-chrome-btn-1")
-                                    .into_element(cx),
-                                shadcn::Button::new("Two")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("ui-gallery-chrome-btn-2")
-                                    .into_element(cx),
-                                shadcn::Button::new("Three")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .test_id("ui-gallery-chrome-btn-3")
-                                    .into_element(cx),
-                                shadcn::Button::new("Disabled")
-                                    .disabled(true)
-                                    .test_id("ui-gallery-chrome-btn-disabled")
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
+                    let row = doc_layout::wrap_controls_row(cx, theme, Space::N2, |cx| {
+                        vec![
+                            shadcn::Button::new("One")
+                                .test_id("ui-gallery-chrome-btn-1")
+                                .into_element(cx),
+                            shadcn::Button::new("Two")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .test_id("ui-gallery-chrome-btn-2")
+                                .into_element(cx),
+                            shadcn::Button::new("Three")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("ui-gallery-chrome-btn-3")
+                                .into_element(cx),
+                            shadcn::Button::new("Disabled")
+                                .disabled(true)
+                                .test_id("ui-gallery-chrome-btn-disabled")
+                                .into_element(cx),
+                        ]
+                    });
                     out.push(row);
 
-                    let fields = stack::hstack(
+                    let fields = doc_layout::wrap_row(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_start(),
+                        theme,
+                        Space::N2,
+                        fret_ui::element::CrossAlign::Start,
                         |cx| {
                             vec![
                                 stack::vstack(

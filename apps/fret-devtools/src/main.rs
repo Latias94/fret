@@ -516,8 +516,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
 
     let theme = cx.theme_snapshot();
 
-    let header = header_bar(cx, theme, st);
-    let body = resizable_body(cx, theme, st);
+    let header = header_bar(cx, theme.clone(), st);
+    let body = resizable_body(cx, theme.clone(), st);
 
     let wrap = fret_ui_kit::declarative::style::container_props(
         &theme,
@@ -679,11 +679,11 @@ fn resizable_body(
     let group = shadcn::ResizablePanelGroup::new(st.panel_fractions.clone())
         .axis(fret_core::Axis::Horizontal)
         .entries([
-            shadcn::ResizablePanel::new([left_panel(cx, theme, st)]).into(),
+            shadcn::ResizablePanel::new([left_panel(cx, theme.clone(), st)]).into(),
             shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new([center_panel(cx, theme, st)]).into(),
+            shadcn::ResizablePanel::new([center_panel(cx, theme.clone(), st)]).into(),
             shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new([right_panel(cx, theme, st)]).into(),
+            shadcn::ResizablePanel::new([right_panel(cx, theme.clone(), st)]).into(),
         ])
         .into_element(cx);
 

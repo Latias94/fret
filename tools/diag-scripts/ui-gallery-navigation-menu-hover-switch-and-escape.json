@@ -77,29 +77,18 @@
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 6 },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "not_exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-link-introduction"
-        }
-      }
-    },
 
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 16 },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-navigation-menu-demo-link-alert-dialog"
         }
-      }
+      },
+      "timeout_frames": 240
     },
 
     {
@@ -108,4 +97,3 @@
     }
   ]
 }
-

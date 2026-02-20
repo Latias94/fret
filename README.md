@@ -63,6 +63,8 @@ Run native demo:
 cargo run -p fretboard -- dev native --bin todo_demo
 ```
 
+Windows note: `fretboard dev native` defaults to `--profile dev-fast` for faster builds. Override with `--profile dev`.
+
 Run web demo:
 
 ```bash

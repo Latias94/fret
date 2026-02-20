@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "name": "ui-gallery-control-chrome-flex1-button-fill",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "schema_version": 2,
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "button" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-button" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-button" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-flex1-left" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-flex1-left" },
+        "min_w_px": 180.0,
+        "min_h_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-flex1-left" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-flex1-left.chrome" },
+        "eps_px": 1.0
+      }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-flex1-right" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-flex1-right" },
+        "min_w_px": 180.0,
+        "min_h_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-flex1-right" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-flex1-right.chrome" },
+        "eps_px": 1.0
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-control-chrome-flex1-button-fill" }
+  ]
+}

@@ -5,21 +5,41 @@ use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
 use fret_core::time::Instant;
 
-fn compute_text_vertical_offset(
-    style: Option<&fret_core::TextStyle>,
-    layout_height: Length,
+fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
+    Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
+}
+
+fn compute_text_vertical_offset_and_baseline(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
     bounds_height: Px,
-    metrics_height: Px,
-) -> Px {
-    // Approximate CSS "half-leading": when a text element uses a fixed line box (`leading-*`),
-    // center the font's em box within the line box. This better matches web baseline behavior for
-    // shadcn recipes (e.g. `text-sm leading-snug`).
-    match (style, layout_height) {
-        (Some(style), Length::Px(line_box)) => {
-            let line_height = style.line_height.unwrap_or(line_box);
-            Px(((line_height.0 - style.size.0) * 0.5).max(0.0))
+    metrics: fret_core::TextMetrics,
+    vertical_placement: fret_core::TextVerticalPlacement,
+) -> (Px, Px) {
+    match vertical_placement {
+        fret_core::TextVerticalPlacement::CenterMetricsBox => (
+            compute_text_vertical_offset(bounds_height, metrics.size.height),
+            metrics.baseline,
+        ),
+        fret_core::TextVerticalPlacement::BoundsAsLineBox => {
+            let approx_single_line = metrics.size.height.0 <= 0.0
+                || services
+                    .first_line_metrics(blob)
+                    .is_some_and(|m| metrics.size.height.0 <= m.line_height.0 + 0.01);
+
+            if approx_single_line && let Some(line) = services.first_line_metrics(blob) {
+                let padding_top =
+                    Px(((bounds_height.0 - line.ascent.0 - line.descent.0) * 0.5).max(0.0));
+                let baseline =
+                    Px((padding_top.0 + line.ascent.0).clamp(0.0, bounds_height.0.max(0.0)));
+                (Px(0.0), baseline)
+            } else {
+                (
+                    compute_text_vertical_offset(bounds_height, metrics.size.height),
+                    metrics.baseline,
+                )
+            }
         }
-        _ => Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0)),
     }
 }
 
@@ -30,29 +50,49 @@ impl ElementHostWidget {
             return;
         };
 
-        let models_started = cx.tree.debug_enabled().then(Instant::now);
-        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
-            for &(model, invalidation) in items {
-                (cx.observe_model)(model, invalidation);
-            }
-            if let Some(started) = models_started.as_ref() {
-                cx.tree
-                    .debug_record_paint_host_widget_observed_models(started.elapsed(), items.len());
-            }
-        });
+        let debug_enabled = cx.tree.debug_enabled();
+        let total_started = debug_enabled.then(Instant::now);
+        let (models_len, models_loop, globals_len, globals_loop) =
+            crate::elements::with_observed_deps_for_element(
+                cx.app,
+                window,
+                self.element,
+                |models, globals| {
+                    let models_started = debug_enabled.then(Instant::now);
+                    for &(model, invalidation) in models {
+                        (cx.observe_model)(model, invalidation);
+                    }
+                    let models_loop = models_started.map(|started| started.elapsed());
 
-        let globals_started = cx.tree.debug_enabled().then(Instant::now);
-        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
-            for &(global, invalidation) in items {
-                (cx.observe_global)(global, invalidation);
-            }
-            if let Some(started) = globals_started.as_ref() {
-                cx.tree.debug_record_paint_host_widget_observed_globals(
-                    started.elapsed(),
-                    items.len(),
-                );
-            }
-        });
+                    let globals_started = debug_enabled.then(Instant::now);
+                    for &(global, invalidation) in globals {
+                        (cx.observe_global)(global, invalidation);
+                    }
+                    let globals_loop = globals_started.map(|started| started.elapsed());
+
+                    (models.len(), models_loop, globals.len(), globals_loop)
+                },
+            );
+
+        if debug_enabled {
+            let total_elapsed = total_started.map(|started| started.elapsed());
+            let models_loop = models_loop.unwrap_or_default();
+            let globals_loop = globals_loop.unwrap_or_default();
+            let overhead = total_elapsed
+                .unwrap_or_default()
+                .saturating_sub(models_loop.saturating_add(globals_loop));
+            let overhead_models = overhead / 2;
+            let overhead_globals = overhead.saturating_sub(overhead_models);
+
+            cx.tree.debug_record_paint_host_widget_observed_models(
+                models_loop.saturating_add(overhead_models),
+                models_len,
+            );
+            cx.tree.debug_record_paint_host_widget_observed_globals(
+                globals_loop.saturating_add(overhead_globals),
+                globals_len,
+            );
+        }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
         let instance = self.instance(cx.app, window, cx.node);
@@ -592,15 +632,16 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset = compute_text_vertical_offset(
-                    props.style.as_ref(),
-                    props.layout.size.height,
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
                     cx.bounds.size.height,
-                    metrics.size.height,
+                    metrics,
+                    style.vertical_placement,
                 );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -788,15 +829,16 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let vertical_offset = compute_text_vertical_offset(
-                    Some(&style),
-                    props.layout.size.height,
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
                     cx.bounds.size.height,
-                    metrics.size.height,
+                    metrics,
+                    style.vertical_placement,
                 );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -1035,6 +1077,73 @@ impl ElementHostWidget {
                     cx.bounds.size,
                 );
 
+                let mut interactive_span_bounds: Vec<
+                    crate::element::SelectableTextInteractiveSpanBounds,
+                > = Vec::new();
+                if !props.interactive_spans.is_empty() {
+                    let mut rects: Vec<fret_core::Rect> = Vec::new();
+                    for span in props.interactive_spans.iter() {
+                        let start = span.range.start.min(props.rich.text.len());
+                        let end = span.range.end.min(props.rich.text.len());
+                        if start >= end {
+                            continue;
+                        }
+                        if !props.rich.text.is_char_boundary(start)
+                            || !props.rich.text.is_char_boundary(end)
+                        {
+                            continue;
+                        }
+
+                        rects.clear();
+                        cx.services
+                            .selection_rects_clipped(blob, (start, end), clip, &mut rects);
+                        if rects.is_empty() {
+                            continue;
+                        }
+
+                        let mut x0 = f32::INFINITY;
+                        let mut y0 = f32::INFINITY;
+                        let mut x1 = f32::NEG_INFINITY;
+                        let mut y1 = f32::NEG_INFINITY;
+                        for r in rects.iter() {
+                            x0 = x0.min(r.origin.x.0);
+                            y0 = y0.min(r.origin.y.0);
+                            x1 = x1.max(r.origin.x.0 + r.size.width.0);
+                            y1 = y1.max(r.origin.y.0 + r.size.height.0);
+                        }
+                        if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite()
+                        {
+                            continue;
+                        }
+                        if x1 <= x0 || y1 <= y0 {
+                            continue;
+                        }
+
+                        interactive_span_bounds.push(
+                            crate::element::SelectableTextInteractiveSpanBounds {
+                                range: start..end,
+                                tag: span.tag.clone(),
+                                bounds_local: fret_core::Rect::new(
+                                    fret_core::Point::new(fret_core::Px(x0), fret_core::Px(y0)),
+                                    fret_core::Size::new(
+                                        fret_core::Px(x1 - x0),
+                                        fret_core::Px(y1 - y0),
+                                    ),
+                                ),
+                            },
+                        );
+                    }
+                }
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        state.interactive_span_bounds = interactive_span_bounds;
+                    },
+                );
+
                 let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
                 let mut rects: Vec<fret_core::Rect> = Vec::new();
 
@@ -1144,15 +1253,16 @@ impl ElementHostWidget {
                     }
                 }
 
-                let vertical_offset = compute_text_vertical_offset(
-                    Some(&style),
-                    props.layout.size.height,
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
                     cx.bounds.size.height,
-                    metrics.size.height,
+                    metrics,
+                    style.vertical_placement,
                 );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + metrics.baseline,
+                    cx.bounds.origin.y + vertical_offset + baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -1828,10 +1938,13 @@ impl ElementHostWidget {
 mod tests {
     use super::*;
 
-    use fret_core::{FontId, FontWeight, Px, TextStyle};
+    use fret_core::{
+        FontId, FontWeight, Px, Size, TextBlobId, TextLineMetrics, TextMetrics, TextStyle,
+        TextVerticalPlacement,
+    };
 
     #[test]
-    fn text_vertical_offset_centers_em_box_in_fixed_line_box() {
+    fn text_vertical_offset_centers_metrics_in_bounds() {
         let style = TextStyle {
             font: FontId::default(),
             size: Px(12.0),
@@ -1839,10 +1952,11 @@ mod tests {
             slant: Default::default(),
             line_height: Some(Px(16.0)),
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
 
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(16.0)), Px(16.0), Px(12.0));
+        let _ = style;
+        let offset = compute_text_vertical_offset(Px(16.0), Px(12.0));
         assert_eq!(offset, Px(2.0));
     }
 
@@ -1855,10 +1969,62 @@ mod tests {
             slant: Default::default(),
             line_height: Some(Px(12.0)),
             letter_spacing_em: None,
+            vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
 
-        let offset =
-            compute_text_vertical_offset(Some(&style), Length::Px(Px(12.0)), Px(12.0), Px(14.0));
+        let _ = style;
+        let offset = compute_text_vertical_offset(Px(12.0), Px(14.0));
         assert_eq!(offset, Px(0.0));
+    }
+
+    struct FakeTextService {
+        line: Option<TextLineMetrics>,
+    }
+
+    impl fret_core::TextService for FakeTextService {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            unimplemented!("not needed for this test")
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+
+        fn first_line_metrics(&mut self, _blob: TextBlobId) -> Option<TextLineMetrics> {
+            self.line
+        }
+    }
+
+    #[test]
+    fn bounds_as_line_box_baseline_uses_half_leading_in_bounds() {
+        let mut blobs: slotmap::SlotMap<TextBlobId, ()> = slotmap::SlotMap::with_key();
+        let blob = blobs.insert(());
+
+        let mut services = FakeTextService {
+            line: Some(TextLineMetrics {
+                ascent: Px(10.0),
+                descent: Px(4.0),
+                line_height: Px(16.0),
+            }),
+        };
+
+        let metrics = TextMetrics {
+            size: Size::new(Px(32.0), Px(16.0)),
+            baseline: Px(12.0),
+        };
+
+        let (offset, baseline) = compute_text_vertical_offset_and_baseline(
+            &mut services,
+            blob,
+            Px(20.0),
+            metrics,
+            TextVerticalPlacement::BoundsAsLineBox,
+        );
+
+        // bounds_h=20, ascent=10, descent=4 => padding_top=3, baseline=13
+        assert_eq!(offset, Px(0.0));
+        assert_eq!(baseline, Px(13.0));
     }
 }

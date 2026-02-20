@@ -13,6 +13,7 @@ use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::elements::ElementContext;
+use std::sync::Arc;
 
 pub const DEFAULT_MINIMUM_INTERACTIVE_SIZE: Px = Px(48.0);
 
@@ -38,4 +39,17 @@ pub fn centered_fill<H: UiHost>(cx: &mut ElementContext<'_, H>, child: AnyElemen
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     cx.flex(props, move |_cx| vec![child])
+}
+
+pub fn centered_fill_with_chrome_test_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    base_test_id: Option<&Arc<str>>,
+    chrome: AnyElement,
+) -> AnyElement {
+    let chrome = if let Some(id) = base_test_id {
+        chrome.test_id(Arc::<str>::from(format!("{id}.chrome")))
+    } else {
+        chrome
+    };
+    centered_fill(cx, chrome)
 }

@@ -82,8 +82,10 @@ Scripted repros (existing):
 
 - `tools/diag-scripts/ui-gallery-dropdown-open-select.json`
 - `tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json`
+- `tools/diag-scripts/ui-gallery-dropdown-menu-docs-smoke.json`
 - `tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json`
 - `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json`
+- `tools/diag-scripts/ui-gallery-dropdown-submenu-arrowleft-escape-close.json` (keyboard submenu close)
 - `tools/diag-scripts/ui-gallery-dropdown-submenu-safe-corridor-sweep.json` (corridor guard)
 
 ---
@@ -108,18 +110,59 @@ Invariants:
 - Keyboard navigation is deterministic and does not depend on pointer state.
 - Outside interaction handling is explicit (consume vs click-through), and consistent with Radix outcomes.
 
+### State machine sketch (root + submenu)
+
+This is a compact “reason → outcome” model aligned with Radix `@radix-ui/react-menu` /
+`@radix-ui/react-dropdown-menu`.
+
+Root session:
+
+- Closed → Opened when:
+  - Trigger is activated (press/click), or
+  - Keyboard open key (ArrowDown/ArrowUp) is pressed on the trigger (`wire_open_on_arrow_keys`).
+- Opened → Closed when:
+  - Escape dismiss, or
+  - Outside press / focus outside / scroll dismissal, or
+  - Item selection commit (activation) chooses to close.
+
+Submenu session (while root is open):
+
+- SubmenuClosed(item) → SubmenuOpen(item) when:
+  - Pointer enters a submenu trigger item and hover-open delay elapses (if configured), or
+  - Keyboard navigation selects submenu trigger and ArrowRight opens.
+- SubmenuOpen(item A) → SubmenuOpen(item B) when:
+  - Pointer enters a different submenu trigger item (switch), unless suppressed by the pointer grace corridor.
+- SubmenuOpen(item) → SubmenuClosed(item) when:
+  - ArrowLeft closes, restoring focus to the submenu trigger, or
+  - Root closes, or
+  - Outside press dismiss closes the whole menu stack as configured.
+
+Pointer grace corridor (submenu safe-hover):
+
+- When the pointer leaves a submenu trigger towards the submenu content, we start a “grace window”
+  during which submenu switching is suppressed if the pointer stays within the safe corridor.
+- Geometry + membership checks:
+  - corridor geometry: `ecosystem/fret-ui-kit/src/primitives/menu/pointer_grace_intent.rs`
+  - “moving toward submenu” tests: `ecosystem/fret-ui-kit/src/headless/safe_hover.rs`
+
+### Policy surfaces (where decisions live)
+
+- Trigger open keys: `ecosystem/fret-ui-kit/src/primitives/menu/trigger.rs`
+- Roving focus + typeahead policy: `ecosystem/fret-ui-kit/src/primitives/menu/content.rs`
+- Close auto-focus suppression (click-through non-modal menus): `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`
+
 ---
 
 ## Audit checklist (dimension-driven)
 
 ### Model
 
-- [ ] `M` Write down root + submenu state machine, including pointer grace corridor.
+- [x] `M` Write down root + submenu state machine, including pointer grace corridor.
 
 ### Policy (Trigger / Listbox / Commit)
 
-- [ ] `M/I` TriggerPolicy: open/close inputs and open keys.
-- [ ] `M/I` ListboxPolicy: roving focus + typeahead + scroll-into-view.
+- [x] `M/I` TriggerPolicy: open/close inputs and open keys.
+- [x] `M/I` ListboxPolicy: roving focus + typeahead + scroll-into-view.
 - [ ] `M/I` SelectionCommitPolicy: activation commits selection and closes as appropriate.
 
 ### Focus
@@ -154,4 +197,5 @@ Invariants:
 ### Tests / gates
 
 - [x] `G` At least one multi-step diag script gates submenu corridor behavior.
+- [x] `G` Keep a diag script gating keyboard submenu close (ArrowLeft) and root close (Escape).
 - [ ] `G` Add/keep Radix timeline parity gates where available.

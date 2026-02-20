@@ -207,6 +207,15 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    /// Configures a fixed line box by setting both `line_height_px(height)` and `h_px(height)`.
+    ///
+    /// This is a pragmatic escape hatch for fixed-height controls (tabs, pills, buttons) where
+    /// centering by glyph bounds can read as slightly bottom-heavy. A fixed line box allows the
+    /// text widget to apply CSS/GPUI-like "half-leading" baseline placement.
+    pub fn fixed_line_box_px(self, height: Px) -> Self {
+        self.line_height_px(height).h_px(height)
+    }
+
     pub fn letter_spacing_em(mut self, letter_spacing_em: f32) -> Self {
         self.inner.letter_spacing_em_override = Some(letter_spacing_em);
         self
@@ -233,6 +242,24 @@ impl UiBuilder<crate::ui::TextBox> {
 
     pub fn truncate(self) -> Self {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+
+    /// Sets `TextWrap::WordBreak` and clips overflow.
+    ///
+    /// This matches Tailwind's `break-words` intent (prevent horizontal overflow by allowing
+    /// breaks inside long tokens such as URLs, paths, and identifiers).
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
+    }
+
+    /// Opt into "bounds-as-line-box" baseline placement for fixed-height controls.
+    ///
+    /// This is intended for single-line labels that should look vertically centered inside a
+    /// container whose height is larger than the natural line height.
+    pub fn line_box_in_bounds(mut self) -> Self {
+        self.inner.vertical_placement_override =
+            Some(fret_core::TextVerticalPlacement::BoundsAsLineBox);
+        self
     }
 }
 
@@ -263,6 +290,14 @@ impl UiBuilder<crate::ui::RawTextBox> {
 
     pub fn truncate(self) -> Self {
         self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+
+    /// Sets `TextWrap::WordBreak` and clips overflow.
+    ///
+    /// This matches Tailwind's `break-words` intent (prevent horizontal overflow by allowing
+    /// breaks inside long tokens such as URLs, paths, and identifiers).
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
 }
 

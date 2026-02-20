@@ -255,6 +255,7 @@ pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
+pub(crate) const PAGE_MATERIAL3_SLIDER: &str = "material3_slider";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
 pub(crate) const PAGE_MATERIAL3_BADGE: &str = "material3_badge";
 pub(crate) const PAGE_MATERIAL3_SEGMENTED_BUTTON: &str = "material3_segmented_button";
@@ -478,6 +479,7 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
     "ui_gallery.nav.select.material3_icon_button";
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
+pub(crate) const CMD_NAV_MATERIAL3_SLIDER: &str = "ui_gallery.nav.select.material3_slider";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
 pub(crate) const CMD_NAV_MATERIAL3_BADGE: &str = "ui_gallery.nav.select.material3_badge";
 pub(crate) const CMD_NAV_MATERIAL3_SEGMENTED_BUTTON: &str =
@@ -2235,6 +2237,21 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "switch", "state-layer", "ripple", "forms"],
             ),
             PageSpec::new(
+                PAGE_MATERIAL3_SLIDER,
+                "Slider",
+                "Material 3 Slider (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SLIDER,
+                &[
+                    "material3",
+                    "slider",
+                    "state-layer",
+                    "ripple",
+                    "forms",
+                    "value",
+                ],
+            ),
+            PageSpec::new(
                 PAGE_MATERIAL3_RADIO,
                 "Radio",
                 "Material 3 Radio (MVP)",
@@ -2407,6 +2424,16 @@ pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
         .iter()
         .flat_map(|group| group.items.iter())
         .find(|item| item.id == id)
+}
+
+pub(crate) fn page_group_title(id: &str) -> Option<&'static str> {
+    PAGE_GROUPS.iter().find_map(|group| {
+        group
+            .items
+            .iter()
+            .any(|item| item.id == id)
+            .then_some(group.title)
+    })
 }
 
 pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {

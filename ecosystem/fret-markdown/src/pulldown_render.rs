@@ -740,6 +740,7 @@ fn render_task_list_marker<H: UiHost>(
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
             letter_spacing_em: None,
+            ..Default::default()
         }),
         color: Some(color),
         wrap: TextWrap::None,

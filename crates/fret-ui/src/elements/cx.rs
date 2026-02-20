@@ -19,9 +19,9 @@ use crate::action::{
     OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
     OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
     OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
-    OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks,
-    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
-    TimerActionHooks,
+    OnRovingNavigate, OnRovingTypeahead, OnSelectableTextActivateSpan, OnTimer, OnWheel,
+    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult,
+    RovingActionHooks, SelectableTextActionHooks, TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -255,7 +255,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
     /// without mixing layout transforms into the layout solver.
     pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
-        self.window_state.last_visual_bounds(element)
+        self.window_state
+            .last_visual_bounds(element)
+            .or_else(|| self.window_state.last_bounds(element))
     }
 
     /// Returns the last recorded root bounds for the element's root, if available.
@@ -1614,6 +1616,39 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a component-owned activation handler for interactive spans in the current
+    /// selectable text element.
+    ///
+    /// This is a policy hook mechanism (ADR 0074): components decide what activation does
+    /// (open URL, dispatch command, etc.), while the runtime remains mechanism-only.
+    pub fn selectable_text_on_activate_span(&mut self, handler: OnSelectableTextActivateSpan) {
+        self.with_state(SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = Some(handler);
+        });
+    }
+
+    pub fn selectable_text_on_activate_span_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnSelectableTextActivateSpan,
+    ) {
+        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = Some(handler);
+        });
+    }
+
+    pub fn selectable_text_clear_on_activate_span(&mut self) {
+        self.with_state(SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = None;
+        });
+    }
+
+    pub fn selectable_text_clear_on_activate_span_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, SelectableTextActionHooks::default, |hooks| {
+            hooks.on_activate_span = None;
+        });
+    }
+
     /// Register a component-owned pointer down handler for the current pressable element.
     ///
     /// This is a policy hook mechanism (ADR 0074): components can opt into Radix-style "select on
@@ -2776,6 +2811,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
             cx.new_any_element(
                 id,
                 ElementKind::SelectableText(SelectableTextProps::new(rich)),
@@ -2785,9 +2821,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn selectable_text_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> SelectableTextProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
+            let props = f(cx, id);
+            cx.new_any_element(id, ElementKind::SelectableText(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
     pub fn selectable_text_props(&mut self, props: SelectableTextProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.selectable_text_clear_on_activate_span();
             cx.new_any_element(id, ElementKind::SelectableText(props), Vec::new())
         })
     }
@@ -3112,6 +3162,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     fret_core::Axis::Horizontal => (state.viewport_w, state.offset_x),
                 };
 
+                // For large scroll jumps, rendering the full overscan window can produce a
+                // one-frame layout spike (we're attaching and solving many item roots at once).
+                //
+                // Prefer rendering the true visible window for the jump frame and let overscan
+                // catch up on subsequent frames.
+                let mut overscan_for_range = if scroll_handle.deferred_scroll_to_item().is_some() {
+                    0
+                } else {
+                    options.overscan
+                };
+
                 let prev_anchor = if viewport.0 > 0.0 && len > 0 {
                     state.metrics.visible_range(offset, viewport, 0).map(|r| {
                         let idx = r.start_index;
@@ -3253,6 +3314,35 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     };
                     let handle_axis = state.metrics.clamp_offset(handle_axis, viewport);
                     if (handle_axis.0 - offset.0).abs() > 0.01 {
+                        // If the handle jumps far outside the previously committed visible range,
+                        // skip overscan for this render so we don't attach/solve a large window of
+                        // off-screen items in a single frame.
+                        if overscan_for_range > 0 {
+                            let prev_visible = state.metrics.visible_range(offset, viewport, 0);
+                            let next_visible =
+                                state.metrics.visible_range(handle_axis, viewport, 0);
+                            let large_jump = match (prev_visible, next_visible) {
+                                (Some(prev), Some(next)) => {
+                                    let prev_len = prev
+                                        .end_index
+                                        .saturating_sub(prev.start_index)
+                                        .saturating_add(1);
+                                    let threshold = prev_len
+                                        .saturating_mul(4)
+                                        .max(options.overscan.saturating_mul(8));
+                                    next.start_index.abs_diff(prev.start_index) > threshold
+                                }
+                                _ => {
+                                    let delta_px = (handle_axis.0 - offset.0).abs();
+                                    delta_px > (viewport.0 * 3.0)
+                                }
+                            };
+
+                            if large_jump {
+                                overscan_for_range = 0;
+                                range = None;
+                            }
+                        }
                         preview_offset = handle_axis;
                     }
                 }
@@ -3273,7 +3363,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     state.deferred_scroll_offset_hint = Some(desired);
                     range = state
                         .metrics
-                        .visible_range(desired, viewport, options.overscan);
+                        .visible_range(desired, viewport, overscan_for_range);
                 }
 
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
@@ -3302,19 +3392,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,
-                                options.overscan,
+                                overscan_for_range,
                             );
                         }
                     } else if range.is_none() {
-                        range =
-                            state
-                                .metrics
-                                .visible_range(preview_offset, viewport, options.overscan);
+                        range = state.metrics.visible_range(
+                            preview_offset,
+                            viewport,
+                            overscan_for_range,
+                        );
                     }
                 } else if range.is_none() {
                     range = state
                         .metrics
-                        .visible_range(offset, viewport, options.overscan);
+                        .visible_range(offset, viewport, overscan_for_range);
                 }
 
                 state.render_window_range = range;

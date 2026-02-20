@@ -194,7 +194,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 vec![
                     tooltip(
                         cx,
-                        "?????",
+                        "يناير",
                         shadcn::ChartTooltipIndicator::Dot,
                         false,
                         false,
@@ -299,7 +299,7 @@ shadcn::Alert::new([
                 .code(
                     "rust",
                     r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::ChartTooltipContent::new().label("?????").into_element(cx)
+    shadcn::ChartTooltipContent::new().label("يناير").into_element(cx)
 })"#,
                 ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),

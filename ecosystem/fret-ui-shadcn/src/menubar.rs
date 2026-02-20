@@ -17,6 +17,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -574,10 +575,15 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_style: TextStyle,
+    chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    vec![cx.container(
+    let child = cx.container(
         ContainerProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
             padding: Edges {
                 top: pad_y,
                 right: pad_x,
@@ -682,8 +688,14 @@ fn menu_row_children<H: UiHost>(
                 move |_cx| row.clone(),
             )]
         },
-    )]
-    .into()
+    );
+
+    let mut chrome = child;
+    if let Some(test_id) = chrome_test_id {
+        chrome = chrome.test_id(test_id);
+    }
+
+    vec![chrome].into()
 }
 
 fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
@@ -1215,12 +1227,13 @@ impl MenubarMenuEntries {
                 slant: Default::default(),
                 line_height: Some(font_line_height),
                 letter_spacing_em: None,
+                vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
             };
 
             let label = self.menu.label.clone();
             let test_id = self.menu.test_id.clone();
 
-            cx.pressable_with_id_props(|cx, st, trigger_id| {
+            control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                 let (patient_click_sticky, patient_click_timer) =
                     menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
@@ -1880,6 +1893,7 @@ impl MenubarMenuEntries {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_style.clone(),
+                                                                        None,
                                                                     );
 
                                                                     (props, children)
@@ -2062,6 +2076,7 @@ impl MenubarMenuEntries {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_style.clone(),
+                                                                        None,
                                                                     );
 
                                                                     (props, children)
@@ -2150,10 +2165,13 @@ impl MenubarMenuEntries {
                                                                    submenu_for_content.clone();
                                                                let trigger_registry =
                                                                    trigger_registry_for_overlay_for_content.clone();
-                                                              let value = item.value.clone();
-                                                              let test_id = item.test_id.clone();
-                                                               let pad_left =
-                                                                   if item.inset { pad_x_inset } else { pad_x };
+                                                               let value = item.value.clone();
+                                                               let test_id = item.test_id.clone();
+                                                               let chrome_test_id = test_id
+                                                                   .clone()
+                                                                   .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                                                let pad_left =
+                                                                    if item.inset { pad_x_inset } else { pad_x };
                                                             let _theme = theme.clone();
                                                                 let overlay_root_name_for_controls =
                                                                     overlay_root_name_for_controls.clone();
@@ -2314,22 +2332,23 @@ impl MenubarMenuEntries {
                                                                         })
                                                                     };
 
-                                                                    let children = menu_row_children(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        leading.clone(),
-                                                                        reserve_leading_slot,
-                                                                        trailing,
-                                                                        None,
-                                                                        has_submenu,
-                                                                        bg,
-                                                                        fg,
-                                                                        pad_left,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_style.clone(),
-                                                                    );
+                                                                     let children = menu_row_children(
+                                                                         cx,
+                                                                         label.clone(),
+                                                                         leading.clone(),
+                                                                         reserve_leading_slot,
+                                                                         trailing,
+                                                                         None,
+                                                                         has_submenu,
+                                                                         bg,
+                                                                         fg,
+                                                                         pad_left,
+                                                                         pad_x,
+                                                                         pad_y,
+                                                                         radius_sm,
+                                                                         text_style.clone(),
+                                                                         chrome_test_id.clone(),
+                                                                     );
 
                                                                     (props, children)
                                                                 })
@@ -2956,6 +2975,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    None,
                                                                                 );
 
                                                                                 (props, children)
@@ -3109,6 +3129,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    None,
                                                                                 );
 
                                                                                 (props, children)
@@ -3123,6 +3144,9 @@ impl MenubarMenuEntries {
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let test_id = item.test_id.clone();
+                                                                        let chrome_test_id = test_id
+                                                                            .clone()
+                                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                                         let command = item.command.clone();
                                                                         let item_enabled = !item.disabled
                                                                             && !crate::command_gating::command_is_disabled_by_gating(
@@ -3267,6 +3291,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    chrome_test_id.clone(),
                                                                                 );
 
                                                                                 (props, children)
@@ -3367,22 +3392,25 @@ impl MenubarMenuEntries {
                     }
                 }
 
-                let content = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle::default(),
-                        padding: Edges {
-                            top: Px(4.0),
-                            right: Px(8.0),
-                            bottom: Px(4.0),
-                            left: Px(8.0),
-                        },
-                        background: trigger_bg,
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: Corners::all(radius),
-                        ..Default::default()
+                let chrome = ContainerProps {
+                    layout: LayoutStyle::default(),
+                    padding: Edges {
+                        top: Px(4.0),
+                        right: Px(8.0),
+                        bottom: Px(4.0),
+                        left: Px(8.0),
                     },
+                    background: trigger_bg,
+                    shadow: None,
+                    border: Edges::all(Px(0.0)),
+                    border_color: None,
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
+                };
+
+                (
+                    props,
+                    chrome,
                     move |cx| {
                         let mut label_text = ui::text(cx, label.clone())
                             .text_size_px(text_style.size)
@@ -3397,9 +3425,7 @@ impl MenubarMenuEntries {
                         }
                         vec![label_text.into_element(cx)]
                     },
-                );
-
-                (props, vec![content])
+                )
             })
         })
     }

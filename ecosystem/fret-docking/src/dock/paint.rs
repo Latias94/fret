@@ -124,7 +124,7 @@ pub(super) fn paint_dock(
         });
 
         let scroll = tab_scroll_for_node(tab_scroll, node_id);
-        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
         let tab_geom_candidate = tab_widths
             .get(&node_id)
             .filter(|w| w.len() == tabs.len())
@@ -217,7 +217,7 @@ pub(super) fn paint_dock(
             }
 
             if let Some(title) = tab_titles.get(panel) {
-                let clip = tab_title_clip_rect(theme, tab_rect, tab_close_glyph.is_some());
+                let clip = tab_title_clip_rect(theme.clone(), tab_rect, tab_close_glyph.is_some());
                 let text_x = clip.origin.x;
                 let inner_y = tab_rect.origin.y.0
                     + ((tab_rect.size.height.0 - title.metrics.size.height.0) * 0.5);
@@ -241,7 +241,7 @@ pub(super) fn paint_dock(
             }
 
             if (is_active || is_hovered) && (tab_close_svg.is_some() || tab_close_glyph.is_some()) {
-                let close_rect = tab_close_rect(theme, tab_rect);
+                let close_rect = tab_close_rect(theme.clone(), tab_rect);
                 let close_hovered = is_hovered && hovered_tab_close;
                 let close_pressed = pressed_tab_close == Some((node_id, i));
 
@@ -302,7 +302,7 @@ pub(super) fn paint_dock(
         scene.push(SceneOp::PopClip);
 
         if overflow {
-            let button_rect = tab_overflow_button_rect(theme, tab_bar);
+            let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
             let hovered = hovered_tab_overflow_button == Some(node_id);
             let open = tab_overflow_menu.is_some_and(|m| m.tabs == node_id);
             if hovered || open {
@@ -356,7 +356,7 @@ pub(super) fn paint_dock(
         if let Some(menu) = tab_overflow_menu
             && menu.tabs == node_id
         {
-            let menu_rect = tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
             let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
             let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
             let row_h = overflow_menu_row_height(tab_bar).0;
@@ -460,7 +460,7 @@ pub(super) fn paint_dock(
                 if let Some(hooks) = overlay_hooks
                     && let Some(panel_key) = active_panel
                 {
-                    hooks.paint_with_layout(theme, window, panel_key, vp, layout, scene);
+                    hooks.paint_with_layout(theme.clone(), window, panel_key, vp, layout, scene);
                 }
                 scene.push(SceneOp::PopClip);
             } else {
@@ -622,7 +622,8 @@ pub(super) fn paint_drop_overlay(
                         Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
                         _ => 0,
                     };
-                    let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+                    let strip_candidate =
+                        tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
                     let geom_candidate = tab_widths
                         .get(&target.tabs)
                         .filter(|w| w.len() == tab_count)
@@ -643,7 +644,7 @@ pub(super) fn paint_drop_overlay(
                     let insert_index = target.insert_index.unwrap_or(tab_count);
                     let mut x = geom.insert_x(insert_index.min(tab_count), scroll).0;
                     let mut w = dock_tab_width_for_title(
-                        theme,
+                        theme.clone(),
                         title.metrics.size.width,
                         close_glyph_present,
                     )
@@ -696,7 +697,8 @@ pub(super) fn paint_drop_overlay(
                         Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
                         _ => 0,
                     };
-                    let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+                    let strip_candidate =
+                        tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
                     let geom_candidate = tab_widths
                         .get(&target.tabs)
                         .filter(|w| w.len() == tab_count)
@@ -948,7 +950,14 @@ pub(super) fn paint_drop_hints(
                 border_paint: fret_core::Paint::Solid(stroke),
                 corner_radii,
             });
-            paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+            paint_drop_hint_icon(
+                theme.clone(),
+                zone,
+                hint_rect,
+                is_active,
+                scene,
+                order.0 + 1,
+            );
         }
     };
 

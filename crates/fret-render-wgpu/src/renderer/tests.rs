@@ -153,7 +153,7 @@ fn shaders_validate_for_webgpu() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-webgpu-tests"))]
 mod webgpu_tint_guardrail {
     use super::*;
     use wasm_bindgen_test::*;

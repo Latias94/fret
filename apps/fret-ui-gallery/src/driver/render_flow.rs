@@ -101,9 +101,12 @@ pub(super) fn begin_frame(
     let inspector_last_pointer = state.inspector_last_pointer.clone();
 
     let inspector_on = app.models().get_copied(&inspector_enabled).unwrap_or(false);
+    // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the UI-tree debug HUD/stats in
+    // that mode because it perturbs steady-state perf measurements.
+    let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
     let debug_on = inspector_on
         || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
-        || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
+        || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
     state.ui.set_debug_enabled(debug_on);
     if debug_on {
         app.request_redraw(window);

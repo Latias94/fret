@@ -83,6 +83,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -1079,6 +1080,9 @@ impl NavigationMenu {
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
                         let trigger_test_id = item.trigger_test_id.clone();
+                        let trigger_chrome_test_id = trigger_test_id
+                            .clone()
+                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -1176,7 +1180,12 @@ impl NavigationMenu {
                                         move |_cx| content_children,
                                     );
 
-                                    vec![cx.container(wrapper, move |_cx| vec![row])]
+                                    let child = cx.container(wrapper, move |_cx| vec![row]);
+                                    let mut chrome = child;
+                                    if let Some(test_id) = trigger_chrome_test_id.clone() {
+                                        chrome = chrome.test_id(test_id);
+                                    }
+                                    vec![chrome]
                                 });
                             }
                             radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
@@ -1320,7 +1329,12 @@ impl NavigationMenu {
                                             move |_cx| row_children,
                                         );
 
-                                        vec![cx.container(wrapper, move |_cx| vec![row])]
+                                        let child = cx.container(wrapper, move |_cx| vec![row]);
+                                        let mut chrome = child;
+                                        if let Some(test_id) = trigger_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                         })

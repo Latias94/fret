@@ -40,6 +40,7 @@ fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
         slant: Default::default(),
         line_height: Some(theme.metric_token("component.text.sm_line_height")),
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 

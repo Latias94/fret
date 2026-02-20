@@ -124,6 +124,19 @@ blake3 = "1"
 # GPUI applies a similar per-package opt-level override for Taffy.
 [profile.dev]
 opt-level = 1
+# Keep default dev builds reasonably fast on Windows/MSVC where PDB/link time can dominate.
+debug = 1
+codegen-units = 16
+incremental = true
+
+[profile.dev.build-override]
+# Mirror dev settings for build-dependencies to avoid extra rebuild churn in large workspaces.
+codegen-units = 16
+
+[profile.dev-full]
+inherits = "dev"
+# Opt back into full debuginfo when you need rich debugger inspection.
+debug = 2
 
 [profile.dev.package.taffy]
 opt-level = 3

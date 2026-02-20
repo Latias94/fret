@@ -1126,7 +1126,7 @@ impl DockSpace {
         tab_bar: Rect,
         tab_count: usize,
     ) -> (TabBarGeometry, bool) {
-        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
         let geom_candidate = self
             .tab_widths
             .get(&tabs)
@@ -1464,7 +1464,7 @@ impl DockSpace {
             }
         };
 
-        self.rebuild_dock_drag_tooltip(services, theme, scale_factor, &msg);
+        self.rebuild_dock_drag_tooltip(services, theme.clone(), scale_factor, &msg);
         let Some(tooltip) = self.dock_drag_tooltip else {
             return;
         };
@@ -1677,7 +1677,7 @@ impl DockSpace {
         scene: &mut fret_core::Scene,
     ) {
         let rect = float_zone(dock_bounds);
-        self.rebuild_float_zone_glyph(services, theme, scale_factor);
+        self.rebuild_float_zone_glyph(services, theme.clone(), scale_factor);
 
         let border = theme.color_token("border");
         let card = theme.color_token("card");
@@ -1728,7 +1728,7 @@ impl DockSpace {
             "Click: float active tabs (in-window).\nTear-off (OS window) is disabled on this platform/session."
         };
 
-        self.rebuild_float_zone_tooltip(services, theme, scale_factor, msg);
+        self.rebuild_float_zone_tooltip(services, theme.clone(), scale_factor, msg);
 
         let Some(tooltip) = self.float_zone_tooltip else {
             return;
@@ -1910,7 +1910,7 @@ impl DockSpace {
             let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
             self.paint_dock_drag_modifier_hint(
                 cx.services,
-                theme,
+                theme.clone(),
                 cx.scale_factor,
                 dock_bounds,
                 dock_drag_pos,
@@ -1921,7 +1921,7 @@ impl DockSpace {
 
         let pad = theme.metric_token("metric.padding.md").0.max(0.0);
         let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
-        self.rebuild_empty_state(cx.services, theme, cx.scale_factor, max_w);
+        self.rebuild_empty_state(cx.services, theme.clone(), cx.scale_factor, max_w);
 
         let Some(text) = self.empty_state else {
             return;
@@ -2020,7 +2020,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -2054,14 +2055,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -3061,7 +3064,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
             .is_some();
 
-        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point, bool)> = None;
+        let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
         let mut start_dock_tabs_drag: Option<(Point, DockTabsDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
@@ -3124,6 +3127,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let allow_tear_off_for_panel =
                     |source_window: fret_core::AppWindowId, panel: &PanelKey| -> bool {
                         if !allow_tear_off {
+                            return false;
+                        }
+
+                        // Once a panel lives in a DockFloating OS window, dragging it out-of-bounds
+                        // should behave like a cross-window drag/drop (or window move), not a new
+                        // tear-off into yet another OS window. This keeps multi-window tab drags
+                        // stable and avoids creating chains of one-panel windows.
+                        if crate::runtime::is_dock_floating_os_window(app, source_window)
+                            && dock.graph.collect_panels_in_window(source_window).len() == 1
+                        {
                             return false;
                         }
 
@@ -3392,9 +3405,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         (tabs_rect, node)
                                     {
                                         let (tab_bar, _content) = split_tab_bar(tabs_rect);
-                                        let button_rect = tab_overflow_button_rect(theme, tab_bar);
+                                        let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
                                         let menu_rect =
-                                            tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+                                            tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
 
                                         if menu_rect.contains(*position) {
                                             let row = overflow_menu_row_at_pos(
@@ -3463,11 +3476,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             continue;
                                         }
                                         let max_scroll =
-                                            self.max_tab_scroll(theme, node_id, tab_bar, tabs.len());
+                                            self.max_tab_scroll(theme.clone(), node_id, tab_bar, tabs.len());
                                         if max_scroll.0 <= 0.0 {
                                             continue;
                                         }
-                                        let button_rect = tab_overflow_button_rect(theme, tab_bar);
+                                        let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
                                         if !button_rect.contains(*position) {
                                             continue;
                                         }
@@ -3622,7 +3635,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             &layout,
                                             &self.tab_scroll,
                                             &self.tab_widths,
-                                            theme,
+                                            theme.clone(),
                                             *position,
                                         )
                                 {
@@ -3661,7 +3674,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     let scroll = self.tab_scroll_for(tabs_node);
                                                     let (geom, _overflow) = self
                                                         .tab_bar_geometry_for_node(
-                                                            theme,
+                                                            theme.clone(),
                                                             tabs_node,
                                                             bar,
                                                             tab_count,
@@ -3679,7 +3692,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         // If this tab is already in an in-window floating container, prefer moving
                                         // the floating window itself by dragging the tab (imgui/egui parity).
                                         // Hold Alt to force the dock drag behavior (tear-off / docking previews).
-                                        if let Some(layout_root) = layout_root
+                                        // When this OS window has no dock root (multi-window
+                                        // tear-off), dragging a tab should initiate a dock drag so
+                                        // the user can re-dock into another window. Treat the
+                                        // floating content as the window root for interaction
+                                        // purposes, rather than allowing the inner floating rect
+                                        // to be moved around.
+                                        if root.is_some()
+                                            && let Some(layout_root) = layout_root
                                             && root != Some(layout_root)
                                             && !modifiers.alt
                                             && let Some(entry) = dock
@@ -3776,13 +3796,25 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             {
                                 let (tab_bar, _content) = split_tab_bar(tabs_rect);
                                 if tab_bar.contains(*position)
-                                    && !tab_overflow_button_rect(theme, tab_bar)
+                                    && !tab_overflow_button_rect(theme.clone(), tab_bar)
                                         .contains(*position)
                                 {
-                                    // If the tab bar belongs to an in-window floating container, prefer moving the
-                                    // floating window itself over starting a "tabs group" dock drag.
-                                    if let Some(floating) = self
-                                        .find_floating_container_for_tabs(&dock.graph, tabs_node)
+                                    let is_dedicated_floating_window =
+                                        dock.graph.window_root(self.window).is_none();
+
+                                    // If the tab bar belongs to an in-window floating container,
+                                    // prefer moving the floating window itself over starting a
+                                    // "tabs group" dock drag.
+                                    //
+                                    // Exception: when this OS window has no dock root and only
+                                    // hosts floating content (the multi-window tear-off case),
+                                    // dragging the tab bar should start a dock tabs drag so the
+                                    // user can re-dock by dropping into another window.
+                                    if !is_dedicated_floating_window
+                                        && let Some(floating) = self.find_floating_container_for_tabs(
+                                            &dock.graph,
+                                            tabs_node,
+                                        )
                                         && let Some(entry) = dock
                                             .graph
                                             .floating_windows(self.window)
@@ -3857,7 +3889,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         &layout,
                                         &self.tab_scroll,
                                         &self.tab_widths,
-                                        theme,
+                                        theme.clone(),
                                         *position,
                                     )
                             {
@@ -3976,7 +4008,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         if !tab_bar.contains(*position) {
                                             continue;
                                         }
-                                        if tab_overflow_button_rect(theme, tab_bar)
+                                        if tab_overflow_button_rect(theme.clone(), tab_bar)
                                             .contains(*position)
                                         {
                                             continue;
@@ -4256,17 +4288,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         let wants_dock_previews = docking_interaction_settings
                                             .drag_inversion
                                             .wants_dock_previews(*modifiers);
-                                        let last_tab_in_source_tabs = dock
-                                            .graph
-                                            .find_panel_in_window(self.window, &pending.panel)
-                                            .and_then(|(tabs_node, _)| match dock.graph.node(tabs_node)
-                                            {
-                                                Some(DockNode::Tabs { tabs, .. }) => Some(tabs.len() == 1),
-                                                _ => None,
-                                            })
-                                            .unwrap_or(false);
-                                        let follow_window =
-                                            dock.graph.windows().len() > 1 && last_tab_in_source_tabs;
                                         if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
                                             .is_some_and(|v| !v.is_empty())
                                         {
@@ -4296,7 +4317,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
-                                            follow_window,
                                         ));
                                         request_pointer_capture = Some(None);
                                     }
@@ -4472,7 +4492,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         &layout,
                                         &self.tab_scroll,
                                         &self.tab_widths,
-                                        theme,
+                                        theme.clone(),
                                         *position,
                                     )
                                     .map(|(node, idx, _panel, close)| (node, idx, close));
@@ -4505,7 +4525,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             continue;
                                         }
                                         let (_geom, overflow) = self.tab_bar_geometry_for_node(
-                                            theme,
+                                            theme.clone(),
                                             node_id,
                                             tab_bar,
                                             tabs.len(),
@@ -4513,7 +4533,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         if !overflow {
                                             continue;
                                         }
-                                        if tab_overflow_button_rect(theme, tab_bar)
+                                        if tab_overflow_button_rect(theme.clone(), tab_bar)
                                             .contains(*position)
                                         {
                                             next_overflow_button = Some(node_id);
@@ -4766,7 +4786,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             {
                                 let (tab_bar, _content) = split_tab_bar(tabs_rect);
                                 let menu_rect =
-                                    tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+                                    tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
                                 if menu_rect.contains(*position) {
                                     let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
                                     let wheel = delta.x.0 + delta.y.0;
@@ -4805,7 +4825,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 self.clamp_and_ensure_active_visible(
-                                    theme,
+                                    theme.clone(),
                                     node_id,
                                     tab_bar,
                                     tabs.len(),
@@ -4813,7 +4833,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 );
 
                                 let max_scroll =
-                                    self.max_tab_scroll(theme, node_id, tab_bar, tabs.len());
+                                    self.max_tab_scroll(theme.clone(), node_id, tab_bar, tabs.len());
                                 if max_scroll.0 <= 0.0 {
                                     scrolled_tabs = true;
                                     break;
@@ -4999,7 +5019,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     &layout,
                                     &self.tab_scroll,
                                     &self.tab_widths,
-                                    theme,
+                                    theme.clone(),
                                     *position,
                                 )
                                 .is_some_and(|(n, i, p, close)| {
@@ -5183,6 +5203,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     dock.hover = None;
                                     invalidate_paint = true;
                                 }
+                            }
+
+                            // Robustness: always end an active dock drag on pointer release, even
+                            // if we don't have a hover target (cancel drop) or the release is
+                            // delivered to a different window than the hover window.
+                            if *button == fret_core::MouseButton::Left
+                                && app.drag(pointer_id).is_some_and(|d| {
+                                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                                        || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                                })
+                            {
+                                dock.hover = None;
+                                end_dock_drag = true;
+                                invalidate_paint = true;
+                                pending_redraws.push(self.window);
                             }
                         }
                     },
@@ -5673,8 +5708,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
             request_focus = panel_nodes.get(&panel).copied();
         }
 
-        if let Some((start, payload, position, follow_window)) = start_dock_drag {
+        if let Some((start, payload, position)) = start_dock_drag {
             let grab_offset = payload.grab_offset;
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let follow_enabled = settings.follow_window_during_drag
+                || std::env::var_os("FRET_DOCK_FOLLOW_WINDOW_DURING_DRAG")
+                    .is_some_and(|v| !v.is_empty());
+            let follow_this_window =
+                follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_PANEL,
@@ -5683,16 +5728,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 payload,
             );
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
+                if follow_this_window {
+                    drag.follow_window = Some(self.window);
+                }
                 drag.position = position;
                 drag.dragging = true;
                 drag.cursor_grab_offset = Some(grab_offset);
-                if follow_window {
-                    drag.follow_window = Some(self.window);
-                }
             }
         }
         if let Some((start, payload, position)) = start_dock_tabs_drag {
             let grab_offset = payload.grab_offset;
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            let follow_enabled = settings.follow_window_during_drag
+                || std::env::var_os("FRET_DOCK_FOLLOW_WINDOW_DURING_DRAG")
+                    .is_some_and(|v| !v.is_empty());
+            let follow_this_window =
+                follow_enabled && crate::runtime::is_dock_floating_os_window(cx.app, self.window);
             cx.app.begin_cross_window_drag_with_kind(
                 pointer_id,
                 fret_runtime::DRAG_KIND_DOCK_TABS,
@@ -5701,6 +5756,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 payload,
             );
             if let Some(drag) = cx.app.drag_mut(pointer_id) {
+                if follow_this_window {
+                    drag.follow_window = Some(self.window);
+                }
                 drag.position = position;
                 drag.dragging = true;
                 drag.cursor_grab_offset = Some(grab_offset);
@@ -5814,7 +5872,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -5848,14 +5907,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -5983,7 +6044,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 visible_tabs_nodes.insert(node_id);
 
                 let (tab_bar, _content) = split_tab_bar(rect);
-                self.clamp_and_ensure_active_visible(theme, node_id, tab_bar, tabs.len(), *active);
+                self.clamp_and_ensure_active_visible(
+                    theme.clone(),
+                    node_id,
+                    tab_bar,
+                    tabs.len(),
+                    *active,
+                );
             }
             self.tab_scroll
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
@@ -6087,14 +6154,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
             let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
-            let dock_graph_stats = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
-            let dock_graph_signature = cx
-                .app
-                .global::<DockManager>()
-                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
+            let (dock_graph_stats, dock_graph_signature) =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        (
+                            dock_graph_stats_for_window(&dock.graph, self.window),
+                            dock_graph_signature_for_window(&dock.graph, self.window),
+                        )
+                    });
+            let dock_graph_stats = Some(dock_graph_stats);
+            let dock_graph_signature = Some(dock_graph_signature);
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -6270,7 +6339,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             {
                 let (tab_bar, _content) = split_tab_bar(tabs_rect);
                 let _ = self.apply_tab_bar_drag_auto_scroll(
-                    theme,
+                    theme.clone(),
                     &dock.graph,
                     target,
                     tab_bar,
@@ -6285,7 +6354,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             self.rebuild_tab_titles(
                 services,
-                theme,
+                theme.clone(),
                 scale_factor,
                 &*dock,
                 &layout_all,
@@ -6312,7 +6381,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             .get(panel)
                             .map(|t| t.metrics.size.width)
                             .unwrap_or(Px(0.0));
-                        dock_tab_width_for_title(theme, title_width, close_glyph_present)
+                        dock_tab_width_for_title(theme.clone(), title_width, close_glyph_present)
                     })
                     .collect();
                 self.tab_widths.insert(node_id, Arc::from(widths));
@@ -6348,7 +6417,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
 
             paint_dock(
-                theme,
+                theme.clone(),
                 &*dock,
                 PaintDockParams {
                     window: self.window,
@@ -6466,7 +6535,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 }
 
                 paint_dock(
-                    theme,
+                    theme.clone(),
                     &*dock,
                     PaintDockParams {
                         window: self.window,
@@ -6495,7 +6564,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
 
             paint_split_handles(
-                theme,
+                theme.clone(),
                 &dock.graph,
                 &layout_all,
                 self.divider_drag.as_ref().map(|d| d.handle.split),
@@ -6507,7 +6576,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             self.paint_float_zone_hint(
                 services,
-                theme,
+                theme.clone(),
                 scale_factor,
                 dock_bounds,
                 tear_off_possible,
@@ -6517,7 +6586,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if dock_drag_pointer_id.is_some() {
                 self.paint_dock_drag_modifier_hint(
                     services,
-                    theme,
+                    theme.clone(),
                     scale_factor,
                     dock_bounds,
                     dock_drag_pos,
@@ -6551,7 +6620,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                 if !suppress_hints_for_tab_reorder {
                     paint_drop_hints(
-                        theme,
+                        theme.clone(),
                         dock_drag_pos.and_then(|position| {
                             fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
                                 const EPS: f32 = 0.001;
@@ -6668,7 +6737,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 }
             }
             paint_drop_overlay(
-                theme,
+                theme.clone(),
                 hover,
                 self.window,
                 bounds,

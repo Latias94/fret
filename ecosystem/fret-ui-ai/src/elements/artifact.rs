@@ -282,6 +282,7 @@ impl ArtifactTitle {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("foreground")),
             wrap: fret_core::TextWrap::None,
@@ -344,6 +345,7 @@ impl ArtifactDescription {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(muted_fg),
             wrap: fret_core::TextWrap::None,

@@ -125,6 +125,7 @@ fn breadcrumb_with_patch<H: UiHost>(
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         };
 
         let props = decl_style::container_props(theme, chrome, layout);
@@ -404,6 +405,7 @@ pub mod primitives {
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         }
     }
 

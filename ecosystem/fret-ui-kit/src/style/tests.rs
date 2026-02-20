@@ -2,6 +2,7 @@ use super::*;
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::ThemeConfig;
+use fret_ui::element::PositionStyle;
 
 #[test]
 fn space_falls_back_to_theme_padding_scale() {
@@ -209,4 +210,16 @@ fn state_specific_token_overrides_fallback_derivation() {
     .resolve(theme);
 
     assert_eq!(resolved, expected);
+}
+
+#[test]
+fn inset_refinement_implies_relative_position() {
+    let refinement = LayoutRefinement::default().top(Space::N1);
+    assert_eq!(refinement.position, Some(PositionStyle::Relative));
+
+    let refinement = LayoutRefinement::default().inset(Space::N2);
+    assert_eq!(refinement.position, Some(PositionStyle::Relative));
+
+    let refinement = LayoutRefinement::default().absolute().left(Space::N1);
+    assert_eq!(refinement.position, Some(PositionStyle::Absolute));
 }

@@ -5,7 +5,7 @@ use fret_core::{Color, Corners, Px, TextStyle};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Mutex, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use crate::UiHost;
@@ -633,110 +633,29 @@ pub struct ThemeColors {
     pub viewport_rotate_gizmo: Color,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ThemeSnapshot {
     pub colors: ThemeColors,
     pub metrics: ThemeMetrics,
     pub revision: u64,
+    color_tokens: Arc<HashMap<String, Color>>,
+    metric_tokens: Arc<HashMap<String, Px>>,
 }
 
 impl ThemeSnapshot {
+    pub fn from_baseline(colors: ThemeColors, metrics: ThemeMetrics, revision: u64) -> Self {
+        Self {
+            colors,
+            metrics,
+            revision,
+            color_tokens: Arc::new(default_color_tokens(colors)),
+            metric_tokens: Arc::new(default_metric_tokens(metrics)),
+        }
+    }
+
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
         let key = canonicalize_token_key(ThemeTokenKind::Color, key);
-        let c = match key {
-            // Baseline dotted keys (ADR 0050). These are useful for app/editor overlays and for
-            // gradual migration away from typed theme field reads.
-            "color.surface.background" => self.colors.surface_background,
-            "color.panel.background" => self.colors.panel_background,
-            "color.panel.border" => self.colors.panel_border,
-            "color.text.primary" => self.colors.text_primary,
-            "color.text.muted" => self.colors.text_muted,
-            "color.text.disabled" => self.colors.text_disabled,
-            "color.accent" => self.colors.accent,
-            "color.selection.background" => self.colors.selection_background,
-            "color.selection.inactive.background" => self.colors.selection_inactive_background,
-            "color.selection.window_inactive.background" => {
-                self.colors.selection_window_inactive_background
-            }
-            "color.hover.background" => self.colors.hover_background,
-            "color.focus.ring" => self.colors.focus_ring,
-            "color.menu.background" => self.colors.menu_background,
-            "color.menu.border" => self.colors.menu_border,
-            "color.menu.item.hover" => self.colors.menu_item_hover,
-            "color.menu.item.selected" => self.colors.menu_item_selected,
-            "color.list.background" => self.colors.list_background,
-            "color.list.border" => self.colors.list_border,
-            "color.list.row.hover" => self.colors.list_row_hover,
-            "color.list.row.selected" => self.colors.list_row_selected,
-            "color.scrollbar.track" => self.colors.scrollbar_track,
-            "color.scrollbar.thumb" => self.colors.scrollbar_thumb,
-            "color.scrollbar.thumb.hover" => self.colors.scrollbar_thumb_hover,
-            "color.viewport.selection.fill" => self.colors.viewport_selection_fill,
-            "color.viewport.selection.stroke" => self.colors.viewport_selection_stroke,
-            "color.viewport.marker" => self.colors.viewport_marker,
-            "color.viewport.drag_line.pan" => self.colors.viewport_drag_line_pan,
-            "color.viewport.drag_line.orbit" => self.colors.viewport_drag_line_orbit,
-            "color.viewport.gizmo.x" => self.colors.viewport_gizmo_x,
-            "color.viewport.gizmo.y" => self.colors.viewport_gizmo_y,
-            "color.viewport.gizmo.handle.background" => {
-                self.colors.viewport_gizmo_handle_background
-            }
-            "color.viewport.gizmo.handle.border" => self.colors.viewport_gizmo_handle_border,
-            "color.viewport.rotate_gizmo" => self.colors.viewport_rotate_gizmo,
-
-            "background" => self.colors.surface_background,
-            "foreground" => self.colors.text_primary,
-
-            "card" => self.colors.panel_background,
-            "card-foreground" => self.colors.text_primary,
-
-            "popover" => self.colors.menu_background,
-            "popover-foreground" => self.colors.text_primary,
-            "popover.border" => self.colors.menu_border,
-
-            "border" => self.colors.panel_border,
-            "input" => self.colors.panel_border,
-            "ring" => self.colors.focus_ring,
-            "ring-offset-background" => self.colors.surface_background,
-
-            "muted" => self.colors.panel_background,
-            "muted-foreground" => self.colors.text_muted,
-
-            "accent" => self.colors.hover_background,
-            "accent-foreground" => self.colors.text_primary,
-
-            "primary" => self.colors.accent,
-            "primary-foreground" => self.colors.text_primary,
-
-            "secondary" => self.colors.panel_background,
-            "secondary-foreground" => self.colors.text_primary,
-
-            "destructive" => self.colors.viewport_gizmo_x,
-            "destructive-foreground" => self.colors.text_primary,
-
-            "selection.background" => self.colors.selection_background,
-            "selection.inactive.background" => self.colors.selection_inactive_background,
-            "selection.window_inactive.background" => {
-                self.colors.selection_window_inactive_background
-            }
-
-            "scrollbar.background" => self.colors.scrollbar_track,
-            "scrollbar.thumb.background" => self.colors.scrollbar_thumb,
-            "scrollbar.thumb.hover.background" => self.colors.scrollbar_thumb_hover,
-
-            "fret.menu.background" => self.colors.menu_background,
-            "fret.menu.border" => self.colors.menu_border,
-            "fret.menu.item.hover" => self.colors.menu_item_hover,
-            "fret.menu.item.selected" => self.colors.menu_item_selected,
-
-            "fret.list.background" => self.colors.list_background,
-            "fret.list.border" => self.colors.list_border,
-            "fret.list.row.hover" => self.colors.list_row_hover,
-            "fret.list.row.selected" => self.colors.list_row_selected,
-
-            _ => return None,
-        };
-        Some(c)
+        self.color_tokens.get(key).copied()
     }
 
     pub fn color_required(&self, key: &str) -> Color {
@@ -758,32 +677,7 @@ impl ThemeSnapshot {
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
-        let px = match key {
-            "metric.radius.sm" => self.metrics.radius_sm,
-            "metric.radius.md" => self.metrics.radius_md,
-            "metric.radius.lg" => self.metrics.radius_lg,
-            "metric.padding.sm" => self.metrics.padding_sm,
-            "metric.padding.md" => self.metrics.padding_md,
-            "metric.size.sm" => Px(32.0),
-            "metric.size.md" => Px(36.0),
-            "metric.size.lg" => Px(40.0),
-            "metric.scrollbar.width" => self.metrics.scrollbar_width,
-            "metric.font.size" => self.metrics.font_size,
-            "metric.font.line_height" => self.metrics.font_line_height,
-            "metric.font.mono_size" => self.metrics.mono_font_size,
-            "metric.font.mono_line_height" => self.metrics.mono_font_line_height,
-
-            "radius" => self.metrics.radius_sm,
-            "radius.lg" => self.metrics.radius_md,
-
-            "font.size" => self.metrics.font_size,
-            "font.line_height" => self.metrics.font_line_height,
-            "mono_font.size" => self.metrics.mono_font_size,
-            "mono_font.line_height" => self.metrics.mono_font_line_height,
-
-            _ => return None,
-        };
-        Some(px)
+        self.metric_tokens.get(key).copied()
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
@@ -811,8 +705,8 @@ pub struct Theme {
     pub url: Option<String>,
     pub colors: ThemeColors,
     pub metrics: ThemeMetrics,
-    extra_colors: HashMap<String, Color>,
-    extra_metrics: HashMap<String, Px>,
+    extra_colors: Arc<HashMap<String, Color>>,
+    extra_metrics: Arc<HashMap<String, Px>>,
     extra_corners: HashMap<String, Corners>,
     extra_numbers: HashMap<String, f32>,
     extra_durations_ms: HashMap<String, u32>,
@@ -861,10 +755,7 @@ impl Theme {
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
         let key = canonicalize_token_key(ThemeTokenKind::Color, key);
-        self.extra_colors
-            .get(key)
-            .copied()
-            .or_else(|| self.snapshot().color_by_key(key))
+        self.extra_colors.get(key).copied()
     }
 
     pub fn color_required(&self, key: &str) -> Color {
@@ -886,10 +777,7 @@ impl Theme {
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
-        self.extra_metrics
-            .get(key)
-            .copied()
-            .or_else(|| self.snapshot().metric_by_key(key))
+        self.extra_metrics.get(key).copied()
     }
 
     pub fn metric_required(&self, key: &str) -> Px {
@@ -1062,6 +950,8 @@ impl Theme {
             colors: self.colors,
             metrics: self.metrics,
             revision: self.revision,
+            color_tokens: self.extra_colors.clone(),
+            metric_tokens: self.extra_metrics.clone(),
         }
     }
 
@@ -1669,6 +1559,9 @@ impl Theme {
             changed = true;
         }
 
+        let next_colors = Arc::new(next_colors);
+        let next_metrics = Arc::new(next_metrics);
+
         if self.extra_colors != next_colors {
             self.extra_colors = next_colors;
             changed = true;
@@ -1745,7 +1638,7 @@ impl Theme {
                 match self.extra_colors.get(key.as_str()).copied() {
                     Some(prev) if prev == c => {}
                     _ => {
-                        self.extra_colors.insert(key.to_string(), c);
+                        Arc::make_mut(&mut self.extra_colors).insert(key.to_string(), c);
                         changed = true;
                     }
                 }
@@ -1758,7 +1651,7 @@ impl Theme {
             match self.extra_metrics.get(key.as_str()).copied() {
                 Some(prev) if prev == px => {}
                 _ => {
-                    self.extra_metrics.insert(key.to_string(), px);
+                    Arc::make_mut(&mut self.extra_metrics).insert(key.to_string(), px);
                     changed = true;
                 }
             }
@@ -1846,7 +1739,7 @@ impl Theme {
             match self.extra_colors.get(key.as_str()).copied() {
                 Some(prev) if prev == c => {}
                 _ => {
-                    self.extra_colors.insert(key.to_string(), c);
+                    Arc::make_mut(&mut self.extra_colors).insert(key.to_string(), c);
                     changed = true;
                 }
             }
@@ -1859,7 +1752,7 @@ impl Theme {
             match self.extra_metrics.get(key.as_str()).copied() {
                 Some(prev) if prev == px => {}
                 _ => {
-                    self.extra_metrics.insert(key.to_string(), px);
+                    Arc::make_mut(&mut self.extra_metrics).insert(key.to_string(), px);
                     changed = true;
                 }
             }
@@ -2023,8 +1916,8 @@ fn default_theme() -> &'static Theme {
             revision: 1,
             metrics,
             colors,
-            extra_colors: default_color_tokens(colors),
-            extra_metrics: default_metric_tokens(metrics),
+            extra_colors: Arc::new(default_color_tokens(colors)),
+            extra_metrics: Arc::new(default_metric_tokens(metrics)),
             extra_corners: HashMap::new(),
             extra_numbers: HashMap::new(),
             extra_durations_ms: HashMap::new(),
@@ -2310,6 +2203,60 @@ mod tests {
             "sidebar.ring",
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
+        }
+    }
+
+    #[test]
+    fn theme_snapshot_includes_configured_color_tokens() {
+        let host = crate::test_host::TestHost::default();
+        let mut theme = Theme::global(&host).clone();
+
+        let mut cfg = ThemeConfig::default();
+        cfg.colors
+            .insert("muted".to_string(), "#ff0000".to_string());
+        theme.apply_config(&cfg);
+
+        let snapshot = theme.snapshot();
+        assert_eq!(theme.color_token("muted"), snapshot.color_token("muted"));
+    }
+
+    #[test]
+    fn theme_snapshot_matches_theme_for_common_semantic_tokens() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+        let snapshot = theme.snapshot();
+
+        for key in [
+            "background",
+            "foreground",
+            "border",
+            "card",
+            "card-foreground",
+            "muted",
+            "muted-foreground",
+            "accent",
+            "accent-foreground",
+            "primary",
+            "primary-foreground",
+            "popover",
+            "popover-foreground",
+            "chart-1",
+            "sidebar",
+            "sidebar-foreground",
+        ] {
+            assert_eq!(
+                theme.color_token(key),
+                snapshot.color_token(key),
+                "key={key}"
+            );
+        }
+
+        for key in ["metric.size.sm", "metric.size.md", "metric.size.lg"] {
+            assert_eq!(
+                theme.metric_token(key),
+                snapshot.metric_token(key),
+                "key={key}"
+            );
         }
     }
 
@@ -2628,6 +2575,7 @@ mod tests {
                     slant: TextSlant::Normal,
                     line_height: Some(Px(20.0)),
                     letter_spacing_em: None,
+                    vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                 },
             )]),
             ..ThemeConfig::default()

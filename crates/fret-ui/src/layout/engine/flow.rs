@@ -6,11 +6,13 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
 use crate::widget::LayoutCx;
 use fret_core::{AppWindowId, NodeId, Px, Rect, Size};
-use taffy::geometry::{Line as TaffyLine, Rect as TaffyRect, Size as TaffySize};
+use taffy::geometry::{
+    Line as TaffyLine, Point as TaffyPoint, Rect as TaffyRect, Size as TaffySize,
+};
 use taffy::style::{
     AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
     GridTemplateComponent, JustifyContent, LengthPercentage, LengthPercentageAuto,
-    Position as TaffyPosition, Style,
+    Overflow as TaffyOverflow, Position as TaffyPosition, Style,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -295,6 +297,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, true);
+            engine.set_measure_min_content_width_as_max(node, false);
         }
         Some(
             instance @ (ElementInstance::Container(_)
@@ -638,6 +641,189 @@ fn build_flow_subtree_impl<H: UiHost>(
                 );
             }
         }
+        Some(ElementInstance::Text(props)) => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            let wrap = props.wrap;
+            let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
+            let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
+            let mut measured = width_auto || height_auto;
+            let mut min_content_width_as_max =
+                measured && matches!(wrap, fret_core::TextWrap::Word);
+
+            if measured
+                && wrap == fret_core::TextWrap::None
+                && let Some((cached_fingerprint, cached_size)) =
+                    tree.node_text_wrap_none_measure_cache(node)
+                && cached_size != Size::default()
+            {
+                let theme_revision = crate::Theme::global(&*app).revision();
+                let font_stack_key = app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                    &props.text,
+                    props.style.as_ref(),
+                    theme_revision,
+                    props.overflow,
+                    props.align,
+                    sf,
+                    font_stack_key,
+                );
+
+                if fingerprint == cached_fingerprint {
+                    if height_auto {
+                        style.size.height =
+                            Dimension::length(scale_nonneg_px(cached_size.height, sf));
+                    }
+                    if props.overflow != fret_core::TextOverflow::Ellipsis {
+                        if width_auto {
+                            style.size.width =
+                                Dimension::length(scale_nonneg_px(cached_size.width, sf));
+                        }
+                        measured = false;
+                    } else {
+                        measured = width_auto;
+                    }
+                    min_content_width_as_max = false;
+                }
+            }
+
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, measured);
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
+        }
+        Some(ElementInstance::StyledText(props)) => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            let wrap = props.wrap;
+            let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
+            let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
+            let mut measured = width_auto || height_auto;
+            let mut min_content_width_as_max =
+                measured && matches!(wrap, fret_core::TextWrap::Word);
+
+            if measured
+                && wrap == fret_core::TextWrap::None
+                && let Some((cached_fingerprint, cached_size)) =
+                    tree.node_text_wrap_none_measure_cache(node)
+                && cached_size != Size::default()
+            {
+                let theme_revision = crate::Theme::global(&*app).revision();
+                let font_stack_key = app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    props.style.as_ref(),
+                    theme_revision,
+                    props.overflow,
+                    props.align,
+                    sf,
+                    font_stack_key,
+                );
+
+                if fingerprint == cached_fingerprint {
+                    if height_auto {
+                        style.size.height =
+                            Dimension::length(scale_nonneg_px(cached_size.height, sf));
+                    }
+                    if props.overflow != fret_core::TextOverflow::Ellipsis {
+                        if width_auto {
+                            style.size.width =
+                                Dimension::length(scale_nonneg_px(cached_size.width, sf));
+                        }
+                        measured = false;
+                    } else {
+                        measured = width_auto;
+                    }
+                    min_content_width_as_max = false;
+                }
+            }
+
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, measured);
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
+        }
+        Some(ElementInstance::SelectableText(props)) => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            let wrap = props.wrap;
+            let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
+            let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
+            let mut measured = width_auto || height_auto;
+            let mut min_content_width_as_max =
+                measured && matches!(wrap, fret_core::TextWrap::Word);
+
+            if measured
+                && wrap == fret_core::TextWrap::None
+                && let Some((cached_fingerprint, cached_size)) =
+                    tree.node_text_wrap_none_measure_cache(node)
+                && cached_size != Size::default()
+            {
+                let theme_revision = crate::Theme::global(&*app).revision();
+                let font_stack_key = app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    props.style.as_ref(),
+                    theme_revision,
+                    props.overflow,
+                    props.align,
+                    sf,
+                    font_stack_key,
+                );
+
+                if fingerprint == cached_fingerprint {
+                    if height_auto {
+                        style.size.height =
+                            Dimension::length(scale_nonneg_px(cached_size.height, sf));
+                    }
+                    if props.overflow != fret_core::TextOverflow::Ellipsis {
+                        if width_auto {
+                            style.size.width =
+                                Dimension::length(scale_nonneg_px(cached_size.width, sf));
+                        }
+                        measured = false;
+                    } else {
+                        measured = width_auto;
+                    }
+                    min_content_width_as_max = false;
+                }
+            }
+
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, measured);
+            engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
+        }
         Some(ElementInstance::Scroll(_)) => {
             let layout_style = layout_style_for_node(app, window, node);
             let mut style = style_for_item_in_parent(
@@ -672,6 +858,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, measured);
+            engine.set_measure_min_content_width_as_max(node, false);
 
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
@@ -711,6 +898,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, true);
+            engine.set_measure_min_content_width_as_max(node, false);
 
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
@@ -750,6 +938,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, true);
+            engine.set_measure_min_content_width_as_max(node, false);
         }
     }
 }
@@ -804,6 +993,10 @@ fn style_for_item_in_parent<H: UiHost>(
 
     let mut style = Style {
         display,
+        overflow: TaffyPoint {
+            x: taffy_overflow(layout_style.overflow),
+            y: taffy_overflow(layout_style.overflow),
+        },
         position: taffy_position(layout_style.position),
         inset: taffy_rect_lpa_from_inset(scale_factor, layout_style.position, layout_style.inset),
         size: TaffySize {
@@ -973,6 +1166,13 @@ fn passthrough_wrapper_child<H: UiHost>(
         _ => None,
     })
     .flatten()
+}
+
+fn taffy_overflow(overflow: crate::element::Overflow) -> TaffyOverflow {
+    match overflow {
+        crate::element::Overflow::Visible => TaffyOverflow::Visible,
+        crate::element::Overflow::Clip => TaffyOverflow::Hidden,
+    }
 }
 
 fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {

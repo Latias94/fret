@@ -10,6 +10,7 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -547,6 +548,7 @@ fn combobox_with_patch<H: UiHost>(
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_token("font.line_height"))),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         };
 
         let min_h = chrome_patch
@@ -661,7 +663,7 @@ fn combobox_with_patch<H: UiHost>(
                     move |cx| {
                         let open_change_reason_model = open_change_reason_model_for_trigger.clone();
                         let focus_restore_target = focus_restore_target_for_trigger.clone();
-                        cx.pressable_with_id_props(|cx, st, trigger_id| {
+                        control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                             *focus_restore_target
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
@@ -713,81 +715,76 @@ fn combobox_with_patch<H: UiHost>(
                                 ..Default::default()
                             };
 
-                            let children = vec![cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size = trigger_layout.size;
-                                        layout
-                                    },
-                                    padding: Edges {
-                                        top: pad_top,
-                                        right: pad_right,
-                                        bottom: pad_bottom,
-                                        left: pad_left,
-                                    },
-                                    background: Some(bg),
-                                    shadow: None,
-                                    border: Edges::all(border_w),
-                                    border_color: Some(border),
-                                    corner_radii: Corners::all(radius),
-                                    ..Default::default()
+                            let chrome_props = ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size = trigger_layout.size;
+                                    layout
                                 },
-                                move |cx| {
-                                    vec![cx.flex(
-                                        FlexProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Fill;
-                                                layout
-                                            },
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: trigger_gap,
-                                            padding: Edges::all(Px(0.0)),
-                                            justify: MainAlign::SpaceBetween,
-                                            align: CrossAlign::Center,
-                                            wrap: false,
-                                        },
-                                        move |cx| {
-                                            let label_style = text_style.clone();
-                                            vec![
-                                                {
-                                                    let mut label =
-                                                        ui::label(cx, resolved_label.clone())
-                                                            .w_full()
-                                                            .min_w_0()
-                                                            .flex_1()
-                                                            .basis_0()
-                                                            .text_size_px(label_style.size)
-                                                            .font_weight(label_style.weight)
-                                                            .text_color(fg_ref.clone())
-                                                            .truncate();
-                                                    if let Some(line_height) =
-                                                        label_style.line_height
-                                                    {
-                                                        label = label.line_height_px(line_height);
-                                                    }
-                                                    if let Some(letter_spacing_em) =
-                                                        label_style.letter_spacing_em
-                                                    {
-                                                        label = label
-                                                            .letter_spacing_em(letter_spacing_em);
-                                                    }
-                                                    label.into_element(cx)
-                                                },
-                                                decl_icon::icon_with(
-                                                    cx,
-                                                    ids::ui::CHEVRON_DOWN,
-                                                    Some(Px(16.0)),
-                                                    Some(ColorRef::Color(icon_fg)),
-                                                ),
-                                            ]
-                                        },
-                                    )]
+                                padding: Edges {
+                                    top: pad_top,
+                                    right: pad_right,
+                                    bottom: pad_bottom,
+                                    left: pad_left,
                                 },
-                            )];
+                                background: Some(bg),
+                                shadow: None,
+                                border: Edges::all(border_w),
+                                border_color: Some(border),
+                                corner_radii: Corners::all(radius),
+                                ..Default::default()
+                            };
 
-                            (props, children)
+                            (props, chrome_props, move |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        },
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: trigger_gap,
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::SpaceBetween,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let label_style = text_style.clone();
+                                        vec![
+                                            {
+                                                let mut label =
+                                                    ui::label(cx, resolved_label.clone())
+                                                        .w_full()
+                                                        .min_w_0()
+                                                        .flex_1()
+                                                        .basis_0()
+                                                        .text_size_px(label_style.size)
+                                                        .font_weight(label_style.weight)
+                                                        .text_color(fg_ref.clone())
+                                                        .truncate();
+                                                if let Some(line_height) = label_style.line_height {
+                                                    label = label.line_height_px(line_height);
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    label_style.letter_spacing_em
+                                                {
+                                                    label =
+                                                        label.letter_spacing_em(letter_spacing_em);
+                                                }
+                                                label.into_element(cx)
+                                            },
+                                            decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHEVRON_DOWN,
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(icon_fg)),
+                                            ),
+                                        ]
+                                    },
+                                )]
+                            })
                         })
                     },
                     move |cx| {
@@ -985,7 +982,7 @@ fn combobox_with_patch<H: UiHost>(
                 move |cx| {
                     let open_change_reason_model = open_change_reason_model_for_trigger.clone();
                     let focus_restore_target = focus_restore_target_for_trigger.clone();
-                    cx.pressable_with_id_props(|cx, st, trigger_id| {
+                    control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                         *focus_restore_target
                             .lock()
                             .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
@@ -1037,71 +1034,66 @@ fn combobox_with_patch<H: UiHost>(
                             ..Default::default()
                         };
 
-                        let children = vec![cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle::default(),
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
-                                },
-                                background: Some(bg),
-                                shadow: None,
-                                border: Edges::all(border_w),
-                                border_color: Some(border),
-                                corner_radii: Corners::all(radius),
-                                ..Default::default()
+                        let chrome_props = ContainerProps {
+                            layout: LayoutStyle::default(),
+                            padding: Edges {
+                                top: pad_top,
+                                right: pad_right,
+                                bottom: pad_bottom,
+                                left: pad_left,
                             },
-                            move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: trigger_gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::SpaceBetween,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |cx| {
-                                        let label_style = text_style.clone();
-                                        vec![
-                                            {
-                                                let mut label =
-                                                    ui::label(cx, resolved_label.clone())
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .flex_1()
-                                                        .basis_0()
-                                                        .text_size_px(label_style.size)
-                                                        .font_weight(label_style.weight)
-                                                        .text_color(fg_ref.clone())
-                                                        .truncate();
-                                                if let Some(line_height) = label_style.line_height {
-                                                    label = label.line_height_px(line_height);
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    label_style.letter_spacing_em
-                                                {
-                                                    label =
-                                                        label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                label.into_element(cx)
-                                            },
-                                            decl_icon::icon_with(
-                                                cx,
-                                                ids::ui::CHEVRON_DOWN,
-                                                Some(Px(16.0)),
-                                                Some(ColorRef::Color(icon_fg)),
-                                            ),
-                                        ]
-                                    },
-                                )]
-                            },
-                        )];
+                            background: Some(bg),
+                            shadow: None,
+                            border: Edges::all(border_w),
+                            border_color: Some(border),
+                            corner_radii: Corners::all(radius),
+                            ..Default::default()
+                        };
 
-                        (props, children)
+                        (props, chrome_props, move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: trigger_gap,
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::SpaceBetween,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| {
+                                    let label_style = text_style.clone();
+                                    vec![
+                                        {
+                                            let mut label = ui::label(cx, resolved_label.clone())
+                                                .w_full()
+                                                .min_w_0()
+                                                .flex_1()
+                                                .basis_0()
+                                                .text_size_px(label_style.size)
+                                                .font_weight(label_style.weight)
+                                                .text_color(fg_ref.clone())
+                                                .truncate();
+                                            if let Some(line_height) = label_style.line_height {
+                                                label = label.line_height_px(line_height);
+                                            }
+                                            if let Some(letter_spacing_em) =
+                                                label_style.letter_spacing_em
+                                            {
+                                                label = label.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            label.into_element(cx)
+                                        },
+                                        decl_icon::icon_with(
+                                            cx,
+                                            ids::ui::CHEVRON_DOWN,
+                                            Some(Px(16.0)),
+                                            Some(ColorRef::Color(icon_fg)),
+                                        ),
+                                    ]
+                                },
+                            )]
+                        })
                     })
                 },
                 move |cx, anchor| {

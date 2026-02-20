@@ -5,25 +5,25 @@ use fret_core::{
 use fret_runtime::{FrameId, TickId};
 
 #[derive(Debug, Clone)]
-pub(super) struct DockPanelDragPayload {
-    pub(super) panel: PanelKey,
-    pub(super) grab_offset: Point,
-    pub(super) start_tick: TickId,
-    pub(super) tear_off_requested: bool,
-    pub(super) tear_off_oob_start_frame: Option<FrameId>,
-    pub(super) dock_previews_enabled: bool,
+pub(crate) struct DockPanelDragPayload {
+    pub(crate) panel: PanelKey,
+    pub(crate) grab_offset: Point,
+    pub(crate) start_tick: TickId,
+    pub(crate) tear_off_requested: bool,
+    pub(crate) tear_off_oob_start_frame: Option<FrameId>,
+    pub(crate) dock_previews_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct DockTabsDragPayload {
-    pub(super) source_tabs: DockNodeId,
-    pub(super) tabs: Vec<PanelKey>,
-    pub(super) active: usize,
-    pub(super) grab_offset: Point,
-    pub(super) start_tick: TickId,
-    pub(super) tear_off_requested: bool,
-    pub(super) tear_off_oob_start_frame: Option<FrameId>,
-    pub(super) dock_previews_enabled: bool,
+pub(crate) struct DockTabsDragPayload {
+    pub(crate) source_tabs: DockNodeId,
+    pub(crate) tabs: Vec<PanelKey>,
+    pub(crate) active: usize,
+    pub(crate) grab_offset: Point,
+    pub(crate) start_tick: TickId,
+    pub(crate) tear_off_requested: bool,
+    pub(crate) tear_off_oob_start_frame: Option<FrameId>,
+    pub(crate) dock_previews_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

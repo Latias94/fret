@@ -50,6 +50,7 @@ Scripted repros (existing):
 
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (alert dialog open snapshot)
 - `tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json` (least-destructive focus gate)
+- `tools/diag-scripts/ui-gallery-alert-dialog-docs-smoke.json` (gallery page layout + open/close)
 
 ---
 

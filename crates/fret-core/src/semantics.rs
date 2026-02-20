@@ -59,6 +59,15 @@ pub struct SemanticsFlags {
     pub checked: Option<bool>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SemanticsInlineSpan {
+    /// UTF-8 byte range `(start, end)` into `SemanticsNode::value`.
+    pub range_utf8: (u32, u32),
+    pub role: SemanticsRole,
+    /// Opaque, component-defined tag (e.g. a URL for markdown links).
+    pub tag: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct SemanticsNode {
     pub id: NodeId,
@@ -111,6 +120,8 @@ pub struct SemanticsNode {
     ///
     /// This is a portable approximation of relations such as `aria-controls`.
     pub controls: Vec<NodeId>,
+    /// Inline semantics spans within this node's `value` (v1 metadata-only surface).
+    pub inline_spans: Vec<SemanticsInlineSpan>,
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +154,7 @@ pub struct SemanticsSnapshot {
 pub enum SemanticsValidationField {
     TextSelection,
     TextComposition,
+    InlineSpan,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -205,7 +217,9 @@ impl SemanticsNode {
             self.value.as_deref(),
             self.text_selection,
             self.text_composition,
-        )
+        )?;
+        validate_inline_spans(self.id, self.value.as_deref(), &self.inline_spans)?;
+        Ok(())
     }
 }
 
@@ -393,6 +407,74 @@ fn validate_text_ranges(
     Ok(())
 }
 
+fn validate_inline_spans(
+    node: NodeId,
+    value: Option<&str>,
+    spans: &[SemanticsInlineSpan],
+) -> Result<(), SemanticsValidationError> {
+    if spans.is_empty() {
+        return Ok(());
+    }
+
+    let Some(value) = value else {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::MissingValueForTextRange {
+                field: SemanticsValidationField::InlineSpan,
+            },
+        });
+    };
+
+    let len_u32 = u32::try_from(value.len()).unwrap_or(u32::MAX);
+    for span in spans {
+        let (start, end) = span.range_utf8;
+        if start > end {
+            return Err(SemanticsValidationError {
+                node,
+                kind: SemanticsValidationErrorKind::InvalidRangeOrder {
+                    field: SemanticsValidationField::InlineSpan,
+                    start,
+                    end,
+                },
+            });
+        }
+        if start > len_u32 || end > len_u32 {
+            return Err(SemanticsValidationError {
+                node,
+                kind: SemanticsValidationErrorKind::RangeOutOfBounds {
+                    field: SemanticsValidationField::InlineSpan,
+                    start,
+                    end,
+                    len: len_u32,
+                },
+            });
+        }
+
+        let start_usize = start as usize;
+        let end_usize = end as usize;
+        if !value.is_char_boundary(start_usize) {
+            return Err(SemanticsValidationError {
+                node,
+                kind: SemanticsValidationErrorKind::RangeNotCharBoundary {
+                    field: SemanticsValidationField::InlineSpan,
+                    offset: start,
+                },
+            });
+        }
+        if !value.is_char_boundary(end_usize) {
+            return Err(SemanticsValidationError {
+                node,
+                kind: SemanticsValidationErrorKind::RangeNotCharBoundary {
+                    field: SemanticsValidationField::InlineSpan,
+                    offset: end,
+                },
+            });
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,6 +522,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         n.validate().expect("valid ranges should pass");
 
@@ -478,11 +561,96 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let err = n.validate().expect_err("range without value should fail");
         assert!(matches!(
             err.kind,
             SemanticsValidationErrorKind::MissingValueForTextRange { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_inline_spans_without_value() {
+        let n = SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Text,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: vec![SemanticsInlineSpan {
+                range_utf8: (0, 0),
+                role: SemanticsRole::Link,
+                tag: None,
+            }],
+        };
+        let err = n
+            .validate()
+            .expect_err("inline spans without value should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::MissingValueForTextRange {
+                field: SemanticsValidationField::InlineSpan
+            }
+        ));
+    }
+
+    #[test]
+    fn validates_utf8_char_boundaries_for_inline_spans() {
+        let n = SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Text,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: Some("😀".to_string()), // 4 bytes
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: vec![SemanticsInlineSpan {
+                range_utf8: (0, 4),
+                role: SemanticsRole::Link,
+                tag: None,
+            }],
+        };
+        n.validate()
+            .expect("inline span on a utf-8 boundary should pass");
+
+        let bad = SemanticsNode {
+            inline_spans: vec![SemanticsInlineSpan {
+                range_utf8: (0, 2),
+                role: SemanticsRole::Link,
+                tag: None,
+            }],
+            ..n
+        };
+        let err = bad.validate().expect_err("non-boundary should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::RangeNotCharBoundary {
+                field: SemanticsValidationField::InlineSpan,
+                offset: 2
+            }
         ));
     }
 
@@ -506,6 +674,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let err = n.validate().expect_err("oob should fail");
         assert!(matches!(
@@ -534,6 +703,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let err = n.validate().expect_err("invalid order should fail");
         assert!(matches!(
@@ -565,6 +735,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let snap = snapshot_with_nodes(vec![n1.clone(), n1]);
         let err = snap.validate().expect_err("duplicate node ids should fail");
@@ -594,6 +765,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let child = SemanticsNode {
             id: node(2),
@@ -613,6 +785,7 @@ mod tests {
             labelled_by: vec![node(997)],
             described_by: vec![node(996)],
             controls: vec![node(995)],
+            inline_spans: Vec::new(),
         };
 
         let snap = snapshot_with_nodes(vec![root, child]);
@@ -643,6 +816,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
 
         let bad_missing_peer = SemanticsNode {
@@ -663,6 +837,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let snap = snapshot_with_nodes(vec![root.clone(), bad_missing_peer]);
         let err = snap.validate().expect_err("missing set_size should fail");
@@ -689,6 +864,7 @@ mod tests {
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         };
         let snap = snapshot_with_nodes(vec![root, bad_bounds]);
         let err = snap

@@ -238,6 +238,10 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
   - Fret: when a dock tear-off window follows the cursor, prefer the window behind it (`prefer_not`) so re-docking remains possible
     without flicker. See `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
     and `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor`).
+  - Fret: while following the cursor, request a temporary `WindowZLevel::AlwaysOnTop` (capability-gated) so the moving window
+    remains visible above other app windows (ImGui-style). This is applied via `WindowRequest::SetStyle` and patched back to
+    `Normal` when follow stops.
+    - Anchor: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
   - Optional (ImGui-style “transparent payload”):
     - ImGui: `ImGuiIO::ConfigDockingTransparentPayload` + `Platform_SetWindowAlpha` + `ImGuiViewportFlags_NoInputs`.
     - Fret: enable via `DockingInteractionSettings::transparent_payload_during_follow` (default false), or force on via

@@ -555,6 +555,22 @@ pub(crate) struct ExternalDragActionHooks {
 }
 
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
+
+/// Span activation payload for `SelectableText` interactive spans.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectableTextSpanActivation {
+    pub tag: Arc<str>,
+    pub range: std::ops::Range<usize>,
+}
+
+pub type OnSelectableTextActivateSpan = Arc<
+    dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, SelectableTextSpanActivation) + 'static,
+>;
+
+#[derive(Default)]
+pub(crate) struct SelectableTextActionHooks {
+    pub on_activate_span: Option<OnSelectableTextActivateSpan>,
+}
 pub type OnPressablePointerDown = Arc<
     dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerDownCx) -> PressablePointerDownResult
         + 'static,

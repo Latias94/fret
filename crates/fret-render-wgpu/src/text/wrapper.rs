@@ -37,7 +37,7 @@ pub(crate) fn wrap_with_constraints(
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = constraints.scale_factor.max(1.0);
+    let scale = super::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),
@@ -76,6 +76,11 @@ pub(crate) fn wrap_with_constraints(
         } => wrap_word(shaper, input, text_len, max_width.0 * scale, scale),
         TextConstraints {
             max_width: Some(max_width),
+            wrap: TextWrap::WordBreak,
+            ..
+        } => wrap_word_break(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
             wrap: TextWrap::Grapheme,
             ..
         } => wrap_grapheme(shaper, input, text_len, max_width.0 * scale, scale),
@@ -99,7 +104,7 @@ pub(crate) fn wrap_with_constraints_measure_only(
     input: TextInputRef<'_>,
     constraints: TextConstraints,
 ) -> WrappedLayout {
-    let scale = constraints.scale_factor.max(1.0);
+    let scale = super::effective_text_scale_factor(constraints.scale_factor);
     let text_len = match input {
         TextInputRef::Plain { text, .. } => text.len(),
         TextInputRef::Attributed { text, .. } => text.len(),
@@ -137,6 +142,11 @@ pub(crate) fn wrap_with_constraints_measure_only(
             wrap: TextWrap::Word,
             ..
         } => wrap_word_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::WordBreak,
+            ..
+        } => wrap_word_break_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
         TextConstraints {
             max_width: Some(max_width),
             wrap: TextWrap::Grapheme,
@@ -336,6 +346,19 @@ fn push_paragraph(
         }
         TextConstraints {
             max_width: Some(_),
+            wrap: TextWrap::WordBreak,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) =
+                wrap_word_break_range(shaper, text, base, spans, paragraph_range, max_w, scale);
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
+        TextConstraints {
+            max_width: Some(_),
             wrap: TextWrap::Grapheme,
             ..
         } => {
@@ -408,6 +431,26 @@ fn push_paragraph_measure_only(
                 return;
             };
             let (ranges, lines) = wrap_word_range_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                paragraph_range,
+                max_w,
+                scale,
+            );
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::WordBreak,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) = wrap_word_break_range_measure_only(
                 shaper,
                 text,
                 base,
@@ -551,6 +594,29 @@ fn wrap_word(
     }
 }
 
+fn wrap_word_break(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let (line_ranges, lines) =
+        wrap_word_break_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
 fn wrap_grapheme(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
@@ -588,6 +654,36 @@ fn wrap_word_measure_only(
 
     let (line_ranges, lines) =
         wrap_word_range_measure_only(shaper, text, base, spans, 0..text_len, max_width_px, scale);
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
+fn wrap_word_break_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let (line_ranges, lines) = wrap_word_break_range_measure_only(
+        shaper,
+        text,
+        base,
+        spans,
+        0..text_len,
+        max_width_px,
+        scale,
+    );
 
     WrappedLayout {
         text_len,
@@ -826,6 +922,55 @@ fn wrap_word_range(
     (line_ranges, lines)
 }
 
+fn wrap_word_break_range(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![Range { start, end: start }],
+            vec![shape_slice(shaper, text, base, spans, start..start, scale)],
+        );
+    }
+
+    let slice = &text[start..end];
+    let spans = spans.map(|spans| slice_spans(spans, start, end));
+    let max_width_px = max_width_px.max(0.0) + 0.5;
+
+    let shaped = match spans.as_ref() {
+        Some(spans) => shaper.shape_paragraph_word_break_wrap(
+            TextInputRef::Attributed {
+                text: slice,
+                base,
+                spans: spans.as_slice(),
+            },
+            max_width_px,
+            scale,
+        ),
+        None => shaper.shape_paragraph_word_break_wrap(
+            TextInputRef::plain(slice, base),
+            max_width_px,
+            scale,
+        ),
+    };
+
+    let mut line_ranges: Vec<Range<usize>> = Vec::with_capacity(shaped.len().max(1));
+    let mut lines: Vec<ShapedLineLayout> = Vec::with_capacity(shaped.len().max(1));
+    for (r, line) in shaped {
+        line_ranges.push((start + r.start)..(start + r.end));
+        lines.push(line);
+    }
+    (line_ranges, lines)
+}
+
 fn wrap_word_range_measure_only(
     shaper: &mut ParleyShaper,
     text: &str,
@@ -867,6 +1012,62 @@ fn wrap_word_range_measure_only(
             scale,
         ),
         None => shaper.shape_paragraph_word_wrap_metrics(
+            TextInputRef::plain(slice, base),
+            max_width_px,
+            scale,
+        ),
+    };
+
+    let mut line_ranges: Vec<Range<usize>> = Vec::with_capacity(shaped.len().max(1));
+    let mut lines: Vec<ShapedLineLayout> = Vec::with_capacity(shaped.len().max(1));
+    for (r, line) in shaped {
+        line_ranges.push((start + r.start)..(start + r.end));
+        lines.push(line);
+    }
+    (line_ranges, lines)
+}
+
+fn wrap_word_break_range_measure_only(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![Range { start, end: start }],
+            vec![shape_slice_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                start..start,
+                scale,
+            )],
+        );
+    }
+
+    let slice = &text[start..end];
+    let spans = spans.map(|spans| slice_spans(spans, start, end));
+    let max_width_px = max_width_px.max(0.0) + 0.5;
+
+    let shaped = match spans.as_ref() {
+        Some(spans) => shaper.shape_paragraph_word_break_wrap_metrics(
+            TextInputRef::Attributed {
+                text: slice,
+                base,
+                spans: spans.as_slice(),
+            },
+            max_width_px,
+            scale,
+        ),
+        None => shaper.shape_paragraph_word_break_wrap_metrics(
             TextInputRef::plain(slice, base),
             max_width_px,
             scale,
@@ -1283,6 +1484,63 @@ mod tests {
     }
 
     #[test]
+    fn wrap_uses_scale_factor_below_one() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "hello world";
+        let constraints_1x = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let constraints_half = TextConstraints {
+            scale_factor: 0.5,
+            ..constraints_1x
+        };
+
+        let a = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints_1x,
+        );
+        let b = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints_half,
+        );
+
+        let Some(font_a) = a
+            .lines
+            .first()
+            .and_then(|l| l.glyphs.first())
+            .map(|g| g.font_size)
+        else {
+            panic!("expected shaped glyphs for scale=1.0");
+        };
+        let Some(font_b) = b
+            .lines
+            .first()
+            .and_then(|l| l.glyphs.first())
+            .map(|g| g.font_size)
+        else {
+            panic!("expected shaped glyphs for scale=0.5");
+        };
+
+        let ratio = font_b / font_a.max(1.0);
+        assert!(
+            (ratio - 0.5).abs() <= 0.15,
+            "expected shaped glyph font_size to scale with constraints.scale_factor; font_a={font_a} font_b={font_b} ratio={ratio}",
+        );
+    }
+
+    #[test]
     fn word_wrap_produces_multiple_lines_and_full_coverage() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {
@@ -1384,6 +1642,126 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn word_wrap_does_not_break_single_token() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(20.0),
+            ..Default::default()
+        };
+
+        let text = "Demo";
+        let constraints = TextConstraints {
+            max_width: Some(Px(1.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        assert!(
+            wrapped.lines[0].width > 1.0,
+            "expected word-wrap to keep a single token unbroken and allow overflow"
+        );
+    }
+
+    #[test]
+    fn word_wrap_min_content_width_matches_longest_unbreakable_segment() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(20.0),
+            ..Default::default()
+        };
+
+        // Under a near-zero wrap width, word-wrap should break at whitespace opportunities, but
+        // must not break within tokens. The resulting wrapped lines should therefore represent
+        // the "unbreakable segments" whose maximum width matches min-content semantics.
+        let text = "foo barbaz qux";
+        let wrapped = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            TextConstraints {
+                max_width: Some(Px(0.0)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            },
+        );
+
+        assert!(
+            wrapped.lines.len() >= 2,
+            "expected near-zero word-wrap to produce multiple visual lines for spaced text"
+        );
+        assert_eq!(
+            wrapped.lines.len(),
+            wrapped.line_ranges.len(),
+            "expected line_ranges to match wrapped line count"
+        );
+
+        // Validate each produced line width against an independently shaped single-line slice
+        // matching the wrapped range. This avoids making assumptions about whether trailing
+        // whitespace is kept at soft wrap boundaries.
+        for (range, line) in wrapped.line_ranges.iter().zip(wrapped.lines.iter()) {
+            let slice = &text[range.clone()];
+            let expected = shaper.shape_single_line_metrics(TextInputRef::plain(slice, &base), 1.0);
+            let delta = (expected.width - line.width).abs();
+            assert!(
+                delta <= 0.75,
+                "expected wrapped line width to match shaped slice; slice={:?} expected={} actual={} delta={}",
+                slice,
+                expected.width,
+                line.width,
+                delta
+            );
+        }
+
+        let max_line_w = wrapped.lines.iter().map(|l| l.width).fold(0.0f32, f32::max);
+        assert!(
+            max_line_w > 0.0,
+            "expected non-zero min-content width for non-empty text"
+        );
+    }
+
+    #[test]
+    fn word_break_wrap_can_break_single_token() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(20.0),
+            ..Default::default()
+        };
+
+        let text = "Demo";
+        let constraints = TextConstraints {
+            max_width: Some(Px(1.0)),
+            wrap: TextWrap::WordBreak,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert!(
+            wrapped.lines.len() > 1,
+            "expected word-break wrap to split a single long token under tight constraints"
+        );
     }
 
     #[test]
@@ -1741,6 +2119,7 @@ mod tests {
     #[serde(rename_all = "snake_case")]
     enum FixtureWrapMode {
         Word,
+        WordBreak,
         Grapheme,
     }
 
@@ -1766,6 +2145,7 @@ mod tests {
     fn wrap_mode_for_fixture(mode: FixtureWrapMode) -> TextWrap {
         match mode {
             FixtureWrapMode::Word => TextWrap::Word,
+            FixtureWrapMode::WordBreak => TextWrap::WordBreak,
             FixtureWrapMode::Grapheme => TextWrap::Grapheme,
         }
     }
@@ -1774,15 +2154,14 @@ mod tests {
         ranges.iter().map(|r| [r.start, r.end]).collect()
     }
 
-    #[test]
-    fn text_wrap_conformance_v1_fixtures() {
+    fn run_text_wrap_conformance_v1_fixtures() {
         let raw = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/src/text/tests/fixtures/text_wrap_conformance_v1.json"
         ));
         let suite: WrapFixtureSuite =
             serde_json::from_str(raw).expect("wrap conformance fixtures JSON");
-        assert_eq!(suite.schema_version, 1);
+        assert_eq!(suite.schema_version, 2);
 
         let mut shaper = shaper_with_bundled_fonts();
 
@@ -1907,5 +2286,21 @@ mod tests {
             "wrap conformance fixture failures:\n{}",
             failures.join("\n")
         );
+    }
+
+    #[test]
+    fn text_wrap_conformance_v1_fixtures() {
+        run_text_wrap_conformance_v1_fixtures();
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    mod wasm_wrap_conformance {
+        use super::*;
+        use wasm_bindgen_test::*;
+
+        #[wasm_bindgen_test]
+        fn text_wrap_conformance_v1_fixtures_wasm() {
+            run_text_wrap_conformance_v1_fixtures();
+        }
     }
 }

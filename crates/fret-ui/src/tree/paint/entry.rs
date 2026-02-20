@@ -145,7 +145,7 @@ impl<H: UiHost> UiTree<H> {
                         .and_then(|svc| svc.snapshot(window))
                         .is_none_or(|prev| prev != &input_ctx);
                     if needs_update {
-                        app.with_global_mut(
+                        app.with_global_mut_untracked(
                             fret_runtime::WindowInputContextService::default,
                             |svc, _app| {
                                 svc.set_snapshot(window, input_ctx);
@@ -186,6 +186,8 @@ impl<H: UiHost> UiTree<H> {
                     self.paint_cache.invalidate_recording();
                 }
 
+                self.scratch_visual_bounds_records.clear();
+
                 let (roots, roots_elapsed) = fret_perf::measure(self.debug_enabled, || {
                     self.visible_layers_in_paint_order()
                         .map(|layer| self.layers[layer].root)
@@ -199,6 +201,32 @@ impl<H: UiHost> UiTree<H> {
                 }
                 for root in roots {
                     self.paint(app, services, root, bounds, scene, scale_factor);
+                }
+
+                if let Some(window) = self.window
+                    && !self.scratch_visual_bounds_records.is_empty()
+                {
+                    let mut records = std::mem::take(&mut self.scratch_visual_bounds_records);
+                    let (_, flush_elapsed) = fret_perf::measure(self.debug_enabled, || {
+                        crate::elements::with_window_state(app, window, |st| {
+                            for (element, visual) in records.drain(..) {
+                                if st
+                                    .current_bounds(element)
+                                    .is_some_and(|bounds| bounds == visual)
+                                {
+                                    continue;
+                                }
+                                st.record_visual_bounds(element, visual);
+                            }
+                        });
+                    });
+                    self.scratch_visual_bounds_records = records;
+                    if let Some(flush_elapsed) = flush_elapsed {
+                        self.debug_stats.paint_record_visual_bounds_time = self
+                            .debug_stats
+                            .paint_record_visual_bounds_time
+                            .saturating_add(flush_elapsed);
+                    }
                 }
 
                 // Publish a platform-facing text-input snapshot after paint so text widgets can update

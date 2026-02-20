@@ -434,6 +434,7 @@ Core:
 
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
+- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -456,6 +457,12 @@ Privacy / size:
 - `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
+
+Practical bundle size controls (recommended for scripted repros you want to share):
+
+- Prefer smaller dumps: `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=10` (or `5` for very small bundles).
+- Bound path/debug strings: `FRET_DIAG_MAX_DEBUG_STRING_BYTES=2048` (or `1024`).
+- If you mostly target `test_id`, consider `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1` to keep semantics exports smaller.
 
 Script harness:
 
@@ -556,7 +563,11 @@ Recent additions:
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
 - `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
+- `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
+- `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
+- `dock_drag_transparent_payload_mouse_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
 - `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
 - `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)

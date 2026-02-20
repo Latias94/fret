@@ -120,8 +120,15 @@ impl UiRuntimeEnvConfig {
                 .map(|v| v != "0")
                 .unwrap_or(true);
 
+        // Default-on: unbounded scroll probing can trigger deep measure walks when descendant
+        // layout invalidations are present (common under view-cache reconciliation). Deferring the
+        // probe by a few frames (when we have prior size data) helps avoid tail spikes on those
+        // invalidation frames. Set to "0" to disable.
         let scroll_defer_unbounded_probe_on_invalidation =
-            env_non_empty("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION");
+            std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
 
         let scroll_defer_unbounded_probe_stable_frames =
             std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES")

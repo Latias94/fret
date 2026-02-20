@@ -154,6 +154,10 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
         };
         let updated = svc.poll(self);
         self.diag_mouse_buttons_override = Some(svc);
+        if updated {
+            self.diag_last_mouse_buttons_override_tick = Some(self.tick_id);
+            self.diag_mouse_buttons_override_active = true;
+        }
         updated
     }
 }

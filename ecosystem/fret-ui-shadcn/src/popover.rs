@@ -3,7 +3,7 @@ use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size};
+use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
@@ -676,11 +676,7 @@ impl Popover {
                 trigger
             };
 
-            let is_open = cx
-                .watch_model(&self.open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
+            let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
 
             let auto_focus = self
                 .auto_focus
@@ -1297,7 +1293,8 @@ impl PopoverTitle {
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx)
     }
 }
@@ -1335,6 +1332,8 @@ impl PopoverDescription {
             .line_height_px(line_height)
             .font_normal()
             .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx)
     }
 }

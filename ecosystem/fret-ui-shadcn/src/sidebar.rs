@@ -2,7 +2,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
+    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -1854,7 +1855,8 @@ impl SidebarGroupLabel {
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx);
 
         cx.opacity_props(
@@ -3115,6 +3117,9 @@ impl SidebarMenuSubButton {
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
         let test_id = self.test_id.clone();
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let href = self.href.clone();
         let target = self.target.clone();
         let rel = self.rel.clone();
@@ -3147,6 +3152,7 @@ impl SidebarMenuSubButton {
         let icon = self.icon;
         let active = self.active;
         let size = self.size;
+        let chrome_test_id = chrome_test_id.clone();
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
         } else {
@@ -3196,7 +3202,7 @@ impl SidebarMenuSubButton {
                 (fg, props, style, gap)
             };
 
-            vec![cx.container(props, move |cx| {
+            let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
                     gap,
@@ -3242,7 +3248,11 @@ impl SidebarMenuSubButton {
                     out.push(text.into_element(cx));
                     out
                 })]
-            })]
+            });
+            if let Some(test_id) = chrome_test_id {
+                chrome = chrome.test_id(test_id);
+            }
+            vec![chrome]
         });
 
         if let Some(href) = href_for_semantics {
@@ -3419,6 +3429,9 @@ impl SidebarMenuButton {
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
         let test_id = self.test_id.clone();
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let href = self.href.clone();
         let target = self.target.clone();
         let rel = self.rel.clone();
@@ -3453,6 +3466,7 @@ impl SidebarMenuButton {
         let variant = self.variant;
         let size = self.size;
         let expanded_progress = expanded_progress.clamp(0.0, 1.0);
+        let chrome_test_id = chrome_test_id.clone();
 
         let navigate_handler: Option<OnActivate> = if let Some(on_navigate) = on_navigate {
             Some(on_navigate)
@@ -3526,7 +3540,7 @@ impl SidebarMenuButton {
                 (fg, props, inner_gap, label_style)
             };
 
-            vec![cx.container(props, move |cx| {
+            let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
                     gap: inner_gap,
@@ -3590,7 +3604,11 @@ impl SidebarMenuButton {
                     ));
                     out
                 })]
-            })]
+            });
+            if let Some(test_id) = chrome_test_id {
+                chrome = chrome.test_id(test_id);
+            }
+            vec![chrome]
         });
 
         if let Some(href) = href_for_semantics {
@@ -3642,7 +3660,8 @@ impl SidebarMenuButton {
                 .text_size_px(label_style.size)
                 .font_weight(label_style.weight)
                 .text_color(ColorRef::Color(fg))
-                .nowrap();
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip);
             if let Some(line_height) = label_style.line_height {
                 text = text.line_height_px(line_height);
             }
@@ -3652,7 +3671,11 @@ impl SidebarMenuButton {
             vec![text.into_element(cx)]
         })
         .refine_style(chrome)
-        .refine_layout(LayoutRefinement::default().overflow_hidden())
+        .refine_layout(
+            LayoutRefinement::default()
+                .max_w(Px(240.0))
+                .overflow_hidden(),
+        )
         .into_element(cx);
 
         Tooltip::new(button, content)

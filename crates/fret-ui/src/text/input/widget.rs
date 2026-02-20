@@ -1215,8 +1215,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             .clamp_caret_and_anchor_to_grapheme_boundary();
 
         let theme = cx.theme().snapshot();
-        self.sync_chrome_from_theme(theme);
-        self.sync_text_style_from_theme(theme);
+        self.sync_chrome_from_theme(theme.clone());
+        self.sync_text_style_from_theme(theme.clone());
 
         let base_constraints = TextConstraints {
             max_width: Some(cx.available.width),
@@ -1273,8 +1273,8 @@ impl<H: UiHost> Widget<H> for TextInput {
         };
 
         let theme = cx.theme().snapshot();
-        self.sync_chrome_from_theme(theme);
-        self.sync_text_style_from_theme(theme);
+        self.sync_chrome_from_theme(theme.clone());
+        self.sync_text_style_from_theme(theme.clone());
         let focused = cx.focus == Some(cx.node);
         let focus_visible = focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
         if !focused && self.is_ime_composing() {

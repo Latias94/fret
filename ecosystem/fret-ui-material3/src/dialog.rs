@@ -161,6 +161,9 @@ impl DialogAction {
             a11y_label,
             test_id,
         } = self;
+        let chrome_test_id = test_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
         cx.pressable_with_id_props(move |cx, st, pressable_id| {
             let enabled = !disabled;
@@ -278,7 +281,7 @@ impl DialogAction {
                         align: fret_core::TextAlign::Start,
                     });
 
-                    vec![cx.container(
+                    let mut chrome = cx.container(
                         ContainerProps {
                             layout: {
                                 let mut l = LayoutStyle::default();
@@ -290,7 +293,12 @@ impl DialogAction {
                             ..Default::default()
                         },
                         move |_cx| vec![text, ink],
-                    )]
+                    );
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+
+                    vec![chrome]
                 },
             )];
 

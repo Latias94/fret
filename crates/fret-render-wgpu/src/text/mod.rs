@@ -19,6 +19,15 @@ use read_fonts::{FontRef, TableProvider as _};
 pub(crate) mod parley_shaper;
 pub(crate) mod wrapper;
 
+#[inline]
+pub(crate) fn effective_text_scale_factor(scale_factor: f32) -> f32 {
+    if scale_factor.is_finite() && scale_factor > 0.0 {
+        scale_factor
+    } else {
+        1.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CommonFallbackMode {
     PreferSystemFallback,
@@ -636,6 +645,8 @@ pub struct TextLine {
     /// Baseline Y for this line (y=0 at top of text box).
     pub y_baseline: Px,
     pub height: Px,
+    pub ascent: Px,
+    pub descent: Px,
     pub caret_stops: Vec<(usize, Px)>,
 }
 
@@ -1519,7 +1530,9 @@ impl TextMeasureKey {
             // apply overflow policy at higher levels. Normalize away width so repeated measurements
             // (e.g. layout engine intrinsic probes) can reuse cached metrics.
             TextWrap::None => None,
-            TextWrap::Word | TextWrap::Grapheme => constraints.max_width.map(|w| w.0.to_bits()),
+            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                constraints.max_width.map(|w| w.0.to_bits())
+            }
         };
         Self {
             font: style.font.clone(),
@@ -2744,8 +2757,8 @@ impl TextSystem {
         let text = key.text.clone();
         key.backend = 1;
 
-        let scale = constraints.scale_factor.max(1.0);
-        let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+        let scale = effective_text_scale_factor(constraints.scale_factor);
+        let snap_vertical = scale.fract().abs() > 1e-4;
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
             let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
@@ -2921,6 +2934,8 @@ impl TextSystem {
                             y_top: Px((line_top_px / scale).max(0.0)),
                             y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                             height: Px((line_height_px / scale).max(0.0)),
+                            ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
+                            descent: Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
                         });
 
@@ -3229,6 +3244,8 @@ impl TextSystem {
                                 y_top: Px((line_top_px / scale).max(0.0)),
                                 y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                                 height: Px((line_height_px / scale).max(0.0)),
+                                ascent: Px((unwrapped.ascent.max(0.0) / scale).max(0.0)),
+                                descent: Px((unwrapped.descent.max(0.0) / scale).max(0.0)),
                                 caret_stops,
                             });
 
@@ -3496,9 +3513,18 @@ impl TextSystem {
             shape
         };
 
+        let decoration_metrics = self.decoration_metrics_for_shape(style, scale, &shape);
         let decorations: Vec<TextDecoration> = resolved_spans
             .as_deref()
-            .map(|spans| decorations_for_lines(shape.lines.as_ref(), spans, scale, snap_vertical))
+            .map(|spans| {
+                decorations_for_lines(
+                    shape.lines.as_ref(),
+                    spans,
+                    decoration_metrics,
+                    scale,
+                    snap_vertical,
+                )
+            })
             .unwrap_or_default();
 
         let metrics = shape.metrics;
@@ -3595,6 +3621,54 @@ impl TextSystem {
         }
     }
 
+    fn decoration_metrics_for_shape(
+        &self,
+        style: &TextStyle,
+        scale: f32,
+        shape: &Arc<TextShape>,
+    ) -> Option<TextDecorationMetricsPx> {
+        let usage = shape.font_faces.first()?;
+
+        let face_key = FontFaceKey {
+            font_data_id: usage.font_data_id,
+            face_index: usage.face_index,
+            variation_key: usage.variation_key,
+            synthesis_embolden: usage.synthesis_embolden,
+            synthesis_skew_degrees: usage.synthesis_skew_degrees,
+        };
+
+        let font_data = self
+            .font_data_by_face
+            .get(&(usage.font_data_id, usage.face_index))?;
+        let font_ref =
+            parley::swash::FontRef::from_index(font_data.data.data(), usage.face_index as usize)?;
+
+        let coords: &[i16] = self
+            .font_instance_coords_by_face
+            .get(&face_key)
+            .map(|v| v.as_ref())
+            .unwrap_or(&[]);
+
+        let ppem = style.size.0 * scale;
+        if !ppem.is_finite() || ppem <= 0.0 {
+            return None;
+        }
+
+        let m = font_ref.metrics(coords).scale(ppem);
+        if !m.underline_offset.is_finite()
+            || !m.strikeout_offset.is_finite()
+            || !m.stroke_size.is_finite()
+        {
+            return None;
+        }
+
+        Some(TextDecorationMetricsPx {
+            underline_offset_px: m.underline_offset,
+            strikeout_offset_px: m.strikeout_offset,
+            stroke_size_px: m.stroke_size,
+        })
+    }
+
     fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
         if let Some(name) = self
             .font_face_family_name_cache
@@ -3657,6 +3731,7 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
 
         let mut normalized_constraints = constraints;
         if normalized_constraints.wrap == TextWrap::None {
@@ -3666,11 +3741,13 @@ impl TextSystem {
         let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(text);
         if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(hit) = bucket
-                .iter()
-                .find(|e| e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text)
+            && let Some(idx) = bucket.iter().position(|e| {
+                e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text
+            })
+            && let Some(hit) = bucket.remove(idx)
         {
             let mut metrics = hit.metrics;
+            bucket.push_back(hit);
             if constraints.wrap == TextWrap::None
                 && constraints.overflow == TextOverflow::Ellipsis
                 && let Some(max_width) = constraints.max_width
@@ -3680,13 +3757,13 @@ impl TextSystem {
             return metrics;
         }
 
-        let scale = constraints.scale_factor.max(1.0);
+        let scale = effective_text_scale_factor(constraints.scale_factor);
         let allow_fast_wrap_measure =
             constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::Grapheme,
+                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
             } if allow_fast_wrap_measure && !text.contains('\n') => Some(max_width),
@@ -3805,42 +3882,15 @@ impl TextSystem {
                 }
             }
         } else {
-            // Prefer the same wrap policy as `prepare` so `measure` stays layout-consistent.
-            // This matters even under fractional scale factors where we may snap line heights.
-            if normalized_constraints.wrap == TextWrap::Word
-                && normalized_constraints.overflow == TextOverflow::Clip
-                && normalized_constraints.max_width.is_some()
-                && !text.contains('\n')
-            {
-                let wrapped = crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
-                    TextInputRef::plain(text, style),
-                    normalized_constraints,
-                );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            } else {
-                // Keep measurement aligned with prepare/paint under fractional scale factors.
-                //
-                // `shape_single_line_metrics` can disagree with full shaping near wrap boundaries
-                // when we also snap vertical layout to device pixels (common on Windows at
-                // 125%/150% DPI). Prefer the full wrapper in that case so layout height matches
-                // the prepared blob.
-                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-                let wrapped = if snap_vertical {
-                    crate::text::wrapper::wrap_with_constraints(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    )
-                } else {
-                    crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    )
-                };
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            }
+            // Keep measurement aligned with prepare/paint under fractional scale factors while
+            // avoiding per-glyph work in layout. The metrics-only wrapper shares the same Parley
+            // shaping + line breaking, but does not materialize glyph runs.
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::plain(text, style),
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -3851,7 +3901,13 @@ impl TextSystem {
             spans: None,
             metrics,
         });
-        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+        let limit = match normalized_constraints.wrap {
+            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                MEASURE_CACHE_PER_BUCKET_LIMIT
+            }
+        };
+        while bucket.len() > limit {
             bucket.pop_front();
         }
 
@@ -3872,6 +3928,7 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
 
         let mut normalized_constraints = constraints;
         if normalized_constraints.wrap == TextWrap::None {
@@ -3883,7 +3940,7 @@ impl TextSystem {
         let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
 
         if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(hit) = bucket.iter().find(|e| {
+            && let Some(idx) = bucket.iter().position(|e| {
                 e.text_hash == text_hash
                     && e.spans_hash == spans_hash
                     && e.text.as_ref() == rich.text.as_ref()
@@ -3891,8 +3948,10 @@ impl TextSystem {
                         Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
                     })
             })
+            && let Some(hit) = bucket.remove(idx)
         {
             let mut metrics = hit.metrics;
+            bucket.push_back(hit);
             if constraints.wrap == TextWrap::None
                 && constraints.overflow == TextOverflow::Ellipsis
                 && let Some(max_width) = constraints.max_width
@@ -3902,13 +3961,13 @@ impl TextSystem {
             return metrics;
         }
 
-        let scale = constraints.scale_factor.max(1.0);
+        let scale = effective_text_scale_factor(constraints.scale_factor);
         let allow_fast_wrap_measure =
             constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::Grapheme,
+                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
             } if allow_fast_wrap_measure && !rich.text.as_ref().contains('\n') => Some(max_width),
@@ -4048,45 +4107,16 @@ impl TextSystem {
             }
         } else {
             let text = rich.text.as_ref();
-            if normalized_constraints.wrap == TextWrap::Word
-                && normalized_constraints.overflow == TextOverflow::Clip
-                && normalized_constraints.max_width.is_some()
-                && !text.contains('\n')
-            {
-                let wrapped = self.wrap_for_prepare(
-                    TextInputRef::Attributed {
-                        text,
-                        base: base_style,
-                        spans: rich.spans.as_ref(),
-                    },
-                    normalized_constraints,
-                );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            } else {
-                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-                let wrapped = if snap_vertical {
-                    crate::text::wrapper::wrap_with_constraints(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    )
-                } else {
-                    crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    )
-                };
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
-            }
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::Attributed {
+                    text,
+                    base: base_style,
+                    spans: rich.spans.as_ref(),
+                },
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -4097,7 +4127,13 @@ impl TextSystem {
             spans: Some(rich.spans.clone()),
             metrics,
         });
-        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+        let limit = match normalized_constraints.wrap {
+            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                MEASURE_CACHE_PER_BUCKET_LIMIT
+            }
+        };
+        while bucket.len() > limit {
             bucket.pop_front();
         }
 
@@ -4200,6 +4236,16 @@ impl TextSystem {
         let blob = self.blobs.get(blob)?;
         selection_rects_from_lines_clipped(blob.shape.lines.as_ref(), range, clip, out);
         Some(())
+    }
+
+    pub fn first_line_metrics(&self, blob: TextBlobId) -> Option<fret_core::TextLineMetrics> {
+        let blob = self.blobs.get(blob)?;
+        let line = blob.shape.lines.first()?;
+        Some(fret_core::TextLineMetrics {
+            ascent: line.ascent,
+            descent: line.descent,
+            line_height: line.height,
+        })
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
@@ -4802,15 +4848,20 @@ fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
     *rects = out;
 }
 
+#[derive(Debug, Clone, Copy)]
+struct TextDecorationMetricsPx {
+    underline_offset_px: f32,
+    strikeout_offset_px: f32,
+    stroke_size_px: f32,
+}
+
 fn decorations_for_lines(
     lines: &[TextLine],
     spans: &[ResolvedSpan],
+    metrics_px: Option<TextDecorationMetricsPx>,
     scale: f32,
     snap_vertical: bool,
 ) -> Vec<TextDecoration> {
-    let thickness_px = 1.0_f32;
-    let thickness = Px(thickness_px / scale.max(1.0));
-
     let mut out: Vec<TextDecoration> = Vec::new();
     if lines.is_empty() || spans.is_empty() {
         return out;
@@ -4821,31 +4872,79 @@ fn decorations_for_lines(
         let line_bottom_px = (line.y_top.0 + line.height.0).max(line.y_top.0) * scale;
         let baseline_px = line.y_baseline.0 * scale;
 
-        // Underline: anchor to the baseline and snap in device px under fractional scaling.
-        let underline_bottom_px_raw = baseline_px + 1.0;
-        let underline_bottom_px = if snap_vertical {
-            underline_bottom_px_raw.round()
-        } else {
-            underline_bottom_px_raw
-        }
-        .clamp(line_top_px, line_bottom_px);
-        let underline_top_px =
-            (underline_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
-        let underline_y = Px((underline_top_px / scale).max(0.0));
-
-        // Strikethrough: approximate as a fraction of the line height above the baseline.
         let line_height_px = (line.height.0.max(0.0) * scale).max(0.0);
-        let strike_offset_px_raw = (line_height_px * 0.30).clamp(1.0, line_height_px);
-        let strike_bottom_px_raw = baseline_px - strike_offset_px_raw;
-        let strike_bottom_px = if snap_vertical {
-            strike_bottom_px_raw.round()
+        let max_thickness_px = line_height_px.max(1.0);
+
+        let (thickness_px, underline_y, strike_y) = if let Some(m) = metrics_px {
+            let raw = m.stroke_size_px.abs().max(1.0).min(max_thickness_px);
+            let thickness_px = if snap_vertical {
+                raw.round().max(1.0)
+            } else {
+                raw
+            };
+
+            // Swash metrics are expressed in the typical typographic coordinate system where
+            // positive Y points upward. Convert to our Y-down coordinate space by subtracting
+            // from the baseline.
+            let underline_top_px_raw = baseline_px - m.underline_offset_px;
+            let underline_bottom_px_raw = underline_top_px_raw + thickness_px;
+            let underline_bottom_px = if snap_vertical {
+                underline_bottom_px_raw.round()
+            } else {
+                underline_bottom_px_raw
+            }
+            .clamp(line_top_px, line_bottom_px);
+            let max_top_px = (line_bottom_px - thickness_px).max(line_top_px);
+            let underline_top_px =
+                (underline_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
+
+            let strike_top_px_raw = baseline_px - m.strikeout_offset_px;
+            let strike_bottom_px_raw = strike_top_px_raw + thickness_px;
+            let strike_bottom_px = if snap_vertical {
+                strike_bottom_px_raw.round()
+            } else {
+                strike_bottom_px_raw
+            }
+            .clamp(line_top_px, line_bottom_px);
+            let strike_top_px = (strike_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
+
+            (
+                thickness_px,
+                Px((underline_top_px / scale).max(0.0)),
+                Px((strike_top_px / scale).max(0.0)),
+            )
         } else {
-            strike_bottom_px_raw
-        }
-        .clamp(line_top_px, line_bottom_px);
-        let strike_top_px =
-            (strike_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
-        let strike_y = Px((strike_top_px / scale).max(0.0));
+            let thickness_px = 1.0_f32;
+
+            // Underline: anchor to the baseline and snap in device px under fractional scaling.
+            let underline_bottom_px_raw = baseline_px + 1.0;
+            let underline_bottom_px = if snap_vertical {
+                underline_bottom_px_raw.round()
+            } else {
+                underline_bottom_px_raw
+            }
+            .clamp(line_top_px, line_bottom_px);
+            let max_top_px = (line_bottom_px - thickness_px).max(line_top_px);
+            let underline_top_px =
+                (underline_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
+            let underline_y = Px((underline_top_px / scale).max(0.0));
+
+            // Strikethrough: approximate as a fraction of the line height above the baseline.
+            let strike_offset_px_raw = (line_height_px * 0.30).clamp(1.0, line_height_px);
+            let strike_bottom_px_raw = baseline_px - strike_offset_px_raw;
+            let strike_bottom_px = if snap_vertical {
+                strike_bottom_px_raw.round()
+            } else {
+                strike_bottom_px_raw
+            }
+            .clamp(line_top_px, line_bottom_px);
+            let strike_top_px = (strike_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
+            let strike_y = Px((strike_top_px / scale).max(0.0));
+
+            (thickness_px, underline_y, strike_y)
+        };
+
+        let thickness = Px((thickness_px / scale).max(0.0));
 
         for span in spans {
             if span.underline.is_none() && span.strikethrough.is_none() {
@@ -5042,6 +5141,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5068,6 +5169,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5106,6 +5209,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: stops,
         };
 
@@ -5134,6 +5239,8 @@ mod tests {
                 y_top: Px((i as f32) * 10.0),
                 y_baseline: Px(0.0),
                 height: Px(10.0),
+                ascent: Px(0.0),
+                descent: Px(0.0),
                 caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
             });
         }
@@ -5161,6 +5268,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
         };
         let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
@@ -5663,6 +5772,69 @@ mod tests {
     }
 
     #[test]
+    fn glyph_cache_key_tracks_scale_factor_below_one() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Keep this test deterministic: bundled fonts only (no system font discovery).
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+            text.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "mmmm";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints_1x = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let constraints_half = TextConstraints {
+            scale_factor: 0.5,
+            ..constraints_1x
+        };
+
+        let (blob_a, _metrics_a) = text.prepare(content, &style, constraints_1x);
+        let (blob_b, _metrics_b) = text.prepare(content, &style, constraints_half);
+
+        let a = text.blob(blob_a).expect("prepared blob (scale=1.0)");
+        let b = text.blob(blob_b).expect("prepared blob (scale=0.5)");
+
+        let ga = a.shape.glyphs.first().expect("expected at least one glyph");
+        let gb = b.shape.glyphs.first().expect("expected at least one glyph");
+
+        let size_a = f32::from_bits(ga.key.size_bits);
+        let size_b = f32::from_bits(gb.key.size_bits);
+
+        let ratio = size_b / size_a.max(1.0);
+        assert!(
+            (ratio - 0.5).abs() <= 0.15,
+            "expected glyph cache key font size to scale with constraints.scale_factor; size_a={size_a} size_b={size_b} ratio={ratio}"
+        );
+
+        text.release(blob_a);
+        text.release(blob_b);
+    }
+
+    #[test]
     fn grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
@@ -5858,6 +6030,16 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
+        // Keep this test deterministic: simulate a bundled-font-only environment (no system fonts).
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
+        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
+            text.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
         let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
             .iter()
             .map(|b| b.to_vec())
@@ -5882,7 +6064,7 @@ mod tests {
             scale_factor,
         };
         let style = TextStyle {
-            font: fret_core::FontId::monospace(),
+            font: fret_core::FontId::family("Inter"),
             size: Px(13.0),
             ..Default::default()
         };
@@ -5937,8 +6119,12 @@ mod tests {
 
             let h_px = d.rect.size.height.0 * scale_factor;
             assert!(
-                (h_px - 1.0).abs() < 1e-3,
-                "expected a 1px hairline decoration thickness, got {h_px}"
+                h_px >= 1.0 - 1e-3,
+                "expected a visible decoration thickness (>= 1px), got {h_px}"
+            );
+            assert!(
+                h_px <= 4.0 + 1e-3,
+                "expected decoration thickness to remain bounded, got {h_px}"
             );
 
             assert!(
@@ -6427,6 +6613,8 @@ mod tests {
             y_top: Px(0.0),
             y_baseline: Px(0.0),
             height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
             caret_stops,
         };
 

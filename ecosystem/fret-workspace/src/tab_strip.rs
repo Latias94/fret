@@ -86,6 +86,7 @@ fn tab_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: None,
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 
@@ -568,6 +569,17 @@ impl WorkspaceTabStrip {
                                             let cross_drop_target = cross_drop_target.clone();
 
                                             let element = cx.keyed(tab_id.as_ref(), |cx| {
+                                                let tab_test_id = tab_test_id_prefix_for_tab
+                                                    .as_ref()
+                                                    .map(|prefix| {
+                                                        Arc::<str>::from(format!(
+                                                            "{prefix}-{}",
+                                                            tab_id.as_ref()
+                                                        ))
+                                                    });
+                                                let tab_chrome_test_id = tab_test_id
+                                                    .as_ref()
+                                                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                 let tab_element = cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: {
@@ -580,14 +592,7 @@ impl WorkspaceTabStrip {
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Tab),
                                                             label: Some(tab_title.clone()),
-                                                            test_id: tab_test_id_prefix_for_tab
-                                                                .as_ref()
-                                                                .map(|prefix| {
-                                                                    Arc::<str>::from(format!(
-                                                                        "{prefix}-{}",
-                                                                        tab_id.as_ref()
-                                                                    ))
-                                                                }),
+                                                            test_id: tab_test_id.clone(),
                                                             selected: is_active,
                                                             pos_in_set: Some(pos_in_set),
                                                             set_size: Some(set_size),
@@ -1022,7 +1027,7 @@ impl WorkspaceTabStrip {
                                                             }
                                                         };
 
-                                                        vec![cx.container(
+                                                        let mut chrome = cx.container(
                                                             ContainerProps {
                                                                 layout: {
                                                                     let mut layout =
@@ -1066,11 +1071,11 @@ impl WorkspaceTabStrip {
                                                                         align: CrossAlign::Center,
                                                                         ..Default::default()
                                                                     },
-                                                                    |cx| {
-                                                                        let tab_fg = if is_active {
-                                                                            active_fg
-                                                                        } else {
-                                                                            inactive_fg
+                                                            |cx| {
+                                                                let tab_fg = if is_active {
+                                                                    active_fg
+                                                                } else {
+                                                                    inactive_fg
                                                                         };
 
                                                                         let show_close = tab_close_command
@@ -1209,7 +1214,11 @@ impl WorkspaceTabStrip {
                                                                     },
                                                                 )]
                                                             },
-                                                        )]
+                                                        );
+                                                        if let Some(test_id) = tab_chrome_test_id.clone() {
+                                                            chrome = chrome.test_id(test_id);
+                                                        }
+                                                        vec![chrome]
                                                     },
                                                 );
 

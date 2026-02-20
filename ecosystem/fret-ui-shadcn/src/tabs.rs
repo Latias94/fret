@@ -12,6 +12,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
 use fret_ui_kit::declarative::motion_value::{
@@ -123,6 +124,7 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -155,6 +157,57 @@ pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 type OnValueChangeWithSource =
     Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeSource) + Send + Sync + 'static>;
+type OnValueChangeWithDetails =
+    Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeDetails) + Send + Sync + 'static>;
+
+/// Base UI-compatible activation direction metadata for tab changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabsActivationDirection {
+    Left,
+    Right,
+    Up,
+    Down,
+    None,
+}
+
+impl TabsActivationDirection {
+    fn from_indices(
+        orientation: TabsOrientation,
+        prev: Option<usize>,
+        next: Option<usize>,
+    ) -> Self {
+        let (Some(prev), Some(next)) = (prev, next) else {
+            return Self::None;
+        };
+        if prev == next {
+            return Self::None;
+        }
+
+        match orientation {
+            TabsOrientation::Horizontal => {
+                if next < prev {
+                    Self::Left
+                } else {
+                    Self::Right
+                }
+            }
+            TabsOrientation::Vertical => {
+                if next < prev {
+                    Self::Up
+                } else {
+                    Self::Down
+                }
+            }
+        }
+    }
+}
+
+/// Change metadata for Base UI parity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TabsValueChangeDetails {
+    pub source: TabsValueChangeSource,
+    pub activation_direction: TabsActivationDirection,
+}
 
 /// Source metadata for tab value changes.
 ///
@@ -214,8 +267,14 @@ fn tabs_shared_indicator<H: UiHost>(
                 states |= WidgetStates::SELECTED;
             }
 
-            // shadcn new-york-v4: inactive triggers inherit `text-muted-foreground` from the list.
-            let fg_inactive = ColorRef::Color(tabs_list_fg_muted(theme));
+            // shadcn new-york-v4 `TabsTrigger` defaults:
+            // - light: `text-foreground`
+            // - dark: `text-muted-foreground`
+            let fg_inactive = if theme.name.contains("/dark") {
+                ColorRef::Color(tabs_list_fg_muted(theme))
+            } else {
+                ColorRef::Color(theme.color_token("foreground"))
+            };
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -430,11 +489,26 @@ fn tabs_shared_indicator<H: UiHost>(
 fn set_tabs_value_and_emit_change(
     host: &mut dyn fret_ui::action::UiActionHost,
     model: &Model<Option<Arc<str>>>,
+    values: &[Arc<str>],
+    disabled: &[bool],
     next: Option<Arc<str>>,
     on_value_change: Option<&OnValueChange>,
     on_value_change_with_source: Option<&OnValueChangeWithSource>,
+    on_value_change_with_details: Option<&OnValueChangeWithDetails>,
     source: TabsValueChangeSource,
+    orientation: TabsOrientation,
 ) {
+    let prev_value = host.models_mut().read(model, |v| v.clone()).ok().flatten();
+    let prev_idx = fret_ui_kit::primitives::tabs::active_index_from_values(
+        values,
+        prev_value.as_deref(),
+        disabled,
+    );
+    let next_idx =
+        fret_ui_kit::primitives::tabs::active_index_from_values(values, next.as_deref(), disabled);
+    let activation_direction =
+        TabsActivationDirection::from_indices(orientation, prev_idx, next_idx);
+
     let mut changed = false;
     let next_for_update = next.clone();
     let _ = host.models_mut().update(model, |value| {
@@ -449,7 +523,17 @@ fn set_tabs_value_and_emit_change(
     }
 
     if changed && let Some(on_value_change_with_source) = on_value_change_with_source {
-        on_value_change_with_source(next, source);
+        on_value_change_with_source(next.clone(), source);
+    }
+
+    if changed && let Some(on_value_change_with_details) = on_value_change_with_details {
+        on_value_change_with_details(
+            next,
+            TabsValueChangeDetails {
+                source,
+                activation_direction,
+            },
+        );
     }
 }
 
@@ -606,6 +690,7 @@ pub struct TabsRoot {
     test_id: Option<Arc<str>>,
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
+    on_value_change_with_details: Option<OnValueChangeWithDetails>,
 }
 
 impl std::fmt::Debug for TabsRoot {
@@ -628,6 +713,10 @@ impl std::fmt::Debug for TabsRoot {
             .field(
                 "on_value_change_with_source",
                 &self.on_value_change_with_source.is_some(),
+            )
+            .field(
+                "on_value_change_with_details",
+                &self.on_value_change_with_details.is_some(),
             )
             .finish()
     }
@@ -655,6 +744,7 @@ impl TabsRoot {
             test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
+            on_value_change_with_details: None,
         }
     }
 
@@ -680,6 +770,7 @@ impl TabsRoot {
             test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
+            on_value_change_with_details: None,
         }
     }
 
@@ -810,6 +901,15 @@ impl TabsRoot {
         self
     }
 
+    /// Called when the selected tab value changes, with Base UI-compatible change metadata.
+    pub fn on_value_change_with_details(
+        mut self,
+        on_value_change_with_details: Option<OnValueChangeWithDetails>,
+    ) -> Self {
+        self.on_value_change_with_details = on_value_change_with_details;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = self.list.clone();
@@ -850,6 +950,7 @@ impl TabsRoot {
             .loop_navigation(self.loop_navigation)
             .on_value_change(self.on_value_change)
             .on_value_change_with_source(self.on_value_change_with_source)
+            .on_value_change_with_details(self.on_value_change_with_details)
             .style(self.style)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
@@ -936,6 +1037,7 @@ pub struct Tabs {
     test_id: Option<Arc<str>>,
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
+    on_value_change_with_details: Option<OnValueChangeWithDetails>,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -957,6 +1059,10 @@ impl std::fmt::Debug for Tabs {
             .field(
                 "on_value_change_with_source",
                 &self.on_value_change_with_source.is_some(),
+            )
+            .field(
+                "on_value_change_with_details",
+                &self.on_value_change_with_details.is_some(),
             )
             .finish()
     }
@@ -983,6 +1089,7 @@ impl Tabs {
             test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
+            on_value_change_with_details: None,
         }
     }
 
@@ -1007,6 +1114,7 @@ impl Tabs {
             test_id: None,
             on_value_change: None,
             on_value_change_with_source: None,
+            on_value_change_with_details: None,
         }
     }
 
@@ -1132,6 +1240,15 @@ impl Tabs {
         self
     }
 
+    /// Called when the selected tab value changes, with Base UI-compatible change metadata.
+    pub fn on_value_change_with_details(
+        mut self,
+        on_value_change_with_details: Option<OnValueChangeWithDetails>,
+    ) -> Self {
+        self.on_value_change_with_details = on_value_change_with_details;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
@@ -1153,6 +1270,7 @@ impl Tabs {
         let root_test_id_for_children = root_test_id.clone();
         let on_value_change = self.on_value_change;
         let on_value_change_with_source = self.on_value_change_with_source;
+        let on_value_change_with_details = self.on_value_change_with_details;
 
         let model =
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
@@ -1173,10 +1291,11 @@ impl Tabs {
         );
 
         let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
+        let disabled_flags_arc: Arc<[bool]> = Arc::from(disabled_flags.clone().into_boxed_slice());
         let roving = RovingFocusProps {
             enabled: !tabs_disabled,
             wrap: loop_navigation,
-            disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
+            disabled: disabled_flags_arc.clone(),
             ..Default::default()
         };
         let tab_set_size = u32::try_from(items.len())
@@ -1189,7 +1308,8 @@ impl Tabs {
             &theme,
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
-                .bg(ColorRef::Color(tabs_list_bg(&theme))),
+                .bg(ColorRef::Color(tabs_list_bg(&theme)))
+                .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
             LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
@@ -1304,9 +1424,13 @@ impl Tabs {
                                 if activation_mode == TabsActivationMode::Automatic {
                                     let model_for_roving = model.clone();
                                     let values_for_roving = values_arc.clone();
+                                    let disabled_for_roving = disabled_flags_arc.clone();
                                     let on_value_change_for_roving = on_value_change.clone();
                                     let on_value_change_with_source_for_roving =
                                         on_value_change_with_source.clone();
+                                    let on_value_change_with_details_for_roving =
+                                        on_value_change_with_details.clone();
+                                    let orientation_for_roving = orientation;
                                     cx.roving_on_active_change(Arc::new(move |host, _acx, idx| {
                                         let Some(value) = values_for_roving.get(idx).cloned() else {
                                             return;
@@ -1314,17 +1438,26 @@ impl Tabs {
                                         set_tabs_value_and_emit_change(
                                             host,
                                             &model_for_roving,
+                                            values_for_roving.as_ref(),
+                                            disabled_for_roving.as_ref(),
                                             Some(value),
                                             on_value_change_for_roving.as_ref(),
                                             on_value_change_with_source_for_roving.as_ref(),
+                                            on_value_change_with_details_for_roving.as_ref(),
                                             TabsValueChangeSource::RovingActiveChange,
+                                            orientation_for_roving,
                                         );
                                     }));
                                 }
 
-                                // shadcn new-york-v4: `TabsList` sets `text-muted-foreground`, so
-                                // inactive triggers inherit it in both themes.
-                                let fg_inactive = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                // shadcn new-york-v4 `TabsTrigger` defaults:
+                                // - light: `text-foreground`
+                                // - dark: `text-muted-foreground`
+                                let fg_inactive = if theme.name.contains("/dark") {
+                                    ColorRef::Color(tabs_list_fg_muted(&theme))
+                                } else {
+                                    ColorRef::Color(theme.color_token("foreground"))
+                                };
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
@@ -1350,9 +1483,9 @@ impl Tabs {
                                 // content box (after list padding).
                                 //
                                 // In Fret, centering a `-1px` height delta produces a half-pixel
-                                // offset which can snap inconsistently and read as a 1px vertical
-                                // misalignment in the active highlight. Prefer an even delta so
-                                // the centered position lands on whole pixels.
+                                // offset which can snap inconsistently (esp. at non-integer scale
+                                // factors) and read as a 1px vertical misalignment. Prefer an even
+                                // delta so the centered position lands on whole pixels.
                                 let trigger_h = Px(
                                     (list_height.0 - list_padding.0 * 2.0 - 2.0).max(0.0),
                                 );
@@ -1371,6 +1504,11 @@ impl Tabs {
                                     let on_value_change = on_value_change.clone();
                                     let on_value_change_with_source =
                                         on_value_change_with_source.clone();
+                                    let on_value_change_with_details =
+                                        on_value_change_with_details.clone();
+                                    let values_for_change = values_arc.clone();
+                                    let disabled_for_change = disabled_flags_arc.clone();
+                                    let orientation_for_change = orientation;
                                     let item_disabled =
                                         disabled_flags.get(idx).copied().unwrap_or(true);
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
@@ -1393,13 +1531,16 @@ impl Tabs {
                                     let text_style = text_style.clone();
 
                                     out.push(cx.keyed(value.clone(), move |cx| {
-                                        let mut trigger =
-                                            cx.pressable_with_id_props(move |cx, st, _id| {
+                                        control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
+                                        let values_for_pointer = values_for_change.clone();
+                                        let disabled_for_pointer = disabled_for_change.clone();
                                         let on_value_change_for_pointer = on_value_change.clone();
                                         let on_value_change_with_source_for_pointer =
                                             on_value_change_with_source.clone();
+                                        let on_value_change_with_details_for_pointer =
+                                            on_value_change_with_details.clone();
 
                                         cx.pressable_add_on_pointer_down(Arc::new(
                                             move |host, _cx, down| {
@@ -1415,11 +1556,16 @@ impl Tabs {
                                                         set_tabs_value_and_emit_change(
                                                             host,
                                                             &model_for_pointer,
+                                                            values_for_pointer.as_ref(),
+                                                            disabled_for_pointer.as_ref(),
                                                             Some(value_for_pointer.clone()),
                                                             on_value_change_for_pointer.as_ref(),
                                                             on_value_change_with_source_for_pointer
                                                                 .as_ref(),
+                                                            on_value_change_with_details_for_pointer
+                                                                .as_ref(),
                                                             TabsValueChangeSource::PointerDown,
+                                                            orientation_for_change,
                                                         );
                                                         R::Continue
                                                     }
@@ -1435,29 +1581,38 @@ impl Tabs {
                                         ));
                                         let value_for_activate = value.clone();
                                         let model_for_activate = model.clone();
+                                        let values_for_activate = values_for_change.clone();
+                                        let disabled_for_activate = disabled_for_change.clone();
                                         let on_value_change_for_activate = on_value_change.clone();
                                         let on_value_change_with_source_for_activate =
                                             on_value_change_with_source.clone();
+                                        let on_value_change_with_details_for_activate =
+                                            on_value_change_with_details.clone();
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, _acx, _reason| {
                                                 set_tabs_value_and_emit_change(
                                                     host,
                                                     &model_for_activate,
+                                                    values_for_activate.as_ref(),
+                                                    disabled_for_activate.as_ref(),
                                                     Some(value_for_activate.clone()),
                                                     on_value_change_for_activate.as_ref(),
                                                     on_value_change_with_source_for_activate
                                                         .as_ref(),
+                                                    on_value_change_with_details_for_activate
+                                                        .as_ref(),
                                                     TabsValueChangeSource::Activate,
+                                                    orientation_for_change,
                                                 );
                                             },
                                         ));
                                         if active {
-                                            selected_tab_element.set(Some(_id.0));
+                                            selected_tab_element.set(Some(id.0));
                                         }
                                         if force_mount_content
                                             && let Some(cell) = tab_trigger_elements.get(idx)
                                         {
-                                            cell.set(Some(_id.0));
+                                            cell.set(Some(id.0));
                                         }
 
                                         cx.with_state_for(
@@ -1465,10 +1620,10 @@ impl Tabs {
                                             TabsListLayoutRuntime::default,
                                             |rt| {
                                                 if rt.triggers.len() != list_item_count {
-                                                    rt.triggers.resize(list_item_count, _id);
+                                                    rt.triggers.resize(list_item_count, id);
                                                 }
                                                 if let Some(slot) = rt.triggers.get_mut(idx) {
-                                                    *slot = _id;
+                                                    *slot = id;
                                                 }
                                             },
                                         );
@@ -1506,111 +1661,101 @@ impl Tabs {
                                             border
                                         };
 
+                                        let mut a11y =
+                                            fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
+                                                Some(label.clone()),
+                                                active,
+                                                u32::try_from(idx + 1).ok(),
+                                                tab_set_size,
+                                            );
+                                        if let Some(test_id) = trigger_test_id.as_ref() {
+                                            a11y.test_id = Some(test_id.clone());
+                                        }
+
                                         let props = PressableProps {
                                             layout: trigger_layout,
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
                                             focus_ring: Some(ring),
-                                            a11y: fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
-                                                Some(label.clone()),
-                                                active,
-                                                u32::try_from(idx + 1).ok(),
-                                                tab_set_size,
-                                            ),
+                                            a11y,
                                             ..Default::default()
                                         };
 
-                                        let children = vec![cx.container(
-                                            ContainerProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout.size.height = Length::Fill;
-                                                    layout
-                                                },
-                                                padding: Edges {
-                                                    top: pad_y,
-                                                    right: pad_x,
-                                                    bottom: pad_y,
-                                                    left: pad_x,
-                                                },
-                                                background: bg,
-                                                shadow,
-                                                border: Edges::all(border_w),
-                                                border_color: Some(border),
-                                                corner_radii: Corners::all(radius),
-                                                ..Default::default()
+                                        let chrome = ContainerProps {
+                                            padding: Edges {
+                                                top: pad_y,
+                                                right: pad_x,
+                                                bottom: pad_y,
+                                                left: pad_x,
                                             },
-                                            move |cx| {
-                                                let base =
-                                                    trigger_children.clone().unwrap_or_else(|| {
-                                                        let style = text_style.clone();
-                                                        let mut text = ui::label(cx, label.clone())
-                                                            .text_size_px(style.size)
-                                                            .font_weight(style.weight)
-                                                            .text_color(fg_ref.clone())
-                                                            .nowrap();
-                                                        if let Some(line_height) = style.line_height
-                                                        {
-                                                            // Match web baseline behavior by giving the label a fixed line box
-                                                            // height when a line-height is configured. This allows the text
-                                                            // host widget to apply CSS-like "half-leading" centering rather
-                                                            // than centering by the prepared glyph bounds, which can read as
-                                                            // slightly bottom-heavy in GPU-first layout.
-                                                            text = text
-                                                                .line_height_px(line_height)
-                                                                .h_px(line_height);
-                                                        }
-                                                        if let Some(letter_spacing_em) =
-                                                            style.letter_spacing_em
-                                                        {
-                                                            text =
-                                                                text.letter_spacing_em(letter_spacing_em);
-                                                        }
-                                                        vec![text.into_element(cx)]
-                                                    });
+                                            background: bg,
+                                            shadow,
+                                            border: Edges::all(border_w),
+                                            border_color: Some(border),
+                                            corner_radii: Corners::all(radius),
+                                            ..Default::default()
+                                        };
 
-                                                let styled: Vec<AnyElement> = base
-                                                    .into_iter()
-                                                    .map(|child| {
-                                                        apply_trigger_inherited_style(
-                                                            child,
-                                                            fg,
-                                                            &text_style,
-                                                        )
-                                                    })
-                                                    .collect();
+                                        let content = move |cx: &mut ElementContext<'_, H>| {
+                                            let base = trigger_children.clone().unwrap_or_else(|| {
+                                                let style = text_style.clone();
+                                                let mut text = ui::label(cx, label.clone())
+                                                    .text_size_px(style.size)
+                                                    .font_weight(style.weight)
+                                                    .text_color(fg_ref.clone())
+                                                    .nowrap();
+                                                if let Some(line_height) = style.line_height {
+                                                    // Match web/GPUI baseline behavior in fixed-height controls by
+                                                    // treating the allocated bounds height as the effective line box.
+                                                    //
+                                                    // This opts into a "half-leading" baseline placement model for
+                                                    // the first line, but does not force the element height to equal
+                                                    // the configured line height.
+                                                    text = text
+                                                        .line_height_px(line_height)
+                                                        .h_full()
+                                                        .line_box_in_bounds();
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    style.letter_spacing_em
+                                                {
+                                                    text = text.letter_spacing_em(letter_spacing_em);
+                                                }
+                                                vec![text.into_element(cx)]
+                                            });
 
-                                                vec![cx.flex(
-                                                    FlexProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width = Length::Fill;
-                                                            layout.size.height = Length::Fill;
-                                                            layout
-                                                        },
-                                                        direction: fret_core::Axis::Horizontal,
-                                                        gap: Px(6.0),
-                                                        padding: Edges::all(Px(0.0)),
-                                                        justify: MainAlign::Center,
-                                                        align: CrossAlign::Center,
-                                                        wrap: false,
-                                                    },
-                                                    move |_cx| styled,
-                                                )]
-                                            },
-                                        )];
+                                            let styled: Vec<AnyElement> = base
+                                                .into_iter()
+                                                .map(|child| {
+                                                    apply_trigger_inherited_style(child, fg, &text_style)
+                                                })
+                                                .collect();
 
-                                        (props, children)
-                                        });
-                                        if let Some(test_id) = trigger_test_id.as_ref() {
-                                            trigger = trigger.test_id(test_id.clone());
-                                        }
-                                        trigger
+                                            vec![cx.flex(
+                                                FlexProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                     layout.size.width = Length::Fill;
+                                                     layout.size.height = Length::Fill;
+                                                     layout
+                                                 },
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(6.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Center,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |_cx| styled,
+                                            )]
+                                        };
+
+                                        (props, chrome, content)
+                                        })
                                      }));
-                                }
-                                out
-                            },
+                                 }
+                                 out
+                             },
                         ));
                         list_children
                     })]
@@ -2655,6 +2800,175 @@ mod tests {
         assert_eq!(changed.len(), 1);
         assert_eq!(changed[0].0.as_deref(), Some("beta"));
         assert_eq!(changed[0].1, TabsValueChangeSource::RovingActiveChange);
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_details_reports_activation_direction_on_pointer_down() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-details-pointer",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .on_value_change_with_details(Some(Arc::new(move |value, details| {
+                            changed_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push((value, details));
+                        })))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(changed[0].1.source, TabsValueChangeSource::PointerDown);
+        assert_eq!(
+            changed[0].1.activation_direction,
+            TabsActivationDirection::Right
+        );
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_details_reports_activation_direction_on_roving_active_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-details-roving",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Automatic)
+                        .on_value_change_with_details(Some(Arc::new(move |value, details| {
+                            changed_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push((value, details));
+                        })))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(
+            changed[0].1.source,
+            TabsValueChangeSource::RovingActiveChange
+        );
+        assert_eq!(
+            changed[0].1.activation_direction,
+            TabsActivationDirection::Right
+        );
     }
 
     fn render_force_mount_frame(

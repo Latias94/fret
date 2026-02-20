@@ -61,6 +61,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.measure_cache_this_frame.clear();
+        self.scratch_bounds_records.clear();
 
         if pass_kind == LayoutPassKind::Final {
             self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
@@ -498,6 +499,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         if pass_kind == LayoutPassKind::Final {
+            self.flush_layout_bounds_records_if_needed(app);
             let (_, prepaint_elapsed) = fret_perf::measure_span(
                 layout_phase_time_enabled,
                 trace_layout,
@@ -896,6 +898,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut roots_with_bounds: Vec<(NodeId, Rect)> = Vec::with_capacity(targets.len());
         for root in targets {
             let Some(node) = self.nodes.get(root) else {
                 continue;
@@ -929,6 +932,15 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            roots_with_bounds.push((root, bounds));
+        }
+
+        // Pending barrier relayouts run as contained solves. Pre-solve each root via the layout
+        // engine to avoid widget-local fallback solves (which amplify tail latency by triggering
+        // extra out-of-band engine passes).
+        self.solve_barrier_flow_roots_if_needed(app, services, &roots_with_bounds, scale_factor);
+
+        for (root, bounds) in roots_with_bounds {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
             if self.debug_enabled {
@@ -1111,6 +1123,27 @@ impl<H: UiHost> UiTree<H> {
         self.viewport_roots.clear();
     }
 
+    fn mark_layout_engine_seen_subtree_from_ui_children(
+        &mut self,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+    ) {
+        if engine.layout_id_for_node(root).is_none() {
+            return;
+        }
+
+        self.scratch_node_stack.clear();
+        self.scratch_node_stack.push(root);
+        while let Some(node) = self.scratch_node_stack.pop() {
+            engine.mark_seen_if_present(node);
+            if let Some(entry) = self.nodes.get(node) {
+                for &child in &entry.children {
+                    self.scratch_node_stack.push(child);
+                }
+            }
+        }
+    }
+
     fn layout_contained_view_cache_roots_if_needed(
         &mut self,
         app: &mut H,
@@ -1195,6 +1228,11 @@ impl<H: UiHost> UiTree<H> {
             targets.push((id, bounds));
         }
 
+        // Contained cache-root relayouts run as independent solves after the main viewport roots.
+        // Pre-solve via the layout engine so cache-root subtrees don't trigger widget-local
+        // fallback solves (which create extra solves and jitter within the same frame).
+        self.solve_barrier_flow_roots_if_needed(app, services, &targets, scale_factor);
+
         for (root, bounds) in targets {
             if self.debug_enabled {
                 self.debug_stats.view_cache_contained_relayouts = self
@@ -1214,6 +1252,7 @@ impl<H: UiHost> UiTree<H> {
             );
             if let Some(node) = self.nodes.get_mut(root) {
                 node.view_cache_needs_rerender = true;
+                node.invalidation.layout = false;
             }
         }
     }
@@ -1277,13 +1316,13 @@ impl<H: UiHost> UiTree<H> {
                 && measured != Size::default();
 
             if engine.layout_id_for_node(root).is_some() && (!needs_layout || is_translation_only) {
-                engine.mark_seen_subtree_from_cached_children(root);
+                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
                 continue;
             }
             if reuse_cached_flow && engine.layout_id_for_node(root).is_some() && !layout_invalidated
             {
                 engine.set_viewport_root_override_size(root, bounds.size, sf);
-                engine.mark_seen_subtree_from_cached_children(root);
+                self.mark_layout_engine_seen_subtree_from_ui_children(&mut engine, root);
             } else {
                 build_viewport_flow_subtree(
                     &mut engine,
@@ -1300,6 +1339,11 @@ impl<H: UiHost> UiTree<H> {
 
         let phase2_started = profile_layout.then(Instant::now);
         // Phase 2: compute/apply only when layout is needed.
+        //
+        // When multiple independent viewport roots need layout in the same frame (window root +
+        // overlays + other detached flow roots), solving them one-by-one can amplify fixed per-solve
+        // overhead into tail spikes. Prefer batching via the layout engine's synthetic-root path.
+        let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
         for &root in roots {
             let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
                 Some(node) => {
@@ -1318,12 +1362,16 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            pending_solves.push((root, available));
+        }
+
+        if !pending_solves.is_empty() {
             let solves_before = engine.solve_count();
             let solve_time_before = engine.last_solve_time();
-            let _ =
-                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
-                    self.measure_in(app, services, n, c, sf)
-                });
+            engine.compute_independent_roots_with_measure_if_needed(&pending_solves, sf, |n, c| {
+                self.measure_in(app, services, n, c, sf)
+            });
+
             if self.debug_enabled && engine.solve_count() > solves_before {
                 let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
                 let top_measures = engine
@@ -1372,24 +1420,11 @@ impl<H: UiHost> UiTree<H> {
                         }
                     })
                     .collect();
-                let solve_root = engine.last_solve_root().unwrap_or(root);
-                let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
-                let root_element_kind =
-                    crate::declarative::frame::element_record_for_node(app, window, solve_root)
-                        .map(|record| record.instance.kind_name());
-                let root_element_path: Option<String> = root_element.and_then(|element| {
-                    #[cfg(feature = "diagnostics")]
-                    {
-                        crate::elements::with_window_state(app, window, |st| {
-                            st.debug_path_for_element(element)
-                        })
-                    }
-                    #[cfg(not(feature = "diagnostics"))]
-                    {
-                        let _ = element;
-                        None
-                    }
-                });
+                let solve_root = engine
+                    .last_solve_root()
+                    .unwrap_or_else(|| pending_solves[0].0);
+                let (root_element, root_element_kind, root_element_path) =
+                    self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
                 self.debug_record_layout_engine_solve(
                     solve_root,
@@ -1405,7 +1440,9 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_measure_children.clear();
             }
 
-            self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
+            for &(root, _available) in &pending_solves {
+                self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
+            }
         }
         let phase2_elapsed = phase2_started.map(|s| s.elapsed());
 
@@ -1495,7 +1532,10 @@ impl<H: UiHost> UiTree<H> {
                     if engine.layout_id_for_node(item.root).is_some()
                         && (!item.needs_layout || item.is_translation_only)
                     {
-                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        self.mark_layout_engine_seen_subtree_from_ui_children(
+                            &mut engine,
+                            item.root,
+                        );
                         continue;
                     }
                     if reuse_cached_flow
@@ -1503,7 +1543,10 @@ impl<H: UiHost> UiTree<H> {
                         && !item.layout_invalidated
                     {
                         engine.set_viewport_root_override_size(item.root, item.bounds.size, sf);
-                        engine.mark_seen_subtree_from_cached_children(item.root);
+                        self.mark_layout_engine_seen_subtree_from_ui_children(
+                            &mut engine,
+                            item.root,
+                        );
                     } else {
                         build_viewport_flow_subtree(
                             &mut engine,
@@ -1518,24 +1561,29 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 // Phase 2: compute/apply only for roots that need layout and are not translation-only.
+                let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
                 for item in &batch {
                     if !item.needs_layout || item.is_translation_only {
                         continue;
                     }
+                    pending_solves.push((
+                        item.root,
+                        LayoutSize::new(
+                            AvailableSpace::Definite(item.bounds.size.width),
+                            AvailableSpace::Definite(item.bounds.size.height),
+                        ),
+                    ));
+                }
 
-                    let available = LayoutSize::new(
-                        AvailableSpace::Definite(item.bounds.size.width),
-                        AvailableSpace::Definite(item.bounds.size.height),
-                    );
-
+                if !pending_solves.is_empty() {
                     let solves_before = engine.solve_count();
                     let solve_time_before = engine.last_solve_time();
-                    let _ = engine.compute_root_for_node_with_measure_if_needed(
-                        item.root,
-                        available,
+                    engine.compute_independent_roots_with_measure_if_needed(
+                        &pending_solves,
                         sf,
                         |n, c| self.measure_in(app, services, n, c, sf),
                     );
+
                     if self.debug_enabled && engine.solve_count() > solves_before {
                         let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
                         let top_measures = engine
@@ -1586,25 +1634,11 @@ impl<H: UiHost> UiTree<H> {
                                 }
                             })
                             .collect();
-                        let solve_root = engine.last_solve_root().unwrap_or(item.root);
-                        let root_element = self.nodes.get(solve_root).and_then(|n| n.element);
-                        let root_element_kind = crate::declarative::frame::element_record_for_node(
-                            app, window, solve_root,
-                        )
-                        .map(|record| record.instance.kind_name());
-                        let root_element_path: Option<String> = root_element.and_then(|element| {
-                            #[cfg(feature = "diagnostics")]
-                            {
-                                crate::elements::with_window_state(app, window, |st| {
-                                    st.debug_path_for_element(element)
-                                })
-                            }
-                            #[cfg(not(feature = "diagnostics"))]
-                            {
-                                let _ = element;
-                                None
-                            }
-                        });
+                        let solve_root = engine
+                            .last_solve_root()
+                            .unwrap_or_else(|| pending_solves[0].0);
+                        let (root_element, root_element_kind, root_element_path) =
+                            self.debug_resolve_layout_solve_root_label(app, window, solve_root);
 
                         self.debug_record_layout_engine_solve(
                             solve_root,
@@ -1620,7 +1654,19 @@ impl<H: UiHost> UiTree<H> {
                         self.debug_measure_children.clear();
                     }
 
-                    self.maybe_dump_taffy_subtree(app, window, &engine, item.root, item.bounds, sf);
+                    for item in &batch {
+                        if !item.needs_layout || item.is_translation_only {
+                            continue;
+                        }
+                        self.maybe_dump_taffy_subtree(
+                            app,
+                            window,
+                            &engine,
+                            item.root,
+                            item.bounds,
+                            sf,
+                        );
+                    }
                 }
 
                 self.put_layout_engine(engine);

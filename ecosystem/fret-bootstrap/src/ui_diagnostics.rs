@@ -24,6 +24,7 @@ use fret_diag_protocol::{
     UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
     UiWindowTargetV1,
 };
+use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -756,25 +757,243 @@ impl UiDiagnosticsService {
         current_window: AppWindowId,
         target: Option<&UiWindowTargetV1>,
     ) -> Option<AppWindowId> {
+        let first_seen = self
+            .known_windows
+            .iter()
+            .copied()
+            .min_by_key(|w| w.data().as_ffi());
+        let last_seen = self
+            .known_windows
+            .iter()
+            .copied()
+            .max_by_key(|w| w.data().as_ffi());
         match target.copied().unwrap_or(UiWindowTargetV1::Current) {
             UiWindowTargetV1::Current => Some(current_window),
-            UiWindowTargetV1::FirstSeen => self.known_windows.first().copied(),
+            UiWindowTargetV1::FirstSeen => first_seen,
             UiWindowTargetV1::FirstSeenOther => self
                 .known_windows
                 .iter()
                 .copied()
-                .find(|w| *w != current_window),
-            UiWindowTargetV1::LastSeen => self.known_windows.last().copied(),
+                .filter(|w| *w != current_window)
+                .min_by_key(|w| w.data().as_ffi()),
+            UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
-                .rev()
                 .copied()
-                .find(|w| *w != current_window),
+                .filter(|w| *w != current_window)
+                .max_by_key(|w| w.data().as_ffi()),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
             }
+        }
+    }
+
+    fn resolve_window_target_for_active_step(
+        &self,
+        current_window: AppWindowId,
+        anchor_window: AppWindowId,
+        target: Option<&UiWindowTargetV1>,
+    ) -> Option<AppWindowId> {
+        let Some(target) = target else {
+            return Some(current_window);
+        };
+
+        match target {
+            UiWindowTargetV1::Current => Some(current_window),
+            UiWindowTargetV1::FirstSeen => Some(anchor_window),
+            _ => self.resolve_window_target(anchor_window, Some(target)),
+        }
+    }
+
+    fn predicate_can_eval_off_window(predicate: &UiPredicateV1) -> bool {
+        matches!(
+            predicate,
+            UiPredicateV1::KnownWindowCountGe { .. }
+                | UiPredicateV1::KnownWindowCountIs { .. }
+                | UiPredicateV1::PlatformUiWindowHoverDetectionIs { .. }
+                | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                | UiPredicateV1::DockDragMovingWindowIs { .. }
+                | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
+                | UiPredicateV1::DockDragActiveIs { .. }
+                | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
+                | UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { .. }
+                | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
+                | UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { .. }
+                | UiPredicateV1::DockFloatingDragActiveIs { .. }
+                | UiPredicateV1::DockDropPreviewKindIs { .. }
+                | UiPredicateV1::DockDropResolveSourceIs { .. }
+                | UiPredicateV1::DockDropResolvedIsSome { .. }
+                | UiPredicateV1::DockGraphCanonicalIs { .. }
+                | UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { .. }
+                | UiPredicateV1::DockGraphNodeCountLe { .. }
+                | UiPredicateV1::DockGraphMaxSplitDepthLe { .. }
+                | UiPredicateV1::DockGraphSignatureIs { .. }
+                | UiPredicateV1::DockGraphSignatureContains { .. }
+                | UiPredicateV1::DockGraphSignatureFingerprint64Is { .. }
+        )
+    }
+
+    fn preferred_window_for_active_script(active: &ActiveScript) -> Option<AppWindowId> {
+        if let Some(step) = active.steps.get(active.next_step) {
+            match step {
+                UiActionStepV2::WaitUntil { predicate, .. }
+                | UiActionStepV2::Assert { predicate, .. }
+                    if Self::predicate_can_eval_off_window(predicate) =>
+                {
+                    // Avoid pinning scripts to a specific window during "read-only" docking
+                    // assertions / waits. Overlap + occlusion can prevent the target window from
+                    // producing frames, so allowing migration keeps timeouts and gates progressing.
+                    return None;
+                }
+                _ => {}
+            }
+
+            // Avoid migrating a newly started script before any per-window state is established.
+            // The first few steps typically establish window geometry and must run consistently.
+            if active.next_step == 0 {
+                return Some(active.anchor_window);
+            }
+
+            // Before a step caches any per-window state (pointer session / v2 step state), we may
+            // still need to "pin" execution to a specific window to avoid migration loops.
+            //
+            // Example: a window-targeted drag step (`drag_pointer_until`) can be repeatedly stolen
+            // by any window that happens to be producing frames. If the step keeps handing off to
+            // its intended window without ever initializing playback, timeouts may never decrement
+            // and tooling can hang waiting for `script.result.json` to complete.
+            //
+            // Prefer a stable window when the step targets:
+            // - `first_seen` (use the script's `anchor_window`)
+            // - `window_ffi` (resolve directly)
+            //
+            // Leave other relative targets (last_seen/other) migratable until per-window state is
+            // established; those depend on `known_windows`, which is maintained at runtime.
+            let step_window_target: Option<&UiWindowTargetV1> = match step {
+                UiActionStepV2::Click { window, .. }
+                | UiActionStepV2::PointerDown { window, .. }
+                | UiActionStepV2::PointerMove { window, .. }
+                | UiActionStepV2::PointerUp { window, .. }
+                | UiActionStepV2::DragPointer { window, .. }
+                | UiActionStepV2::DragPointerUntil { window, .. }
+                | UiActionStepV2::DragTo { window, .. }
+                | UiActionStepV2::SetWindowInnerSize { window, .. }
+                | UiActionStepV2::SetWindowOuterPosition { window, .. }
+                | UiActionStepV2::SetCursorInWindow { window, .. }
+                | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+                | UiActionStepV2::SetMouseButtons { window, .. }
+                | UiActionStepV2::RaiseWindow { window, .. }
+                | UiActionStepV2::WaitUntil { window, .. }
+                | UiActionStepV2::Assert { window, .. } => window.as_ref(),
+                _ => None,
+            };
+            match step_window_target.copied() {
+                Some(UiWindowTargetV1::FirstSeen) => return Some(active.anchor_window),
+                Some(UiWindowTargetV1::WindowFfi { window }) => {
+                    return Some(AppWindowId::from(KeyData::from_ffi(window)));
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(session) = active.pointer_session.as_ref() {
+            return Some(session.window);
+        }
+        match active.v2_step_state.as_ref()? {
+            V2StepState::DragPointer(state) => Some(state.window),
+            V2StepState::DragPointerUntil(state) => Some(state.playback.window),
+            V2StepState::DragTo(state) => state.playback.as_ref().map(|p| p.window),
+            _ => None,
+        }
+    }
+
+    fn active_step_window_target(active: &ActiveScript) -> Option<UiWindowTargetV1> {
+        let step = active.steps.get(active.next_step)?;
+        let step_window_target: Option<&UiWindowTargetV1> = match step {
+            UiActionStepV2::Click { window, .. }
+            | UiActionStepV2::PointerDown { window, .. }
+            | UiActionStepV2::PointerMove { window, .. }
+            | UiActionStepV2::PointerUp { window, .. }
+            | UiActionStepV2::DragPointer { window, .. }
+            | UiActionStepV2::DragPointerUntil { window, .. }
+            | UiActionStepV2::DragTo { window, .. }
+            | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowOuterPosition { window, .. }
+            | UiActionStepV2::SetCursorInWindow { window, .. }
+            | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+            | UiActionStepV2::SetMouseButtons { window, .. }
+            | UiActionStepV2::RaiseWindow { window, .. }
+            | UiActionStepV2::WaitUntil { window, .. }
+            | UiActionStepV2::Assert { window, .. } => window.as_ref(),
+            _ => None,
+        };
+        step_window_target.copied()
+    }
+
+    fn remap_script_per_window_state_for_migration(
+        active: &mut ActiveScript,
+        new_window: AppWindowId,
+        allow_remap_captured_drag: bool,
+    ) {
+        if let Some(session) = active.pointer_session.as_mut() {
+            session.window = new_window;
+        }
+        if let Some(state) = active.v2_step_state.as_mut() {
+            match state {
+                V2StepState::DragPointer(state) => state.window = new_window,
+                V2StepState::DragPointerUntil(state) => {
+                    // Avoid splitting a captured-pointer gesture across windows. `drag_pointer_until`
+                    // is allowed to "hold" the drag across frames; once we've emitted a down/move
+                    // segment, keep injecting into the original playback window unless the runner
+                    // has migrated the captured drag to a different window (ImGui-style tear-off).
+                    if (!state.down_issued && state.playback.frame == 0)
+                        || allow_remap_captured_drag
+                    {
+                        state.playback.window = new_window;
+                    }
+                }
+                V2StepState::DragTo(state) => {
+                    if let Some(playback) = state.playback.as_mut() {
+                        playback.window = new_window;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn can_migrate_for_current_target(active: &ActiveScript) -> bool {
+        if !matches!(
+            Self::active_step_window_target(active),
+            Some(UiWindowTargetV1::Current)
+        ) {
+            return false;
+        }
+
+        // Avoid splitting a captured-pointer gesture across windows. After a drag step has issued
+        // a pointer down, migrating execution to a different window would cause the corresponding
+        // pointer up to land in the wrong window and leave the original runtime drag state stuck.
+        match active.v2_step_state.as_ref() {
+            None => true,
+            Some(V2StepState::DragPointerUntil(state))
+                if state.step_index == active.next_step
+                    && !state.down_issued
+                    && state.playback.frame == 0 =>
+            {
+                true
+            }
+            Some(V2StepState::DragPointer(state))
+                if state.step_index == active.next_step && state.frame == 0 =>
+            {
+                true
+            }
+            Some(V2StepState::DragTo(state))
+                if state.step_index == active.next_step && state.playback.is_none() =>
+            {
+                true
+            }
+            _ => false,
         }
     }
 
@@ -1260,9 +1479,20 @@ impl UiDiagnosticsService {
             && let Some(script) = self.pending_script.take()
         {
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
+            // Prefer a deterministic anchor window when starting a script. The trigger touch can
+            // be observed by any window, and multi-window apps may produce frames in a different
+            // order across runs. Using the smallest observed window key (best-effort "first
+            // created") keeps `first_seen` window targets stable for scripts.
+            let anchor_window = self
+                .known_windows
+                .iter()
+                .copied()
+                .min_by_key(|w| w.data().as_ffi())
+                .unwrap_or(window);
             let mut active_script = ActiveScript {
                 steps: script.steps,
                 run_id,
+                anchor_window,
                 next_step: 0,
                 event_log: Vec::new(),
                 event_log_dropped: 0,
@@ -1277,6 +1507,7 @@ impl UiDiagnosticsService {
                 pointer_session: None,
                 pending_cancel_cross_window_drag: None,
                 last_reported_step: Some(0),
+                last_reported_unix_ms: 0,
                 selector_resolution_trace: Vec::new(),
                 hit_test_trace: Vec::new(),
                 click_stable_trace: Vec::new(),
@@ -1299,12 +1530,12 @@ impl UiDiagnosticsService {
                     bundle_dir: None,
                 },
             );
-            self.active_scripts.insert(window, active_script);
+            self.active_scripts.insert(anchor_window, active_script);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id,
                 updated_unix_ms: unix_ms_now(),
-                window: Some(window.data().as_ffi()),
+                window: Some(anchor_window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(0),
                 reason_code: None,
@@ -1316,6 +1547,8 @@ impl UiDiagnosticsService {
                     .map(|p| display_path(&self.cfg.out_dir, p)),
                 last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
+            app.request_redraw(anchor_window);
+            app.push_effect(Effect::RequestAnimationFrame(anchor_window));
         }
 
         // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
@@ -1323,20 +1556,132 @@ impl UiDiagnosticsService {
         // while a drag is active. Keep scripted playback progressing by migrating the single
         // active script to whichever window is currently being driven.
         if !self.active_scripts.contains_key(&window) && self.active_scripts.len() == 1 {
-            if let Some(&other_window) = self.active_scripts.keys().next() {
-                if let Some(active) = self.active_scripts.remove(&other_window) {
-                    self.active_scripts.insert(window, active);
+            if let Some((&other_window, other_active)) = self.active_scripts.iter().next() {
+                let allow_migrate_for_current_target =
+                    Self::can_migrate_for_current_target(other_active);
+                let preferred: Option<AppWindowId> = if allow_migrate_for_current_target {
+                    None
+                } else {
+                    Self::preferred_window_for_active_script(other_active)
+                };
+                let allow_migrate_for_unobserved_preferred =
+                    preferred.is_some_and(|w| !self.per_window.contains_key(&w));
+                let dock_drag = dock_drag_runtime_state(app, self.known_windows.as_slice());
+                let dock_drag_source_window = dock_drag.as_ref().map(|drag| drag.source_window);
+                let allow_migrate_for_dock_drag = dock_drag_source_window == Some(window);
+
+                // Note: do not use `dock_drag.current_window` for migration decisions. Hover can
+                // legitimately change during a captured-pointer gesture; `dock_drag.source_window`
+                // is the stable ownership signal.
+
+                if preferred.is_none()
+                    || preferred == Some(window)
+                    || allow_migrate_for_dock_drag
+                    || allow_migrate_for_current_target
+                    || allow_migrate_for_unobserved_preferred
+                {
+                    if let Some(mut active) = self.active_scripts.remove(&other_window) {
+                        if allow_migrate_for_current_target
+                            || allow_migrate_for_unobserved_preferred
+                            || allow_migrate_for_dock_drag
+                        {
+                            let allow_remap_captured_drag = allow_migrate_for_dock_drag;
+                            Self::remap_script_per_window_state_for_migration(
+                                &mut active,
+                                window,
+                                allow_remap_captured_drag,
+                            );
+                        }
+                        self.active_scripts.insert(window, active);
+                    } else {
+                        tracing::debug!(
+                            target: "ui_diag_script",
+                            "script migrate requested but no active script found"
+                        );
+                    }
+                } else {
+                    let step_window_target = match Self::active_step_window_target(other_active) {
+                        Some(UiWindowTargetV1::Current) => Some("current"),
+                        Some(UiWindowTargetV1::FirstSeen) => Some("first_seen"),
+                        Some(UiWindowTargetV1::FirstSeenOther) => Some("first_seen_other"),
+                        Some(UiWindowTargetV1::LastSeen) => Some("last_seen"),
+                        Some(UiWindowTargetV1::LastSeenOther) => Some("last_seen_other"),
+                        Some(UiWindowTargetV1::WindowFfi { .. }) => Some("window_ffi"),
+                        None => None,
+                    };
+                    tracing::debug!(
+                        target: "ui_diag_script",
+                        from_window_ffi = other_window.data().as_ffi(),
+                        to_window_ffi = window.data().as_ffi(),
+                        preferred_window_ffi = preferred.map(|w| w.data().as_ffi()),
+                        dock_drag_source_window_ffi = dock_drag_source_window
+                            .map(|w| w.data().as_ffi()),
+                        allow_migrate_for_unobserved_preferred,
+                        allow_migrate_for_dock_drag,
+                        step_index = other_active.next_step as u32,
+                        step_window_target,
+                        "script migration skipped"
+                    );
                 }
-            }
+            };
         }
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
             let mut output = UiScriptFrameOutput::default();
-            output.request_redraw = self.cfg.script_keepalive || devtools_request_redraw;
+            output.request_redraw = self.cfg.script_keepalive
+                || devtools_request_redraw
+                || !self.active_scripts.is_empty();
+
+            let heartbeat = if self.active_scripts.len() == 1 {
+                self.active_scripts
+                    .iter()
+                    .next()
+                    .and_then(|(&active_window, active)| {
+                        let now_unix_ms = unix_ms_now();
+                        let should_write = active.last_reported_unix_ms == 0
+                            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000;
+                        should_write.then_some((
+                            active_window,
+                            active.run_id,
+                            active.next_step.min(u32::MAX as usize) as u32,
+                            now_unix_ms,
+                        ))
+                    })
+            } else {
+                None
+            };
+
+            if let Some((active_window, run_id, step_index, now_unix_ms)) = heartbeat {
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: now_unix_ms,
+                    window: Some(active_window.data().as_ffi()),
+                    stage: UiScriptStageV1::Running,
+                    step_index: Some(step_index),
+                    reason_code: None,
+                    reason: None,
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+                if let Some(active) = self.active_scripts.get_mut(&active_window) {
+                    active.last_reported_unix_ms = now_unix_ms;
+                }
+            }
 
             if !self.active_scripts.is_empty() {
                 let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
                 for other in windows {
+                    // Prefer a direct redraw request here. Some platforms/backends can treat
+                    // "script keepalive" effects as best-effort, which risks starving the
+                    // window that owns the active script (and therefore preventing wait timeouts
+                    // from ever elapsing).
+                    app.request_redraw(other);
+                    output.effects.push(Effect::Redraw(other));
                     output.effects.push(Effect::RequestAnimationFrame(other));
                 }
             }
@@ -1344,9 +1689,106 @@ impl UiDiagnosticsService {
             return output;
         };
 
-        if let Some(pointer_id) = active.pending_cancel_cross_window_drag.take() {
-            if app.drag(pointer_id).is_some_and(|d| d.cross_window_hover) {
-                app.cancel_drag(pointer_id);
+        let now_unix_ms = unix_ms_now();
+        if active.last_reported_unix_ms == 0
+            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000
+        {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: now_unix_ms,
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Running,
+                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason_code: None,
+                reason: None,
+                evidence: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+            });
+            active.last_reported_unix_ms = now_unix_ms;
+        }
+
+        if let Some(mut pending) = active.pending_cancel_cross_window_drag.take() {
+            let pointer_id = pending.pointer_id;
+            let step_index = active.next_step.min(u32::MAX as usize) as u32;
+            let mut canceled_any = false;
+
+            if let Some(drag) = app.drag(pointer_id) {
+                if drag.cross_window_hover
+                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                {
+                    push_script_event_log(
+                        &mut active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "diag.cancel_drag".to_string(),
+                            step_index: Some(step_index),
+                            note: Some(format!(
+                                "pointer_id={} kind={:?} cross_window_hover={}",
+                                pointer_id.0, drag.kind, drag.cross_window_hover
+                            )),
+                            bundle_dir: None,
+                        },
+                    );
+                    app.cancel_drag(pointer_id);
+                    canceled_any = true;
+                }
+            }
+
+            if !canceled_any {
+                // Fallback: cancel any active dock drags. Some scripted sequences migrate across
+                // windows while a captured-pointer gesture is active; if the release is delivered
+                // to a different window, the original drag session can remain stuck. Prefer
+                // deterministically clearing dock drag state over hanging the suite.
+                let mut canceled: Vec<PointerId> = Vec::new();
+                while let Some(id) = app.find_drag_pointer_id(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
+                }) {
+                    app.cancel_drag(id);
+                    canceled.push(id);
+                }
+
+                push_script_event_log(
+                    &mut active,
+                    &self.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: if canceled.is_empty() {
+                            "diag.cancel_drag.skip".to_string()
+                        } else {
+                            "diag.cancel_drag.fallback".to_string()
+                        },
+                        step_index: Some(step_index),
+                        note: Some(format!(
+                            "pointer_id={} drag_present={} canceled={:?}",
+                            pointer_id.0,
+                            app.drag(pointer_id).is_some(),
+                            canceled.iter().map(|id| id.0).collect::<Vec<_>>(),
+                        )),
+                        bundle_dir: None,
+                    },
+                );
+
+                canceled_any = !canceled.is_empty();
+            }
+
+            // Retry cancellation for a bounded number of frames. Some runners update drag session
+            // state after input dispatch; a one-shot cancel can miss the window where the drag
+            // becomes visible.
+            if canceled_any {
+                // Keep cleared.
+            } else {
+                pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+                if pending.remaining_frames > 0 {
+                    active.pending_cancel_cross_window_drag = Some(pending);
+                }
             }
         }
 
@@ -1387,11 +1829,15 @@ impl UiDiagnosticsService {
             };
         }
 
-        if active.last_reported_step != Some(active.next_step) {
+        let now_unix_ms = unix_ms_now();
+        let should_report_progress = active.last_reported_step != Some(active.next_step)
+            || active.last_reported_unix_ms == 0
+            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000;
+        if should_report_progress {
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
-                updated_unix_ms: unix_ms_now(),
+                updated_unix_ms: now_unix_ms,
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
@@ -1405,6 +1851,7 @@ impl UiDiagnosticsService {
                 last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
             active.last_reported_step = Some(active.next_step);
+            active.last_reported_unix_ms = now_unix_ms;
         }
 
         if active.wait_frames_remaining > 0 {
@@ -1472,10 +1919,12 @@ impl UiDiagnosticsService {
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
         let mut handoff_to: Option<AppWindowId> = None;
+        let anchor_window = active.anchor_window;
 
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::ClickSelectableTextSpanStable { .. }
                 | UiActionStepV2::WaitBoundsStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
@@ -1590,38 +2039,39 @@ impl UiDiagnosticsService {
                 x_px,
                 y_px,
             } => {
-                let Some(target_window) =
+                if let Some(target_window) =
                     self.resolve_window_target(window, target_window.as_ref())
-                else {
+                {
+                    let payload = format!(
+                        "schema_version=1\nkind=window_client_physical\nwindow={}\nx_px={}\ny_px={}\n",
+                        target_window.data().as_ffi(),
+                        x_px,
+                        y_px
+                    );
+                    let text_path = self.cfg.out_dir.join("cursor_screen_pos.override.txt");
+                    let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
+                    let _ = std::fs::create_dir_all(&self.cfg.out_dir);
+                    if std::fs::write(text_path, payload).is_ok()
+                        && touch_file(&trigger_path).is_ok()
+                    {
+                        active.wait_until = None;
+                        active.screenshot_wait = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_cursor_in_window-write-failed"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("cursor_override_write_failed".to_string());
+                        output.request_redraw = true;
+                    }
+                } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-set_cursor_in_window-window-not-found"
                     ));
                     stop_script = true;
                     failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                    return output;
-                };
-
-                let payload = format!(
-                    "schema_version=1\nkind=window_client_physical\nwindow={}\nx_px={}\ny_px={}\n",
-                    target_window.data().as_ffi(),
-                    x_px,
-                    y_px
-                );
-                let text_path = self.cfg.out_dir.join("cursor_screen_pos.override.txt");
-                let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
-                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
-                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-set_cursor_in_window-write-failed"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("cursor_override_write_failed".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -1630,36 +2080,35 @@ impl UiDiagnosticsService {
                 x_px,
                 y_px,
             } => {
-                let Some(target_window) =
+                if let Some(target_window) =
                     self.resolve_window_target(window, target_window.as_ref())
-                else {
+                {
+                    if write_cursor_override_window_client_logical(
+                        &self.cfg.out_dir,
+                        target_window,
+                        x_px,
+                        y_px,
+                    )
+                    .is_ok()
+                    {
+                        active.wait_until = None;
+                        active.screenshot_wait = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_cursor_in_window_logical-write-failed"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("cursor_override_write_failed".to_string());
+                        output.request_redraw = true;
+                    }
+                } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-set_cursor_in_window_logical-window-not-found"
                     ));
                     stop_script = true;
                     failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                    return output;
-                };
-
-                if write_cursor_override_window_client_logical(
-                    &self.cfg.out_dir,
-                    target_window,
-                    x_px,
-                    y_px,
-                )
-                .is_ok()
-                {
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-set_cursor_in_window_logical-write-failed"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("cursor_override_write_failed".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -1670,51 +2119,52 @@ impl UiDiagnosticsService {
                 middle,
             } => {
                 let resolved_window = if let Some(target_window) = target_window.as_ref() {
-                    let Some(target_window) =
-                        self.resolve_window_target(window, Some(target_window))
-                    else {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-set_mouse_buttons-window-not-found"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("window_target_unresolved".to_string());
-                        output.request_redraw = true;
-                        return output;
-                    };
-                    Some(target_window)
+                    self.resolve_window_target(window, Some(target_window))
                 } else {
                     None
                 };
-
-                let mut payload = String::from("schema_version=1\n");
-                if let Some(window) = resolved_window {
-                    payload.push_str(&format!("window={}\n", window.data().as_ffi()));
-                }
-                if let Some(left) = left {
-                    payload.push_str(&format!("left={left}\n"));
-                }
-                if let Some(right) = right {
-                    payload.push_str(&format!("right={right}\n"));
-                }
-                if let Some(middle) = middle {
-                    payload.push_str(&format!("middle={middle}\n"));
-                }
-
-                let text_path = self.cfg.out_dir.join("mouse_buttons.override.txt");
-                let trigger_path = self.cfg.out_dir.join("mouse_buttons.touch");
-                let _ = std::fs::create_dir_all(&self.cfg.out_dir);
-                if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                } else {
+                if target_window.is_some() && resolved_window.is_none() {
                     force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-set_mouse_buttons-write-failed"
+                        "script-step-{step_index:04}-set_mouse_buttons-window-not-found"
                     ));
                     stop_script = true;
-                    failure_reason = Some("mouse_buttons_override_write_failed".to_string());
+                    failure_reason = Some("window_target_unresolved".to_string());
                     output.request_redraw = true;
+                }
+
+                if !stop_script {
+                    let mut payload = String::from("schema_version=1\n");
+                    if let Some(window) = resolved_window {
+                        payload.push_str(&format!("window={}\n", window.data().as_ffi()));
+                    }
+                    if let Some(left) = left {
+                        payload.push_str(&format!("left={left}\n"));
+                    }
+                    if let Some(right) = right {
+                        payload.push_str(&format!("right={right}\n"));
+                    }
+                    if let Some(middle) = middle {
+                        payload.push_str(&format!("middle={middle}\n"));
+                    }
+
+                    let text_path = self.cfg.out_dir.join("mouse_buttons.override.txt");
+                    let trigger_path = self.cfg.out_dir.join("mouse_buttons.touch");
+                    let _ = std::fs::create_dir_all(&self.cfg.out_dir);
+                    if std::fs::write(text_path, payload).is_ok()
+                        && touch_file(&trigger_path).is_ok()
+                    {
+                        active.wait_until = None;
+                        active.screenshot_wait = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_mouse_buttons-write-failed"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("mouse_buttons_override_write_failed".to_string());
+                        output.request_redraw = true;
+                    }
                 }
             }
             UiActionStepV2::RaiseWindow {
@@ -2144,20 +2594,29 @@ impl UiDiagnosticsService {
                 timeout_frames,
             } => {
                 active.screenshot_wait = None;
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
+
+                let mut predicate_window = window;
+                if let Some(target_window) = self.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    target_window.as_ref(),
+                ) {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::WaitUntil { window, .. } = step_mut {
-                                *window = None;
-                            }
+                        if Self::predicate_can_eval_off_window(&predicate) {
+                            predicate_window = target_window;
+                            output.effects.push(Effect::Redraw(target_window));
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                        } else {
+                            handoff_to = Some(target_window);
+                            output.effects.push(Effect::Redraw(target_window));
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
                         }
-                        handoff_to = Some(target_window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(target_window));
-                        output.request_redraw = true;
                     }
                 } else if target_window.is_some() {
                     force_dump_label = Some(format!(
@@ -2190,11 +2649,11 @@ impl UiDiagnosticsService {
                     let ok = match &predicate {
                         UiPredicateV1::EventKindSeen { event_kind } => self
                             .per_window
-                            .get(&window)
+                            .get(&predicate_window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
                         UiPredicateV1::RunnerAccessibilityActivated => app
                             .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
-                            .and_then(|store| store.snapshot(window))
+                            .and_then(|store| store.snapshot(predicate_window))
                             .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
@@ -2202,48 +2661,62 @@ impl UiDiagnosticsService {
                         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
                         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
                         _ => {
-                            let Some(snapshot) = semantics_snapshot else {
-                                force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-wait_until-no-semantics"
-                                ));
-                                stop_script = true;
-                                failure_reason = Some("no_semantics_snapshot".to_string());
-                                output.request_redraw = true;
-                                active.wait_until = None;
-                                active.screenshot_wait = None;
-                                return output;
-                            };
-
-                            record_overlay_placement_trace(
-                                &mut active.overlay_placement_trace,
-                                element_runtime,
-                                Some(snapshot),
-                                window,
-                                step_index as u32,
-                                "wait_until",
-                            );
                             let docking_diag = app
                                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                                .and_then(|store| store.docking_latest_for_window(window));
+                                .and_then(|store| {
+                                    store.docking_latest_for_window(predicate_window)
+                                });
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
-                                .and_then(|svc| svc.snapshot(window));
-                            eval_predicate(
-                                snapshot,
-                                window_bounds,
-                                window,
-                                app.global::<fret_runtime::PlatformCapabilities>(),
-                                element_runtime,
-                                text_input_snapshot,
-                                app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                                app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                                self.known_windows.as_slice(),
-                                docking_diag,
-                                text_font_stack_key_stable_frames,
-                                font_catalog_populated,
-                                system_font_rescan_idle,
-                                &predicate,
-                            )
+                                .and_then(|svc| svc.snapshot(predicate_window));
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
+                            let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
+
+                            if let Some(snapshot) = semantics_snapshot {
+                                record_overlay_placement_trace(
+                                    &mut active.overlay_placement_trace,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    window,
+                                    step_index as u32,
+                                    "wait_until",
+                                );
+                                eval_predicate(
+                                    snapshot,
+                                    window_bounds,
+                                    predicate_window,
+                                    input_ctx,
+                                    element_runtime,
+                                    text_input_snapshot,
+                                    app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                                    app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                    self.known_windows.as_slice(),
+                                    platform_caps,
+                                    docking_diag,
+                                    dock_drag_runtime.as_ref(),
+                                    text_font_stack_key_stable_frames,
+                                    font_catalog_populated,
+                                    system_font_rescan_idle,
+                                    &predicate,
+                                )
+                            } else {
+                                eval_predicate_without_semantics(
+                                    predicate_window,
+                                    self.known_windows.as_slice(),
+                                    platform_caps,
+                                    docking_diag,
+                                    dock_drag_runtime.as_ref(),
+                                    &predicate,
+                                )
+                                .unwrap_or_else(|| {
+                                    output.request_redraw = true;
+                                    false
+                                })
+                            }
                         }
                     };
 
@@ -2383,20 +2856,28 @@ impl UiDiagnosticsService {
                 active.wait_until = None;
                 active.screenshot_wait = None;
 
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
+                let mut predicate_window = window;
+                if let Some(target_window) = self.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    target_window.as_ref(),
+                ) {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::Assert { window, .. } = step_mut {
-                                *window = None;
-                            }
+                        if Self::predicate_can_eval_off_window(&predicate) {
+                            predicate_window = target_window;
+                            output.effects.push(Effect::Redraw(target_window));
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                        } else {
+                            handoff_to = Some(target_window);
+                            output.effects.push(Effect::Redraw(target_window));
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
                         }
-                        handoff_to = Some(target_window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(target_window));
-                        output.request_redraw = true;
                     }
                 } else if target_window.is_some() {
                     force_dump_label = Some(format!(
@@ -2415,11 +2896,11 @@ impl UiDiagnosticsService {
                     let ok = match &predicate {
                         UiPredicateV1::EventKindSeen { event_kind } => self
                             .per_window
-                            .get(&window)
+                            .get(&predicate_window)
                             .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
                         UiPredicateV1::RunnerAccessibilityActivated => app
                             .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
-                            .and_then(|store| store.snapshot(window))
+                            .and_then(|store| store.snapshot(predicate_window))
                             .is_some_and(|snapshot| snapshot.activation_requests > 0),
                         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
                             text_font_stack_key_stable_frames >= *stable_frames
@@ -2427,46 +2908,67 @@ impl UiDiagnosticsService {
                         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
                         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
                         _ => {
-                            let Some(snapshot) = semantics_snapshot else {
-                                force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-assert-no-semantics"
-                                ));
-                                stop_script = true;
-                                failure_reason = Some("no_semantics_snapshot".to_string());
-                                output.request_redraw = true;
-                                return output;
-                            };
-
-                            record_overlay_placement_trace(
-                                &mut active.overlay_placement_trace,
-                                element_runtime,
-                                Some(snapshot),
-                                window,
-                                step_index as u32,
-                                "assert",
-                            );
                             let docking_diag = app
                                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                                .and_then(|store| store.docking_latest_for_window(window));
+                                .and_then(|store| {
+                                    store.docking_latest_for_window(predicate_window)
+                                });
+                            let input_ctx = app
+                                .global::<fret_runtime::WindowInputContextService>()
+                                .and_then(|svc| svc.snapshot(predicate_window));
                             let text_input_snapshot = app
                                 .global::<fret_runtime::WindowTextInputSnapshotService>()
-                                .and_then(|svc| svc.snapshot(window));
-                            eval_predicate(
-                                snapshot,
-                                window_bounds,
-                                window,
-                                app.global::<fret_runtime::PlatformCapabilities>(),
-                                element_runtime,
-                                text_input_snapshot,
-                                app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                                app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                                self.known_windows.as_slice(),
-                                docking_diag,
-                                text_font_stack_key_stable_frames,
-                                font_catalog_populated,
-                                system_font_rescan_idle,
-                                &predicate,
-                            )
+                                .and_then(|svc| svc.snapshot(predicate_window));
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
+                            let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
+
+                            if let Some(snapshot) = semantics_snapshot {
+                                record_overlay_placement_trace(
+                                    &mut active.overlay_placement_trace,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    window,
+                                    step_index as u32,
+                                    "assert",
+                                );
+                                eval_predicate(
+                                    snapshot,
+                                    window_bounds,
+                                    predicate_window,
+                                    input_ctx,
+                                    element_runtime,
+                                    text_input_snapshot,
+                                    app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                                    app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                    self.known_windows.as_slice(),
+                                    platform_caps,
+                                    docking_diag,
+                                    dock_drag_runtime.as_ref(),
+                                    text_font_stack_key_stable_frames,
+                                    font_catalog_populated,
+                                    system_font_rescan_idle,
+                                    &predicate,
+                                )
+                            } else {
+                                eval_predicate_without_semantics(
+                                    predicate_window,
+                                    self.known_windows.as_slice(),
+                                    platform_caps,
+                                    docking_diag,
+                                    dock_drag_runtime.as_ref(),
+                                    &predicate,
+                                )
+                                .unwrap_or_else(|| {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-assert-no-semantics"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason = Some("no_semantics_snapshot".to_string());
+                                    output.request_redraw = true;
+                                    false
+                                })
+                            }
                         }
                     };
 
@@ -2489,15 +2991,12 @@ impl UiDiagnosticsService {
                 click_count,
                 modifiers,
             } => {
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
+                if let Some(target_window) = self.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    target_window.as_ref(),
+                ) {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::Click { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -2520,12 +3019,6 @@ impl UiDiagnosticsService {
                     // This step is window-targeted; migrate the active script to the target window.
                     // The next frame for that window will resolve the selector and inject events
                     // relative to its semantics snapshot.
-                    //
-                    // Note: we clear the `window` field in the stored step to avoid ping-pong when
-                    // the target was expressed via a relative selector (e.g. `last_seen_other`).
-                    // The migrated step should now run "in current window" from the target's
-                    // perspective.
-                    // (Actual migration happens after the match via `handoff_to`.)
                     //
                     // Keep the step state clean: per-step caches (if any) must be recomputed.
                     active.v2_step_state = None;
@@ -3238,6 +3731,272 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::ClickSelectableTextSpanStable {
+                target,
+                tag,
+                button,
+                click_count,
+                modifiers,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let note = format!(
+                    "click_selectable_text_span_stable(tag={})",
+                    truncate_debug_value(tag.as_str(), 64)
+                );
+
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickSelectableTextSpanStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickSelectableTextSpanStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_pos: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds),
+                                    Some(node),
+                                    Some("click_selectable_text_span_stable.timeout"),
+                                    self.cfg.max_debug_string_bytes,
+                                );
+                            }
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-click_selectable_span-timeout"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("click_selectable_text_span_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let bounds_local: Option<Rect> = match element_runtime.and_then(|rt| {
+                                rt.selectable_text_interactive_span_bounds_for_node(window, node.id)
+                            }) {
+                                None => {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) if spans.is_empty() => {
+                                    // Best-effort: span bounds are computed during `paint_all()`. If
+                                    // we don't see them yet, wait a few frames before failing.
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) => spans
+                                    .iter()
+                                    .find(|span| span.tag.as_ref() == tag.as_str())
+                                    .map(|span| span.bounds_local)
+                                    .or_else(|| {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-click_selectable_span-tag-not-found"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason = Some(
+                                            "click_selectable_text_span_stable_tag_not_found"
+                                                .to_string(),
+                                        );
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        None
+                                    }),
+                            };
+
+                            if let Some(bounds_local) = bounds_local {
+                                let span_bounds = Rect::new(
+                                    Point::new(
+                                        Px(node.bounds.origin.x.0 + bounds_local.origin.x.0),
+                                        Px(node.bounds.origin.y.0 + bounds_local.origin.y.0),
+                                    ),
+                                    bounds_local.size,
+                                );
+
+                                let skinny = Rect::new(
+                                    span_bounds.origin,
+                                    fret_core::Size::new(
+                                        Px(span_bounds.size.width.0.max(1.0).min(2.0)),
+                                        span_bounds.size.height,
+                                    ),
+                                );
+                                let pos = center_of_rect_clamped_to_rect(skinny, window_bounds);
+
+                                let moved = match state.last_pos {
+                                    Some(last) => {
+                                        let dx = (pos.x.0 - last.x.0).abs();
+                                        let dy = (pos.y.0 - last.y.0).abs();
+                                        dx.max(dy)
+                                    }
+                                    None => 0.0,
+                                };
+
+                                if moved <= max_move_px {
+                                    state.stable_count = state.stable_count.saturating_add(1);
+                                } else {
+                                    state.stable_count = 1;
+                                }
+                                state.last_pos = Some(pos);
+
+                                if state.stable_count >= stable_required {
+                                    if let Some(ui) = ui {
+                                        let mut hit = build_hit_test_trace_entry_for_selector(
+                                            ui,
+                                            element_runtime,
+                                            window,
+                                            Some(snapshot),
+                                            &target,
+                                            step_index as u32,
+                                            pos,
+                                            Some(node),
+                                            Some(&note),
+                                            self.cfg.max_debug_string_bytes,
+                                        );
+                                        let ok = hit.includes_intended == Some(true)
+                                            || hit.hit_path_contains_intended == Some(true);
+                                        if !ok {
+                                            hit.note =
+                                                Some("click_selectable_span.mismatch".to_string());
+                                            push_hit_test_trace(
+                                                &mut active.hit_test_trace,
+                                                hit.clone(),
+                                            );
+                                            push_click_stable_trace(
+                                                &mut active.click_stable_trace,
+                                                UiClickStableTraceEntryV1 {
+                                                    step_index: step_index as u32,
+                                                    stable_required,
+                                                    stable_count: state.stable_count,
+                                                    moved_px: moved,
+                                                    max_move_px,
+                                                    remaining_frames: state.remaining_frames,
+                                                    hit_test: hit,
+                                                },
+                                            );
+                                            state.stable_count = 0;
+                                            state.last_pos = None;
+                                            state.remaining_frames =
+                                                state.remaining_frames.saturating_sub(1);
+                                            active.v2_step_state = Some(
+                                                V2StepState::ClickSelectableTextSpanStable(state),
+                                            );
+                                            output.request_redraw = true;
+                                        } else {
+                                            hit.note =
+                                                Some("click_selectable_span.click".to_string());
+                                            push_hit_test_trace(&mut active.hit_test_trace, hit);
+                                            record_overlay_placement_trace(
+                                                &mut active.overlay_placement_trace,
+                                                element_runtime,
+                                                Some(snapshot),
+                                                window,
+                                                step_index as u32,
+                                                "click_selectable_span.click",
+                                            );
+                                            output.events.extend(click_events_with_modifiers(
+                                                pos,
+                                                button,
+                                                click_count,
+                                                click_modifiers,
+                                            ));
+                                            active.next_step = active.next_step.saturating_add(1);
+                                            active.v2_step_state = None;
+                                            output.request_redraw = true;
+                                            if self.cfg.script_auto_dump {
+                                                force_dump_label = Some(format!(
+                                                    "script-step-{step_index:04}-click_selectable_span-click"
+                                                ));
+                                            }
+                                        }
+                                    } else {
+                                        output.events.extend(click_events_with_modifiers(
+                                            pos,
+                                            button,
+                                            click_count,
+                                            click_modifiers,
+                                        ));
+                                        active.next_step = active.next_step.saturating_add(1);
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        if self.cfg.script_auto_dump {
+                                            force_dump_label = Some(format!(
+                                                "script-step-{step_index:04}-click_selectable_span-click"
+                                            ));
+                                        }
+                                    }
+                                } else {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(state));
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_selectable_span-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some(
+                            "click_selectable_text_span_stable_no_semantics_match".to_string(),
+                        );
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_selectable_span-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::MovePointer { target } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
@@ -3369,11 +4128,6 @@ impl UiDiagnosticsService {
                         self.resolve_window_target(window, target_window.as_ref())
                     {
                         if target_window != window {
-                            if let Some(step_mut) = active.steps.get_mut(step_index) {
-                                if let UiActionStepV2::PointerDown { window, .. } = step_mut {
-                                    *window = None;
-                                }
-                            }
                             handoff_to = Some(target_window);
                             output
                                 .effects
@@ -3397,7 +4151,102 @@ impl UiDiagnosticsService {
                 } else if handoff_to.is_some() {
                     // Window-targeted: migrate to the target window before resolving semantics.
                 } else {
-                    let Some(snapshot) = semantics_snapshot else {
+                    if let Some(snapshot) = semantics_snapshot {
+                        if let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) {
+                            let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    pos,
+                                    Some(node),
+                                    Some("pointer_down"),
+                                    self.cfg.max_debug_string_bytes,
+                                );
+                            }
+
+                            let modifiers = core_modifiers_from_ui(modifiers);
+                            let pointer_id = PointerId(0);
+                            let pointer_type = PointerType::Mouse;
+                            let button = match button_ui {
+                                UiMouseButtonV1::Left => MouseButton::Left,
+                                UiMouseButtonV1::Right => MouseButton::Right,
+                                UiMouseButtonV1::Middle => MouseButton::Middle,
+                            };
+                            output.events.push(Event::Pointer(PointerEvent::Move {
+                                pointer_id,
+                                position: pos,
+                                buttons: MouseButtons::default(),
+                                modifiers,
+                                pointer_type,
+                            }));
+                            output.events.push(Event::Pointer(PointerEvent::Down {
+                                pointer_id,
+                                position: pos,
+                                button,
+                                modifiers,
+                                click_count: 1,
+                                pointer_type,
+                            }));
+                            let _ = write_cursor_override_window_client_logical(
+                                &self.cfg.out_dir,
+                                window,
+                                pos.x.0,
+                                pos.y.0,
+                            );
+                            let _ = write_mouse_buttons_override_window_v1(
+                                &self.cfg.out_dir,
+                                window,
+                                match button_ui {
+                                    UiMouseButtonV1::Left => Some(true),
+                                    _ => None,
+                                },
+                                match button_ui {
+                                    UiMouseButtonV1::Right => Some(true),
+                                    _ => None,
+                                },
+                                match button_ui {
+                                    UiMouseButtonV1::Middle => Some(true),
+                                    _ => None,
+                                },
+                            );
+
+                            active.pointer_session = Some(V2PointerSessionState {
+                                window,
+                                button: button_ui,
+                                modifiers,
+                                position: pos,
+                            });
+                            active.last_injected_step =
+                                Some(step_index.min(u32::MAX as usize) as u32);
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-pointer_down"));
+                            }
+                        } else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_down-no-semantics-match"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("selector.not_found".to_string());
+                            output.request_redraw = true;
+                        }
+                    } else {
                         force_dump_label = Some(format!(
                             "script-step-{step_index:04}-pointer_down-no-semantics"
                         ));
@@ -3405,85 +4254,6 @@ impl UiDiagnosticsService {
                         failure_reason = Some("no_semantics_snapshot".to_string());
                         active.v2_step_state = None;
                         output.request_redraw = true;
-                        return output;
-                    };
-                    let Some(node) = select_semantics_node_with_trace(
-                        snapshot,
-                        window,
-                        element_runtime,
-                        &target,
-                        step_index as u32,
-                        self.cfg.redact_text,
-                        &mut active.selector_resolution_trace,
-                    ) else {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-pointer_down-no-semantics-match"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("selector.not_found".to_string());
-                        output.request_redraw = true;
-                        return output;
-                    };
-
-                    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                    if let Some(ui) = ui {
-                        record_hit_test_trace_for_selector(
-                            &mut active.hit_test_trace,
-                            ui,
-                            element_runtime,
-                            window,
-                            Some(snapshot),
-                            &target,
-                            step_index as u32,
-                            pos,
-                            Some(node),
-                            Some("pointer_down"),
-                            self.cfg.max_debug_string_bytes,
-                        );
-                    }
-
-                    let modifiers = core_modifiers_from_ui(modifiers);
-                    let pointer_id = PointerId(0);
-                    let pointer_type = PointerType::Mouse;
-                    let button = match button_ui {
-                        UiMouseButtonV1::Left => MouseButton::Left,
-                        UiMouseButtonV1::Right => MouseButton::Right,
-                        UiMouseButtonV1::Middle => MouseButton::Middle,
-                    };
-                    output.events.push(Event::Pointer(PointerEvent::Move {
-                        pointer_id,
-                        position: pos,
-                        buttons: MouseButtons::default(),
-                        modifiers,
-                        pointer_type,
-                    }));
-                    output.events.push(Event::Pointer(PointerEvent::Down {
-                        pointer_id,
-                        position: pos,
-                        button,
-                        modifiers,
-                        click_count: 1,
-                        pointer_type,
-                    }));
-                    let _ = write_cursor_override_window_client_logical(
-                        &self.cfg.out_dir,
-                        window,
-                        pos.x.0,
-                        pos.y.0,
-                    );
-
-                    active.pointer_session = Some(V2PointerSessionState {
-                        window,
-                        button: button_ui,
-                        modifiers,
-                        position: pos,
-                    });
-                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                    if self.cfg.script_auto_dump {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-pointer_down"));
                     }
                 }
             }
@@ -3497,7 +4267,172 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
                 output.request_redraw = true;
 
-                let Some(mut session) = active.pointer_session.clone() else {
+                if let Some(mut session) = active.pointer_session.clone() {
+                    if let Some(target_window) =
+                        self.resolve_window_target(window, target_window.as_ref())
+                    {
+                        if target_window != window {
+                            if target_window == session.window {
+                                handoff_to = Some(target_window);
+                                output
+                                    .effects
+                                    .push(Effect::RequestAnimationFrame(target_window));
+                                output.request_redraw = true;
+                            } else {
+                                // Pointer sessions are window-local. If the script resolves a
+                                // window target that doesn't match the active pointer session,
+                                // prefer continuing the session in its owning window rather than
+                                // failing the entire run. This makes `last_seen`-targeted scripts
+                                // more resilient under multi-window occlusion/migration.
+                                push_script_event_log(
+                                    &mut active,
+                                    &self.cfg,
+                                    UiScriptEventLogEntryV1 {
+                                        unix_ms: unix_ms_now(),
+                                        kind: "diag.pointer_move_window_redirect".to_string(),
+                                        step_index: Some(step_index as u32),
+                                        note: Some(format!(
+                                            "pointer_move window mismatch: current={} target={} session={}; redirecting to session window",
+                                            window.data().as_ffi(),
+                                            target_window.data().as_ffi(),
+                                            session.window.data().as_ffi(),
+                                        )),
+                                        bundle_dir: None,
+                                    },
+                                );
+                                if session.window != window {
+                                    handoff_to = Some(session.window);
+                                    output
+                                        .effects
+                                        .push(Effect::RequestAnimationFrame(session.window));
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    } else if target_window.is_some() {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_move-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
+                        output.request_redraw = true;
+                    } else if session.window != window {
+                        // The script migrated away from the window that owns the pointer session.
+                        handoff_to = Some(session.window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(session.window));
+                        output.request_redraw = true;
+                    }
+
+                    if stop_script {
+                        active.v2_step_state = None;
+                    } else if handoff_to.is_some() {
+                        // Window-targeted: migrate to the target window before continuing the session.
+                        active.v2_step_state = None;
+                    } else {
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::PointerMove(state))
+                                if state.step_index == step_index =>
+                            {
+                                state
+                            }
+                            _ => {
+                                let steps = steps.max(1);
+                                let start = session.position;
+                                let end = Point::new(
+                                    fret_core::Px(start.x.0 + delta_x),
+                                    fret_core::Px(start.y.0 + delta_y),
+                                );
+                                V2PointerMoveState {
+                                    step_index,
+                                    steps,
+                                    start,
+                                    end,
+                                    frame: 1,
+                                }
+                            }
+                        };
+
+                        let pressed_buttons = match session.button {
+                            UiMouseButtonV1::Left => MouseButtons {
+                                left: true,
+                                ..Default::default()
+                            },
+                            UiMouseButtonV1::Right => MouseButtons {
+                                right: true,
+                                ..Default::default()
+                            },
+                            UiMouseButtonV1::Middle => MouseButtons {
+                                middle: true,
+                                ..Default::default()
+                            },
+                        };
+
+                        let pointer_id = PointerId(0);
+                        let pointer_type = PointerType::Mouse;
+
+                        if state.frame == 0 {
+                            state.frame = 1;
+                        }
+
+                        if state.frame <= state.steps {
+                            let t = state.frame as f32 / state.steps as f32;
+                            let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                            let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                            let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                            output.events.push(Event::Pointer(PointerEvent::Move {
+                                pointer_id,
+                                position,
+                                buttons: pressed_buttons,
+                                modifiers: session.modifiers,
+                                pointer_type,
+                            }));
+                            output
+                                .events
+                                .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                                    pointer_id,
+                                    position,
+                                    kind: fret_core::InternalDragKind::Over,
+                                    modifiers: session.modifiers,
+                                }));
+
+                            session.position = position;
+                            active.pointer_session = Some(session);
+                            let _ = write_cursor_override_window_client_logical(
+                                &self.cfg.out_dir,
+                                window,
+                                position.x.0,
+                                position.y.0,
+                            );
+
+                            state.frame = state.frame.saturating_add(1);
+                            active.v2_step_state = Some(V2StepState::PointerMove(state));
+                            active.last_injected_step =
+                                Some(step_index.min(u32::MAX as usize) as u32);
+                            output.request_redraw = true;
+                        } else {
+                            session.position = state.end;
+                            active.pointer_session = Some(session);
+                            let _ = write_cursor_override_window_client_logical(
+                                &self.cfg.out_dir,
+                                window,
+                                state.end.x.0,
+                                state.end.y.0,
+                            );
+
+                            active.v2_step_state = None;
+                            active.last_injected_step =
+                                Some(step_index.min(u32::MAX as usize) as u32);
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-pointer_move"));
+                            }
+                        }
+                    }
+                } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-pointer_move-no-session"
                     ));
@@ -3505,152 +4440,6 @@ impl UiDiagnosticsService {
                     failure_reason = Some("pointer_session_missing".to_string());
                     output.request_redraw = true;
                     active.v2_step_state = None;
-                    return output;
-                };
-
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
-                    if target_window != window {
-                        if target_window == session.window {
-                            if let Some(step_mut) = active.steps.get_mut(step_index) {
-                                if let UiActionStepV2::PointerMove { window, .. } = step_mut {
-                                    *window = None;
-                                }
-                            }
-                            handoff_to = Some(target_window);
-                            output
-                                .effects
-                                .push(Effect::RequestAnimationFrame(target_window));
-                            output.request_redraw = true;
-                        } else {
-                            force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-pointer_move-window-mismatch"
-                            ));
-                            stop_script = true;
-                            failure_reason =
-                                Some("pointer_session_cross_window_unsupported".to_string());
-                            output.request_redraw = true;
-                        }
-                    }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-pointer_move-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                } else if session.window != window {
-                    // The script migrated away from the window that owns the pointer session.
-                    handoff_to = Some(session.window);
-                    output
-                        .effects
-                        .push(Effect::RequestAnimationFrame(session.window));
-                    output.request_redraw = true;
-                }
-
-                if stop_script {
-                    active.v2_step_state = None;
-                } else if handoff_to.is_some() {
-                    // Window-targeted: migrate to the target window before continuing the session.
-                    active.v2_step_state = None;
-                } else {
-                    let mut state = match active.v2_step_state.take() {
-                        Some(V2StepState::PointerMove(state)) if state.step_index == step_index => {
-                            state
-                        }
-                        _ => {
-                            let steps = steps.max(1);
-                            let start = session.position;
-                            let end = Point::new(
-                                fret_core::Px(start.x.0 + delta_x),
-                                fret_core::Px(start.y.0 + delta_y),
-                            );
-                            V2PointerMoveState {
-                                step_index,
-                                steps,
-                                start,
-                                end,
-                                frame: 1,
-                            }
-                        }
-                    };
-
-                    let pressed_buttons = match session.button {
-                        UiMouseButtonV1::Left => MouseButtons {
-                            left: true,
-                            ..Default::default()
-                        },
-                        UiMouseButtonV1::Right => MouseButtons {
-                            right: true,
-                            ..Default::default()
-                        },
-                        UiMouseButtonV1::Middle => MouseButtons {
-                            middle: true,
-                            ..Default::default()
-                        },
-                    };
-
-                    let pointer_id = PointerId(0);
-                    let pointer_type = PointerType::Mouse;
-
-                    if state.frame == 0 {
-                        state.frame = 1;
-                    }
-
-                    if state.frame <= state.steps {
-                        let t = state.frame as f32 / state.steps as f32;
-                        let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
-                        let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
-                        let position = Point::new(fret_core::Px(x), fret_core::Px(y));
-                        output.events.push(Event::Pointer(PointerEvent::Move {
-                            pointer_id,
-                            position,
-                            buttons: pressed_buttons,
-                            modifiers: session.modifiers,
-                            pointer_type,
-                        }));
-                        output
-                            .events
-                            .push(Event::InternalDrag(fret_core::InternalDragEvent {
-                                pointer_id,
-                                position,
-                                kind: fret_core::InternalDragKind::Over,
-                                modifiers: session.modifiers,
-                            }));
-
-                        session.position = position;
-                        active.pointer_session = Some(session);
-                        let _ = write_cursor_override_window_client_logical(
-                            &self.cfg.out_dir,
-                            window,
-                            position.x.0,
-                            position.y.0,
-                        );
-
-                        state.frame = state.frame.saturating_add(1);
-                        active.v2_step_state = Some(V2StepState::PointerMove(state));
-                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                        output.request_redraw = true;
-                    } else {
-                        session.position = state.end;
-                        active.pointer_session = Some(session);
-                        let _ = write_cursor_override_window_client_logical(
-                            &self.cfg.out_dir,
-                            window,
-                            state.end.x.0,
-                            state.end.y.0,
-                        );
-
-                        active.v2_step_state = None;
-                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                        if self.cfg.script_auto_dump {
-                            force_dump_label =
-                                Some(format!("script-step-{step_index:04}-pointer_move"));
-                        }
-                    }
                 }
             }
             UiActionStepV2::PointerUp {
@@ -3661,114 +4450,137 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
                 output.request_redraw = true;
 
-                let Some(session) = active.pointer_session.clone() else {
+                if let Some(session) = active.pointer_session.clone() {
+                    if let Some(target_window) =
+                        self.resolve_window_target(window, target_window.as_ref())
+                    {
+                        if target_window != window {
+                            if target_window == session.window {
+                                handoff_to = Some(target_window);
+                                output
+                                    .effects
+                                    .push(Effect::RequestAnimationFrame(target_window));
+                                output.request_redraw = true;
+                            } else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-pointer_up-window-mismatch"
+                                ));
+                                stop_script = true;
+                                failure_reason =
+                                    Some("pointer_session_cross_window_unsupported".to_string());
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else if target_window.is_some() {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
+                        output.request_redraw = true;
+                    } else if session.window != window {
+                        // The script migrated away from the window that owns the pointer session.
+                        handoff_to = Some(session.window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(session.window));
+                        output.request_redraw = true;
+                    }
+
+                    if stop_script {
+                        active.v2_step_state = None;
+                    } else if handoff_to.is_some() {
+                        // Window-targeted: migrate to the target window before releasing the session.
+                    } else {
+                        if let Some(want) = want_button
+                            && want != session.button
+                        {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_up-button-mismatch"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("pointer_up_button_mismatch".to_string());
+                            output.request_redraw = true;
+                            active.v2_step_state = None;
+                        } else {
+                            let pointer_id = PointerId(0);
+                            let pointer_type = PointerType::Mouse;
+                            let button = match session.button {
+                                UiMouseButtonV1::Left => MouseButton::Left,
+                                UiMouseButtonV1::Right => MouseButton::Right,
+                                UiMouseButtonV1::Middle => MouseButton::Middle,
+                            };
+
+                            output.events.push(Event::Pointer(PointerEvent::Up {
+                                pointer_id,
+                                position: session.position,
+                                button,
+                                modifiers: session.modifiers,
+                                is_click: false,
+                                click_count: 1,
+                                pointer_type,
+                            }));
+                            output
+                                .events
+                                .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                                    pointer_id,
+                                    position: session.position,
+                                    kind: fret_core::InternalDragKind::Drop,
+                                    modifiers: session.modifiers,
+                                }));
+                            let _ = write_cursor_override_window_client_logical(
+                                &self.cfg.out_dir,
+                                window,
+                                session.position.x.0,
+                                session.position.y.0,
+                            );
+                            let _ = write_mouse_buttons_override_all_windows_v1(
+                                &self.cfg.out_dir,
+                                match session.button {
+                                    UiMouseButtonV1::Left => Some(false),
+                                    _ => None,
+                                },
+                                match session.button {
+                                    UiMouseButtonV1::Right => Some(false),
+                                    _ => None,
+                                },
+                                match session.button {
+                                    UiMouseButtonV1::Middle => Some(false),
+                                    _ => None,
+                                },
+                            );
+                            active.pending_cancel_cross_window_drag =
+                                Some(PendingCancelCrossWindowDrag::new(pointer_id));
+                            push_script_event_log(
+                                &mut active,
+                                &self.cfg,
+                                UiScriptEventLogEntryV1 {
+                                    unix_ms: unix_ms_now(),
+                                    kind: "diag.pending_cancel_drag".to_string(),
+                                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                                    note: Some(format!("pointer_id={}", pointer_id.0)),
+                                    bundle_dir: None,
+                                },
+                            );
+
+                            active.pointer_session = None;
+                            active.last_injected_step =
+                                Some(step_index.min(u32::MAX as usize) as u32);
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-pointer_up"));
+                            }
+                        }
+                    }
+                } else {
                     force_dump_label =
                         Some(format!("script-step-{step_index:04}-pointer_up-no-session"));
                     stop_script = true;
                     failure_reason = Some("pointer_session_missing".to_string());
                     output.request_redraw = true;
                     active.v2_step_state = None;
-                    return output;
-                };
-
-                if let Some(target_window) =
-                    self.resolve_window_target(window, target_window.as_ref())
-                {
-                    if target_window != window {
-                        if target_window == session.window {
-                            if let Some(step_mut) = active.steps.get_mut(step_index) {
-                                if let UiActionStepV2::PointerUp { window, .. } = step_mut {
-                                    *window = None;
-                                }
-                            }
-                            handoff_to = Some(target_window);
-                            output
-                                .effects
-                                .push(Effect::RequestAnimationFrame(target_window));
-                            output.request_redraw = true;
-                        } else {
-                            force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-pointer_up-window-mismatch"
-                            ));
-                            stop_script = true;
-                            failure_reason =
-                                Some("pointer_session_cross_window_unsupported".to_string());
-                            output.request_redraw = true;
-                        }
-                    }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-pointer_up-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                } else if session.window != window {
-                    // The script migrated away from the window that owns the pointer session.
-                    handoff_to = Some(session.window);
-                    output
-                        .effects
-                        .push(Effect::RequestAnimationFrame(session.window));
-                    output.request_redraw = true;
-                }
-
-                if stop_script {
-                    active.v2_step_state = None;
-                } else if handoff_to.is_some() {
-                    // Window-targeted: migrate to the target window before releasing the session.
-                } else {
-                    if let Some(want) = want_button
-                        && want != session.button
-                    {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-pointer_up-button-mismatch"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("pointer_up_button_mismatch".to_string());
-                        output.request_redraw = true;
-                        active.v2_step_state = None;
-                        return output;
-                    }
-
-                    let pointer_id = PointerId(0);
-                    let pointer_type = PointerType::Mouse;
-                    let button = match session.button {
-                        UiMouseButtonV1::Left => MouseButton::Left,
-                        UiMouseButtonV1::Right => MouseButton::Right,
-                        UiMouseButtonV1::Middle => MouseButton::Middle,
-                    };
-
-                    output.events.push(Event::Pointer(PointerEvent::Up {
-                        pointer_id,
-                        position: session.position,
-                        button,
-                        modifiers: session.modifiers,
-                        is_click: false,
-                        click_count: 1,
-                        pointer_type,
-                    }));
-                    output
-                        .events
-                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
-                            pointer_id,
-                            position: session.position,
-                            kind: fret_core::InternalDragKind::Drop,
-                            modifiers: session.modifiers,
-                        }));
-                    let _ = write_cursor_override_window_client_logical(
-                        &self.cfg.out_dir,
-                        window,
-                        session.position.x.0,
-                        session.position.y.0,
-                    );
-
-                    active.pointer_session = None;
-                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                    if self.cfg.script_auto_dump {
-                        force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up"));
-                    }
                 }
             }
             UiActionStepV2::DragPointer {
@@ -3789,9 +4601,11 @@ impl UiDiagnosticsService {
                 });
 
                 if !step_has_state {
-                    if let Some(target_window) =
-                        self.resolve_window_target(window, target_window.as_ref())
-                    {
+                    if let Some(target_window) = self.resolve_window_target_for_active_step(
+                        window,
+                        anchor_window,
+                        target_window.as_ref(),
+                    ) {
                         if target_window != window {
                             handoff_to = Some(target_window);
                             output
@@ -3936,7 +4750,16 @@ impl UiDiagnosticsService {
                         }
                     };
 
-                    let done = push_drag_playback_frame(&mut state, &mut output.events);
+                    // Run the entire drag gesture in a single diagnostics frame to avoid leaving
+                    // the app in a "mouse down across frames" state, which can stall scripted
+                    // playback on some runners/platforms.
+                    let mut done = false;
+                    let mut burst_frames: u32 = 0;
+                    let burst_limit = state.steps.saturating_add(2).min(512);
+                    while !done && burst_frames < burst_limit {
+                        done = push_drag_playback_frame(&mut state, &mut output.events);
+                        burst_frames = burst_frames.saturating_add(1);
+                    }
                     let _ = write_cursor_override_window_client_logical(
                         &self.cfg.out_dir,
                         state.window,
@@ -3944,7 +4767,8 @@ impl UiDiagnosticsService {
                         drag_playback_last_position(&state).y.0,
                     );
                     if done {
-                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
+                        active.pending_cancel_cross_window_drag =
+                            Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
                         if let Some(ui) = ui {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
@@ -3991,9 +4815,11 @@ impl UiDiagnosticsService {
                 });
 
                 if !step_has_state {
-                    if let Some(target_window) =
-                        self.resolve_window_target(window, target_window.as_ref())
-                    {
+                    if let Some(target_window) = self.resolve_window_target_for_active_step(
+                        window,
+                        anchor_window,
+                        target_window.as_ref(),
+                    ) {
                         if target_window != window {
                             handoff_to = Some(target_window);
                             output
@@ -4043,124 +4869,254 @@ impl UiDiagnosticsService {
                             },
                             predicate: predicate.clone(),
                             down_issued: false,
+                            release_armed: false,
                         },
                     };
 
-                    // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
-                    // previous frame), release immediately.
-                    if let Some(snapshot) = semantics_snapshot
-                        && eval_predicate(
-                            snapshot,
-                            window_bounds,
-                            window,
-                            app.global::<fret_runtime::PlatformCapabilities>(),
-                            element_runtime,
-                            app.global::<fret_runtime::WindowTextInputSnapshotService>()
-                                .and_then(|svc| svc.snapshot(window)),
-                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                            self.known_windows.as_slice(),
-                            docking_diag,
-                            text_font_stack_key_stable_frames,
-                            font_catalog_populated,
-                            system_font_rescan_idle,
-                            &state.predicate,
-                        )
-                    {
-                        if state.down_issued {
-                            output.events.extend(pointer_up_with_internal_drop_events(
-                                state.playback.button,
-                                state.playback.end,
-                            ));
-                            let _ = write_cursor_override_window_client_logical(
-                                &self.cfg.out_dir,
-                                state.playback.window,
-                                state.playback.end.x.0,
-                                state.playback.end.y.0,
-                            );
-                            active.pending_cancel_cross_window_drag = Some(PointerId(0));
-                        }
-                        active.v2_step_state = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        if self.cfg.script_auto_dump {
-                            force_dump_label =
-                                Some(format!("script-step-{step_index:04}-drag_pointer_until"));
-                        }
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-drag_pointer_until-timeout"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("drag_pointer_until_timeout".to_string());
-                        active.v2_step_state = None;
-                    } else {
-                        let Some(snapshot) = semantics_snapshot else {
+                    // Diagnostics drag playback behaves like a captured pointer: all events for a
+                    // `drag_pointer_until` step must be injected into the same window. If this
+                    // script frame is running on a different window (e.g. because the new tear-off
+                    // window temporarily starved redraw callbacks), hand off back to the playback
+                    // window before emitting any more input.
+                    if state.playback.window != window {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        if state.remaining_frames == 0 {
                             force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-drag_pointer_until-no-semantics"
+                                "script-step-{step_index:04}-drag_pointer_until-timeout"
                             ));
                             stop_script = true;
-                            failure_reason = Some("no_semantics_snapshot".to_string());
+                            failure_reason = Some("drag_pointer_until_timeout".to_string());
                             active.v2_step_state = None;
                             output.request_redraw = true;
-                            return output;
+                        } else {
+                            handoff_to = Some(state.playback.window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(state.playback.window));
+                            output.request_redraw = true;
+                            active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                            // Window-targeted: migrate before evaluating predicates or injecting input.
+                        }
+                    } else {
+                        // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
+                        // previous frame), release immediately.
+                        let predicate_ok_without_semantics = match &state.predicate {
+                            UiPredicateV1::EventKindSeen { event_kind } => {
+                                self.per_window.get(&window).is_some_and(|ring| {
+                                    ring.events.iter().any(|e| e.kind == *event_kind)
+                                })
+                            }
+                            UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+                                text_font_stack_key_stable_frames >= *stable_frames
+                            }
+                            UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+                            UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+                            UiPredicateV1::KnownWindowCountGe { n } => {
+                                (self.known_windows.len() as u32) >= *n
+                            }
+                            UiPredicateV1::KnownWindowCountIs { n } => {
+                                (self.known_windows.len() as u32) == *n
+                            }
+                            UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => app
+                                .global::<fret_runtime::PlatformCapabilities>()
+                                .is_some_and(|c| {
+                                    c.ui.window_hover_detection.as_str() == quality.as_str()
+                                }),
+                            _ => false,
+                        };
+                        let input_ctx = app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(window));
+                        let predicate_ok = if let Some(snapshot) = semantics_snapshot {
+                            let dock_drag_runtime =
+                                dock_drag_runtime_state(app, self.known_windows.as_slice());
+                            eval_predicate(
+                                snapshot,
+                                window_bounds,
+                                window,
+                                input_ctx,
+                                element_runtime,
+                                app.global::<fret_runtime::WindowTextInputSnapshotService>()
+                                    .and_then(|svc| svc.snapshot(window)),
+                                app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                                app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                self.known_windows.as_slice(),
+                                app.global::<fret_runtime::PlatformCapabilities>(),
+                                docking_diag,
+                                dock_drag_runtime.as_ref(),
+                                text_font_stack_key_stable_frames,
+                                font_catalog_populated,
+                                system_font_rescan_idle,
+                                &state.predicate,
+                            )
+                        } else {
+                            predicate_ok_without_semantics
                         };
 
-                        // Initialize start/end positions on the first frame.
-                        if state.playback.frame == 0 && state.playback.start == Point::default() {
-                            let Some(node) = select_semantics_node_with_trace(
-                                snapshot,
-                                window,
-                                element_runtime,
-                                &target,
-                                step_index as u32,
-                                self.cfg.redact_text,
-                                &mut active.selector_resolution_trace,
-                            ) else {
-                                force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
-                                ));
-                                stop_script = true;
-                                failure_reason = Some("drag_pointer_until_no_match".to_string());
+                        if predicate_ok {
+                            if state.down_issued {
+                                let release_pos = drag_playback_last_position(&state.playback);
+                                let cx0 = window_bounds.origin.x.0;
+                                let cy0 = window_bounds.origin.y.0;
+                                let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
+                                let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
+                                // Route the release to the source window even if the cursor is outside
+                                // all windows (or fully overlapped by a smaller tear-off window). Pick
+                                // a stable in-bounds point that is likely to be unique to the source.
+                                let routing_pos = Point::new(
+                                    fret_core::Px((cx1 - 2.0).max(cx0)),
+                                    fret_core::Px((cy1 - 2.0).max(cy0)),
+                                );
+                                let _ = write_cursor_override_window_client_logical(
+                                    &self.cfg.out_dir,
+                                    state.playback.window,
+                                    routing_pos.x.0,
+                                    routing_pos.y.0,
+                                );
+
+                                if !state.release_armed {
+                                    // The runner polls cursor overrides at the top of the event loop. If we
+                                    // emit `Up/Drop` in the same frame as the override write, the release can
+                                    // be routed to the wrong window during cross-window drags. Stage the
+                                    // override first and release on the next frame.
+                                    state.release_armed = true;
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::DragPointerUntil(state));
+                                    output.request_redraw = true;
+                                } else {
+                                    output.events.extend(pointer_up_with_internal_drop_events(
+                                        state.playback.button,
+                                        release_pos,
+                                    ));
+                                    let _ = write_mouse_buttons_override_all_windows_v1(
+                                        &self.cfg.out_dir,
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Left => Some(false),
+                                            _ => None,
+                                        },
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Right => Some(false),
+                                            _ => None,
+                                        },
+                                        match state.playback.button {
+                                            UiMouseButtonV1::Middle => Some(false),
+                                            _ => None,
+                                        },
+                                    );
+                                    let drag_pointer_id = dock_drag_pointer_id_best_effort(
+                                        app,
+                                        self.known_windows.as_slice(),
+                                    )
+                                    .unwrap_or(PointerId(0));
+                                    active.pending_cancel_cross_window_drag =
+                                        Some(PendingCancelCrossWindowDrag::new(drag_pointer_id));
+                                    active.v2_step_state = None;
+                                    active.next_step = active.next_step.saturating_add(1);
+                                    if self.cfg.script_auto_dump {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-drag_pointer_until"
+                                        ));
+                                    }
+                                }
+                            } else {
                                 active.v2_step_state = None;
-                                output.request_redraw = true;
-                                return output;
-                            };
-
-                            let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                            let end = Point::new(
-                                fret_core::Px(start.x.0 + delta_x),
-                                fret_core::Px(start.y.0 + delta_y),
-                            );
-                            state.playback.start = start;
-                            state.playback.end = end;
-                        }
-
-                        let done =
-                            push_drag_playback_frame(&mut state.playback, &mut output.events);
-                        let _ = write_cursor_override_window_client_logical(
-                            &self.cfg.out_dir,
-                            state.playback.window,
-                            drag_playback_last_position(&state.playback).x.0,
-                            drag_playback_last_position(&state.playback).y.0,
-                        );
-                        if state.playback.frame >= 1 {
-                            state.down_issued = true;
-                        }
-
-                        // Keep polling for the predicate across frames; hold at end if playback is done.
-                        if done {
-                            active.pending_cancel_cross_window_drag = Some(PointerId(0));
-                            // Hold: emit an `Over` tick at the end position to keep drag routing alive.
-                            output.events.extend(pointer_move_with_internal_over_events(
-                                state.playback.button,
-                                state.playback.end,
+                                active.next_step = active.next_step.saturating_add(1);
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-drag_pointer_until"
+                                    ));
+                                }
+                            }
+                        } else if state.remaining_frames == 0 {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-drag_pointer_until-timeout"
                             ));
+                            stop_script = true;
+                            failure_reason = Some("drag_pointer_until_timeout".to_string());
+                            active.v2_step_state = None;
+                        } else {
+                            // Initialize start/end positions on the first frame.
+                            if state.playback.frame == 0 && state.playback.start == Point::default()
+                            {
+                                if let Some(snapshot) = semantics_snapshot {
+                                    if let Some(node) = select_semantics_node_with_trace(
+                                        snapshot,
+                                        window,
+                                        element_runtime,
+                                        &target,
+                                        step_index as u32,
+                                        self.cfg.redact_text,
+                                        &mut active.selector_resolution_trace,
+                                    ) {
+                                        let start = center_of_rect_clamped_to_rect(
+                                            node.bounds,
+                                            window_bounds,
+                                        );
+                                        let end = Point::new(
+                                            fret_core::Px(start.x.0 + delta_x),
+                                            fret_core::Px(start.y.0 + delta_y),
+                                        );
+                                        state.playback.start = start;
+                                        state.playback.end = end;
+                                    } else {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason =
+                                            Some("drag_pointer_until_no_match".to_string());
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                    }
+                                }
+                            }
+
+                            // Wait for semantics to become available before selecting coordinates.
+                            if !stop_script
+                                && state.playback.frame == 0
+                                && state.playback.start == Point::default()
+                            {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                                output.request_redraw = true;
+                            } else if !stop_script {
+                                let move_steps = state.playback.steps.max(1);
+                                let reached_end = state.playback.frame > move_steps;
+
+                                // Drive pointer-down + move segments until we reach `end`. Do not emit a
+                                // pointer-up until the predicate is satisfied; `drag_pointer_until` is
+                                // allowed to "hold" the drag at the end position across frames.
+                                if !reached_end {
+                                    let _ = push_drag_playback_frame(
+                                        &mut state.playback,
+                                        &mut output.events,
+                                    );
+                                } else {
+                                    output.events.extend(pointer_move_with_internal_over_events(
+                                        state.playback.button,
+                                        state.playback.end,
+                                    ));
+                                }
+
+                                let cursor_pos = drag_playback_last_position(&state.playback);
+                                let _ = write_cursor_override_window_client_logical(
+                                    &self.cfg.out_dir,
+                                    state.playback.window,
+                                    cursor_pos.x.0,
+                                    cursor_pos.y.0,
+                                );
+                                if state.playback.frame >= 1 {
+                                    state.down_issued = true;
+                                }
+
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+
+                                active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                                output.request_redraw = true;
+                            }
                         }
-
-                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
-
-                        active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
-                        output.request_redraw = true;
                     }
                 }
             }
@@ -4644,18 +5600,25 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
+                    let dock_drag_runtime =
+                        dock_drag_runtime_state(app, self.known_windows.as_slice());
                     if eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
-                        app.global::<fret_runtime::PlatformCapabilities>(),
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
+                        app.global::<fret_runtime::PlatformCapabilities>(),
                         docking_diag,
+                        dock_drag_runtime.as_ref(),
                         text_font_stack_key_stable_frames,
                         font_catalog_populated,
                         system_font_rescan_idle,
@@ -4734,18 +5697,25 @@ impl UiDiagnosticsService {
                     let docking_diag = app
                         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                         .and_then(|store| store.docking_latest_for_window(window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(window));
+                    let dock_drag_runtime =
+                        dock_drag_runtime_state(app, self.known_windows.as_slice());
                     let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
-                        app.global::<fret_runtime::PlatformCapabilities>(),
+                        input_ctx,
                         element_runtime,
                         app.global::<fret_runtime::WindowTextInputSnapshotService>()
                             .and_then(|svc| svc.snapshot(window)),
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         self.known_windows.as_slice(),
+                        app.global::<fret_runtime::PlatformCapabilities>(),
                         docking_diag,
+                        dock_drag_runtime.as_ref(),
                         text_font_stack_key_stable_frames,
                         font_catalog_populated,
                         system_font_rescan_idle,
@@ -4864,6 +5834,7 @@ impl UiDiagnosticsService {
             UiActionStepV2::TypeTextInto {
                 target,
                 text,
+                clear_before_type,
                 timeout_frames,
             } => {
                 active.wait_until = None;
@@ -5007,9 +5978,20 @@ impl UiDiagnosticsService {
                                 .and_then(|rt| rt.diagnostics_snapshot(window))
                                 .and_then(|s| s.focused_element_node)
                                 .map(key_to_u64);
-                            let focus_matches = match (state.expected_node_id, focused_node_id) {
-                                (Some(expected), Some(focused)) => expected == focused,
-                                // If we cannot observe focus, prefer making progress rather than timing out.
+                            let focus_matches = match (
+                                state.expected_node_id,
+                                focused_node_id,
+                                element_runtime
+                                    .and_then(|rt| rt.diagnostics_snapshot(window))
+                                    .is_some(),
+                            ) {
+                                (Some(expected), Some(focused), _) => expected == focused,
+                                // When we have an expected node id and diagnostics are available,
+                                // treat missing focus as a mismatch to avoid injecting into the
+                                // wrong widget.
+                                (Some(_), None, true) => false,
+                                // If we cannot observe focus (diagnostics unavailable), prefer
+                                // making progress rather than timing out.
                                 _ => true,
                             };
 
@@ -5035,6 +6017,15 @@ impl UiDiagnosticsService {
 
                                 active.last_injected_step =
                                     Some(step_index.min(u32::MAX as usize) as u32);
+                                if clear_before_type {
+                                    // Prefer a platform-independent selection API over shortcuts:
+                                    // suites commonly reuse a single launch, and input fields may
+                                    // retain previous values across runs.
+                                    output.events.push(Event::SetTextSelection {
+                                        anchor: 0,
+                                        focus: u32::MAX,
+                                    });
+                                }
                                 output.events.push(Event::TextInput(text));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
@@ -5400,11 +6391,6 @@ impl UiDiagnosticsService {
                     self.resolve_window_target(window, target_window.as_ref())
                 {
                     if target_window != window {
-                        if let Some(step_mut) = active.steps.get_mut(step_index) {
-                            if let UiActionStepV2::DragTo { window, .. } = step_mut {
-                                *window = None;
-                            }
-                        }
                         handoff_to = Some(target_window);
                         output
                             .effects
@@ -5563,6 +6549,8 @@ impl UiDiagnosticsService {
                             state.remaining_frames = state.remaining_frames.saturating_sub(1);
                             active.v2_step_state = Some(V2StepState::DragTo(state));
                             output.request_redraw = true;
+                            output.effects.push(Effect::RequestAnimationFrame(window));
+                            self.active_scripts.insert(window, active);
                             return output;
                         }
                     };
@@ -5576,7 +6564,8 @@ impl UiDiagnosticsService {
                     );
                     output.request_redraw = true;
                     if done {
-                        active.pending_cancel_cross_window_drag = Some(PointerId(0));
+                        active.pending_cancel_cross_window_drag =
+                            Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         if self.cfg.script_auto_dump {
@@ -6519,7 +7508,12 @@ impl UiDiagnosticsService {
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
-                ElementDiagnosticsSnapshotV1::from_runtime(window, runtime, snapshot)
+                ElementDiagnosticsSnapshotV1::from_runtime(
+                    window,
+                    runtime,
+                    snapshot,
+                    self.cfg.max_debug_string_bytes,
+                )
             })
         });
 
@@ -7171,12 +8165,24 @@ impl UiDiagnosticsService {
             if std::fs::create_dir_all(&dir).is_err() {
                 return None;
             }
-            if write_json_compact(dir.join("bundle.json"), &bundle).is_err() {
+            let bundle_json_path = dir.join("bundle.json");
+            let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
+                .ok()
+                .map(|v| v.trim().to_ascii_lowercase());
+            let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
+
+            let write_result = if want_pretty {
+                write_json(bundle_json_path.clone(), &bundle)
+            } else {
+                // Default: compact/minified JSON. This keeps bundles smaller and avoids accidental
+                // output explosions when someone greps a bundle.
+                write_json_compact(bundle_json_path.clone(), &bundle)
+            };
+
+            if write_result.is_err() {
                 return None;
             }
-            bundle_json_bytes = std::fs::metadata(dir.join("bundle.json"))
-                .ok()
-                .map(|m| m.len());
+            bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
             if self.cfg.screenshot_on_dump {
                 let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
@@ -7442,6 +8448,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return matches!(
             state,
             V2StepState::ClickStable(_)
+                | V2StepState::ClickSelectableTextSpanStable(_)
                 | V2StepState::WaitBoundsStable(_)
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
@@ -7461,6 +8468,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     match step {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::ClickStable { .. }
+        | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
@@ -8154,6 +9162,7 @@ impl UiRendererTextFontTraceSnapshotV1 {
             match wrap {
                 fret_core::TextWrap::None => "none",
                 fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::WordBreak => "word_break",
                 fret_core::TextWrap::Grapheme => "grapheme",
             }
         }
@@ -8676,6 +9685,8 @@ mod legacy_forked_script_protocol {
         TypeTextInto {
             target: UiSelectorV1,
             text: String,
+            #[serde(default)]
+            clear_before_type: bool,
             #[serde(default = "default_action_timeout_frames")]
             timeout_frames: u32,
         },
@@ -9085,6 +10096,7 @@ impl UiPickSelectionV1 {
 struct ActiveScript {
     steps: Vec<UiActionStepV2>,
     run_id: u64,
+    anchor_window: AppWindowId,
     next_step: usize,
     event_log: Vec<UiScriptEventLogEntryV1>,
     event_log_dropped: u64,
@@ -9097,8 +10109,9 @@ struct ActiveScript {
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     pointer_session: Option<V2PointerSessionState>,
-    pending_cancel_cross_window_drag: Option<PointerId>,
+    pending_cancel_cross_window_drag: Option<PendingCancelCrossWindowDrag>,
     last_reported_step: Option<usize>,
+    last_reported_unix_ms: u64,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     click_stable_trace: Vec<UiClickStableTraceEntryV1>,
@@ -9109,6 +10122,29 @@ struct ActiveScript {
     overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PendingCancelCrossWindowDrag {
+    pointer_id: PointerId,
+    remaining_frames: u32,
+}
+
+impl PendingCancelCrossWindowDrag {
+    // This exists as a diagnostics-only escape hatch: when scripted playback migrates across
+    // windows during a captured-pointer drag, the synthetic `PointerUp` can land in a different
+    // window than the corresponding `PointerDown`. That can leave a dock drag session stuck.
+    //
+    // Keep the retry window bounded so we don't accidentally cancel *future* drags started by
+    // later script steps.
+    const RETRY_FRAMES: u32 = 12;
+
+    fn new(pointer_id: PointerId) -> Self {
+        Self {
+            pointer_id,
+            remaining_frames: Self::RETRY_FRAMES,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -9158,6 +10194,7 @@ impl PendingScript {
 #[derive(Debug, Clone)]
 enum V2StepState {
     ClickStable(V2ClickStableState),
+    ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
     WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
@@ -9195,6 +10232,14 @@ struct V2ClickStableState {
     remaining_frames: u32,
     stable_count: u32,
     last_center: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickSelectableTextSpanStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_pos: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -9270,6 +10315,9 @@ struct V2DragPointerUntilState {
     predicate: UiPredicateV1,
     /// If true, the step has issued a pointer down and should release on completion.
     down_issued: bool,
+    /// If true, the step has staged a "route cursor to source window" override and will emit the
+    /// `Up/Drop` events on the next frame to avoid runner override polling latency.
+    release_armed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -9734,12 +10782,70 @@ impl UiTreeDebugSnapshotV1 {
                 last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
             }
         });
+
+        let cache_roots: Vec<UiCacheRootStatsV1> = ui
+            .debug_cache_root_stats()
+            .iter()
+            .map(|stats| {
+                UiCacheRootStatsV1::from_stats(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    semantics.as_ref(),
+                    &contained_relayout_roots,
+                    stats,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let removed_subtrees: Vec<UiRemovedSubtreeV1> = ui
+            .debug_removed_subtrees()
+            .iter()
+            .map(|r| {
+                UiRemovedSubtreeV1::from_record(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    r,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let mut layout_engine_solves: Vec<UiLayoutEngineSolveV1> = ui
+            .debug_layout_engine_solves()
+            .iter()
+            .map(UiLayoutEngineSolveV1::from_solve)
+            .collect();
+        for s in &mut layout_engine_solves {
+            truncate_opt_string_bytes(&mut s.root_element_path, max_debug_string_bytes);
+        }
+
+        let mut layout_hotspots: Vec<UiLayoutHotspotV1> = ui
+            .debug_layout_hotspots()
+            .iter()
+            .map(UiLayoutHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut layout_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
+        let mut widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1> = ui
+            .debug_widget_measure_hotspots()
+            .iter()
+            .map(UiWidgetMeasureHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut widget_measure_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
-                .map(UiInvalidationWalkV1::from_walk)
+                .map(|w| UiInvalidationWalkV1::from_walk(w, window, element_runtime_state))
                 .collect(),
             hover_declarative_invalidation_hotspots: ui
                 .debug_hover_declarative_invalidation_hotspots(20)
@@ -9812,20 +10918,7 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
                 .collect(),
-            cache_roots: ui
-                .debug_cache_root_stats()
-                .iter()
-                .map(|stats| {
-                    UiCacheRootStatsV1::from_stats(
-                        window,
-                        ui,
-                        element_runtime_state,
-                        semantics.as_ref(),
-                        &contained_relayout_roots,
-                        stats,
-                    )
-                })
-                .collect(),
+            cache_roots,
             overlay_synthesis: app
                 .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
                 .and_then(|diag| diag.events_for_window(window, app.frame_id()))
@@ -9852,26 +10945,10 @@ impl UiTreeDebugSnapshotV1 {
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
                 .map(UiDockingInteractionSnapshotV1::from_snapshot),
-            removed_subtrees: ui
-                .debug_removed_subtrees()
-                .iter()
-                .map(|r| UiRemovedSubtreeV1::from_record(window, ui, element_runtime_state, r))
-                .collect(),
-            layout_engine_solves: ui
-                .debug_layout_engine_solves()
-                .iter()
-                .map(UiLayoutEngineSolveV1::from_solve)
-                .collect(),
-            layout_hotspots: ui
-                .debug_layout_hotspots()
-                .iter()
-                .map(UiLayoutHotspotV1::from_hotspot)
-                .collect(),
-            widget_measure_hotspots: ui
-                .debug_widget_measure_hotspots()
-                .iter()
-                .map(UiWidgetMeasureHotspotV1::from_hotspot)
-                .collect(),
+            removed_subtrees,
+            layout_engine_solves,
+            layout_hotspots,
+            widget_measure_hotspots,
             paint_widget_hotspots: ui
                 .debug_paint_widget_hotspots()
                 .iter()
@@ -11414,6 +12491,7 @@ impl UiRemovedSubtreeV1 {
         ui: &UiTree<App>,
         element_runtime_state: Option<&ElementRuntime>,
         r: &fret_ui::tree::UiDebugRemoveSubtreeRecord,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let outcome = match r.outcome {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::SkippedLayerRoot => "skipped_layer_root",
@@ -11421,25 +12499,29 @@ impl UiRemovedSubtreeV1 {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::Removed => "removed",
         };
 
-        let root_element_path = r.root_element.and_then(|element| {
+        let mut root_element_path = r.root_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_element_path, max_debug_string_bytes);
 
-        let root_parent_element_path = r.root_parent_element.and_then(|element| {
+        let mut root_parent_element_path = r.root_parent_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_parent_element_path, max_debug_string_bytes);
 
-        let trigger_element_path = r.trigger_element.and_then(|element| {
+        let mut trigger_element_path = r.trigger_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_path, max_debug_string_bytes);
 
-        let trigger_element_root_path = r.trigger_element_root.and_then(|element| {
+        let mut trigger_element_root_path = r.trigger_element_root.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_root_path, max_debug_string_bytes);
 
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
         let root_path_edge_len = (r.root_path_edge_len as usize)
@@ -11459,8 +12541,10 @@ impl UiRemovedSubtreeV1 {
             .root_parent
             .and_then(|parent| ui.debug_set_children_write_for(parent))
             .map(|w| {
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
                 (
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.old_len),
                     Some(w.new_len),
                     Some(w.frame_id.0),
@@ -11485,10 +12569,11 @@ impl UiRemovedSubtreeV1 {
             .map(|w| {
                 let parent_element = element_runtime_state
                     .and_then(|runtime| runtime.element_for_node(window, w.parent));
-                let parent_path = parent_element.and_then(|element| {
+                let mut parent_path = parent_element.and_then(|element| {
                     element_runtime_state
                         .and_then(|runtime| runtime.debug_path_for_element(window, element))
                 });
+                truncate_opt_string_bytes(&mut parent_path, max_debug_string_bytes);
                 let parent_is_view_cache_reuse_root = parent_element.and_then(|element| {
                     element_runtime_state.and_then(|runtime| {
                         runtime
@@ -11521,12 +12606,18 @@ impl UiRemovedSubtreeV1 {
                     }
                 }
 
+                truncate_vec_string_bytes(&mut old_elements_head_paths, max_debug_string_bytes);
+                truncate_vec_string_bytes(&mut new_elements_head_paths, max_debug_string_bytes);
+
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+
                 (
                     Some(key_to_u64(w.parent)),
                     parent_element.map(|e| e.0),
                     parent_path,
                     parent_is_view_cache_reuse_root,
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.frame_id.0),
                     old_elements_head,
                     old_elements_head_paths,
@@ -11603,7 +12694,11 @@ impl UiRemovedSubtreeV1 {
                 .to_vec(),
             outcome: Some(outcome.to_string()),
             frame_id: Some(r.frame_id.0),
-            location: Some(format!("{}:{}:{}", r.file, r.line, r.column)),
+            location: {
+                let mut location = Some(format!("{}:{}:{}", r.file, r.line, r.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+                location
+            },
         }
     }
 }
@@ -11709,6 +12804,7 @@ impl UiCacheRootStatsV1 {
         semantics: Option<&UiSemanticsSnapshotV1>,
         contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
             element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id))
@@ -11793,7 +12889,8 @@ impl UiCacheRootStatsV1 {
                 Vec::new(),
                 None,
             ));
-        Self {
+
+        let mut out = Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
             element_path,
@@ -11814,7 +12911,21 @@ impl UiCacheRootStatsV1 {
             children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
-        }
+        };
+
+        truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.children_last_set_location, max_debug_string_bytes);
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_old_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_new_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
+
+        out
     }
 }
 
@@ -11992,6 +13103,7 @@ impl UiPaintTextPrepareHotspotV1 {
             match wrap {
                 fret_core::TextWrap::None => "none",
                 fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::WordBreak => "word_break",
                 fret_core::TextWrap::Grapheme => "grapheme",
             }
         }
@@ -12196,6 +13308,8 @@ pub struct UiInvalidationWalkV1 {
     pub root_node: u64,
     #[serde(default)]
     pub root_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_element_path: Option<String>,
     pub kind: UiInvalidationKindV1,
     pub source: UiInvalidationSourceV1,
     #[serde(default)]
@@ -12206,7 +13320,11 @@ pub struct UiInvalidationWalkV1 {
 }
 
 impl UiInvalidationWalkV1 {
-    fn from_walk(walk: &fret_ui::tree::UiDebugInvalidationWalk) -> Self {
+    fn from_walk(
+        walk: &fret_ui::tree::UiDebugInvalidationWalk,
+        window: AppWindowId,
+        element_runtime_state: Option<&ElementRuntime>,
+    ) -> Self {
         let kind = match walk.inv {
             Invalidation::Paint => UiInvalidationKindV1::Paint,
             Invalidation::Layout => UiInvalidationKindV1::Layout,
@@ -12225,9 +13343,13 @@ impl UiInvalidationWalkV1 {
             fret_ui::tree::UiDebugInvalidationSource::Focus => UiInvalidationSourceV1::Focus,
             fret_ui::tree::UiDebugInvalidationSource::Other => UiInvalidationSourceV1::Other,
         };
+        let root_element_path = walk.root_element.and_then(|element| {
+            element_runtime_state.and_then(|rt| rt.debug_path_for_element(window, element))
+        });
         Self {
             root_node: key_to_u64(walk.root),
             root_element: walk.root_element.map(|e| e.0),
+            root_element_path,
             kind,
             source,
             detail: walk.detail.as_str().map(|s| s.to_string()),
@@ -13896,26 +15018,39 @@ impl ElementDiagnosticsSnapshotV1 {
         window: AppWindowId,
         runtime: &ElementRuntime,
         snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot,
+        max_debug_string_bytes: usize,
     ) -> Self {
-        let focused_element_path = snapshot
+        let mut focused_element_path = snapshot
             .focused_element
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
+        truncate_opt_string_bytes(&mut focused_element_path, max_debug_string_bytes);
+
+        let mut active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
             let a = runtime.debug_path_for_element(window, a)?;
             let b = runtime.debug_path_for_element(window, b)?;
             Some((a, b))
         });
-        let hovered_pressable_path = snapshot
+        if let Some((a, b)) = active_text_selection_path.as_mut() {
+            truncate_string_bytes(a, max_debug_string_bytes);
+            truncate_string_bytes(b, max_debug_string_bytes);
+        }
+
+        let mut hovered_pressable_path = snapshot
             .hovered_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let pressed_pressable_path = snapshot
+        truncate_opt_string_bytes(&mut hovered_pressable_path, max_debug_string_bytes);
+
+        let mut pressed_pressable_path = snapshot
             .pressed_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let hovered_hover_region_path = snapshot
+        truncate_opt_string_bytes(&mut pressed_pressable_path, max_debug_string_bytes);
+
+        let mut hovered_hover_region_path = snapshot
             .hovered_hover_region
             .and_then(|id| runtime.debug_path_for_element(window, id));
+        truncate_opt_string_bytes(&mut hovered_hover_region_path, max_debug_string_bytes);
 
-        Self {
+        let mut out = Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
             focused_element_node: snapshot.focused_element_node.map(key_to_u64),
@@ -14050,24 +15185,64 @@ impl ElementDiagnosticsSnapshotV1 {
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
                 .into_iter()
-                .map(|r| ElementNodeEntryRootOverwriteV1 {
-                    frame_id: r.frame_id.0,
-                    element: r.element.0,
-                    element_path: runtime.debug_path_for_element(window, r.element),
-                    old_root: r.old_root.0,
-                    old_root_path: runtime.debug_path_for_element(window, r.old_root),
-                    new_root: r.new_root.0,
-                    new_root_path: runtime.debug_path_for_element(window, r.new_root),
-                    old_node: r.old_node.data().as_ffi(),
-                    new_node: r.new_node.data().as_ffi(),
-                    location: Some(UiSourceLocationV1 {
-                        file: r.file.to_string(),
-                        line: r.line,
-                        column: r.column,
-                    }),
+                .map(|r| {
+                    let mut element_path = runtime.debug_path_for_element(window, r.element);
+                    let mut old_root_path = runtime.debug_path_for_element(window, r.old_root);
+                    let mut new_root_path = runtime.debug_path_for_element(window, r.new_root);
+                    truncate_opt_string_bytes(&mut element_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut old_root_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut new_root_path, max_debug_string_bytes);
+
+                    let mut file = r.file.to_string();
+                    truncate_string_bytes(&mut file, max_debug_string_bytes);
+
+                    ElementNodeEntryRootOverwriteV1 {
+                        frame_id: r.frame_id.0,
+                        element: r.element.0,
+                        element_path,
+                        old_root: r.old_root.0,
+                        old_root_path,
+                        new_root: r.new_root.0,
+                        new_root_path,
+                        old_node: r.old_node.data().as_ffi(),
+                        new_node: r.new_node.data().as_ffi(),
+                        location: Some(UiSourceLocationV1 {
+                            file,
+                            line: r.line,
+                            column: r.column,
+                        }),
+                    }
                 })
                 .collect(),
+        };
+
+        for entry in &mut out.observed_layout_queries {
+            for region in &mut entry.regions {
+                truncate_opt_string_bytes(&mut region.region_name, max_debug_string_bytes);
+                truncate_string_bytes(&mut region.invalidation, max_debug_string_bytes);
+            }
         }
+        for region in &mut out.layout_query_regions {
+            truncate_opt_string_bytes(&mut region.name, max_debug_string_bytes);
+        }
+        for entry in &mut out.observed_environment {
+            for key in &mut entry.keys {
+                truncate_string_bytes(&mut key.key, max_debug_string_bytes);
+                truncate_string_bytes(&mut key.invalidation, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_models {
+            for (_, inv) in &mut entry.models {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_globals {
+            for (_, inv) in &mut entry.globals {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+
+        out
     }
 }
 
@@ -14742,6 +15917,7 @@ fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
     match step {
         UiActionStepV2::Click { .. } => "click",
         UiActionStepV2::ClickStable { .. } => "click_stable",
+        UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
         UiActionStepV2::DragTo { .. } => "drag_to",
@@ -16250,17 +17426,257 @@ fn pick_best_match<'a>(
     best.map(|(n, _)| n)
 }
 
+#[derive(Clone, Copy, Debug)]
+struct DockDragRuntimeState {
+    dragging: bool,
+    source_window: AppWindowId,
+    current_window: AppWindowId,
+    moving_window: Option<AppWindowId>,
+    window_under_moving_window: Option<AppWindowId>,
+    window_under_moving_window_source: fret_runtime::WindowUnderCursorSource,
+    transparent_payload_applied: bool,
+    transparent_payload_mouse_passthrough_applied: bool,
+    window_under_cursor_source: fret_runtime::WindowUnderCursorSource,
+}
+
+fn dock_drag_pointer_id_best_effort(
+    app: &fret_app::App,
+    known_windows: &[AppWindowId],
+) -> Option<PointerId> {
+    if let Some(pointer_id) = app.find_drag_pointer_id(|d| {
+        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+            || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+            && d.dragging
+    }) {
+        return Some(pointer_id);
+    }
+
+    let store = app.global::<fret_runtime::WindowInteractionDiagnosticsStore>()?;
+    for window in known_windows.iter().rev().copied() {
+        let docking = store.docking_latest_for_window(window)?;
+        if let Some(drag) = docking.dock_drag
+            && drag.dragging
+        {
+            // `docking_latest_for_window` is intentionally stable across frames, which makes it
+            // useful for debugging but also means it can be stale. Only treat it as authoritative
+            // when the drag session is still present in the live `App` drag registry.
+            if app.drag(drag.pointer_id).is_some() {
+                return Some(drag.pointer_id);
+            }
+        }
+    }
+
+    None
+}
+
+fn dock_drag_runtime_state(
+    app: &fret_app::App,
+    known_windows: &[AppWindowId],
+) -> Option<DockDragRuntimeState> {
+    if let Some(pointer_id) = dock_drag_pointer_id_best_effort(app, known_windows)
+        && let Some(drag) = app.drag(pointer_id)
+    {
+        return Some(DockDragRuntimeState {
+            dragging: drag.dragging,
+            source_window: drag.source_window,
+            current_window: drag.current_window,
+            moving_window: drag.moving_window,
+            window_under_moving_window: drag.window_under_moving_window,
+            window_under_moving_window_source: drag.window_under_moving_window_source,
+            transparent_payload_applied: drag.transparent_payload_applied,
+            transparent_payload_mouse_passthrough_applied: drag
+                .transparent_payload_mouse_passthrough_applied,
+            window_under_cursor_source: drag.window_under_cursor_source,
+        });
+    }
+
+    // If the drag session cannot be found in `App`, treat it as inactive. The per-window docking
+    // diagnostics store may retain stale "latest" snapshots across frames (by design), which is
+    // useful for debugging but unsuitable as a source of truth for scripted gates.
+    None
+}
+
+fn dock_drag_window_under_cursor_source_is(
+    have: fret_runtime::WindowUnderCursorSource,
+    want: &str,
+) -> bool {
+    use fret_runtime::WindowUnderCursorSource as Src;
+    match want {
+        "platform" => matches!(have, Src::PlatformWin32 | Src::PlatformMacos),
+        "platform_win32" => matches!(have, Src::PlatformWin32),
+        "platform_macos" => matches!(have, Src::PlatformMacos),
+        "latched" => matches!(have, Src::Latched),
+        "heuristic" => matches!(have, Src::HeuristicZOrder | Src::HeuristicRects),
+        "heuristic_z_order" => matches!(have, Src::HeuristicZOrder),
+        "heuristic_rects" => matches!(have, Src::HeuristicRects),
+        "unknown" => matches!(have, Src::Unknown),
+        _ => false,
+    }
+}
+
+fn eval_predicate_without_semantics(
+    window: AppWindowId,
+    known_windows: &[AppWindowId],
+    platform_caps: Option<&fret_runtime::PlatformCapabilities>,
+    docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    dock_drag_runtime: Option<&DockDragRuntimeState>,
+    pred: &UiPredicateV1,
+) -> Option<bool> {
+    match pred {
+        UiPredicateV1::KnownWindowCountGe { n } => Some((known_windows.len() as u32) >= *n),
+        UiPredicateV1::KnownWindowCountIs { n } => Some((known_windows.len() as u32) == *n),
+        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
+            platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
+        ),
+        UiPredicateV1::DockDragCurrentWindowIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            Some(
+                dock_drag_runtime
+                    .is_some_and(|drag| drag.dragging && drag.current_window == target_window),
+            )
+        }
+        UiPredicateV1::DockDragMovingWindowIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            Some(
+                dock_drag_runtime
+                    .is_some_and(|drag| drag.dragging && drag.moving_window == Some(target_window)),
+            )
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            Some(dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.window_under_moving_window == Some(target_window)
+            }))
+        }
+        UiPredicateV1::DockDragActiveIs { active } => {
+            Some(dock_drag_runtime.is_some_and(|drag| drag.dragging) == *active)
+        }
+        UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => Some(
+            dock_drag_runtime
+                .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
+                || (!*applied && dock_drag_runtime.is_none()),
+        ),
+        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => Some(
+            dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.transparent_payload_mouse_passthrough_applied == *applied
+            }) || (!*applied && dock_drag_runtime.is_none()),
+        ),
+        UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
+            Some(dock_drag_runtime.is_some_and(|drag| {
+                dock_drag_window_under_cursor_source_is(drag.window_under_cursor_source, source)
+            }))
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { source } => {
+            Some(dock_drag_runtime.is_some_and(|drag| {
+                dock_drag_window_under_cursor_source_is(
+                    drag.window_under_moving_window_source,
+                    source,
+                )
+            }))
+        }
+        UiPredicateV1::DockFloatingDragActiveIs { active } => {
+            Some(match docking.and_then(|d| d.floating_drag) {
+                Some(drag) => drag.activated == *active,
+                None => !*active,
+            })
+        }
+        UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
+            let preview = docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .and_then(|d| d.preview.as_ref())?;
+            let have = match preview.kind {
+                fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary => "wrap_binary",
+                fret_runtime::DockDropPreviewKindDiagnostics::InsertIntoSplit { .. } => {
+                    "insert_into_split"
+                }
+            };
+            Some(have == preview_kind.as_str())
+        }
+        UiPredicateV1::DockDropResolveSourceIs { source } => {
+            let resolve = docking.and_then(|d| d.dock_drop_resolve.as_ref())?;
+            let have = match resolve.source {
+                fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
+                fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
+                fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
+                fret_runtime::DockDropResolveSource::EmptyDockSpace => "empty_dock_space",
+                fret_runtime::DockDropResolveSource::LayoutBoundsMiss => "layout_bounds_miss",
+                fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
+                    "latched_previous_hover"
+                }
+                fret_runtime::DockDropResolveSource::TabBar => "tab_bar",
+                fret_runtime::DockDropResolveSource::FloatingTitleBar => "floating_title_bar",
+                fret_runtime::DockDropResolveSource::OuterHintRect => "outer_hint_rect",
+                fret_runtime::DockDropResolveSource::InnerHintRect => "inner_hint_rect",
+                fret_runtime::DockDropResolveSource::None => "none",
+            };
+            Some(have == source.as_str())
+        }
+        UiPredicateV1::DockDropResolvedIsSome { some } => Some(
+            docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .is_some_and(|d| d.resolved.is_some() == *some),
+        ),
+        UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
+            docking
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.canonical_ok == *canonical),
+        ),
+        UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
+            docking
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.has_nested_same_axis_splits == *has_nested),
+        ),
+        UiPredicateV1::DockGraphNodeCountLe { max } => Some(
+            docking
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.node_count <= *max),
+        ),
+        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => Some(
+            docking
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.max_split_depth <= *max),
+        ),
+        UiPredicateV1::DockGraphSignatureIs { signature } => Some(
+            docking
+                .and_then(|d| d.dock_graph_signature.as_ref())
+                .is_some_and(|s| s.signature == *signature),
+        ),
+        UiPredicateV1::DockGraphSignatureContains { needle } => Some(
+            docking
+                .and_then(|d| d.dock_graph_signature.as_ref())
+                .is_some_and(|s| s.signature.contains(needle)),
+        ),
+        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
+            docking
+                .and_then(|d| d.dock_graph_signature.as_ref())
+                .is_some_and(|s| s.fingerprint64 == *fingerprint64),
+        ),
+        _ => None,
+    }
+}
+
 fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
     window: AppWindowId,
-    platform_caps: Option<&fret_runtime::PlatformCapabilities>,
+    input_ctx: Option<&fret_runtime::InputContext>,
     element_runtime: Option<&ElementRuntime>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     known_windows: &[AppWindowId],
+    platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    dock_drag_runtime: Option<&DockDragRuntimeState>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
     system_font_rescan_idle: bool,
@@ -16562,6 +17978,57 @@ fn eval_predicate(
 
             w <= max_w + eps && h <= max_h + eps
         }
+        UiPredicateV1::BoundsApproxEqual { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax = a.bounds.origin.x.0;
+            let ay = a.bounds.origin.y.0;
+            let aw = a.bounds.size.width.0.max(0.0);
+            let ah = a.bounds.size.height.0.max(0.0);
+
+            let bx = b.bounds.origin.x.0;
+            let by = b.bounds.origin.y.0;
+            let bw = b.bounds.size.width.0.max(0.0);
+            let bh = b.bounds.size.height.0.max(0.0);
+
+            (ax - bx).abs() <= eps
+                && (ay - by).abs() <= eps
+                && (aw - bw).abs() <= eps
+                && (ah - bh).abs() <= eps
+        }
+        UiPredicateV1::BoundsCenterApproxEqual { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax = a.bounds.origin.x.0;
+            let ay = a.bounds.origin.y.0;
+            let aw = a.bounds.size.width.0.max(0.0);
+            let ah = a.bounds.size.height.0.max(0.0);
+            let acx = ax + aw * 0.5;
+            let acy = ay + ah * 0.5;
+
+            let bx = b.bounds.origin.x.0;
+            let by = b.bounds.origin.y.0;
+            let bw = b.bounds.size.width.0.max(0.0);
+            let bh = b.bounds.size.height.0.max(0.0);
+            let bcx = bx + bw * 0.5;
+            let bcy = by + bh * 0.5;
+
+            (acx - bcx).abs() <= eps && (acy - bcy).abs() <= eps
+        }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
                 return false;
@@ -16653,7 +18120,12 @@ fn eval_predicate(
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
-            platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
+            if let Some(input_ctx) = input_ctx {
+                input_ctx.caps.ui.window_hover_detection.as_str() == quality.as_str()
+            } else {
+                platform_caps
+                    .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
+            }
         }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
@@ -16663,44 +18135,66 @@ fn eval_predicate(
             else {
                 return false;
             };
-            let Some(drag) = docking.and_then(|d| d.dock_drag) else {
+            dock_drag_runtime
+                .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
+        }
+        UiPredicateV1::DockDragMovingWindowIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
                 return false;
             };
-            drag.dragging && drag.current_window == target_window
+            dock_drag_runtime
+                .is_some_and(|drag| drag.dragging && drag.moving_window == Some(target_window))
         }
-        UiPredicateV1::DockDragActiveIs { active } => match docking.and_then(|d| d.dock_drag) {
-            Some(drag) => drag.dragging == *active,
-            None => !*active,
-        },
+        UiPredicateV1::DockDragWindowUnderMovingWindowIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            dock_drag_runtime.is_some_and(|drag| {
+                drag.dragging && drag.window_under_moving_window == Some(target_window)
+            })
+        }
+        UiPredicateV1::DockDragActiveIs { active } => {
+            let dragging = dock_drag_runtime.is_some_and(|drag| drag.dragging);
+            dragging == *active
+        }
         UiPredicateV1::DockDragTransparentPayloadAppliedIs { applied } => {
-            match docking.and_then(|d| d.dock_drag) {
-                Some(drag) => drag.dragging && drag.transparent_payload_applied == *applied,
-                None => !*applied,
+            if let Some(drag) = dock_drag_runtime {
+                return drag.dragging && drag.transparent_payload_applied == *applied;
             }
+            !*applied
+        }
+        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => {
+            if let Some(drag) = dock_drag_runtime {
+                return drag.dragging
+                    && drag.transparent_payload_mouse_passthrough_applied == *applied;
+            }
+            !*applied
         }
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
-            let Some(drag) = docking.and_then(|d| d.dock_drag) else {
+            let Some(drag) = dock_drag_runtime else {
                 return false;
             };
-            if !drag.dragging {
+            dock_drag_window_under_cursor_source_is(
+                drag.window_under_cursor_source,
+                source.as_str(),
+            )
+        }
+        UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { source } => {
+            let Some(drag) = dock_drag_runtime else {
                 return false;
-            }
-
-            use fret_runtime::WindowUnderCursorSource as Src;
-            let have = drag.window_under_cursor_source;
-            let want = source.as_str();
-
-            match want {
-                "platform" => matches!(have, Src::PlatformWin32 | Src::PlatformMacos),
-                "platform_win32" => matches!(have, Src::PlatformWin32),
-                "platform_macos" => matches!(have, Src::PlatformMacos),
-                "latched" => matches!(have, Src::Latched),
-                "heuristic" => matches!(have, Src::HeuristicZOrder | Src::HeuristicRects),
-                "heuristic_z_order" => matches!(have, Src::HeuristicZOrder),
-                "heuristic_rects" => matches!(have, Src::HeuristicRects),
-                "unknown" => matches!(have, Src::Unknown),
-                _ => false,
-            }
+            };
+            dock_drag_window_under_cursor_source_is(
+                drag.window_under_moving_window_source,
+                source.as_str(),
+            )
         }
         UiPredicateV1::DockFloatingDragActiveIs { active } => {
             match docking.and_then(|d| d.floating_drag) {
@@ -16777,18 +18271,28 @@ fn resolve_window_target_from_known_windows(
     known_windows: &[AppWindowId],
     target: UiWindowTargetV1,
 ) -> Option<AppWindowId> {
+    let first_seen = known_windows
+        .iter()
+        .copied()
+        .min_by_key(|w| w.data().as_ffi());
+    let last_seen = known_windows
+        .iter()
+        .copied()
+        .max_by_key(|w| w.data().as_ffi());
     match target {
         UiWindowTargetV1::Current => Some(current_window),
-        UiWindowTargetV1::FirstSeen => known_windows.first().copied(),
-        UiWindowTargetV1::FirstSeenOther => {
-            known_windows.iter().copied().find(|w| *w != current_window)
-        }
-        UiWindowTargetV1::LastSeen => known_windows.last().copied(),
+        UiWindowTargetV1::FirstSeen => first_seen,
+        UiWindowTargetV1::FirstSeenOther => known_windows
+            .iter()
+            .copied()
+            .filter(|w| *w != current_window)
+            .min_by_key(|w| w.data().as_ffi()),
+        UiWindowTargetV1::LastSeen => last_seen,
         UiWindowTargetV1::LastSeenOther => known_windows
             .iter()
-            .rev()
             .copied()
-            .find(|w| *w != current_window),
+            .filter(|w| *w != current_window)
+            .max_by_key(|w| w.data().as_ffi()),
         UiWindowTargetV1::WindowFfi { window } => {
             let want = AppWindowId::from(KeyData::from_ffi(window));
             known_windows.contains(&want).then_some(want)
@@ -17473,6 +18977,55 @@ fn write_cursor_override_window_client_logical(
     Ok(())
 }
 
+fn write_mouse_buttons_override_window_v1(
+    out_dir: &Path,
+    window: AppWindowId,
+    left: Option<bool>,
+    right: Option<bool>,
+    middle: Option<bool>,
+) -> Result<(), std::io::Error> {
+    let mut payload = format!("schema_version=1\nwindow={}\n", window.data().as_ffi());
+    if let Some(v) = left {
+        payload.push_str(&format!("left={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = right {
+        payload.push_str(&format!("right={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = middle {
+        payload.push_str(&format!("middle={}\n", if v { 1 } else { 0 }));
+    }
+    let text_path = out_dir.join("mouse_buttons.override.txt");
+    let trigger_path = out_dir.join("mouse_buttons.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)?;
+    Ok(())
+}
+
+fn write_mouse_buttons_override_all_windows_v1(
+    out_dir: &Path,
+    left: Option<bool>,
+    right: Option<bool>,
+    middle: Option<bool>,
+) -> Result<(), std::io::Error> {
+    let mut payload = "schema_version=1\n".to_string();
+    if let Some(v) = left {
+        payload.push_str(&format!("left={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = right {
+        payload.push_str(&format!("right={}\n", if v { 1 } else { 0 }));
+    }
+    if let Some(v) = middle {
+        payload.push_str(&format!("middle={}\n", if v { 1 } else { 0 }));
+    }
+    let text_path = out_dir.join("mouse_buttons.override.txt");
+    let trigger_path = out_dir.join("mouse_buttons.touch");
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(text_path, payload)?;
+    touch_file(&trigger_path)?;
+    Ok(())
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
@@ -17731,6 +19284,19 @@ fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
     s.push_str(suffix);
 }
 
+fn truncate_opt_string_bytes(s: &mut Option<String>, max_bytes: usize) {
+    let Some(v) = s.as_mut() else {
+        return;
+    };
+    truncate_string_bytes(v, max_bytes);
+}
+
+fn truncate_vec_string_bytes(items: &mut Vec<String>, max_bytes: usize) {
+    for s in items {
+        truncate_string_bytes(s, max_bytes);
+    }
+}
+
 fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {
     let path = out_dir.join("latest.txt");
     let Some(parent) = path.parent() else {
@@ -17922,6 +19488,39 @@ mod tests {
     };
     use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
+
+    fn eval_predicate(
+        snapshot: &fret_core::SemanticsSnapshot,
+        window_bounds: Rect,
+        window: AppWindowId,
+        element_runtime: Option<&ElementRuntime>,
+        text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
+        render_text: Option<fret_core::RendererTextPerfSnapshot>,
+        render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
+        known_windows: &[AppWindowId],
+        docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+        text_font_stack_key_stable_frames: u32,
+        font_catalog_populated: bool,
+        system_font_rescan_idle: bool,
+        pred: &UiPredicateV1,
+    ) -> bool {
+        super::eval_predicate(
+            snapshot,
+            window_bounds,
+            window,
+            element_runtime,
+            None,
+            text_input_snapshot,
+            render_text,
+            render_text_font_trace,
+            known_windows,
+            docking,
+            text_font_stack_key_stable_frames,
+            font_catalog_populated,
+            system_font_rescan_idle,
+            pred,
+        )
+    }
 
     #[test]
     fn parse_key_code_supports_function_keys() {
@@ -18412,6 +20011,8 @@ mod tests {
             None,
             &[],
             None,
+            None,
+            None,
             0,
             false,
             true,
@@ -18437,6 +20038,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -18492,6 +20095,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -18566,6 +20171,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -18610,6 +20217,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19046,6 +20655,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19118,6 +20729,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19145,6 +20758,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19195,6 +20810,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19268,6 +20885,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19295,6 +20914,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19368,6 +20989,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19395,6 +21018,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19468,6 +21093,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19495,6 +21122,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,
@@ -19662,6 +21291,8 @@ mod tests {
                 None,
                 &[],
                 None,
+                None,
+                None,
                 0,
                 false,
                 true,
@@ -19685,6 +21316,8 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
+                None,
                 None,
                 0,
                 false,

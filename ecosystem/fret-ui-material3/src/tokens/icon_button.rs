@@ -22,6 +22,15 @@ pub(crate) enum IconButtonInteraction {
     Pressed,
 }
 
+pub(crate) fn selected_container_shape_radius(theme: &Theme) -> f32 {
+    theme
+        .metric_by_key("md.comp.icon-button.selected.container.shape.round")
+        .or_else(|| theme.metric_by_key("md.comp.icon-button.container.shape.round"))
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
+        .unwrap_or(Px(9999.0))
+        .0
+}
+
 pub(crate) fn icon_color(
     theme: &Theme,
     variant: IconButtonVariant,
@@ -77,13 +86,26 @@ pub(crate) fn state_layer_color(
     color
 }
 
-pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: IconButtonVariant) -> f32 {
-    state_layer_opacity(theme, variant, IconButtonInteraction::Pressed)
+pub(crate) fn pressed_state_layer_opacity(
+    theme: &Theme,
+    variant: IconButtonVariant,
+    toggle: bool,
+    selected: bool,
+) -> f32 {
+    state_layer_opacity(
+        theme,
+        variant,
+        toggle,
+        selected,
+        IconButtonInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_opacity(
     theme: &Theme,
     variant: IconButtonVariant,
+    toggle: bool,
+    selected: bool,
     interaction: IconButtonInteraction,
 ) -> f32 {
     let fallback = match interaction {
@@ -93,7 +115,12 @@ pub(crate) fn state_layer_opacity(
     };
 
     theme
-        .number_by_key(state_layer_opacity_key(variant, interaction))
+        .number_by_key(state_layer_opacity_key(
+            variant,
+            toggle,
+            selected,
+            interaction,
+        ))
         .or_else(|| match interaction {
             IconButtonInteraction::Pressed => {
                 theme.number_by_key("md.sys.state.pressed.state-layer-opacity")
@@ -252,44 +279,60 @@ pub(crate) fn size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSize
 
 fn state_layer_opacity_key(
     variant: IconButtonVariant,
+    toggle: bool,
+    selected: bool,
     interaction: IconButtonInteraction,
 ) -> &'static str {
-    match (variant, interaction) {
-        (IconButtonVariant::Standard, IconButtonInteraction::Hovered) => {
-            "md.comp.icon-button.standard.hovered.state-layer.opacity"
+    if toggle && selected {
+        match interaction {
+            IconButtonInteraction::Hovered => {
+                "md.comp.icon-button.selected.hover.state-layer.opacity"
+            }
+            IconButtonInteraction::Focused => {
+                "md.comp.icon-button.selected.focus.state-layer.opacity"
+            }
+            IconButtonInteraction::Pressed => {
+                "md.comp.icon-button.selected.pressed.state-layer.opacity"
+            }
         }
-        (IconButtonVariant::Standard, IconButtonInteraction::Focused) => {
-            "md.comp.icon-button.standard.focused.state-layer.opacity"
-        }
-        (IconButtonVariant::Standard, IconButtonInteraction::Pressed) => {
-            "md.comp.icon-button.standard.pressed.state-layer.opacity"
-        }
-        (IconButtonVariant::Filled, IconButtonInteraction::Hovered) => {
-            "md.comp.icon-button.filled.hovered.state-layer.opacity"
-        }
-        (IconButtonVariant::Filled, IconButtonInteraction::Focused) => {
-            "md.comp.icon-button.filled.focused.state-layer.opacity"
-        }
-        (IconButtonVariant::Filled, IconButtonInteraction::Pressed) => {
-            "md.comp.icon-button.filled.pressed.state-layer.opacity"
-        }
-        (IconButtonVariant::Tonal, IconButtonInteraction::Hovered) => {
-            "md.comp.icon-button.tonal.hovered.state-layer.opacity"
-        }
-        (IconButtonVariant::Tonal, IconButtonInteraction::Focused) => {
-            "md.comp.icon-button.tonal.focused.state-layer.opacity"
-        }
-        (IconButtonVariant::Tonal, IconButtonInteraction::Pressed) => {
-            "md.comp.icon-button.tonal.pressed.state-layer.opacity"
-        }
-        (IconButtonVariant::Outlined, IconButtonInteraction::Hovered) => {
-            "md.comp.icon-button.outlined.hovered.state-layer.opacity"
-        }
-        (IconButtonVariant::Outlined, IconButtonInteraction::Focused) => {
-            "md.comp.icon-button.outlined.focused.state-layer.opacity"
-        }
-        (IconButtonVariant::Outlined, IconButtonInteraction::Pressed) => {
-            "md.comp.icon-button.outlined.pressed.state-layer.opacity"
+    } else {
+        match (variant, interaction) {
+            (IconButtonVariant::Standard, IconButtonInteraction::Hovered) => {
+                "md.comp.icon-button.standard.hovered.state-layer.opacity"
+            }
+            (IconButtonVariant::Standard, IconButtonInteraction::Focused) => {
+                "md.comp.icon-button.standard.focused.state-layer.opacity"
+            }
+            (IconButtonVariant::Standard, IconButtonInteraction::Pressed) => {
+                "md.comp.icon-button.standard.pressed.state-layer.opacity"
+            }
+            (IconButtonVariant::Filled, IconButtonInteraction::Hovered) => {
+                "md.comp.icon-button.filled.hovered.state-layer.opacity"
+            }
+            (IconButtonVariant::Filled, IconButtonInteraction::Focused) => {
+                "md.comp.icon-button.filled.focused.state-layer.opacity"
+            }
+            (IconButtonVariant::Filled, IconButtonInteraction::Pressed) => {
+                "md.comp.icon-button.filled.pressed.state-layer.opacity"
+            }
+            (IconButtonVariant::Tonal, IconButtonInteraction::Hovered) => {
+                "md.comp.icon-button.tonal.hovered.state-layer.opacity"
+            }
+            (IconButtonVariant::Tonal, IconButtonInteraction::Focused) => {
+                "md.comp.icon-button.tonal.focused.state-layer.opacity"
+            }
+            (IconButtonVariant::Tonal, IconButtonInteraction::Pressed) => {
+                "md.comp.icon-button.tonal.pressed.state-layer.opacity"
+            }
+            (IconButtonVariant::Outlined, IconButtonInteraction::Hovered) => {
+                "md.comp.icon-button.outlined.hovered.state-layer.opacity"
+            }
+            (IconButtonVariant::Outlined, IconButtonInteraction::Focused) => {
+                "md.comp.icon-button.outlined.focused.state-layer.opacity"
+            }
+            (IconButtonVariant::Outlined, IconButtonInteraction::Pressed) => {
+                "md.comp.icon-button.outlined.pressed.state-layer.opacity"
+            }
         }
     }
 }

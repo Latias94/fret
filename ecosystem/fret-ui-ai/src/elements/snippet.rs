@@ -11,6 +11,7 @@ use fret_ui::element::{
     SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -152,6 +153,7 @@ impl SnippetText {
                         slant: Default::default(),
                         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                         letter_spacing_em: None,
+                        ..Default::default()
                     }),
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
@@ -212,6 +214,7 @@ impl SnippetInput {
             slant: Default::default(),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
             letter_spacing_em: None,
+            ..Default::default()
         });
         props.color = Some(theme.color_token("foreground"));
         props.wrap = TextWrap::None;
@@ -324,7 +327,7 @@ impl SnippetCopyButton {
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
 
-        cx.pressable_with_id_props(move |cx, st, id| {
+        centered_fixed_chrome_pressable_with_id_props(cx, move |cx, st, id| {
             let copied = feedback.lock().copied;
 
             cx.timer_on_timer_for(
@@ -428,56 +431,56 @@ impl SnippetCopyButton {
             };
             let icon = decl_icon::icon_with(cx, icon_id, Some(Px(14.0)), Some(ColorRef::Color(fg)));
 
-            let mut content_props = ContainerProps::default();
-            content_props.layout.size.width = Length::Px(size);
-            content_props.layout.size.height = Length::Px(size);
-            content_props.background = Some(bg);
-            content_props.corner_radii = fret_core::Corners::all(radius);
-            content_props.border = Edges::all(Px(0.0));
-            content_props.padding = Edges::all(Px(0.0));
+            let mut chrome_props = ContainerProps::default();
+            chrome_props.layout.size.width = Length::Px(size);
+            chrome_props.layout.size.height = Length::Px(size);
+            chrome_props.background = Some(bg);
+            chrome_props.corner_radii = fret_core::Corners::all(radius);
+            chrome_props.border = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0));
 
-            let content = cx.container(content_props, move |cx| {
-                vec![stack::hstack(
+            (props, chrome_props, move |cx| {
+                let row = stack::hstack(
                     cx,
                     stack::HStackProps::default()
                         .items_center()
                         .justify_center()
                         .layout(LayoutRefinement::default().w_full().h_full()),
                     move |_cx| vec![icon],
-                )]
-            });
+                );
 
-            let marker = copied_marker_test_id.clone().and_then(|marker_id| {
-                copied.then(|| {
-                    cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(0.0)),
-                                height: Length::Px(Px(0.0)),
+                let marker = copied_marker_test_id.clone().and_then(|marker_id| {
+                    copied.then(|| {
+                        cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Px(Px(0.0)),
+                                    height: Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        text: Arc::<str>::from(""),
-                        style: None,
-                        color: None,
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
+                            text: Arc::<str>::from(""),
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                        })
+                        .attach_semantics(
+                            fret_ui::element::SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .test_id(marker_id),
+                        )
                     })
-                    .attach_semantics(
-                        fret_ui::element::SemanticsDecoration::default()
-                            .role(SemanticsRole::Group)
-                            .test_id(marker_id),
-                    )
-                })
-            });
+                });
 
-            let mut children = vec![content];
-            if let Some(marker) = marker {
-                children.push(marker);
-            }
-            (props, children)
+                let mut children = vec![row];
+                if let Some(marker) = marker {
+                    children.push(marker);
+                }
+                children
+            })
         })
     }
 }

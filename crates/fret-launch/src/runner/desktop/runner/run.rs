@@ -91,6 +91,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             left_mouse_down: false,
             dock_tearoff_follow: None,
             dock_floating_windows: HashSet::new(),
+            dock_drag_pointer_capture: None,
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_environment_poll_at: now,
@@ -112,8 +113,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_window_insets_overrides: HashMap::new(),
             diag_cursor_screen_pos_override:
                 super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
+            diag_last_cursor_override_tick: None,
             diag_mouse_buttons_override:
                 super::diag_mouse_buttons_override::DiagMouseButtonsOverride::from_env(),
+            diag_last_mouse_buttons_override_tick: None,
+            diag_mouse_buttons_override_active: false,
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),

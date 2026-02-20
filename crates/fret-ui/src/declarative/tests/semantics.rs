@@ -40,6 +40,75 @@ fn declarative_text_sets_semantics_label() {
 }
 
 #[test]
+fn selectable_text_emits_inline_link_spans_in_semantics_snapshot() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let text: Arc<str> = "hello link world".into();
+    let span = crate::element::SelectableTextInteractiveSpan {
+        range: 6..10,
+        tag: Arc::<str>::from("https://example.com"),
+    };
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-selectable-text-inline-spans",
+        |cx| {
+            vec![
+                cx.selectable_text_props(crate::element::SelectableTextProps {
+                    layout: Default::default(),
+                    rich: fret_core::AttributedText::new(
+                        Arc::clone(&text),
+                        Arc::from([fret_core::TextSpan {
+                            len: text.len(),
+                            shaping: Default::default(),
+                            paint: Default::default(),
+                        }]),
+                    ),
+                    style: None,
+                    color: None,
+                    wrap: fret_core::TextWrap::Word,
+                    overflow: fret_core::TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    interactive_spans: Arc::from([span]),
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == fret_core::SemanticsRole::Text && n.value.as_deref() == Some(&text))
+        .expect("expected a Text semantics node carrying the selectable value");
+
+    assert_eq!(node.inline_spans.len(), 1);
+    assert_eq!(node.inline_spans[0].role, fret_core::SemanticsRole::Link);
+    assert_eq!(node.inline_spans[0].range_utf8, (6, 10));
+    assert_eq!(
+        node.inline_spans[0].tag.as_deref(),
+        Some("https://example.com")
+    );
+}
+
+#[test]
 fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
