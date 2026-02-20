@@ -6507,6 +6507,212 @@ mod tests {
     }
 
     #[test]
+    fn caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
+        let x_space_end = text
+            .caret_x(single_blob, 6)
+            .expect("caret_x at end of space");
+        let x_w_start = text
+            .caret_x(single_blob, 6 + "w".len())
+            .expect("caret_x at start of 'w'");
+
+        // Force a soft wrap at the boundary between the space and the next word.
+        let max_width = Px((x_space_end.0 + x_w_start.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
+
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
+        let line0 = &blob_ref.shape.lines[0];
+        let line1 = &blob_ref.shape.lines[1];
+
+        // At a wrap boundary, the same byte index can appear on both lines.
+        let wrap_index = line1.start;
+        assert_eq!(
+            line0.end, wrap_index,
+            "expected wrapped lines to share the boundary index"
+        );
+
+        let upstream = text
+            .caret_rect(blob, wrap_index, CaretAffinity::Upstream)
+            .expect("caret rect upstream");
+        let downstream = text
+            .caret_rect(blob, wrap_index, CaretAffinity::Downstream)
+            .expect("caret rect downstream");
+
+        assert!(
+            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected upstream caret to be on the previous line, got upstream={upstream:?} line0={line0:?}"
+        );
+        assert!(
+            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected downstream caret to be on the next line, got downstream={downstream:?} line1={line1:?}"
+        );
+
+        text.release(blob);
+        text.release(single_blob);
+    }
+
+    #[test]
+    fn hit_test_point_reports_upstream_affinity_at_visual_line_end() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected wrapped lines");
+        let line0 = &blob_ref.shape.lines[0];
+        let line1 = &blob_ref.shape.lines[1];
+        assert_eq!(line0.end, line1.start, "expected a shared break index");
+
+        // Point on the first line near its visual end should map to the break index with upstream affinity.
+        let p0 = Point::new(Px(10_000.0), Px(line0.y_top.0 + (line0.height.0 * 0.5)));
+        let ht0 = text.hit_test_point(blob, p0).expect("hit test point");
+        assert_eq!(ht0.index, line0.end);
+        assert_eq!(ht0.affinity, CaretAffinity::Upstream);
+
+        // Point on the second line near its start should map to the same index with downstream affinity.
+        let p1 = Point::new(Px(0.0), Px(line1.y_top.0 + (line1.height.0 * 0.5)));
+        let ht1 = text.hit_test_point(blob, p1).expect("hit test point");
+        assert_eq!(ht1.index, line1.start);
+        assert_eq!(ht1.affinity, CaretAffinity::Downstream);
+
+        text.release(blob);
+    }
+
+    #[test]
+    fn explicit_newline_boundary_is_not_ambiguous_for_caret_affinity() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello\nworld";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let blob_ref = text.blob(blob).expect("blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected multiple lines");
+        let line0 = &blob_ref.shape.lines[0];
+        let line1 = &blob_ref.shape.lines[1];
+
+        let newline_index = content
+            .find('\n')
+            .expect("expected an explicit newline in the test content");
+        let after_newline = newline_index + "\n".len();
+
+        // Explicit newlines are represented as their own byte index in the text buffer, so the
+        // caret indices for "end of previous line" and "start of next line" are distinct.
+        assert_eq!(
+            line0.end, newline_index,
+            "expected the first line to end at the newline index"
+        );
+        assert_eq!(
+            line1.start, after_newline,
+            "expected the second line to start after the newline index"
+        );
+
+        let end_line0_upstream = text
+            .caret_rect(blob, newline_index, CaretAffinity::Upstream)
+            .expect("caret rect");
+        let end_line0_downstream = text
+            .caret_rect(blob, newline_index, CaretAffinity::Downstream)
+            .expect("caret rect");
+        assert!(
+            (end_line0_upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected newline_index caret to be on line0 regardless of affinity"
+        );
+        assert!(
+            (end_line0_downstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected newline_index caret to be on line0 regardless of affinity"
+        );
+
+        let start_line1_upstream = text
+            .caret_rect(blob, after_newline, CaretAffinity::Upstream)
+            .expect("caret rect");
+        let start_line1_downstream = text
+            .caret_rect(blob, after_newline, CaretAffinity::Downstream)
+            .expect("caret rect");
+        assert!(
+            (start_line1_upstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected after_newline caret to be on line1 regardless of affinity"
+        );
+        assert!(
+            (start_line1_downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected after_newline caret to be on line1 regardless of affinity"
+        );
+
+        text.release(blob);
+    }
+
+    #[test]
     fn trailing_space_at_soft_wrap_is_selectable() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
