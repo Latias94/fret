@@ -6355,6 +6355,60 @@ mod tests {
     }
 
     #[test]
+    fn empty_string_produces_nonzero_line_metrics_and_caret_rect() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, metrics) = text.prepare("", &style, constraints);
+        assert!(
+            metrics.size.height.0 > 0.1,
+            "expected empty string to have non-zero metrics height, got {metrics:?}"
+        );
+        assert!(
+            metrics.baseline.0 >= 0.0 && metrics.baseline.0 <= metrics.size.height.0 + 0.01,
+            "expected empty string baseline to be within the metrics box, got {metrics:?}"
+        );
+
+        let line = text
+            .first_line_metrics(blob)
+            .expect("expected first-line metrics for empty string");
+        assert!(
+            line.line_height.0 > 0.1,
+            "expected a non-zero line height for empty string, got {line:?}"
+        );
+
+        let caret = text
+            .caret_rect(blob, 0, CaretAffinity::Downstream)
+            .expect("expected caret rect for empty string");
+        assert!(
+            caret.size.height.0 > 0.1,
+            "expected a non-zero caret rect height for empty string, got {caret:?}"
+        );
+
+        text.release(blob);
+    }
+
+    #[test]
     fn trailing_space_at_soft_wrap_is_selectable() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
