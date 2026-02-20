@@ -76,7 +76,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 .resolved_text_style(cx.theme().snapshot())
                 .vertical_placement;
             let (vertical_offset, _) =
-                super::super::text_coords::compute_text_vertical_offset_and_baseline(
+                crate::text::coords::compute_text_vertical_offset_and_baseline(
                     cx.services.text(),
                     blob,
                     bounds_height,

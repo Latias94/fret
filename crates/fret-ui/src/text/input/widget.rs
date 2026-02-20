@@ -192,13 +192,24 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .text()
                 .prepare_str(composed.as_str(), &self.style, constraints);
 
+        let metrics = if metrics.size.height.0 <= 0.01 {
+            self.approx_text_metrics()
+        } else {
+            metrics
+        };
         let text_height = metrics.size.height;
         let inner_height = Px(
             (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
                 .max(0.0)
                 .max(text_height.0),
         );
-        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+        let (vertical_offset, _) = crate::text::coords::compute_text_vertical_offset_and_baseline(
+            cx.services.text(),
+            blob,
+            inner_height,
+            metrics,
+            self.style.vertical_placement,
+        );
 
         let origin = fret_core::Point::new(
             self.last_bounds.origin.x + padding_left - self.offset_x,
@@ -281,13 +292,24 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .text()
                 .prepare_str(composed.as_str(), &self.style, constraints);
 
+        let metrics = if metrics.size.height.0 <= 0.01 {
+            self.approx_text_metrics()
+        } else {
+            metrics
+        };
         let text_height = metrics.size.height;
         let inner_height = Px(
             (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
                 .max(0.0)
                 .max(text_height.0),
         );
-        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+        let (vertical_offset, _) = crate::text::coords::compute_text_vertical_offset_and_baseline(
+            cx.services.text(),
+            blob,
+            inner_height,
+            metrics,
+            self.style.vertical_placement,
+        );
 
         let origin = fret_core::Point::new(
             self.last_bounds.origin.x + padding_left - self.offset_x,
@@ -1394,17 +1416,34 @@ impl<H: UiHost> Widget<H> for TextInput {
         let padding_top = self.chrome_style.padding.top;
         let padding_bottom = self.chrome_style.padding.bottom;
         let inner_width = Px((cx.bounds.size.width.0 - padding_left.0 - padding_right.0).max(0.0));
-        let text_height = if show_placeholder {
-            self.placeholder_metrics
-                .map(|m| m.size.height)
-                .unwrap_or(Px(16.0))
+        let (placement_blob, placement_metrics) = if show_placeholder {
+            (self.placeholder_blob, self.placeholder_metrics)
         } else {
-            self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0))
+            (self.text_blob, self.text_metrics)
         };
+        let mut placement_metrics = placement_metrics.unwrap_or_else(|| self.approx_text_metrics());
+        if placement_metrics.size.height.0 <= 0.01 {
+            placement_metrics = self.approx_text_metrics();
+        }
+        let text_height = placement_metrics.size.height;
         let inner_height = Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0)
             .max(0.0)
             .max(text_height.0));
-        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        let (vertical_offset, baseline) = if let Some(blob) = placement_blob {
+            crate::text::coords::compute_text_vertical_offset_and_baseline(
+                cx.services.text(),
+                blob,
+                inner_height,
+                placement_metrics,
+                self.style.vertical_placement,
+            )
+        } else {
+            (
+                crate::text::coords::compute_text_vertical_offset(inner_height, text_height),
+                placement_metrics.baseline,
+            )
+        };
 
         if inner_width.0 <= 0.0 {
             self.offset_x = Px(0.0);
@@ -1521,12 +1560,6 @@ impl<H: UiHost> Widget<H> for TextInput {
                 corner_radii: self.chrome_style.corner_radii,
             });
         }
-        let baseline = if show_placeholder {
-            self.placeholder_metrics.map(|m| m.baseline)
-        } else {
-            self.text_metrics.map(|m| m.baseline)
-        }
-        .unwrap_or(Px(10.0));
         let base_origin = fret_core::geometry::Point::new(
             cx.bounds.origin.x + padding_left - self.offset_x,
             cx.bounds.origin.y + padding_top + vertical_offset + baseline,

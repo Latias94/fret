@@ -1,10 +1,10 @@
-use super::super::prelude::*;
+use fret_core::Px;
 
-pub(super) fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
+pub(crate) fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
     Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
 }
 
-pub(super) fn compute_text_vertical_offset_and_baseline(
+pub(crate) fn compute_text_vertical_offset_and_baseline(
     services: &mut dyn fret_core::TextService,
     blob: fret_core::TextBlobId,
     bounds_height: Px,

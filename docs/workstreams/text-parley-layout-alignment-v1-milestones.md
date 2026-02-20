@@ -52,9 +52,14 @@ Status: Done.
     - `crates/fret-ui/src/tree/tests/platform_text_input.rs` (unit test gate: replacement-range commit + marked mismatch)
 - M4: Done.
   - Evidence:
-    - `crates/fret-ui/src/declarative/host_widget/text_coords.rs` (shared vertical placement mapping helper)
+    - `crates/fret-ui/src/text/coords.rs` (shared vertical placement mapping helper)
     - `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (pointer hit-testing uses text-local coordinates)
     - `crates/fret-ui/src/declarative/tests/selection_indices.rs` (unit test gate: `selectable_text_pointer_hit_test_uses_text_local_coordinates`)
+- M5: Done.
+  - Evidence:
+    - `crates/fret-ui/src/text/coords.rs` (shared vertical placement + baseline mapping helper)
+    - `crates/fret-ui/src/text/input/widget.rs` (paint + platform geometry queries reuse shared mapping)
+    - `crates/fret-ui/src/text/input/input.rs` (`caret_rect` uses shared mapping + first-line metrics when available)
 
 ## M2 — Mixed-direction selection rectangles are segment-accurate
 
@@ -98,5 +103,22 @@ Exit criteria:
 - Shared helper for computing vertical placement offsets is used by both paint and pointer hit-testing.
 - Add a unit test gate that clicks inside vertically centered text and asserts `hit_test_point`
   receives text-local coordinates.
+
+Status: Done.
+
+## M5 — TextInput uses shared vertical placement mapping end-to-end
+
+Goal:
+
+- Ensure `TextInput` uses the same vertical placement mapping as declarative text elements for:
+  - paint origin (baseline + vertical offset)
+  - platform text-input geometry queries (`bounds_for_range`, `character_index_for_point`)
+  - caret placement (best-effort line-metrics aware)
+
+Exit criteria:
+
+- `TextInput` paint uses `compute_text_vertical_offset_and_baseline`.
+- Platform geometry queries use the same vertical placement offset as paint.
+- `TextInput::caret_rect` uses the same mapping and consults `first_line_metrics` when available.
 
 Status: Done.

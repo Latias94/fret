@@ -2,8 +2,8 @@ use super::super::frame::*;
 use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
-use super::text_coords::compute_text_vertical_offset_and_baseline;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
+use crate::text::coords::compute_text_vertical_offset_and_baseline;
 use fret_core::time::Instant;
 
 fn push_attributed_span_background_quads(
@@ -1964,7 +1964,7 @@ mod tests {
         };
 
         let _ = style;
-        let offset = super::super::text_coords::compute_text_vertical_offset(Px(16.0), Px(12.0));
+        let offset = crate::text::coords::compute_text_vertical_offset(Px(16.0), Px(12.0));
         assert_eq!(offset, Px(2.0));
     }
 
@@ -1981,7 +1981,7 @@ mod tests {
         };
 
         let _ = style;
-        let offset = super::super::text_coords::compute_text_vertical_offset(Px(12.0), Px(14.0));
+        let offset = crate::text::coords::compute_text_vertical_offset(Px(12.0), Px(14.0));
         assert_eq!(offset, Px(0.0));
     }
 

@@ -1,5 +1,6 @@
 use fret_core::{
-    FontId, Px, Rect, SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
+    FontId, Px, Rect, SemanticsRole, Size, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap,
 };
 
 use super::TextInput;
@@ -210,6 +211,19 @@ impl TextInput {
             services.text().release(blob);
         }
     }
+
+    pub(super) fn approx_text_metrics(&self) -> TextMetrics {
+        let line_height = self
+            .style
+            .line_height
+            .unwrap_or(Px(self.style.size.0 * 1.2))
+            .max(Px(1.0));
+        let baseline = Px((line_height.0 * 0.8).max(0.0));
+        TextMetrics {
+            size: Size::new(Px(0.0), line_height),
+            baseline,
+        }
+    }
 }
 
 impl TextInput {
@@ -347,16 +361,49 @@ impl TextInput {
             x = x + pre_metrics.size.width;
         }
 
-        let text_h = self.text_metrics.map(|m| m.size.height).unwrap_or(Px(16.0));
+        let mut metrics = self
+            .text_metrics
+            .unwrap_or_else(|| self.approx_text_metrics());
+        if metrics.size.height.0 <= 0.01 {
+            metrics = self.approx_text_metrics();
+        }
+
         let inner_h = Px((bounds.size.height.0 - padding_top.0 - padding_bottom.0)
             .max(0.0)
-            .max(text_h.0));
-        let y_offset = Px(((inner_h.0 - text_h.0).max(0.0)) / 2.0);
+            .max(metrics.size.height.0));
+
+        let (vertical_offset, baseline) = if let Some(blob) = self.text_blob {
+            crate::text::coords::compute_text_vertical_offset_and_baseline(
+                cx.services.text(),
+                blob,
+                inner_h,
+                metrics,
+                self.style.vertical_placement,
+            )
+        } else {
+            (
+                crate::text::coords::compute_text_vertical_offset(inner_h, metrics.size.height),
+                metrics.baseline,
+            )
+        };
+
+        let (caret_top, caret_height) = if let Some(blob) = self.text_blob
+            && let Some(line) = cx.services.first_line_metrics(blob)
+        {
+            let top = Px((baseline.0 - line.ascent.0).max(0.0));
+            let height = line.line_height.max(Px(1.0));
+            (top, height)
+        } else {
+            // Avoid shrinking the caret below a typical single-line minimum even when the backend
+            // reports small or zero-height metrics (e.g. empty strings).
+            let height = metrics.size.height.max(Px(16.0));
+            (Px(0.0), height)
+        };
 
         let hairline = Px((1.0 / scale_factor.max(1.0)).max(1.0 / 8.0));
         Rect::new(
-            fret_core::geometry::Point::new(x, padding_top + y_offset),
-            Size::new(Px(hairline.0.max(1.0)), Px(text_h.0.max(16.0))),
+            fret_core::geometry::Point::new(x, padding_top + vertical_offset + caret_top),
+            Size::new(Px(hairline.0.max(1.0)), caret_height),
         )
     }
 

@@ -5,6 +5,7 @@
 
 #[allow(dead_code)]
 pub(crate) mod area;
+pub(crate) mod coords;
 pub(crate) mod edit;
 #[allow(dead_code)]
 pub(crate) mod input;
