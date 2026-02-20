@@ -6,6 +6,7 @@ pub mod font_stack;
 pub mod font_trace;
 pub mod geometry;
 pub mod parley_shaper;
+pub mod spans;
 pub mod wrapper;
 
 #[inline]
