@@ -1,4 +1,5 @@
 use fret_core::Px;
+use fret_core::{Point, Rect};
 
 pub(crate) fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px) -> Px {
     Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
@@ -36,4 +37,78 @@ pub(crate) fn compute_text_vertical_offset_and_baseline(
             }
         }
     }
+}
+
+pub(crate) fn compute_first_line_box_top_and_height(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+    baseline: Px,
+    fallback_height: Px,
+) -> (Px, Px) {
+    if let Some(line) = services.first_line_metrics(blob) {
+        let top = Px((baseline.0 - line.ascent.0).max(0.0));
+        let height = line.line_height.max(Px(1.0));
+        (top, height)
+    } else {
+        (Px(0.0), fallback_height.max(Px(1.0)))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct TextBoxMapping {
+    /// Window-space origin of the prepared text box (x=0, y=0 in text-local coordinates).
+    pub box_origin: Point,
+}
+
+impl TextBoxMapping {
+    pub fn new(box_origin: Point) -> Self {
+        Self { box_origin }
+    }
+
+    pub fn baseline_origin(&self, baseline: Px) -> Point {
+        Point::new(self.box_origin.x, self.box_origin.y + baseline)
+    }
+
+    pub fn window_to_text_local(&self, point: Point) -> Point {
+        Point::new(
+            Px(point.x.0 - self.box_origin.x.0),
+            Px(point.y.0 - self.box_origin.y.0),
+        )
+    }
+
+    pub fn text_local_to_window_point(&self, point: Point) -> Point {
+        Point::new(
+            Px(self.box_origin.x.0 + point.x.0),
+            Px(self.box_origin.y.0 + point.y.0),
+        )
+    }
+
+    pub fn text_local_to_window_rect(&self, rect: Rect) -> Rect {
+        Rect::new(self.text_local_to_window_point(rect.origin), rect.size)
+    }
+}
+
+pub(crate) fn compute_text_box_mapping_for_vertical_placement(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+    bounds: Rect,
+    metrics: fret_core::TextMetrics,
+    vertical_placement: fret_core::TextVerticalPlacement,
+) -> (TextBoxMapping, Px, Px) {
+    let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+        services,
+        blob,
+        bounds.size.height,
+        metrics,
+        vertical_placement,
+    );
+
+    (
+        TextBoxMapping::new(Point::new(
+            bounds.origin.x,
+            bounds.origin.y + vertical_offset,
+        )),
+        vertical_offset,
+        baseline,
+    )
 }

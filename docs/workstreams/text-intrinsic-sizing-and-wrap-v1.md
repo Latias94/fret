@@ -102,8 +102,8 @@ See:
 
 ## Evidence anchors
 
-- Wrapper algorithms: `crates/fret-render-wgpu/src/text/wrapper.rs`
-- Shaping/baseline: `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+- Wrapper algorithms: `crates/fret-render-text/src/wrapper.rs`
+- Shaping/baseline: `crates/fret-render-text/src/parley_shaper.rs`
 - Intrinsic sizing integration: `crates/fret-ui/src/declarative/host_widget/measure.rs`
 - Authoring helpers: `ecosystem/fret-ui-kit/src/declarative/text.rs`,
   `ecosystem/fret-ui-kit/src/ui_builder.rs`

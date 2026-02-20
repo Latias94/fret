@@ -28,7 +28,7 @@ Evidence anchors (initial baseline):
 
 - Wrap conformance fixtures:
   - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
-  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+  - `crates/fret-render-text/src/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
 
 ## M1 — Wrapper heuristic upgrade (Unicode break opportunities)
 
@@ -76,9 +76,9 @@ Evidence checklist:
 Evidence anchors (expected):
 
 - Paragraph line breaking entry point:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (new paragraph shaping helper)
+  - `crates/fret-render-text/src/parley_shaper.rs` (new paragraph shaping helper)
 - Wrapper integration:
-  - `crates/fret-render-wgpu/src/text/wrapper.rs`
+  - `crates/fret-render-text/src/wrapper.rs`
 - Invariants and geometry query tests:
   - `crates/fret-render-wgpu/src/text/mod.rs` (caret/hit-test/selection tests)
   - `crates/fret-render-wgpu/src/text/mod.rs:6294` (trailing-whitespace selectable gate; do not regress)

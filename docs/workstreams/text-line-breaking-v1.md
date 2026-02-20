@@ -21,7 +21,7 @@ produced editor-visible issues (CJK punctuation, identifiers, URLs) and was hard
 In v1, `TextWrap::Word` migrates to **Parley paragraph line breaking** and locks behavior behind
 fixtures + invariants.
 
-Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs`, `crates/fret-render-wgpu/src/text/mod.rs`,
+Evidence: `crates/fret-render-text/src/wrapper.rs`, `crates/fret-render-wgpu/src/text/mod.rs`,
 `docs/workstreams/text-line-breaking-v1-*.md`.
 
 This approach is fast to ship and offers direct control over caret/selection semantics, but it
@@ -53,7 +53,7 @@ produces editor-visible issues:
 
 Key files:
 
-- Wrapper: `crates/fret-render-wgpu/src/text/wrapper.rs`
+- Wrapper: `crates/fret-render-text/src/wrapper.rs`
   - `TextWrap::Word` uses Parley paragraph line breaking (wrap width drives line breaks).
   - `TextWrap::WordBreak` uses Parley paragraph line breaking with an explicit "break long tokens if needed"
     emergency policy (intended for prose surfaces that may contain URLs/paths/identifiers).
@@ -67,7 +67,7 @@ Key files:
     - `crates/fret-render-wgpu/src/text/mod.rs` (`rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends`)
     - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty`)
 - Conformance harness:
-  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+  - `crates/fret-render-text/src/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
   - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
 
 ## Design Options

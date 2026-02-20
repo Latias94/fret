@@ -202,7 +202,7 @@ This ADR defines the contract and lock-in targets; implementation will evolve. C
 
 - Text shaping/rasterization uses Parley (fontique + swash) via the renderer text system:
   - `crates/fret-render-wgpu/src/text/mod.rs`
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+  - `crates/fret-render-text/src/parley_shaper.rs`
 - A framework-level fallback policy and platform-generic family defaults are configured at text-system startup, and a
   `font_stack_key` participates in `TextBlobId` caching so fallback/generic-family changes cannot reuse stale blobs.
 - `TextStyle.font` selects among the three generic families (`SansSerif`/`Serif`/`Monospace`) via the semantic `FontId`

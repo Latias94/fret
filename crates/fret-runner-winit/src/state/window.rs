@@ -144,13 +144,23 @@ impl WinitWindowState {
                     size: fret_core::Size::new(fret_core::Px(1.0), fret_core::Px(1.0)),
                 });
 
-                let request_data = winit::window::ImeRequestData::default().with_cursor_area(
-                    winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                    winit::dpi::LogicalSize::new(
+                #[cfg(windows)]
+                let (cursor_area_x, cursor_area_y, cursor_area_w, cursor_area_h) =
+                    crate::windows_ime::winit_cursor_area_from_rect(rect);
+
+                #[cfg(not(windows))]
+                let (cursor_area_x, cursor_area_y, cursor_area_w, cursor_area_h) = {
+                    (
+                        rect.origin.x.0,
+                        rect.origin.y.0,
                         rect.size.width.0.max(1.0),
                         rect.size.height.0.max(1.0),
                     )
-                    .into(),
+                };
+
+                let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+                    winit::dpi::LogicalPosition::new(cursor_area_x, cursor_area_y).into(),
+                    winit::dpi::LogicalSize::new(cursor_area_w, cursor_area_h).into(),
                 );
 
                 let caps = winit::window::ImeCapabilities::new().with_cursor_area();

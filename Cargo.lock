@@ -2271,7 +2271,7 @@ dependencies = [
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
- "fret-render-wgpu",
+ "fret-render",
  "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
@@ -2444,6 +2444,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-render-text"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-fonts",
+ "parley",
+ "read-fonts",
+ "serde",
+ "serde_json",
+ "unicode-script",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "fret-render-wgpu"
 version = "0.1.0"
 dependencies = [
@@ -2454,6 +2468,7 @@ dependencies = [
  "fret-fonts",
  "fret-perf",
  "fret-render-core",
+ "fret-render-text",
  "glam 0.30.10",
  "lyon",
  "naga",

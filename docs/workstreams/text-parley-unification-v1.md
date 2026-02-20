@@ -65,8 +65,8 @@ Non-goals (v1):
 
 Renderer (Parley shaping + geometry):
 
-- `crates/fret-render-wgpu/src/text/parley_shaper.rs`
-- `crates/fret-render-wgpu/src/text/wrapper.rs`
+- `crates/fret-render-text/src/parley_shaper.rs`
+- `crates/fret-render-text/src/wrapper.rs`
 - `crates/fret-render-wgpu/src/text/mod.rs` (unit tests)
 
 UI integration (vertical placement + selection/caret mapping):

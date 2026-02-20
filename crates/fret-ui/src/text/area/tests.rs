@@ -107,89 +107,9 @@ impl fret_core::MaterialService for FakeTextService {
 }
 
 #[derive(Default)]
-struct ZeroHeightCaretTextService {}
+struct SelectionRectTextService {}
 
-impl TextService for ZeroHeightCaretTextService {
-    fn prepare(
-        &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: TextConstraints,
-    ) -> (fret_core::TextBlobId, TextMetrics) {
-        (
-            fret_core::TextBlobId::default(),
-            TextMetrics {
-                size: Size::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
-            },
-        )
-    }
-
-    fn first_line_metrics(&mut self, _blob: fret_core::TextBlobId) -> Option<TextLineMetrics> {
-        Some(TextLineMetrics {
-            ascent: Px(8.0),
-            descent: Px(2.0),
-            line_height: Px(10.0),
-        })
-    }
-
-    fn caret_rect(
-        &mut self,
-        _blob: fret_core::TextBlobId,
-        index: usize,
-        _affinity: CaretAffinity,
-    ) -> Rect {
-        Rect::new(
-            Point::new(Px(index as f32), Px(0.0)),
-            Size::new(Px(1.0), Px(0.0)),
-        )
-    }
-
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
-}
-
-impl fret_core::PathService for ZeroHeightCaretTextService {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for ZeroHeightCaretTextService {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        false
-    }
-}
-
-impl fret_core::MaterialService for ZeroHeightCaretTextService {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        false
-    }
-}
-
-#[derive(Default)]
-struct ZeroHeightSelectionRectTextService {}
-
-impl TextService for ZeroHeightSelectionRectTextService {
+impl TextService for SelectionRectTextService {
     fn prepare(
         &mut self,
         _input: &fret_core::TextInput,
@@ -227,7 +147,7 @@ impl TextService for ZeroHeightSelectionRectTextService {
 
         out.push(Rect::new(
             Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px((end - start) as f32), Px(0.0)),
+            Size::new(Px((end - start) as f32), Px(10.0)),
         ));
     }
 
@@ -246,7 +166,7 @@ impl TextService for ZeroHeightSelectionRectTextService {
     fn release(&mut self, _blob: fret_core::TextBlobId) {}
 }
 
-impl fret_core::PathService for ZeroHeightSelectionRectTextService {
+impl fret_core::PathService for SelectionRectTextService {
     fn prepare(
         &mut self,
         _commands: &[fret_core::PathCommand],
@@ -262,7 +182,7 @@ impl fret_core::PathService for ZeroHeightSelectionRectTextService {
     fn release(&mut self, _path: fret_core::PathId) {}
 }
 
-impl fret_core::SvgService for ZeroHeightSelectionRectTextService {
+impl fret_core::SvgService for SelectionRectTextService {
     fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
         fret_core::SvgId::default()
     }
@@ -272,7 +192,7 @@ impl fret_core::SvgService for ZeroHeightSelectionRectTextService {
     }
 }
 
-impl fret_core::MaterialService for ZeroHeightSelectionRectTextService {
+impl fret_core::MaterialService for SelectionRectTextService {
     fn register_material(
         &mut self,
         _desc: fret_core::MaterialDescriptor,
@@ -413,7 +333,7 @@ impl fret_core::MaterialService for AutoscrollTextService {
 }
 
 #[test]
-fn caret_is_visible_even_when_backend_reports_zero_height_caret_rect() {
+fn caret_is_visible_when_text_area_is_focused_and_empty() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
 
@@ -439,7 +359,7 @@ fn caret_is_visible_even_when_backend_reports_zero_height_caret_rect() {
 
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
-    let mut text = ZeroHeightCaretTextService::default();
+    let mut text = FakeTextService::default();
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
@@ -628,7 +548,7 @@ fn right_click_focuses_and_preserves_selection_for_context_menus() {
 }
 
 #[test]
-fn selection_highlight_is_visible_when_backend_reports_zero_height_selection_rects() {
+fn selection_highlight_is_visible_for_nonempty_selection_rects() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
 
@@ -651,7 +571,7 @@ fn selection_highlight_is_visible_when_backend_reports_zero_height_selection_rec
 
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
-    let mut services = ZeroHeightSelectionRectTextService::default();
+    let mut services = SelectionRectTextService::default();
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene = Scene::default();
@@ -667,7 +587,7 @@ fn selection_highlight_is_visible_when_backend_reports_zero_height_selection_rec
     assert_eq!(
         selection_quad_height,
         Some(Px(10.0)),
-        "expected zero-height selection rects to be expanded using line metrics so selection highlights remain visible"
+        "expected a non-zero selection quad height for a non-empty selection"
     );
 }
 

@@ -103,5 +103,5 @@ See: `docs/workstreams/text-interactive-spans-v1-todo.md`.
   - `docs/workstreams/text-line-breaking-v1.md`
   - `docs/workstreams/text-intrinsic-sizing-and-wrap-v1.md`
 - Text shaping/wrapping implementation:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs`
-  - `crates/fret-render-wgpu/src/text/wrapper.rs`
+  - `crates/fret-render-text/src/parley_shaper.rs`
+  - `crates/fret-render-text/src/wrapper.rs`

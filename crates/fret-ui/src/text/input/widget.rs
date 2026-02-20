@@ -203,25 +203,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .max(0.0)
                 .max(text_height.0),
         );
-        let (vertical_offset, baseline) =
-            crate::text::coords::compute_text_vertical_offset_and_baseline(
-                cx.services.text(),
-                blob,
-                inner_height,
-                metrics,
-                self.style.vertical_placement,
-            );
-
-        let fallback_line_height = cx
-            .services
-            .first_line_metrics(blob)
-            .map(|m| m.line_height.max(Px(1.0)))
-            .unwrap_or_else(|| {
-                self.style
-                    .line_height
-                    .unwrap_or(Px(self.style.size.0 * 1.2))
-                    .max(Px(1.0))
-            });
+        let (vertical_offset, _) = crate::text::coords::compute_text_vertical_offset_and_baseline(
+            cx.services.text(),
+            blob,
+            inner_height,
+            metrics,
+            self.style.vertical_placement,
+        );
 
         let origin = fret_core::Point::new(
             self.last_bounds.origin.x + padding_left - self.offset_x,
@@ -236,26 +224,12 @@ impl<H: UiHost> Widget<H> for TextInput {
         );
 
         let out = if bs == be {
-            let mut caret = cx
+            let caret = cx
                 .services
                 .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
-            if caret.size.height.0 <= 0.0 {
-                if let Some(line) = cx.services.first_line_metrics(blob) {
-                    let top = Px((baseline.0 - line.ascent.0).max(0.0));
-                    caret.origin.y = top;
-                    caret.size.height = line.line_height.max(Px(1.0));
-                } else {
-                    let top = Px((baseline.0 - fallback_line_height.0 * 0.8).max(0.0));
-                    caret.origin.y = top;
-                    caret.size.height = fallback_line_height;
-                }
-            }
             Some(Rect::new(
                 fret_core::Point::new(origin.x + caret.origin.x, origin.y + caret.origin.y),
-                Size::new(
-                    Px(caret.size.width.0.max(1.0)),
-                    caret.size.height.max(Px(1.0)),
-                ),
+                Size::new(Px(caret.size.width.0.max(1.0)), caret.size.height),
             ))
         } else {
             let mut rects: Vec<Rect> = Vec::new();
@@ -266,18 +240,13 @@ impl<H: UiHost> Widget<H> for TextInput {
             let mut max_x = f32::NEG_INFINITY;
             let mut max_y = f32::NEG_INFINITY;
             for r in rects {
-                if r.size.width.0 <= 0.0 {
+                if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
                     continue;
                 }
-                let height = if r.size.height.0 <= 0.0 {
-                    fallback_line_height.0
-                } else {
-                    r.size.height.0
-                };
                 min_x = min_x.min(r.origin.x.0);
                 min_y = min_y.min(r.origin.y.0);
                 max_x = max_x.max(r.origin.x.0 + r.size.width.0);
-                max_y = max_y.max(r.origin.y.0 + height);
+                max_y = max_y.max(r.origin.y.0 + r.size.height.0);
             }
 
             if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
@@ -347,7 +316,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
         );
 
-        let local = fret_core::Point::new(point.x - origin.x, point.y - origin.y);
+        let mapping = crate::text::coords::TextBoxMapping::new(origin);
+        let local = mapping.window_to_text_local(point);
         let hit = cx.services.hit_test_point(blob, local);
         cx.services.text().release(blob);
 
@@ -1568,11 +1538,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .map(|blob| cx.services.caret_x(blob, b))
                 .unwrap_or(Px(0.0));
 
-            let (selection_top, selection_height) = if let Some(blob) = self.text_blob
-                && let Some(line) = cx.services.first_line_metrics(blob)
-            {
-                let top = Px((baseline.0 - line.ascent.0).max(0.0));
-                (top, line.line_height.max(Px(1.0)))
+            let (selection_top, selection_height) = if let Some(blob) = self.text_blob {
+                crate::text::coords::compute_first_line_box_top_and_height(
+                    cx.services.text(),
+                    blob,
+                    baseline,
+                    text_height,
+                )
             } else {
                 (Px(0.0), text_height.max(Px(1.0)))
             };

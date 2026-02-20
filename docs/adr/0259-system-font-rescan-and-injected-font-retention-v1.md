@@ -109,11 +109,11 @@ debug-only “no system fonts” mode on native:
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Renderer seed/result split (background compute + main-thread apply):
   - `crates/fret-render-wgpu/src/text/mod.rs` (`SystemFontRescanSeed`, `SystemFontRescanResult`)
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`run_system_font_rescan`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`run_system_font_rescan`)
 - Renderer policy re-application after rescan:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::apply_system_font_rescan_result`)
 - Injected font blob retention (dedupe + budgets):
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`record_registered_font_blob`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`record_registered_font_blob`)
 
 ## Related docs
 

@@ -11,7 +11,7 @@ Start: 2026-02-19
 - [x] Add/confirm at least 1 deterministic gate:
   - a unit test for intrinsic widths (preferred), and/or
   - a diag script + screenshot bundle for the most visible regression.
-  - [x] Landed: `crates/fret-render-wgpu/src/text/wrapper.rs` tests + UI Gallery diag scripts (see evidence anchors).
+  - [x] Landed: `crates/fret-render-text/src/wrapper.rs` tests + UI Gallery diag scripts (see evidence anchors).
 
 ## M1 — True `min-content` for `TextWrap::Word` (core landing)
 

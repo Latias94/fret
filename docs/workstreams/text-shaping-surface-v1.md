@@ -55,7 +55,7 @@ remaining work is ecosystem policy adoption and productization.
 - Shaping attributes in `fret-core`:
   - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle`, `TextFontAxisSetting`)
 - Parley plumbing:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`shaping_properties_for_span`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`shaping_properties_for_span`)
   - sets: `FontStack`, `FontVariations`, `FontWeight`, `FontStyle`, `LetterSpacing`, `FontFeatures`
 - Wrapper + cache keys:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextBlobKey`, `TextShapeKey`, measure caches)
@@ -146,7 +146,7 @@ Do not require consumers to decode Parley internals.
 
 ### Where tests should live
 
-- `crates/fret-render-wgpu/src/text/parley_shaper.rs` (mapping + keying tests)
+- `crates/fret-render-text/src/parley_shaper.rs` (mapping + keying tests)
 - `crates/fret-render-wgpu/src/text/mod.rs` (end-to-end `prepare_*` cache behavior tests)
 
 ## Risks / Pitfalls
@@ -183,6 +183,6 @@ Evidence anchors:
 - `TextFontFeatureSetting` + `TextShapingStyle.features`:
   - `crates/fret-core/src/text/mod.rs`
 - Parley mapping and canonicalization:
-  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`font_features_for_settings`)
+  - `crates/fret-render-text/src/parley_shaper.rs` (`font_features_for_settings`)
 - Shaping key participation:
   - `crates/fret-render-wgpu/src/text/mod.rs` (`features_shaping_fingerprint`)

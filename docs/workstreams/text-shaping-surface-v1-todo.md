@@ -10,7 +10,7 @@ Scope: `docs/workstreams/text-shaping-surface-v1.md`
   - [x] tag validation (4 ASCII bytes),
   - [x] last-writer-wins for duplicates,
   - [x] deterministic ordering for hashing.
-- [x] Plumb mapping in `crates/fret-render-wgpu/src/text/parley_shaper.rs`:
+- [x] Plumb mapping in `crates/fret-render-text/src/parley_shaper.rs`:
   - [x] emit `StyleProperty::FontFeatures(FontSettings::List(...))`.
 - [x] Update shaping fingerprint/keying:
   - [x] features participate in the shaping key,

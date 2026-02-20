@@ -10,5 +10,12 @@ homepage.workspace = true
 documentation.workspace = true
 description = "Public rendering facade for Fret, re-exporting render contracts and integrations."
 
+[features]
+# Default to the wgpu renderer backend, but keep the facade stable so additional backends
+# can be introduced via Cargo features (compile-time selection).
+default = ["backend-wgpu"]
+
+backend-wgpu = ["dep:fret-render-wgpu"]
+
 [dependencies]
-fret-render-wgpu = { version = "0.1.0", path = "../fret-render-wgpu" }
+fret-render-wgpu = { version = "0.1.0", path = "../fret-render-wgpu", optional = true }

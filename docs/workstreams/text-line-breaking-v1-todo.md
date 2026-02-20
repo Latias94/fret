@@ -5,7 +5,7 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 ## M0 — Conformance suite
 
 - [x] Add a fixture-driven wrap conformance harness (baseline goldens):
-  - `crates/fret-render-wgpu/src/text/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
+  - `crates/fret-render-text/src/wrapper.rs` (`text_wrap_conformance_v1_fixtures`)
   - `crates/fret-render-wgpu/src/text/tests/fixtures/text_wrap_conformance_v1.json`
 - [x] Expand fixture coverage and expectations (initial set):
   - [x] CJK punctuation (leading/trailing forbiddens),
@@ -23,7 +23,7 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 ## M1 — Wrapper heuristic upgrade
 
 - [x] Replace `is_word_char`-based candidate selection in:
-  - `crates/fret-render-wgpu/src/text/wrapper.rs`
+  - `crates/fret-render-text/src/wrapper.rs`
   - with Unicode line break opportunities (UAX#14) via `swash::text::analyze` (keep a small heuristic fallback for now).
 - [x] Keep the current behavior for:
   - [x] newline splitting,
@@ -48,9 +48,9 @@ Scope: `docs/workstreams/text-line-breaking-v1.md`
 - [~] Performance guard:
   - [x] ensure no O(n²) regressions on long paragraphs (Parley path is linear; keep a dedicated
     long-paragraph probe in the wrapper test suite):
-    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+    - `crates/fret-render-text/src/wrapper.rs`
       (`parley_word_wrap_handles_long_plain_paragraph_under_resize_jitter`)
-    - `crates/fret-render-wgpu/src/text/wrapper.rs`
+    - `crates/fret-render-text/src/wrapper.rs`
       (`parley_word_wrap_handles_long_attributed_paragraph_under_resize_jitter`)
   - [x] keep resize jitter bounded:
     - add a diag perf script focused on `TextWrap::Word` under window resize jitter:

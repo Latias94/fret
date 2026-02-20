@@ -71,7 +71,7 @@ Exit criteria:
 
 Evidence anchors:
 
-- Renderer catalog extraction: `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+- Renderer catalog extraction: `crates/fret-render-text/src/parley_shaper.rs`
 - Runtime catalog globals: `crates/fret-runtime/src/font_catalog.rs`
 
 ### M2: Policy composition API (renderer-internal)
@@ -114,7 +114,7 @@ Exit criteria:
 Evidence anchors:
 
 - Desktop runner async rescan: `crates/fret-launch/src/runner/desktop/mod.rs`
-- Registered blob retention: `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+- Registered blob retention: `crates/fret-render-text/src/parley_shaper.rs`
 - Bounded fallback suffix: `crates/fret-render-wgpu/src/text/mod.rs` (`FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES`)
 
 ## Notes / upstream patterns
