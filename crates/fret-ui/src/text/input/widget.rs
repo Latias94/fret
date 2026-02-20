@@ -1542,16 +1542,25 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .map(|blob| cx.services.caret_x(blob, b))
                 .unwrap_or(Px(0.0));
 
+            let (selection_top, selection_height) = if let Some(blob) = self.text_blob
+                && let Some(line) = cx.services.first_line_metrics(blob)
+            {
+                let top = Px((baseline.0 - line.ascent.0).max(0.0));
+                (top, line.line_height.max(Px(1.0)))
+            } else {
+                (Px(0.0), text_height.max(Px(1.0)))
+            };
+
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: Rect::new(
                     fret_core::geometry::Point::new(
                         cx.bounds.origin.x + padding_left + start_x - self.offset_x,
-                        cx.bounds.origin.y + padding_top + vertical_offset,
+                        cx.bounds.origin.y + padding_top + vertical_offset + selection_top,
                     ),
                     Size::new(
                         Px((end_x.0 - start_x.0).max(0.0)),
-                        Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0).max(0.0)),
+                        selection_height.min(inner_height).max(Px(1.0)),
                     ),
                 ),
                 background: Paint::Solid(selection_color),

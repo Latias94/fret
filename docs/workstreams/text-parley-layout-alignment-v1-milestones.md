@@ -112,6 +112,7 @@ Goal:
 
 - Ensure `TextInput` uses the same vertical placement mapping as declarative text elements for:
   - paint origin (baseline + vertical offset)
+  - selection highlight quads (height/placement match line metrics in tall controls)
   - platform text-input geometry queries (`bounds_for_range`, `character_index_for_point`)
   - caret placement (best-effort line-metrics aware)
 
