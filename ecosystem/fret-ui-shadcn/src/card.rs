@@ -455,12 +455,49 @@ impl CardContent {
 #[derive(Debug, Clone)]
 pub struct CardFooter {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    border_top: bool,
+    gap: Space,
+    wrap: bool,
 }
 
 impl CardFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            border_top: false,
+            gap: Space::N0,
+            wrap: false,
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn border_top(mut self, value: bool) -> Self {
+        self.border_top = value;
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub fn wrap(mut self, value: bool) -> Self {
+        self.wrap = value;
+        self
     }
 
     #[track_caller]
@@ -470,24 +507,82 @@ impl CardFooter {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = {
-            let theme = Theme::global(&*cx.app);
-            decl_style::container_props(
-                theme,
-                // shadcn/ui v4: `flex items-center px-6` (vertical padding lives on Card).
-                ChromeRefinement::default().px(p),
-                LayoutRefinement::default().w_full(),
-            )
-        };
         let children = self.children;
-        let el = shadcn_layout::container_hstack(
-            cx,
-            props,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center(),
-            children,
-        );
+        let chrome = self.chrome;
+        let layout = self.layout;
+        let gap = self.gap;
+        let wrap = self.wrap;
+
+        let el = if self.border_top {
+            let outer_props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default().w_full(),
+                )
+            };
+
+            let inner_props = {
+                let theme = Theme::global(&*cx.app);
+                // shadcn/ui v4: `flex items-center px-6` and `[.border-t]:pt-6` (vertical padding
+                // lives on Card).
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .px(p)
+                        .pt(Space::N6)
+                        .merge(chrome),
+                    LayoutRefinement::default().w_full().merge(layout),
+                )
+            };
+
+            let inner = cx.container(inner_props, move |cx| {
+                vec![if wrap {
+                    ui::h_flex(cx, move |_cx| children)
+                        .wrap()
+                        .gap(gap)
+                        .into_element(cx)
+                } else {
+                    ui::h_flex(cx, move |_cx| children)
+                        .gap(gap)
+                        .into_element(cx)
+                }]
+            });
+
+            let separator = crate::Separator::new().into_element(cx);
+            shadcn_layout::container_vstack(
+                cx,
+                outer_props,
+                stack::VStackProps::default()
+                    .gap(Space::N0)
+                    .layout(LayoutRefinement::default().w_full()),
+                vec![separator, inner],
+            )
+        } else {
+            let props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(
+                    theme,
+                    // shadcn/ui v4: `flex items-center px-6` (vertical padding lives on Card).
+                    ChromeRefinement::default().px(p).merge(chrome),
+                    LayoutRefinement::default().w_full().merge(layout),
+                )
+            };
+
+            cx.container(props, move |cx| {
+                vec![if wrap {
+                    ui::h_flex(cx, move |_cx| children)
+                        .wrap()
+                        .gap(gap)
+                        .into_element(cx)
+                } else {
+                    ui::h_flex(cx, move |_cx| children)
+                        .gap(gap)
+                        .into_element(cx)
+                }]
+            })
+        };
 
         let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_FOOTER_MARKER_PREFIX, el.id.0));
         attach_test_id(el, marker)

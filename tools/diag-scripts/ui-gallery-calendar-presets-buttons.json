@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI Gallery: Calendar May 2026 day numbers are centered",
+    "name": "UI Gallery: Calendar presets footer buttons match shadcn",
     "tags": ["ui-gallery", "calendar", "shadcn"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "env_defaults": {
@@ -20,7 +20,7 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
     { "type": "wait_frames", "n": 15 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
@@ -32,10 +32,7 @@
       "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-calendar"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" }
       }
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" } },
@@ -47,13 +44,12 @@
         "target": { "kind": "test_id", "id": "ui-gallery-page-calendar" }
       }
     },
-
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery.calendar.basic:2026-05-27"
+        "id": "ui-gallery.calendar.presets:2026-02-12"
       },
       "delta_y": -240.0,
       "require_fully_within_container": true,
@@ -68,66 +64,48 @@
       "timeout_frames": 1800
     },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2026-05-27" },
-      "stable_frames": 4,
-      "max_move_px": 0.5,
-      "timeout_frames": 600
+      "type": "wait_until",
+      "timeout_frames": 240,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Today" }
+      }
     },
     {
       "type": "wait_until",
       "timeout_frames": 240,
       "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2026-05-27" }
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" }
       }
     },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic.nav-next" },
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 16.0,
+        "top_px": 40.0,
+        "right_px": 16.0,
+        "bottom_px": 200.0
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" },
       "stable_frames": 4,
       "max_move_px": 0.5,
-      "timeout_frames": 1800
+      "timeout_frames": 240
     },
-    {
-      "type": "wait_until",
-      "timeout_frames": 1800,
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery.calendar.basic:2026-06-27"
-        }
-      }
-    },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic.nav-prev" },
-      "stable_frames": 4,
-      "max_move_px": 0.5,
-      "timeout_frames": 1800
-    },
-    {
-      "type": "wait_until",
-      "timeout_frames": 1800,
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery.calendar.basic:2026-05-27"
-        }
-      }
-    },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-calendar-may-2026-centering"
-    },
+    { "type": "capture_bundle", "label": "ui-gallery-calendar-presets-buttons" },
     {
       "type": "capture_screenshot",
-      "label": "ui-gallery-calendar-may-2026-centering",
+      "label": "ui-gallery-calendar-presets-buttons",
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 30 }

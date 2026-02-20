@@ -1764,6 +1764,8 @@ fn calendar_range_day_cell<H: UiHost>(
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()
+                        .w_full()
+                        .text_align(fret_core::TextAlign::Center)
                         .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
                         .nowrap();
 
