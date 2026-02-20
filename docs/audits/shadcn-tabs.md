@@ -55,8 +55,10 @@ Base UI `Tabs.Root` behavior.
 
 ## Known gaps
 
-- Gap: Base UI `onValueChange` supports cancelation (`eventDetails.isCanceled`), while Fret's
-  current callbacks are notification-only and do not support canceling a pending value write.
+- Partial: Base UI `onValueChange` supports cancelation (`eventDetails.isCanceled`). Fret supports
+  canceling a pending selection write via `Tabs::on_value_change_with_event_details(...)` /
+  `TabsRoot::on_value_change_with_event_details(...)`, but older callbacks remain
+  notification-only.
 - Partial: Base UI carries `activationDirection` details (`left/right/up/down/none`). Fret exposes
   this via `Tabs::on_value_change_with_details(...)` / `TabsRoot::on_value_change_with_details(...)`,
   but currently derives it from the selected index delta rather than DOM geometry.
@@ -72,4 +74,5 @@ Base UI `Tabs.Root` behavior.
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_source_reports_roving_active_change`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_activation_direction_on_pointer_down`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_activation_direction_on_roving_active_change`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_event_details_can_cancel_model_update`
 - Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.

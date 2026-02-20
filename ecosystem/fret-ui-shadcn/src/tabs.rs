@@ -159,6 +159,8 @@ type OnValueChangeWithSource =
     Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeSource) + Send + Sync + 'static>;
 type OnValueChangeWithDetails =
     Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeDetails) + Send + Sync + 'static>;
+type OnValueChangeWithEventDetails =
+    Arc<dyn Fn(Option<Arc<str>>, &mut TabsValueChangeEventDetails) + Send + Sync + 'static>;
 
 /// Base UI-compatible activation direction metadata for tab changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -207,6 +209,24 @@ impl TabsActivationDirection {
 pub struct TabsValueChangeDetails {
     pub source: TabsValueChangeSource,
     pub activation_direction: TabsActivationDirection,
+}
+
+/// Base UI-style cancellable event details for tab value changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TabsValueChangeEventDetails {
+    pub source: TabsValueChangeSource,
+    pub activation_direction: TabsActivationDirection,
+    is_canceled: bool,
+}
+
+impl TabsValueChangeEventDetails {
+    pub fn prevent_default(&mut self) {
+        self.is_canceled = true;
+    }
+
+    pub fn is_canceled(&self) -> bool {
+        self.is_canceled
+    }
 }
 
 /// Source metadata for tab value changes.
@@ -495,10 +515,14 @@ fn set_tabs_value_and_emit_change(
     on_value_change: Option<&OnValueChange>,
     on_value_change_with_source: Option<&OnValueChangeWithSource>,
     on_value_change_with_details: Option<&OnValueChangeWithDetails>,
+    on_value_change_with_event_details: Option<&OnValueChangeWithEventDetails>,
     source: TabsValueChangeSource,
     orientation: TabsOrientation,
 ) {
     let prev_value = host.models_mut().read(model, |v| v.clone()).ok().flatten();
+    if prev_value == next {
+        return;
+    }
     let prev_idx = fret_ui_kit::primitives::tabs::active_index_from_values(
         values,
         prev_value.as_deref(),
@@ -508,6 +532,18 @@ fn set_tabs_value_and_emit_change(
         fret_ui_kit::primitives::tabs::active_index_from_values(values, next.as_deref(), disabled);
     let activation_direction =
         TabsActivationDirection::from_indices(orientation, prev_idx, next_idx);
+
+    if let Some(on_value_change_with_event_details) = on_value_change_with_event_details {
+        let mut event_details = TabsValueChangeEventDetails {
+            source,
+            activation_direction,
+            is_canceled: false,
+        };
+        on_value_change_with_event_details(next.clone(), &mut event_details);
+        if event_details.is_canceled() {
+            return;
+        }
+    }
 
     let mut changed = false;
     let next_for_update = next.clone();
@@ -691,6 +727,7 @@ pub struct TabsRoot {
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
     on_value_change_with_details: Option<OnValueChangeWithDetails>,
+    on_value_change_with_event_details: Option<OnValueChangeWithEventDetails>,
 }
 
 impl std::fmt::Debug for TabsRoot {
@@ -717,6 +754,10 @@ impl std::fmt::Debug for TabsRoot {
             .field(
                 "on_value_change_with_details",
                 &self.on_value_change_with_details.is_some(),
+            )
+            .field(
+                "on_value_change_with_event_details",
+                &self.on_value_change_with_event_details.is_some(),
             )
             .finish()
     }
@@ -745,6 +786,7 @@ impl TabsRoot {
             on_value_change: None,
             on_value_change_with_source: None,
             on_value_change_with_details: None,
+            on_value_change_with_event_details: None,
         }
     }
 
@@ -771,6 +813,7 @@ impl TabsRoot {
             on_value_change: None,
             on_value_change_with_source: None,
             on_value_change_with_details: None,
+            on_value_change_with_event_details: None,
         }
     }
 
@@ -910,6 +953,15 @@ impl TabsRoot {
         self
     }
 
+    /// Called when the selected tab value changes, with cancellable event details.
+    pub fn on_value_change_with_event_details(
+        mut self,
+        on_value_change_with_event_details: Option<OnValueChangeWithEventDetails>,
+    ) -> Self {
+        self.on_value_change_with_event_details = on_value_change_with_event_details;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = self.list.clone();
@@ -951,6 +1003,7 @@ impl TabsRoot {
             .on_value_change(self.on_value_change)
             .on_value_change_with_source(self.on_value_change_with_source)
             .on_value_change_with_details(self.on_value_change_with_details)
+            .on_value_change_with_event_details(self.on_value_change_with_event_details)
             .style(self.style)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
@@ -1038,6 +1091,7 @@ pub struct Tabs {
     on_value_change: Option<OnValueChange>,
     on_value_change_with_source: Option<OnValueChangeWithSource>,
     on_value_change_with_details: Option<OnValueChangeWithDetails>,
+    on_value_change_with_event_details: Option<OnValueChangeWithEventDetails>,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -1063,6 +1117,10 @@ impl std::fmt::Debug for Tabs {
             .field(
                 "on_value_change_with_details",
                 &self.on_value_change_with_details.is_some(),
+            )
+            .field(
+                "on_value_change_with_event_details",
+                &self.on_value_change_with_event_details.is_some(),
             )
             .finish()
     }
@@ -1090,6 +1148,7 @@ impl Tabs {
             on_value_change: None,
             on_value_change_with_source: None,
             on_value_change_with_details: None,
+            on_value_change_with_event_details: None,
         }
     }
 
@@ -1115,6 +1174,7 @@ impl Tabs {
             on_value_change: None,
             on_value_change_with_source: None,
             on_value_change_with_details: None,
+            on_value_change_with_event_details: None,
         }
     }
 
@@ -1249,6 +1309,15 @@ impl Tabs {
         self
     }
 
+    /// Called when the selected tab value changes, with cancellable event details.
+    pub fn on_value_change_with_event_details(
+        mut self,
+        on_value_change_with_event_details: Option<OnValueChangeWithEventDetails>,
+    ) -> Self {
+        self.on_value_change_with_event_details = on_value_change_with_event_details;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
@@ -1271,6 +1340,7 @@ impl Tabs {
         let on_value_change = self.on_value_change;
         let on_value_change_with_source = self.on_value_change_with_source;
         let on_value_change_with_details = self.on_value_change_with_details;
+        let on_value_change_with_event_details = self.on_value_change_with_event_details;
 
         let model =
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
@@ -1430,6 +1500,8 @@ impl Tabs {
                                         on_value_change_with_source.clone();
                                     let on_value_change_with_details_for_roving =
                                         on_value_change_with_details.clone();
+                                    let on_value_change_with_event_details_for_roving =
+                                        on_value_change_with_event_details.clone();
                                     let orientation_for_roving = orientation;
                                     cx.roving_on_active_change(Arc::new(move |host, _acx, idx| {
                                         let Some(value) = values_for_roving.get(idx).cloned() else {
@@ -1444,6 +1516,7 @@ impl Tabs {
                                             on_value_change_for_roving.as_ref(),
                                             on_value_change_with_source_for_roving.as_ref(),
                                             on_value_change_with_details_for_roving.as_ref(),
+                                            on_value_change_with_event_details_for_roving.as_ref(),
                                             TabsValueChangeSource::RovingActiveChange,
                                             orientation_for_roving,
                                         );
@@ -1506,6 +1579,8 @@ impl Tabs {
                                         on_value_change_with_source.clone();
                                     let on_value_change_with_details =
                                         on_value_change_with_details.clone();
+                                    let on_value_change_with_event_details =
+                                        on_value_change_with_event_details.clone();
                                     let values_for_change = values_arc.clone();
                                     let disabled_for_change = disabled_flags_arc.clone();
                                     let orientation_for_change = orientation;
@@ -1541,6 +1616,8 @@ impl Tabs {
                                             on_value_change_with_source.clone();
                                         let on_value_change_with_details_for_pointer =
                                             on_value_change_with_details.clone();
+                                        let on_value_change_with_event_details_for_pointer =
+                                            on_value_change_with_event_details.clone();
 
                                         cx.pressable_add_on_pointer_down(Arc::new(
                                             move |host, _cx, down| {
@@ -1563,6 +1640,8 @@ impl Tabs {
                                                             on_value_change_with_source_for_pointer
                                                                 .as_ref(),
                                                             on_value_change_with_details_for_pointer
+                                                                .as_ref(),
+                                                            on_value_change_with_event_details_for_pointer
                                                                 .as_ref(),
                                                             TabsValueChangeSource::PointerDown,
                                                             orientation_for_change,
@@ -1588,6 +1667,8 @@ impl Tabs {
                                             on_value_change_with_source.clone();
                                         let on_value_change_with_details_for_activate =
                                             on_value_change_with_details.clone();
+                                        let on_value_change_with_event_details_for_activate =
+                                            on_value_change_with_event_details.clone();
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, _acx, _reason| {
                                                 set_tabs_value_and_emit_change(
@@ -1600,6 +1681,8 @@ impl Tabs {
                                                     on_value_change_with_source_for_activate
                                                         .as_ref(),
                                                     on_value_change_with_details_for_activate
+                                                        .as_ref(),
+                                                    on_value_change_with_event_details_for_activate
                                                         .as_ref(),
                                                     TabsValueChangeSource::Activate,
                                                     orientation_for_change,
@@ -2971,6 +3054,112 @@ mod tests {
         );
     }
 
+    #[test]
+    fn tabs_on_value_change_with_event_details_can_cancel_model_update() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let called: Arc<std::sync::Mutex<Vec<TabsValueChangeEventDetails>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let called_for_handler = called.clone();
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeSource)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_source = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-event-details-cancel",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .on_value_change_with_source(Some(Arc::new(move |value, source| {
+                            changed_for_source
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push((value, source));
+                        })))
+                        .on_value_change_with_event_details(Some(Arc::new(
+                            move |_value, details| {
+                                details.prevent_default();
+                                called_for_handler
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .push(*details);
+                            },
+                        )))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(
+            selected.as_deref(),
+            Some("alpha"),
+            "expected cancelation to keep the previous selection"
+        );
+
+        let called = called.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(called.len(), 1);
+        assert_eq!(called[0].source, TabsValueChangeSource::PointerDown);
+        assert!(called[0].is_canceled);
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(
+            changed.is_empty(),
+            "expected source callbacks to be suppressed when change is canceled"
+        );
+    }
+
     fn render_force_mount_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3230,5 +3419,199 @@ mod tests {
         }
 
         assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_event_details_can_cancel_pointer_down() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<Option<Arc<str>>>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let events: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeEventDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_for_handler = events.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-event-details-pointer-cancel",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .on_value_change(Some(Arc::new(move |value| {
+                            changed_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push(value);
+                        })))
+                        .on_value_change_with_event_details(Some(Arc::new(
+                            move |value, event_details| {
+                                if value.as_deref() == Some("beta") {
+                                    event_details.prevent_default();
+                                }
+                                events_for_handler
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .push((value, *event_details));
+                            },
+                        )))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert!(changed.is_empty());
+
+        let events = events.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0.as_deref(), Some("beta"));
+        assert_eq!(events[0].1.source, TabsValueChangeSource::PointerDown);
+        assert_eq!(
+            events[0].1.activation_direction,
+            TabsActivationDirection::Right
+        );
+        assert!(events[0].1.is_canceled());
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_event_details_can_cancel_roving_active_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let events: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeEventDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_for_handler = events.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-event-details-roving-cancel",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Automatic)
+                        .on_value_change_with_event_details(Some(Arc::new(
+                            move |value, event_details| {
+                                if value.as_deref() == Some("beta") {
+                                    event_details.prevent_default();
+                                }
+                                events_for_handler
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .push((value, *event_details));
+                            },
+                        )))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let events = events.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0.as_deref(), Some("beta"));
+        assert_eq!(
+            events[0].1.source,
+            TabsValueChangeSource::RovingActiveChange
+        );
+        assert_eq!(
+            events[0].1.activation_direction,
+            TabsActivationDirection::Right
+        );
+        assert!(events[0].1.is_canceled());
     }
 }
