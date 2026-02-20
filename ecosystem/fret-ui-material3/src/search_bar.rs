@@ -407,6 +407,7 @@ fn search_bar_text_input_chrome(
         .color_by_key("md.sys.color.primary")
         .unwrap_or(style.caret_color);
     style.preedit_color = style.caret_color;
+    style.preedit_underline_color = style.preedit_color;
 
     style
 }

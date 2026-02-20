@@ -264,6 +264,7 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
         },
         caret_color: theme.color_token("foreground"),
         preedit_color: theme.color_token("primary"),
+        preedit_underline_color: theme.color_token("primary"),
     }
 }
 

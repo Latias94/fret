@@ -248,6 +248,7 @@ fn outlined_text_input_style(
     style.preedit_color = theme
         .color_by_key("md.sys.color.primary")
         .unwrap_or(style.preedit_color);
+    style.preedit_underline_color = style.preedit_color;
 
     if disabled {
         let opacity = theme
@@ -444,6 +445,7 @@ fn filled_text_input_style(
     style.preedit_color = theme
         .color_by_key("md.sys.color.primary")
         .unwrap_or(style.preedit_color);
+    style.preedit_underline_color = style.preedit_color;
 
     if disabled {
         let opacity = theme
