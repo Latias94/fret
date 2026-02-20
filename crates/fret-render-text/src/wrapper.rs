@@ -1497,6 +1497,102 @@ mod tests {
     }
 
     #[test]
+    fn none_ellipsis_does_not_split_keycap_grapheme_cluster() {
+        use std::collections::HashSet;
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let keycap = "1️⃣";
+        let text = format!("{keycap}{keycap}{keycap}{keycap}{keycap}{keycap}{keycap} hello");
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text.as_str(), &base),
+            constraints,
+        );
+        assert!(
+            wrapped.kept_end < text.len(),
+            "expected ellipsis to truncate the text"
+        );
+
+        let mut boundaries: HashSet<usize> = HashSet::new();
+        boundaries.insert(0);
+        let mut cursor = 0usize;
+        for g in text.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.insert(cursor.min(text.len()));
+        }
+
+        assert!(
+            boundaries.contains(&wrapped.kept_end),
+            "expected ellipsis cut point to land on a grapheme boundary; kept_end={} text={text:?}",
+            wrapped.kept_end
+        );
+    }
+
+    #[test]
+    fn none_ellipsis_does_not_split_regional_indicator_flag_grapheme_cluster() {
+        use std::collections::HashSet;
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let flag = "🇺🇸";
+        let text = format!("{flag}{flag}{flag}{flag}{flag}{flag}{flag}{flag} hello");
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped = wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text.as_str(), &base),
+            constraints,
+        );
+        assert!(
+            wrapped.kept_end < text.len(),
+            "expected ellipsis to truncate the text"
+        );
+
+        let mut boundaries: HashSet<usize> = HashSet::new();
+        boundaries.insert(0);
+        let mut cursor = 0usize;
+        for g in text.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.insert(cursor.min(text.len()));
+        }
+
+        assert!(
+            boundaries.contains(&wrapped.kept_end),
+            "expected ellipsis cut point to land on a grapheme boundary; kept_end={} text={text:?}",
+            wrapped.kept_end
+        );
+    }
+
+    #[test]
     fn no_ellipsis_keeps_full_text() {
         let mut shaper = shaper_with_bundled_fonts();
         let base = TextStyle {

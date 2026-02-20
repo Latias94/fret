@@ -63,8 +63,11 @@ Tracking format:
 
 ## M2 — Parley-only shaping path (remove drift)
 
-- [ ] TPU-render-020 Audit for any non-Parley shaping paths still used by default builds and decide migration steps.
+- [x] TPU-render-020 Audit for any non-Parley shaping paths still used by default builds and decide migration steps.
   - Goal: one shaping engine per backend, with Parley as the default direction.
+  - Evidence:
+    - `crates/fret-render-text/src/parley_shaper.rs` (single shaping engine used by default)
+    - `crates/fret-render-wgpu/src/text/mod.rs` (`pub(crate) mod parley_shaper` re-export)
 
 - [~] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
   - mixed scripts (LTR/RTL)
@@ -76,6 +79,8 @@ Tracking format:
       `grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji`)
     - `crates/fret-render-text/src/wrapper.rs`
       (`none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster`)
+      (`none_ellipsis_does_not_split_keycap_grapheme_cluster`,
+      `none_ellipsis_does_not_split_regional_indicator_flag_grapheme_cluster`)
 
 ## M3 — IME + editor-grade polish
 
