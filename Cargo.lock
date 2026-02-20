@@ -1829,6 +1829,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-clip-mask-stress"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-core",
+ "fret-render",
+ "pollster",
+ "wgpu",
+]
+
+[[package]]
 name = "fret-code-editor"
 version = "0.1.0"
 dependencies = [
@@ -2110,6 +2121,7 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "wgpu",
+ "windows 0.62.2",
  "winit",
 ]
 
@@ -2250,6 +2262,7 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "block2 0.6.2",
  "bytemuck",
  "fret-app",
@@ -2288,6 +2301,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "wgpu",
+ "windows 0.62.2",
  "windows-sys 0.61.2",
  "winit",
  "zbus",

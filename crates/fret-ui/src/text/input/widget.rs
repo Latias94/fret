@@ -1545,6 +1545,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                         origin: base_origin,
                         text: blob,
                         paint: fret_core::scene::Paint::Solid(self.chrome_style.placeholder_color),
+                        outline: None,
+                        shadow: None,
                     });
                 }
             } else if let Some(blob) = self.text_blob {
@@ -1553,6 +1555,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: base_origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
+                    shadow: None,
                 });
             }
         } else {
@@ -1571,6 +1575,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: base_origin,
                     text: blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
+                    shadow: None,
                 });
             }
             if let Some(pre_blob) = self.preedit_blob {
@@ -1581,6 +1587,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: pre_origin,
                     text: pre_blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.preedit_color),
+                    outline: None,
+                    shadow: None,
                 });
             }
             if let Some(suffix_blob) = self.suffix_blob {
@@ -1593,6 +1601,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     origin: suffix_origin,
                     text: suffix_blob,
                     paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    outline: None,
+                    shadow: None,
                 });
             }
         }

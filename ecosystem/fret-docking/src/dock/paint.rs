@@ -234,6 +234,8 @@ pub(super) fn paint_dock(
                     origin: Point::new(text_x, text_y),
                     text: title.blob,
                     paint: (text_color).into(),
+                    outline: None,
+                    shadow: None,
                 });
                 scene.push(SceneOp::PopClip);
             }
@@ -290,6 +292,8 @@ pub(super) fn paint_dock(
                         origin: Point::new(text_x, text_y),
                         text: glyph.blob,
                         paint: (color).into(),
+                        outline: None,
+                        shadow: None,
                     });
                 }
             }
@@ -343,6 +347,8 @@ pub(super) fn paint_dock(
                     origin: Point::new(text_x, text_y),
                     text: glyph.blob,
                     paint: (color).into(),
+                    outline: None,
+                    shadow: None,
                 });
             }
         }
@@ -406,6 +412,8 @@ pub(super) fn paint_dock(
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
                             paint: (text_color).into(),
+                            outline: None,
+                            shadow: None,
                         });
                     }
                 }
@@ -677,6 +685,8 @@ pub(super) fn paint_drop_overlay(
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
                             paint: (Color { a: 0.92, ..fg }).into(),
+                            outline: None,
+                            shadow: None,
                         });
                         scene.push(SceneOp::PopClip);
                     }

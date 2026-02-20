@@ -352,6 +352,7 @@ fn page_preview(
         PAGE_TEXT_MIXED_SCRIPT_FALLBACK => preview_text_mixed_script_fallback(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
         PAGE_TEXT_FEATURE_TOGGLES => preview_text_feature_toggles(cx, theme),
+        PAGE_TEXT_OUTLINE_STROKE => preview_text_outline_stroke(cx, theme),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),

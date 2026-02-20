@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // Split from the original single-file renderer for maintainability.
+mod clip_path_mask_cache;
 mod path;
 mod types;
 mod util;
@@ -34,6 +35,7 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use clip_path_mask_cache::*;
 use fullscreen::*;
 use intermediate_pool::*;
 use path::*;
@@ -98,12 +100,14 @@ pub struct Renderer {
 
     text_pipeline_format: Option<wgpu::TextureFormat>,
     text_pipeline: Option<wgpu::RenderPipeline>,
+    text_outline_pipeline: Option<wgpu::RenderPipeline>,
 
     text_color_pipeline_format: Option<wgpu::TextureFormat>,
     text_color_pipeline: Option<wgpu::RenderPipeline>,
 
     text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
     text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
+    text_subpixel_outline_pipeline: Option<wgpu::RenderPipeline>,
 
     mask_pipeline_format: Option<wgpu::TextureFormat>,
     mask_pipeline: Option<wgpu::RenderPipeline>,
@@ -153,6 +157,20 @@ pub struct Renderer {
     scale_param_stride: u64,
     scale_param_capacity: usize,
 
+    backdrop_warp_pipeline_format: Option<wgpu::TextureFormat>,
+    backdrop_warp_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_masked_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_mask_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    backdrop_warp_image_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_masked_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_mask_pipeline: Option<wgpu::RenderPipeline>,
+    backdrop_warp_image_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_image_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    backdrop_warp_param_buffer: wgpu::Buffer,
+
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
     color_adjust_pipeline: Option<wgpu::RenderPipeline>,
     color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
@@ -176,6 +194,14 @@ pub struct Renderer {
     alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_param_buffer: wgpu::Buffer,
+
+    drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
+    drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
+    drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    drop_shadow_param_buffer: wgpu::Buffer,
 
     path_vertices: buffers::RingBuffer<PathVertex>,
 
@@ -205,6 +231,8 @@ pub struct Renderer {
     svg_perf_enabled: bool,
     svg_perf: SvgPerfStats,
 
+    clip_path_mask_cache: ClipPathMaskCache,
+
     perf_enabled: bool,
     // Per-frame SVG cache stats (best-effort; populated only when `perf_enabled` is true).
     perf_svg_raster_cache_hits: u64,
@@ -216,6 +244,7 @@ pub struct Renderer {
         [u64; RenderTargetIngestStrategy::COUNT],
     perf_pending_render_target_updates_by_ingest: [u64; RenderTargetIngestStrategy::COUNT],
     perf_pending_render_target_updates_ingest_fallbacks: u64,
+    perf_pending_render_target_metadata_degradations_color_encoding_dropped: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
     last_render_plan_segment_report: Option<Vec<RenderPlanSegmentReport>>,

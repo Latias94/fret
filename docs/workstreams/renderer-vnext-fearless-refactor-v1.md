@@ -1,16 +1,24 @@
 # Renderer vNext Fearless Refactor v1
 
-Status: Draft (workstream notes only; ADRs remain the source of truth)
+Status: Active (living workstream notes; ADRs remain the source of truth)
 
 Tracking files:
 
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 
-Current status (as of 2026-02-16):
+Related semantic workstreams (drafts; 3-doc format):
+
+- `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
+- `docs/workstreams/renderer-drop-shadow-effect-v1.md`
+- `docs/workstreams/renderer-clip-mask-closure-v1.md`
+
+Current status (as of 2026-02-19):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
+- Liquid glass demo UX was refined to keep lens toggles visible without occluding the backdrop (scripts remain stable via
+  `test_id` anchors).
 - External texture imports v2 planning and observability landed:
   - ADR 0282 (requested: zero/low-copy import path with deterministic fallbacks).
   - Renderer perf snapshot surfaces per-update ingest strategy breakdown for imported render targets
@@ -36,6 +44,26 @@ Current status (as of 2026-02-16):
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+
+- Clip-path slow-path caching closure landed:
+  - clip-path mask intermediates are cached and reused via GPU copy (budgeted + deterministic eviction),
+  - headless perf gate asserts cache stability invariants (hits present, misses bounded, entries bounded).
+  - Tracking: `docs/workstreams/renderer-clip-mask-closure-v1.md`
+- Effect contract clarification + demo quality improvements:
+  - `EffectStep::ColorAdjust.brightness` is treated as a multiplier (identity `1.0`) consistently across renderer + docs,
+    with a GPU conformance test guarding against accidental additive semantics.
+  - `BackdropWarpV1` now applies a radial falloff and differentiates `Wave` vs `LensReserved` for a less grid-regular
+    procedural warp (still bounded + WGSL-uniformity-safe).
+
+Remaining (next):
+
+- External texture imports v2 (native): land one real native external frame source behind a deterministic
+  fallback chain (capability-gated; web remains copy-path baseline).
+  - Tracking: `docs/workstreams/external-texture-imports-v2-zero-low-copy.md`
+  - Status (2026-02-19): Windows MF adapter landed; remaining uplift is additional platform sources
+    (AVFoundation / MediaCodec) behind the same deterministic fallback shape.
+- Evidence-driven (optional): add bounded WebGPU material pipeline variants only if perf evidence warrants it:
+  - Tracking: `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (`REN-VNEXT-webgpu-004`)
 
 ## 0) Why this workstream exists
 
@@ -67,6 +95,7 @@ This workstream exists to make the renderer implementation **fearlessly evolvabl
 - New or clarified scene semantics where parity and portability demand it:
   - isolated opacity / `saveLayer(alpha)` (group alpha),
   - more general clip/mask sources (clip path, image mask) with bounded cost.
+  - bounded backdrop warp/refraction for true liquid-glass distortion (displacement + optional chromatic aberration).
 - “Paint/Material” evolution work that reduces long-term churn:
   - keep `Paint` and `MaterialId` as the controlled extensibility seam (Tier B),
   - ensure capability-gated fallbacks remain deterministic on wasm/mobile.

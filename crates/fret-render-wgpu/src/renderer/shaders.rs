@@ -17,6 +17,19 @@ fn sdf_coverage_linear(sdf: f32) -> f32 {
   return saturate(0.5 - sdf / aa);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
   if (center_to_point.x < 0.0) {
     if (center_to_point.y < 0.0) { return radii.x; }
@@ -423,6 +436,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -438,7 +483,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -447,7 +492,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -457,8 +502,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -493,6 +537,58 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  let rgb = vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+  return rgb;
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -514,7 +610,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -696,7 +792,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 2u) {
@@ -704,7 +800,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 4u) {
@@ -716,7 +812,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 3u) {
@@ -736,7 +832,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 2u) {
@@ -744,7 +840,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 4u) {
@@ -756,7 +852,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 3u) {
@@ -959,6 +1055,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -1020,6 +1129,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -1036,7 +1177,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -1046,7 +1187,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -1057,8 +1198,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -1159,6 +1299,336 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   return textureLoad(src_texture, vec2<i32>(i32(x), i32(y)), 0);
+}
+"#;
+
+pub(super) const DROP_SHADOW_SHADER: &str = r#"
+@group(0) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  offset_px: vec2<f32>,
+  _pad0: vec2<f32>,
+  color: vec4<f32>,
+};
+
+@group(0) @binding(1) var<uniform> params: Params;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let p = pos.xy - params.offset_px;
+  let src = sample_premul_bilinear(p);
+  let a = src.a * clamp(params.color.a, 0.0, 1.0);
+  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
+  return vec4<f32>(rgb, a);
+}
+"#;
+
+const DROP_SHADOW_MASKED_SHADER_PART_A: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  offset_px: vec2<f32>,
+  _pad0: vec2<f32>,
+  color: vec4<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+"#;
+
+const DROP_SHADOW_MASKED_SHADER_PART_B: &str = r#"
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    alpha = alpha * sdf_coverage_linear(sdf);
+  }
+  return alpha;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let p = pos.xy - params.offset_px;
+  let src = sample_premul_bilinear(p);
+  let clip = clip_alpha(pos.xy);
+  let a = src.a * clamp(params.color.a, 0.0, 1.0) * clip;
+  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
+  return vec4<f32>(rgb, a);
+}
+"#;
+
+pub(super) fn drop_shadow_masked_shader_source() -> String {
+    format!(
+        "{DROP_SHADOW_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{DROP_SHADOW_MASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) const DROP_SHADOW_MASK_SHADER: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  offset_px: vec2<f32>,
+  _pad0: vec2<f32>,
+  color: vec4<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+@group(1) @binding(2) var mask_texture: texture_2d<f32>;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
+
+  let p = pos.xy - params.offset_px;
+  let src = sample_premul_bilinear(p);
+  let a = src.a * clamp(params.color.a, 0.0, 1.0) * mask;
+  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
+  return vec4<f32>(rgb, a);
 }
 "#;
 
@@ -1567,6 +2037,1116 @@ pub(super) fn clip_mask_shader_source() -> String {
     format!("{CLIP_MASK_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{CLIP_MASK_SHADER_PART_B}")
 }
 
+pub(super) const BACKDROP_WARP_SHADER: &str = r#"
+@group(0) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(0) @binding(1) var<uniform> params: Params;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  // Convert from pixel-center coordinates to texel coordinates for manual bilinear sampling.
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let s = clamp(params.strength_px, 0.0, 24.0);
+  let scale = max(params.scale_px, 1.0);
+  let phase = params.phase;
+
+  // A deterministic, bounded warp field (portable to WebGPU/WGSL).
+  //
+  // The v1 surface intentionally keeps the vocabulary small. We provide:
+  // - a "Wave" field (cheap, periodic) with a radial falloff so it reads like a lens,
+  // - and a "LensReserved" analytic fallback which is more lens-like and less grid-regular.
+  let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
+  let t = (local / scale) + vec2<f32>(phase, phase);
+
+  // Periodic "wave" (with falloff so the edges stay stable).
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  // Analytic lens-like field: radial + a tiny swirl component for "liquid" motion, with stronger falloff.
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  if (chroma <= 0.0) {
+    return sample_premul_bilinear(base_px + d);
+  }
+
+  let len = length(d);
+  let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+  let center = sample_premul_bilinear(base_px + d);
+  let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+  let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+  let a = center.a;
+  if (a <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let ru = r_s.rgb / max(r_s.a, 1e-4);
+  let cu = center.rgb / a;
+  let bu = b_s.rgb / max(b_s.a, 1e-4);
+  let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+  return vec4<f32>(rgb_u * a, a);
+}
+"#;
+
+pub(super) const BACKDROP_WARP_IMAGE_SHADER: &str = r#"
+@group(0) @binding(0) var src_texture: texture_2d<f32>;
+@group(0) @binding(2) var warp_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(0) @binding(1) var<uniform> params: Params;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_bilinear_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p = uv * (dims - vec2<f32>(1.0)) + vec2<f32>(0.5);
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let px = clamp(p, vec2<f32>(0.5), max_p);
+
+  let t = px - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(warp_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(warp_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(warp_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(warp_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_nearest_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let x = clamp(i32(floor(uv.x * f32(dims_u.x))), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(uv.y * f32(dims_u.y))), 0, i32(dims_u.y) - 1);
+  return textureLoad(warp_texture, vec2<i32>(x, y), 0);
+}
+
+fn warp_map_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let size_px = max(params.bounds_size_px, vec2<f32>(1.0));
+  let t = clamp(local / size_px, vec2<f32>(0.0), vec2<f32>(1.0));
+  let uv = mix(params.uv0, params.uv1, t);
+
+  let use_nearest = params.warp_sampling == 2u;
+  let s = select(sample_warp_bilinear_uv(uv), sample_warp_nearest_uv(uv), use_nearest);
+
+  let v_rg = s.rg * 2.0 - 1.0;
+  let n_xy = (s.rgb * 2.0 - 1.0).xy;
+  let v = select(v_rg, n_xy, params.warp_encoding == 2u);
+
+  let strength = clamp(params.strength_px, 0.0, 24.0);
+  return v * strength;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_map_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  if (chroma <= 0.0) {
+    return sample_premul_bilinear(base_px + d);
+  }
+
+  let len = length(d);
+  let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+  let center = sample_premul_bilinear(base_px + d);
+  let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+  let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+  let a = center.a;
+  if (a <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let ru = r_s.rgb / max(r_s.a, 1e-4);
+  let cu = center.rgb / a;
+  let bu = b_s.rgb / max(b_s.a, 1e-4);
+  let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+  return vec4<f32>(rgb_u * a, a);
+}
+"#;
+
+const BACKDROP_WARP_MASKED_SHADER_PART_A: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+"#;
+
+const BACKDROP_WARP_MASKED_SHADER_PART_B: &str = r#"
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let s = clamp(params.strength_px, 0.0, 24.0);
+  let scale = max(params.scale_px, 1.0);
+  let phase = params.phase;
+
+  let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
+  let t = (local / scale) + vec2<f32>(phase, phase);
+
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    alpha = alpha * sdf_coverage_linear(sdf);
+  }
+  return alpha;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  var color = vec4<f32>(0.0);
+  if (chroma <= 0.0) {
+    color = sample_premul_bilinear(base_px + d);
+  } else {
+    let len = length(d);
+    let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+    let center = sample_premul_bilinear(base_px + d);
+    let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+    let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+    let a = center.a;
+    if (a <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+    let ru = r_s.rgb / max(r_s.a, 1e-4);
+    let cu = center.rgb / a;
+    let bu = b_s.rgb / max(b_s.a, 1e-4);
+    let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+    color = vec4<f32>(rgb_u * a, a);
+  }
+
+  let clip = clip_alpha(pos.xy);
+  return vec4<f32>(color.rgb * clip, clip);
+}
+"#;
+
+pub(super) fn backdrop_warp_masked_shader_source() -> String {
+    format!(
+        "{BACKDROP_WARP_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BACKDROP_WARP_MASKED_SHADER_PART_B}"
+    )
+}
+
+const BACKDROP_WARP_IMAGE_MASKED_SHADER_PART_A: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+@group(1) @binding(2) var warp_texture: texture_2d<f32>;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+"#;
+
+const BACKDROP_WARP_IMAGE_MASKED_SHADER_PART_B: &str = r#"
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_bilinear_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p = uv * (dims - vec2<f32>(1.0)) + vec2<f32>(0.5);
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let px = clamp(p, vec2<f32>(0.5), max_p);
+
+  let t = px - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(warp_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(warp_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(warp_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(warp_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_nearest_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let x = clamp(i32(floor(uv.x * f32(dims_u.x))), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(uv.y * f32(dims_u.y))), 0, i32(dims_u.y) - 1);
+  return textureLoad(warp_texture, vec2<i32>(x, y), 0);
+}
+
+fn warp_map_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let size_px = max(params.bounds_size_px, vec2<f32>(1.0));
+  let t = clamp(local / size_px, vec2<f32>(0.0), vec2<f32>(1.0));
+  let uv = mix(params.uv0, params.uv1, t);
+
+  let use_nearest = params.warp_sampling == 2u;
+  let s = select(sample_warp_bilinear_uv(uv), sample_warp_nearest_uv(uv), use_nearest);
+
+  let v_rg = s.rg * 2.0 - 1.0;
+  let n_xy = (s.rgb * 2.0 - 1.0).xy;
+  let v = select(v_rg, n_xy, params.warp_encoding == 2u);
+
+  let strength = clamp(params.strength_px, 0.0, 24.0);
+  return v * strength;
+}
+
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    alpha = alpha * sdf_coverage_linear(sdf);
+  }
+  return alpha;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_map_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  var color = vec4<f32>(0.0);
+  if (chroma <= 0.0) {
+    color = sample_premul_bilinear(base_px + d);
+  } else {
+    let len = length(d);
+    let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+    let center = sample_premul_bilinear(base_px + d);
+    let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+    let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+    let a = center.a;
+    if (a <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+    let ru = r_s.rgb / max(r_s.a, 1e-4);
+    let cu = center.rgb / a;
+    let bu = b_s.rgb / max(b_s.a, 1e-4);
+    let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+    color = vec4<f32>(rgb_u * a, a);
+  }
+
+  let clip = clip_alpha(pos.xy);
+  return vec4<f32>(color.rgb * clip, clip);
+}
+"#;
+
+pub(super) fn backdrop_warp_image_masked_shader_source() -> String {
+    format!(
+        "{BACKDROP_WARP_IMAGE_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BACKDROP_WARP_IMAGE_MASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) const BACKDROP_WARP_IMAGE_MASK_SHADER: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+@group(1) @binding(2) var warp_texture: texture_2d<f32>;
+@group(1) @binding(3) var mask_texture: texture_2d<f32>;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_bilinear_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p = uv * (dims - vec2<f32>(1.0)) + vec2<f32>(0.5);
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let px = clamp(p, vec2<f32>(0.5), max_p);
+
+  let t = px - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(warp_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(warp_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(warp_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(warp_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn sample_warp_nearest_uv(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(warp_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+  }
+  let x = clamp(i32(floor(uv.x * f32(dims_u.x))), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(uv.y * f32(dims_u.y))), 0, i32(dims_u.y) - 1);
+  return textureLoad(warp_texture, vec2<i32>(x, y), 0);
+}
+
+fn warp_map_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let size_px = max(params.bounds_size_px, vec2<f32>(1.0));
+  let t = clamp(local / size_px, vec2<f32>(0.0), vec2<f32>(1.0));
+  let uv = mix(params.uv0, params.uv1, t);
+
+  let use_nearest = params.warp_sampling == 2u;
+  let s = select(sample_warp_bilinear_uv(uv), sample_warp_nearest_uv(uv), use_nearest);
+
+  let v_rg = s.rg * 2.0 - 1.0;
+  let n_xy = (s.rgb * 2.0 - 1.0).xy;
+  let v = select(v_rg, n_xy, params.warp_encoding == 2u);
+
+  let strength = clamp(params.strength_px, 0.0, 24.0);
+  return v * strength;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_map_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  var color = vec4<f32>(0.0);
+  if (chroma <= 0.0) {
+    color = sample_premul_bilinear(base_px + d);
+  } else {
+    let len = length(d);
+    let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+    let center = sample_premul_bilinear(base_px + d);
+    let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+    let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+    let a = center.a;
+    if (a <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+    let ru = r_s.rgb / max(r_s.a, 1e-4);
+    let cu = center.rgb / a;
+    let bu = b_s.rgb / max(b_s.a, 1e-4);
+    let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+    color = vec4<f32>(rgb_u * a, a);
+  }
+
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
+  return vec4<f32>(color.rgb * mask, mask);
+}
+"#;
+
+pub(super) const BACKDROP_WARP_MASK_SHADER: &str = r#"
+struct ClipRRect {
+  rect: vec4<f32>,
+  corner_radii: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+};
+
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+struct ClipStack {
+  clips: array<ClipRRect>,
+};
+
+@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+
+struct Params {
+  origin_px: vec2<f32>,
+  bounds_size_px: vec2<f32>,
+  strength_px: f32,
+  scale_px: f32,
+  phase: f32,
+  chroma_px: f32,
+  kind: u32,
+  warp_encoding: u32,
+  warp_sampling: u32,
+  _pad0: u32,
+  uv0: vec2<f32>,
+  uv1: vec2<f32>,
+};
+
+@group(1) @binding(1) var<uniform> params: Params;
+@group(1) @binding(2) var mask_texture: texture_2d<f32>;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}
+
+fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
+fn warp_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
+  let local = pixel_pos_px - params.origin_px;
+  let s = clamp(params.strength_px, 0.0, 24.0);
+  let scale = max(params.scale_px, 1.0);
+  let phase = params.phase;
+
+  let tau = 6.283185307179586;
+
+  let bounds = max(params.bounds_size_px, vec2<f32>(1.0));
+  let p01 = clamp(local / bounds, vec2<f32>(0.0), vec2<f32>(1.0));
+  let p = (p01 - vec2<f32>(0.5)) * 2.0;
+  let r = length(p);
+  let falloff = clamp(1.0 - r, 0.0, 1.0);
+  let falloff2 = falloff * falloff;
+
+  let t = (local / scale) + vec2<f32>(phase, phase);
+
+  let wave = vec2<f32>(sin(t.y * tau), sin(t.x * tau)) * falloff2;
+
+  let inv_r = select(0.0, 1.0 / r, r > 1e-4);
+  let dir = select(vec2<f32>(1.0, 0.0), p * inv_r, r > 1e-4);
+  let swirl = vec2<f32>(-dir.y, dir.x);
+  let swirl_phase = sin(phase * 1.7);
+  let lens = (dir * 0.9 + swirl * (0.1 * swirl_phase)) * (falloff2 * falloff);
+
+  let use_lens = params.kind == 1u;
+  return select(wave, lens, use_lens) * s;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let dims = textureDimensions(src_texture);
+  let x = i32(floor(pos.x));
+  let y = i32(floor(pos.y));
+  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
+    return vec4<f32>(0.0);
+  }
+
+  let base_px = pos.xy;
+  let d = warp_offset_px(base_px);
+  let chroma = clamp(params.chroma_px, 0.0, 8.0);
+
+  var color = vec4<f32>(0.0);
+  if (chroma <= 0.0) {
+    color = sample_premul_bilinear(base_px + d);
+  } else {
+    let len = length(d);
+    let dir = select(vec2<f32>(1.0, 0.0), d / len, len > 1e-4);
+
+    let center = sample_premul_bilinear(base_px + d);
+    let r_s = sample_premul_bilinear(base_px + d + dir * chroma);
+    let b_s = sample_premul_bilinear(base_px + d - dir * chroma);
+
+    let a = center.a;
+    if (a <= 0.0) {
+      return vec4<f32>(0.0);
+    }
+    let ru = r_s.rgb / max(r_s.a, 1e-4);
+    let cu = center.rgb / a;
+    let bu = b_s.rgb / max(b_s.a, 1e-4);
+    let rgb_u = vec3<f32>(ru.r, cu.g, bu.b);
+    color = vec4<f32>(rgb_u * a, a);
+  }
+
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
+  return vec4<f32>(color.rgb * mask, mask);
+}
+"#;
+
 pub(super) const COLOR_ADJUST_SHADER: &str = r#"
 @group(0) @binding(0) var src_texture: texture_2d<f32>;
 
@@ -1621,14 +3201,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   // Luma coefficients (linear-ish). This pass treats the stored texture encoding as "working space"
   // to stay consistent with other fullscreen passes.
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   return vec4<f32>(rgb * a, a);
@@ -1749,12 +3329,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   let clip = clip_alpha(pos.xy);
@@ -1858,12 +3438,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   var rgb = tex.rgb / a;
   let s = max(params.saturation, 0.0);
   let c = params.contrast;
-  let b = params.brightness;
+  let b = max(params.brightness, 0.0);
 
   let luma = dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
   rgb = mix(vec3<f32>(luma), rgb, s);
+  rgb = rgb * vec3<f32>(b);
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
-  rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
   let mdims_u = textureDimensions(mask_texture);
@@ -3227,6 +4807,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3264,6 +4857,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -3279,7 +4904,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3288,7 +4913,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3298,8 +4923,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3449,6 +5073,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3486,6 +5123,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -3501,7 +5170,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3510,7 +5179,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3520,8 +5189,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -3729,6 +5397,57 @@ fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   return p.stop_offsets1[i - 4u];
 }
 
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
+}
+
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   let n = min(p.stop_count, MAX_STOPS);
   if (n == 0u) {
@@ -3752,7 +5471,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, c, u);
+      return paint_mix_colorspace(p, prev_color, c, u);
     }
     prev_offset = off;
     prev_color = c;
@@ -3770,7 +5489,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -3778,7 +5497,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -3790,7 +5509,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -3872,6 +5591,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -3909,6 +5641,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -3924,7 +5688,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3933,7 +5697,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -3943,8 +5707,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4083,6 +5846,8 @@ struct MaskStack {
 
 const MAX_STOPS: u32 = 8u;
 
+const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;
+
 struct Paint {
   kind: u32,
   tile_mode: u32,
@@ -4108,6 +5873,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -4117,6 +5883,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4183,11 +5950,75 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
   }
   return p.stop_offsets1[i - 4u];
+}
+
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
 }
 
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
@@ -4211,7 +6042,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -4229,7 +6060,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -4237,7 +6068,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -4249,7 +6080,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -4292,6 +6123,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -4307,7 +6170,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4316,7 +6179,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4326,8 +6189,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4414,7 +6276,84 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
+}
+
+fn glyph_sample_r(uv: vec2<f32>) -> f32 {
+  return textureSample(glyph_atlas, glyph_sampler, uv).r;
+}
+
+fn glyph_dilate_r(uv: vec2<f32>, radius: u32) -> f32 {
+  let dims_u = textureDimensions(glyph_atlas);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let texel = vec2<f32>(1.0, 1.0) / dims;
+
+  let s0 = glyph_sample_r(uv);
+
+  let dx = vec2<f32>(texel.x, 0.0);
+  let dy = vec2<f32>(0.0, texel.y);
+  let d11 = vec2<f32>(texel.x, texel.y);
+  let d1m1 = vec2<f32>(texel.x, -texel.y);
+
+  let d1x = 1.0 * dx;
+  let d1y = 1.0 * dy;
+  let d1d0 = 1.0 * d11;
+  let d1d1 = 1.0 * d1m1;
+  let max1 = max(
+    s0,
+    max(
+      max(
+        max(glyph_sample_r(uv + d1x), glyph_sample_r(uv - d1x)),
+        max(glyph_sample_r(uv + d1y), glyph_sample_r(uv - d1y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d1d0), glyph_sample_r(uv - d1d0)),
+        max(glyph_sample_r(uv + d1d1), glyph_sample_r(uv - d1d1))
+      )
+    )
+  );
+
+  let d2x = 2.0 * dx;
+  let d2y = 2.0 * dy;
+  let d2d0 = 2.0 * d11;
+  let d2d1 = 2.0 * d1m1;
+  let max2 = max(
+    max1,
+    max(
+      max(
+        max(glyph_sample_r(uv + d2x), glyph_sample_r(uv - d2x)),
+        max(glyph_sample_r(uv + d2y), glyph_sample_r(uv - d2y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d2d0), glyph_sample_r(uv - d2d0)),
+        max(glyph_sample_r(uv + d2d1), glyph_sample_r(uv - d2d1))
+      )
+    )
+  );
+
+  let d3x = 3.0 * dx;
+  let d3y = 3.0 * dy;
+  let d3d0 = 3.0 * d11;
+  let d3d1 = 3.0 * d1m1;
+  let max3 = max(
+    max2,
+    max(
+      max(
+        max(glyph_sample_r(uv + d3x), glyph_sample_r(uv - d3x)),
+        max(glyph_sample_r(uv + d3y), glyph_sample_r(uv - d3y))
+      ),
+      max(
+        max(glyph_sample_r(uv + d3d0), glyph_sample_r(uv - d3d0)),
+        max(glyph_sample_r(uv + d3d1), glyph_sample_r(uv - d3d1))
+      )
+    )
+  );
+
+  let m1 = select(0.0, 1.0, radius >= 1u);
+  let m2 = select(0.0, 1.0, radius >= 2u);
+  let m3 = select(0.0, 1.0, radius >= 3u);
+  return max(s0, max(max1 * m1, max(max2 * m2, max3 * m3)));
 }
 
 @fragment
@@ -4422,11 +6361,33 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
+  let fill_sample = tex.r;
   let p = text_paints.paints[input.paint_index];
   let base = paint_eval(p, input.local_pos_px) * input.color;
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
-  let coverage = apply_contrast_and_gamma_correction(tex.r, base_un);
-  let out = vec4<f32>(base.rgb * coverage, base.a * coverage) * clip * mask;
+  let fill_cov = apply_contrast_and_gamma_correction(fill_sample, base_un);
+  var out = vec4<f32>(base.rgb * fill_cov, base.a * fill_cov);
+
+  if (FRET_TEXT_OUTLINE_PRESENT != 0u) {
+    let outline_params = input.outline_params;
+    let outline_radius = min(outline_params & 3u, 3u);
+    let outline_enabled = select(0.0, 1.0, outline_radius != 0u);
+    let outline_max_sample = glyph_dilate_r(input.uv, outline_radius);
+    let ring_sample = saturate(outline_max_sample - fill_sample) * outline_enabled;
+    let outline_paint_index = outline_params >> 2u;
+    let op = text_paints.paints[outline_paint_index];
+    let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
+    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_un = select(
+      vec3<f32>(0.0),
+      outline_base.rgb / outline_base.a,
+      outline_base.a > 1e-6
+    );
+    let ring_cov = apply_contrast_and_gamma_correction(ring_sample, outline_un);
+    out = out + vec4<f32>(outline_base.rgb * ring_cov, outline_base.a * ring_cov);
+  }
+
+  out = out * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -4526,6 +6487,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -4535,6 +6497,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4601,11 +6564,75 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
   }
   return p.stop_offsets1[i - 4u];
+}
+
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
 }
 
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
@@ -4629,7 +6656,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -4647,7 +6674,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -4655,7 +6682,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -4667,7 +6694,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -4710,6 +6737,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -4725,7 +6784,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4734,7 +6793,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -4744,8 +6803,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -4802,6 +6860,7 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
 }
 
@@ -4913,6 +6972,7 @@ struct VsIn {
   @location(1) local_pos_px: vec2<f32>,
   @location(2) uv: vec2<f32>,
   @location(3) color: vec4<f32>,
+  @location(4) outline_params: u32,
 };
 
 struct VsOut {
@@ -4922,6 +6982,7 @@ struct VsOut {
   @location(2) pixel_pos: vec2<f32>,
   @location(3) local_pos_px: vec2<f32>,
   @location(4) @interpolate(flat) paint_index: u32,
+  @location(5) @interpolate(flat) outline_params: u32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -4988,11 +7049,75 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn paint_stop_offset(p: Paint, i: u32) -> f32 {
   if (i < 4u) {
     return p.stop_offsets0[i];
   }
   return p.stop_offsets1[i - 4u];
+}
+
+fn paint_unpremul_rgb(c: vec4<f32>) -> vec3<f32> {
+  let a = max(c.a, 1e-6);
+  return c.rgb / a;
+}
+
+fn linear_rgb_to_oklab(rgb: vec3<f32>) -> vec3<f32> {
+  let c = max(rgb, vec3<f32>(0.0));
+  let lms = vec3<f32>(
+    0.4122214708 * c.x + 0.5363325363 * c.y + 0.0514459929 * c.z,
+    0.2119034982 * c.x + 0.6806995451 * c.y + 0.1073969566 * c.z,
+    0.0883024619 * c.x + 0.2817188376 * c.y + 0.6299787005 * c.z
+  );
+  let lms_cbrt = pow(max(lms, vec3<f32>(0.0)), vec3<f32>(1.0 / 3.0));
+  return vec3<f32>(
+    0.2104542553 * lms_cbrt.x + 0.7936177850 * lms_cbrt.y - 0.0040720468 * lms_cbrt.z,
+    1.9779984951 * lms_cbrt.x - 2.4285922050 * lms_cbrt.y + 0.4505937099 * lms_cbrt.z,
+    0.0259040371 * lms_cbrt.x + 0.7827717662 * lms_cbrt.y - 0.8086757660 * lms_cbrt.z
+  );
+}
+
+fn oklab_to_linear_rgb(lab: vec3<f32>) -> vec3<f32> {
+  let lms_cbrt = vec3<f32>(
+    lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z,
+    lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z,
+    lab.x - 0.0894841775 * lab.y - 1.2914855480 * lab.z
+  );
+  let lms = lms_cbrt * lms_cbrt * lms_cbrt;
+  return vec3<f32>(
+    4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+    -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+    -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z
+  );
+}
+
+fn paint_mix_colorspace(p: Paint, a: vec4<f32>, b: vec4<f32>, u: f32) -> vec4<f32> {
+  if (p.color_space == 1u) {
+    let a0 = clamp(a.a, 0.0, 1.0);
+    let a1 = clamp(b.a, 0.0, 1.0);
+    let alpha = clamp(mix(a0, a1, u), 0.0, 1.0);
+
+    let rgb0 = clamp(paint_unpremul_rgb(a), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb1 = clamp(paint_unpremul_rgb(b), vec3<f32>(0.0), vec3<f32>(1.0));
+    let lab0 = linear_rgb_to_oklab(rgb0);
+    let lab1 = linear_rgb_to_oklab(rgb1);
+    let lab = mix(lab0, lab1, u);
+    let rgb = clamp(oklab_to_linear_rgb(lab), vec3<f32>(0.0), vec3<f32>(1.0));
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+  return mix(a, b, u);
 }
 
 fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
@@ -5016,7 +7141,7 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
     if (t <= off) {
       let denom = max(off - prev_offset, 1e-6);
       let u = saturate((t - prev_offset) / denom);
-      return mix(prev_color, col, u);
+      return paint_mix_colorspace(p, prev_color, col, u);
     }
     prev_offset = off;
     prev_color = col;
@@ -5034,7 +7159,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
@@ -5042,7 +7167,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 4u) {
@@ -5054,7 +7179,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
     let t = rel / span;
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   return vec4<f32>(0.0);
@@ -5097,6 +7222,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -5112,7 +7269,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5121,7 +7278,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5131,8 +7288,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }
@@ -5193,6 +7349,85 @@ fn apply_contrast_and_gamma_correction3(sample: vec3<f32>, color: vec3<f32>) -> 
   return apply_alpha_correction3(contrasted, color, viewport.text_gamma_ratios);
 }
 
+const FRET_TEXT_OUTLINE_PRESENT: u32 = 0u;
+
+fn glyph_sample_max_rgb(uv: vec2<f32>) -> f32 {
+  let tex = textureSample(glyph_atlas, glyph_sampler, uv);
+  return max(max(tex.r, tex.g), tex.b);
+}
+
+fn glyph_dilate_max_rgb(uv: vec2<f32>, radius: u32) -> f32 {
+  let dims_u = textureDimensions(glyph_atlas);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let texel = vec2<f32>(1.0, 1.0) / dims;
+
+  let s0 = glyph_sample_max_rgb(uv);
+
+  let dx = vec2<f32>(texel.x, 0.0);
+  let dy = vec2<f32>(0.0, texel.y);
+  let d11 = vec2<f32>(texel.x, texel.y);
+  let d1m1 = vec2<f32>(texel.x, -texel.y);
+
+  let d1x = 1.0 * dx;
+  let d1y = 1.0 * dy;
+  let d1d0 = 1.0 * d11;
+  let d1d1 = 1.0 * d1m1;
+  let max1 = max(
+    s0,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d1x), glyph_sample_max_rgb(uv - d1x)),
+        max(glyph_sample_max_rgb(uv + d1y), glyph_sample_max_rgb(uv - d1y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d1d0), glyph_sample_max_rgb(uv - d1d0)),
+        max(glyph_sample_max_rgb(uv + d1d1), glyph_sample_max_rgb(uv - d1d1))
+      )
+    )
+  );
+
+  let d2x = 2.0 * dx;
+  let d2y = 2.0 * dy;
+  let d2d0 = 2.0 * d11;
+  let d2d1 = 2.0 * d1m1;
+  let max2 = max(
+    max1,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d2x), glyph_sample_max_rgb(uv - d2x)),
+        max(glyph_sample_max_rgb(uv + d2y), glyph_sample_max_rgb(uv - d2y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d2d0), glyph_sample_max_rgb(uv - d2d0)),
+        max(glyph_sample_max_rgb(uv + d2d1), glyph_sample_max_rgb(uv - d2d1))
+      )
+    )
+  );
+
+  let d3x = 3.0 * dx;
+  let d3y = 3.0 * dy;
+  let d3d0 = 3.0 * d11;
+  let d3d1 = 3.0 * d1m1;
+  let max3 = max(
+    max2,
+    max(
+      max(
+        max(glyph_sample_max_rgb(uv + d3x), glyph_sample_max_rgb(uv - d3x)),
+        max(glyph_sample_max_rgb(uv + d3y), glyph_sample_max_rgb(uv - d3y))
+      ),
+      max(
+        max(glyph_sample_max_rgb(uv + d3d0), glyph_sample_max_rgb(uv - d3d0)),
+        max(glyph_sample_max_rgb(uv + d3d1), glyph_sample_max_rgb(uv - d3d1))
+      )
+    )
+  );
+
+  let m1 = select(0.0, 1.0, radius >= 1u);
+  let m2 = select(0.0, 1.0, radius >= 2u);
+  let m3 = select(0.0, 1.0, radius >= 3u);
+  return max(s0, max(max1 * m1, max(max2 * m2, max3 * m3)));
+}
+
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   if (viewport.output_is_srgb != 0u) {
     return c;
@@ -5215,6 +7450,7 @@ fn vs_main(input: VsIn, @builtin(instance_index) instance_index: u32) -> VsOut {
   out.pixel_pos = input.pos_px;
   out.local_pos_px = input.local_pos_px;
   out.paint_index = instance_index;
+  out.outline_params = input.outline_params;
   return out;
 }
 
@@ -5228,7 +7464,33 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
   let coverage = apply_contrast_and_gamma_correction3(tex.rgb, base_un);
   let a = max(max(coverage.r, coverage.g), coverage.b);
-  let out = vec4<f32>(base.rgb * coverage, base.a * a) * clip * mask;
+  var out = vec4<f32>(base.rgb * coverage, base.a * a);
+
+  if (FRET_TEXT_OUTLINE_PRESENT != 0u) {
+    let outline_params = input.outline_params;
+    let outline_radius = min(outline_params & 3u, 3u);
+    let outline_enabled = select(0.0, 1.0, outline_radius != 0u);
+    let fill_sample = max(max(tex.r, tex.g), tex.b);
+    let outline_max_sample = glyph_dilate_max_rgb(input.uv, outline_radius);
+    let ring_sample = saturate(outline_max_sample - fill_sample) * outline_enabled;
+    let outline_paint_index = outline_params >> 2u;
+    let op = text_paints.paints[outline_paint_index];
+    let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
+    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_un = select(
+      vec3<f32>(0.0),
+      outline_base.rgb / outline_base.a,
+      outline_base.a > 1e-6
+    );
+    let ring_cov3 = apply_contrast_and_gamma_correction3(
+      vec3<f32>(ring_sample, ring_sample, ring_sample),
+      outline_un
+    );
+    let ring_a = max(max(ring_cov3.r, ring_cov3.g), ring_cov3.b);
+    out = out + vec4<f32>(outline_base.rgb * ring_cov3, outline_base.a * ring_a);
+  }
+
+  out = out * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -5378,6 +7640,19 @@ fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
 
+fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
+  if (tile_mode == 1u) {
+    return fract(t);
+  }
+  if (tile_mode == 2u) {
+    let seg = floor(t);
+    let r = fract(t);
+    let odd = (i32(seg) & 1) != 0;
+    return select(r, 1.0 - r, odd);
+  }
+  return clamp(t, 0.0, 1.0);
+}
+
 fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
   if (i < 4u) { return m.stop_offsets0[i]; }
   return m.stop_offsets1[i - 4u];
@@ -5415,6 +7690,38 @@ fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
   return prev_alpha;
 }
 
+fn mask_image_sample_bilinear_clamp(uv: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(mask_image_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let p_px = uv * dims;
+
+  // Manual bilinear sampling avoids WGSL uniformity restrictions on WebGPU.
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(mask_image_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(mask_image_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(mask_image_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(mask_image_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
   let local_pos = vec2<f32>(
     dot(m.inv0.xy, pixel_pos) + m.inv0.z,
@@ -5430,7 +7737,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let dir = end - start;
     let len2 = dot(dir, dir);
     let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5439,7 +7746,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let radius = max(m.params0.zw, vec2<f32>(1e-6));
     let d = (local_pos - center) / radius;
     let t = length(d);
-    let tt = clamp(t, 0.0, 1.0);
+    let tt = gradient_tile_mode_apply(t, m.tile_mode);
     return select(1.0, mask_sample_stops(m, tt), in_bounds);
   }
 
@@ -5449,8 +7756,7 @@ fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
     let denom = max(m.bounds.zw, vec2<f32>(1e-6));
     let t = clamp(p / denom, vec2<f32>(0.0), vec2<f32>(1.0));
     let uv = mix(uv0, uv1, t);
-    // Use an explicit LOD to avoid implicit-derivative uniformity restrictions on WebGPU.
-    let s = textureSampleLevel(mask_image_texture, mask_image_sampler, uv, 0.0);
+    let s = mask_image_sample_bilinear_clamp(uv);
     let cov = select(s.r, s.a, m.tile_mode == 1u);
     return select(1.0, clamp(cov, 0.0, 1.0), in_bounds);
   }

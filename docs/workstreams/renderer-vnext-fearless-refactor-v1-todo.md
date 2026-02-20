@@ -1,6 +1,6 @@
 # Renderer vNext Fearless Refactor v1 — TODO Tracker
 
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 This document tracks TODOs for:
 
@@ -251,23 +251,112 @@ milestones) when implementation begins.
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
     - `cargo test -p fret-render-wgpu --test composite_group_conformance`
   - Guardrail: keep the enum small and portable; do not mirror the full CSS list without evidence.
-- [~] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
-  - Status (2026-02-16): v1 landed for painted text fills (solid + gradients), staged by ADR 0279.
+- [x] REN-VNEXT-sem-060 Text paint expansion: gradient/material text, text outline/stroke, and/or text shadow semantics.
+  - Status (2026-02-18): v1 landed for painted text fills (solid + gradients) and a bounded text shadow surface.
     - Landed (v1): `SceneOp::Text` carries `paint: Paint` with bounded, deterministic degradations.
     - Landed (v1): GPU readback conformance gate for text gradient paint.
+    - Landed (v1): `SceneOp::Text.shadow: Option<TextShadowV1>` (single layer, no blur) for portable text shadows.
     - Landed (adoption): ui-gallery probe uses `Paint::LinearGradient` for text.
     - Landed (prep): unified paint→GPU encoding helper (quad/path/text) with explicit material policy
       (text/path still deterministically degrade materials to a solid base color).
-    - Deferred (v2+): text outline/stroke and text shadow as first-class contract surfaces.
+    - Landed (v1): `TextOutlineV1` contract + wgpu (mask+subpixel) implementation + conformance; adoption landed via ui-gallery probe.
+    - Tracking workstream (outline/stroke):
+      - `docs/workstreams/text-outline-stroke-surface-v1.md`
+      - `docs/workstreams/text-outline-stroke-surface-v1-todo.md`
+      - `docs/workstreams/text-outline-stroke-surface-v1-milestones.md`
+      - Audit is recorded (atlas is coverage, not SDF/MSDF): `docs/workstreams/text-outline-stroke-surface-v1-todo.md` (`TOS-audit-010`)
   - Tracking: `docs/workstreams/text-paint-surface-v1.md` (purpose/TODO/milestones)
-  - ADR: `docs/adr/0279-text-paint-surface-v1.md`
+  - ADRs:
+    - `docs/adr/0279-text-paint-surface-v1.md`
+    - `docs/adr/0283-text-shadow-surface-v1.md`
   - Evidence:
+    - `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text.shadow`, `TextShadowV1`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`paint_to_gpu`, `PaintMaterialPolicy`)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (uses shared helper; material still degrades)
-- [ ] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` and/or image/pattern paints.
-  - Current: sanitize degrades repeat/mirror to clamp for determinism.
-- [ ] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
-  - Current: sanitize degrades Oklab to sRGB for determinism.
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`encode_text` renders shadow layer; material still degrades)
+    - `crates/fret-core/src/scene/mod.rs` (`TextOutlineV1`, `SceneOp::Text { outline }`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (outline pipeline variant)
+    - `crates/fret-render-wgpu/tests/text_outline_conformance.rs` (`gpu_text_outline_v1_renders_a_visible_ring_for_mask_glyphs`)
+    - `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/outline_stroke.rs`
+    - `crates/fret-render-wgpu/tests/text_paint_conformance.rs` (`gpu_text_shadow_v1_renders_a_separate_layer`)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+- [x] REN-VNEXT-sem-070 Pattern/tile semantics: support `TileMode::{Repeat,Mirror}` for gradients.
+  - Landed (v1): `TileMode::{Repeat,Mirror}` is preserved in `Paint` + `Mask` sanitization and implemented in WGSL
+    gradient evaluation (linear/radial/sweep) via a deterministic tiling function.
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `tile_mode`)
+    - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `tile_mode`)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`gradient_tile_mode_apply`, gradient eval uses it)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (repeat/mirror smoke)
+    - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs` (repeat/mirror smoke)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+- [x] REN-VNEXT-sem-080 Wider color spaces: support `ColorSpace::Oklab` (and verify portability).
+  - Landed (v1): `ColorSpace::Oklab` is preserved in sanitization and used for gradient stop interpolation
+    (linear/radial/sweep paints). Masks preserve the enum for forward-compatibility (mask gradients are alpha-only today).
+  - Evidence:
+    - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `color_space`)
+    - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `color_space`)
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_mix_colorspace`, Oklab conversions)
+    - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (Oklab midpoint vs sRGB/linear)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
+- [x] REN-VNEXT-sem-090 Backdrop warp/refraction (bounded): add a “backdrop warp” effect step to enable
+      true liquid-glass style distortion (displacement + optional chromatic aberration), with deterministic
+      degradation on wasm/mobile.
+  - Tracking:
+    - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
+    - `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
+    - `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`
+  - Evidence:
+    - `docs/adr/0284-backdrop-warp-effect-step-v1.md`
+    - `crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs`
+    - `tools/diag-scripts/liquid-glass-backdrop-warp-steady.json`
+    - `apps/fret-examples/src/liquid_glass_demo.rs`
+  - Extension (v2, texture-driven warp field):
+    - Status: landed (conformance + perf baseline recorded)
+    - Tracking:
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2-todo.md`
+      - `docs/workstreams/renderer-effect-backdrop-warp-v2-milestones.md`
+    - Evidence:
+      - `docs/adr/0285-backdrop-warp-effect-step-v2-texture-field.md`
+      - `crates/fret-render-wgpu/tests/effect_backdrop_warp_v2_conformance.rs`
+      - `tools/diag-scripts/liquid-glass-backdrop-warp-v2-steady.json`
+      - `docs/workstreams/perf-baselines/policies/liquid-glass-backdrop-warp-v2-steady.v1.json`
+      - `docs/workstreams/perf-baselines/liquid-glass-backdrop-warp-v2-steady.windows-rtx4090.v1.json`
+      - `apps/fret-examples/src/liquid_glass_demo.rs`
+
+- [x] REN-VNEXT-sem-100 Drop shadow (blur-based, bounded): add a general drop shadow effect step for
+      non-text content (cards/popovers), with deterministic degradation and perf gates.
+  - Tracking:
+    - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
+    - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
+    - `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+  - Evidence:
+    - `docs/adr/0286-drop-shadow-effect-step-v1.md`
+    - `crates/fret-core/src/scene/mod.rs` (`EffectStep::DropShadowV1`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/drop_shadow.rs`
+    - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`DROP_SHADOW_*`)
+    - `crates/fret-render-wgpu/tests/effect_drop_shadow_v1_conformance.rs`
+    - `tools/diag-scripts/drop-shadow-v1-steady.json`
+    - `docs/workstreams/perf-baselines/drop-shadow-v1-steady.windows-rtx4090.v1.json`
+    - `tools/perf/diag_drop_shadow_v1_gate.ps1`
+
+- [x] REN-VNEXT-sem-110 Clip-path + mask closure: keep rect scissor fast paths hot, and make slow-path
+      clip/mask intermediates cacheable and WebGPU-uniformity-safe (no divergent sampling hazards).
+  - Tracking:
+    - `docs/workstreams/renderer-clip-mask-closure-v1.md`
+    - `docs/workstreams/renderer-clip-mask-closure-v1-todo.md`
+    - `docs/workstreams/renderer-clip-mask-closure-v1-milestones.md`
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+    - `tools/perf/headless_clip_mask_stress_gate.py`
+    - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 
 ## Always-run guardrails (before/after each milestone)
 

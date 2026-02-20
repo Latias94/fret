@@ -319,6 +319,77 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         state = mix_px(state, radius_px);
                         mix_u64(state, u64::from(downsample))
                     }
+                    EffectStep::DropShadowV1(s) => {
+                        let mut state = mix_u64(state, 9);
+                        state = mix_px(state, s.offset_px.x);
+                        state = mix_px(state, s.offset_px.y);
+                        state = mix_px(state, s.blur_radius_px);
+                        state = mix_u64(state, u64::from(s.downsample));
+                        state = mix_f32(state, s.color.r);
+                        state = mix_f32(state, s.color.g);
+                        state = mix_f32(state, s.color.b);
+                        mix_f32(state, s.color.a)
+                    }
+                    EffectStep::BackdropWarpV1(w) => {
+                        let mut state = mix_u64(state, 7);
+                        state = mix_px(state, w.strength_px);
+                        state = mix_px(state, w.scale_px);
+                        state = mix_f32(state, w.phase);
+                        state = mix_px(state, w.chromatic_aberration_px);
+                        mix_u64(
+                            state,
+                            match w.kind {
+                                BackdropWarpKindV1::Wave => 1,
+                                BackdropWarpKindV1::LensReserved => 2,
+                            },
+                        )
+                    }
+                    EffectStep::BackdropWarpV2(w) => {
+                        let mut state = mix_u64(state, 8);
+                        // Base (procedural) parameters are always included to preserve deterministic fallback.
+                        state = mix_px(state, w.base.strength_px);
+                        state = mix_px(state, w.base.scale_px);
+                        state = mix_f32(state, w.base.phase);
+                        state = mix_px(state, w.base.chromatic_aberration_px);
+                        state = mix_u64(
+                            state,
+                            match w.base.kind {
+                                BackdropWarpKindV1::Wave => 1,
+                                BackdropWarpKindV1::LensReserved => 2,
+                            },
+                        );
+                        match w.field {
+                            BackdropWarpFieldV2::Procedural => mix_u64(state, 1),
+                            BackdropWarpFieldV2::ImageDisplacementMap {
+                                image,
+                                uv,
+                                sampling,
+                                encoding,
+                            } => {
+                                let mut state = mix_u64(state, 2);
+                                state = mix_u64(state, image.data().as_ffi());
+                                state = mix_f32(state, uv.u0);
+                                state = mix_f32(state, uv.v0);
+                                state = mix_f32(state, uv.u1);
+                                state = mix_f32(state, uv.v1);
+                                state = mix_u64(
+                                    state,
+                                    match sampling {
+                                        ImageSamplingHint::Default => 0,
+                                        ImageSamplingHint::Linear => 1,
+                                        ImageSamplingHint::Nearest => 2,
+                                    },
+                                );
+                                mix_u64(
+                                    state,
+                                    match encoding {
+                                        WarpMapEncodingV1::RgSigned => 1,
+                                        WarpMapEncodingV1::NormalRgb => 2,
+                                    },
+                                )
+                            }
+                        }
+                    }
                     EffectStep::ColorAdjust {
                         saturation,
                         brightness,
@@ -553,12 +624,25 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             origin,
             text,
             paint,
+            outline,
+            shadow,
         } => {
             let mut state = mix_u64(state, 5);
             state = mix_u64(state, u64::from(order.0));
             state = mix_point(state, origin);
             state = mix_u64(state, text.data().as_ffi());
-            mix_paint(state, paint)
+            let mut state = mix_paint(state, paint);
+            state = mix_u64(state, u64::from(outline.is_some()));
+            if let Some(o) = outline {
+                state = mix_paint(state, o.paint);
+                state = mix_f32(state, o.width_px.0);
+            }
+            state = mix_u64(state, u64::from(shadow.is_some()));
+            if let Some(s) = shadow {
+                state = mix_point(state, s.offset);
+                state = mix_color(state, s.color);
+            }
+            state
         }
         SceneOp::Path {
             order,

@@ -133,6 +133,7 @@ pub(super) struct TextVertex {
     pub(super) local_pos_px: [f32; 2],
     pub(super) uv: [f32; 2],
     pub(super) color: [f32; 4],
+    pub(super) outline_params: u32,
 }
 
 #[repr(C)]
@@ -206,6 +207,10 @@ pub struct RenderPerfSnapshot {
     pub render_target_updates_requested_ingest_cpu_upload: u64,
     pub render_target_updates_ingest_fallbacks: u64,
 
+    // Imported render targets (best-effort). Metadata degradations for strategies that cannot
+    // preserve declared semantics.
+    pub render_target_metadata_degradations_color_encoding_dropped: u64,
+
     // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
     // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
     pub svg_raster_budget_bytes: u64,
@@ -254,6 +259,11 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_filter_content_disabled: u64,
     pub render_plan_degradations_clip_path_disabled: u64,
     pub render_plan_degradations_composite_group_blend_to_over: u64,
+
+    pub clip_path_mask_cache_bytes_live: u64,
+    pub clip_path_mask_cache_entries_live: u64,
+    pub clip_path_mask_cache_hits: u64,
+    pub clip_path_mask_cache_misses: u64,
 
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
@@ -331,6 +341,7 @@ pub(super) struct RenderPerfStats {
     pub(super) render_target_updates_requested_ingest_gpu_copy: u64,
     pub(super) render_target_updates_requested_ingest_cpu_upload: u64,
     pub(super) render_target_updates_ingest_fallbacks: u64,
+    pub(super) render_target_metadata_degradations_color_encoding_dropped: u64,
 
     pub(super) svg_raster_budget_bytes: u64,
     pub(super) svg_rasters_live: u64,
@@ -375,6 +386,11 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_filter_content_disabled: u64,
     pub(super) render_plan_degradations_clip_path_disabled: u64,
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
+
+    pub(super) clip_path_mask_cache_bytes_live: u64,
+    pub(super) clip_path_mask_cache_entries_live: u64,
+    pub(super) clip_path_mask_cache_hits: u64,
+    pub(super) clip_path_mask_cache_misses: u64,
 
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
@@ -616,8 +632,10 @@ pub(super) struct TextDraw {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum TextDrawKind {
     Mask,
+    MaskOutline,
     Color,
     Subpixel,
+    SubpixelOutline,
 }
 
 #[derive(Clone, Copy)]
@@ -635,6 +653,7 @@ pub(super) struct ClipPathMaskDraw {
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
+    pub(super) cache_key: u64,
 }
 
 pub(super) struct PathIntermediate {

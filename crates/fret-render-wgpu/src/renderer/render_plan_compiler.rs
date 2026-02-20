@@ -11,6 +11,13 @@ use super::{
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
 
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    state
+}
+
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
     target: super::PlanTarget,
@@ -103,6 +110,13 @@ pub(super) fn compile_for_scene(
                 )
                 .is_some()
             }
+            fret_core::EffectStep::BackdropWarpV1(_w) => {
+                effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::BackdropWarpV2(_w) => {
+                effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::DropShadowV1(_s) => false,
             fret_core::EffectStep::ColorAdjust { .. } => {
                 effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
             }
@@ -323,6 +337,7 @@ fn compile_for_scene_inner(
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
+         mode: fret_core::EffectMode,
          chain: fret_core::EffectChain,
          quality: fret_core::EffectQuality,
          ctx_viewport_size: (u32, u32),
@@ -365,6 +380,7 @@ fn compile_for_scene_inner(
                 passes,
                 &in_use_targets,
                 srcdst,
+                mode,
                 chain,
                 quality,
                 scissor,
@@ -434,6 +450,7 @@ fn compile_for_scene_inner(
                                     &mut passes,
                                     &draw_scopes,
                                     parent_target,
+                                    mode,
                                     chain,
                                     quality,
                                     parent_size,
@@ -582,6 +599,7 @@ fn compile_for_scene_inner(
                                 &mut passes,
                                 &draw_scopes,
                                 content_target,
+                                scope.mode,
                                 scope.chain,
                                 scope.quality,
                                 scope.content_size,
@@ -738,6 +756,10 @@ fn compile_for_scene_inner(
                                 uniform_index,
                                 first_vertex: mask_draw.first_vertex,
                                 vertex_count: mask_draw.vertex_count,
+                                cache_key: mix_u64(
+                                    mask_draw.cache_key,
+                                    (u64::from(mask_size.0) << 32) | u64::from(mask_size.1),
+                                ),
                                 load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                             }));
 

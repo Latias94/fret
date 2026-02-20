@@ -23,9 +23,11 @@ pub use dev_state::DevStateWindowKeyRegistry;
 pub use dev_state::{DevStateExport, DevStateHook, DevStateHooks};
 
 pub use runner::{
-    EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget,
-    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
-    RenderTargetUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
+    EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks,
+    ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
+    NativeExternalImportError, NativeExternalImportOutcome, NativeExternalImportedFrame,
+    NativeExternalTextureFrame, OwnedWgpuTextureFrame, RenderTargetUpdate,
+    SharedAllocationExportError, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
     ViewportOverlay3dImmediateService, ViewportRenderTarget, ViewportRenderTargetWithDepth,
     WgpuInit, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
     WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig,

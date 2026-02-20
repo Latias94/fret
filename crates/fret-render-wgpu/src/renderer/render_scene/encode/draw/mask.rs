@@ -49,36 +49,42 @@ pub(in super::super) fn encode_mask_image(
             local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
+            outline_params: 0,
         },
         TextVertex {
             pos_px: [quad[1].0, quad[1].1],
             local_pos_px: [quad[1].0, quad[1].1],
             uv: [u1, v0],
             color: premul,
+            outline_params: 0,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
             local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
+            outline_params: 0,
         },
         TextVertex {
             pos_px: [quad[0].0, quad[0].1],
             local_pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             color: premul,
+            outline_params: 0,
         },
         TextVertex {
             pos_px: [quad[2].0, quad[2].1],
             local_pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             color: premul,
+            outline_params: 0,
         },
         TextVertex {
             pos_px: [quad[3].0, quad[3].1],
             local_pos_px: [quad[3].0, quad[3].1],
             uv: [u0, v1],
             color: premul,
+            outline_params: 0,
         },
     ]);
 

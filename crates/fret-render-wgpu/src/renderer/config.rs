@@ -79,6 +79,9 @@ impl Renderer {
             render_target_updates_ingest_fallbacks: self
                 .perf
                 .render_target_updates_ingest_fallbacks,
+            render_target_metadata_degradations_color_encoding_dropped: self
+                .perf
+                .render_target_metadata_degradations_color_encoding_dropped,
             svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
             svg_rasters_live: self.perf.svg_rasters_live,
             svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,
@@ -134,6 +137,10 @@ impl Renderer {
             render_plan_degradations_composite_group_blend_to_over: self
                 .perf
                 .render_plan_degradations_composite_group_blend_to_over,
+            clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
+            clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
+            clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,
+            clip_path_mask_cache_misses: self.perf.clip_path_mask_cache_misses,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
@@ -373,6 +380,10 @@ impl Renderer {
         self.intermediate_budget_bytes = bytes.max(1024);
         self.intermediate_pool
             .enforce_budget(self.intermediate_budget_bytes);
+        self.clip_path_mask_cache.enforce_budget(
+            &mut self.intermediate_pool,
+            self.intermediate_budget_bytes / 8,
+        );
     }
 
     pub fn material_paint_budget_per_frame(&self) -> u64 {

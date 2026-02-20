@@ -191,6 +191,9 @@ pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'stat
             "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
         ]),
         "extras-marquee-steady" => Some(&["tools/diag-scripts/extras-marquee-steady.json"]),
+        "liquid-glass-backdrop-warp-steady" => {
+            Some(&["tools/diag-scripts/liquid-glass-backdrop-warp-steady.json"])
+        }
         _ => None,
     }
 }

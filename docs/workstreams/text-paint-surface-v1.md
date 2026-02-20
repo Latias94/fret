@@ -1,7 +1,7 @@
 ---
 title: Text Paint Surface v1 — Workstream
 status: active
-date: 2026-02-16
+date: 2026-02-17
 scope: fret-core SceneOp::Text, renderer text pipeline, portability + conformance
 ---
 
@@ -40,8 +40,12 @@ batch and harder to keep deterministic across wasm/mobile backends.
 ## Non-goals (v1)
 
 - Text outline/stroke as a first-class contract surface.
-- Text shadow as a first-class contract surface (effects-based recipes may exist).
+- Blurred or multi-layer text shadows as a first-class contract surface (effects-based recipes may exist).
 - Full CSS text painting parity (blend modes, decorations, variable fonts behavior contracts, etc.).
+
+Follow-ups:
+
+- Text outline/stroke: `docs/workstreams/text-outline-stroke-surface-v1.md`
 
 ## Contract + semantics
 
@@ -56,9 +60,10 @@ Key semantics to lock:
 - clip/mask/effect stacks operate in pixel space as today
 - backends must degrade deterministically when a `Paint` variant is unsupported
 
-## Current progress (2026-02-16)
+## Current progress (2026-02-17)
 
 - Contract landed: `SceneOp::Text` now carries `paint: Paint` (instead of `color: Color`).
+- Related contract landed: `SceneOp::Text.shadow: Option<TextShadowV1>` (single layer, no blur), staged by ADR 0283.
 - Renderer landed (wgpu default): text paint evaluation is supported for solid + gradients with bounded batching (`paint_index`).
 - Conformance gate landed: `crates/fret-render-wgpu/tests/text_paint_conformance.rs`.
 

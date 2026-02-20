@@ -1,9 +1,9 @@
 use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
-    AlphaThresholdPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass, ColorMatrixPass,
-    FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass,
-    ScissorRect,
+    AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
+    ColorMatrixPass, DropShadowPass, FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass,
+    ScaleMode, ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -39,6 +39,7 @@ pub(super) fn apply_chain_in_place(
     passes: &mut Vec<RenderPlanPass>,
     in_use_targets: &[PlanTarget],
     srcdst: PlanTarget,
+    mode: fret_core::EffectMode,
     chain: fret_core::EffectChain,
     quality: fret_core::EffectQuality,
     scissor: ScissorRect,
@@ -154,6 +155,261 @@ pub(super) fn apply_chain_in_place(
                     mask_uniform_index,
                     mask,
                 );
+            }
+            fret_core::EffectStep::BackdropWarpV1(w) => {
+                if mode != fret_core::EffectMode::Backdrop {
+                    continue;
+                }
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+                append_backdrop_warp_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    scissor,
+                    w.sanitize(),
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
+            fret_core::EffectStep::BackdropWarpV2(w) => {
+                if mode != fret_core::EffectMode::Backdrop {
+                    continue;
+                }
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+
+                // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
+                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: srcdst,
+                    dst: scratch,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: None,
+                    load: wgpu::LoadOp::Clear(ctx.clear),
+                }));
+
+                let base = w.base.sanitize();
+                let (warp_image, warp_uv, warp_sampling, warp_encoding) = match w.field {
+                    fret_core::scene::BackdropWarpFieldV2::Procedural => (
+                        None,
+                        fret_core::scene::UvRect::FULL,
+                        fret_core::scene::ImageSamplingHint::Default,
+                        fret_core::scene::WarpMapEncodingV1::RgSigned,
+                    ),
+                    fret_core::scene::BackdropWarpFieldV2::ImageDisplacementMap {
+                        image,
+                        uv,
+                        sampling,
+                        encoding,
+                    } => (Some(image), uv, sampling, encoding),
+                };
+
+                passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
+                    src: scratch,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    origin_px: (scissor.x, scissor.y),
+                    bounds_size_px: (scissor.w, scissor.h),
+                    dst_scissor: Some(scissor),
+                    mask_uniform_index,
+                    mask,
+                    strength_px: base.strength_px.0,
+                    scale_px: base.scale_px.0,
+                    phase: base.phase,
+                    chromatic_aberration_px: base.chromatic_aberration_px.0,
+                    kind: base.kind,
+                    warp_image,
+                    warp_uv,
+                    warp_sampling,
+                    warp_encoding,
+                    load: wgpu::LoadOp::Load,
+                }));
+            }
+            fret_core::EffectStep::DropShadowV1(s) => {
+                if mode != fret_core::EffectMode::FilterContent {
+                    continue;
+                }
+
+                let s = s.sanitize();
+                if s.color.a <= 0.0 {
+                    continue;
+                }
+
+                // We need two scratch targets:
+                // - one to preserve the original content (for later restore),
+                // - one to store the blurred coverage that the shadow is sampled from.
+                if scratch_targets.len() < 2 {
+                    continue;
+                }
+                if budget_bytes == 0 {
+                    continue;
+                }
+
+                // Conservative budget check: DropShadow needs 1 srcdst + 2 full-size scratch targets.
+                // This keeps degradation deterministic under tight budgets (and matches ADR 0117’s
+                // “bounded multi-pass features” rule).
+                let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+                if full.saturating_mul(3) > budget_bytes {
+                    continue;
+                }
+
+                let scratch_original = scratch_targets[0];
+                let scratch_blurred = scratch_targets[1];
+
+                // Preserve the original content, since we will reuse `srcdst` as a scratch target
+                // during the blur stage.
+                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: srcdst,
+                    dst: scratch_original,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: None,
+                    load: wgpu::LoadOp::Clear(ctx.clear),
+                }));
+
+                // Build blurred coverage into `scratch_blurred`, treating outside-bounds as transparent.
+                let requested_downsample = if s.downsample >= 4 {
+                    4
+                } else if s.downsample >= 2 {
+                    2
+                } else {
+                    1
+                };
+                let downsample_scale = if requested_downsample <= 1 {
+                    1
+                } else {
+                    choose_effect_blur_downsample_scale(
+                        ctx.viewport_size,
+                        ctx.format,
+                        budget_bytes,
+                        requested_downsample,
+                        quality,
+                    )
+                    .unwrap_or(1)
+                };
+
+                if downsample_scale <= 1 {
+                    passes.push(RenderPlanPass::Blur(BlurPass {
+                        src: scratch_original,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(scissor),
+                        mask_uniform_index: None,
+                        mask: None,
+                        axis: BlurAxis::Horizontal,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+                    passes.push(RenderPlanPass::Blur(BlurPass {
+                        src: srcdst,
+                        dst: scratch_blurred,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(scissor),
+                        mask_uniform_index: None,
+                        mask: None,
+                        axis: BlurAxis::Vertical,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+                } else {
+                    let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
+                    let blur_size = downsampled_size(ctx.viewport_size, downsample_scale);
+
+                    let down_scissor =
+                        map_scissor_downsample_nearest(Some(scissor), downsample_scale, blur_size);
+                    let down_origin = down_scissor.map(|s| (s.x, s.y)).unwrap_or((0, 0));
+                    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                        src: scratch_original,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: blur_size,
+                        src_origin: (scissor.x, scissor.y),
+                        dst_scissor: down_scissor,
+                        dst_origin: down_origin,
+                        mask_uniform_index: None,
+                        mask: None,
+                        mode: ScaleMode::Downsample,
+                        scale: downsample_scale,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+
+                    let blur_scissor = down_scissor;
+                    passes.push(RenderPlanPass::Blur(BlurPass {
+                        src: srcdst,
+                        dst: scratch_blurred,
+                        src_size: blur_size,
+                        dst_size: blur_size,
+                        dst_scissor: blur_scissor,
+                        mask_uniform_index: None,
+                        mask: None,
+                        axis: BlurAxis::Horizontal,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+                    passes.push(RenderPlanPass::Blur(BlurPass {
+                        src: scratch_blurred,
+                        dst: srcdst,
+                        src_size: blur_size,
+                        dst_size: blur_size,
+                        dst_scissor: blur_scissor,
+                        mask_uniform_index: None,
+                        mask: None,
+                        axis: BlurAxis::Vertical,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+
+                    let final_scissor =
+                        map_scissor_to_size(Some(scissor), ctx.viewport_size, ctx.viewport_size);
+                    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                        src: srcdst,
+                        dst: scratch_blurred,
+                        src_size: blur_size,
+                        dst_size: ctx.viewport_size,
+                        src_origin: down_origin,
+                        dst_scissor: final_scissor,
+                        dst_origin: (scissor.x, scissor.y),
+                        mask_uniform_index: None,
+                        mask: None,
+                        mode: ScaleMode::Upscale,
+                        scale: downsample_scale,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+                }
+
+                // Restore original content into `srcdst` (outside the effect bounds must remain untouched).
+                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: scratch_original,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: None,
+                    load: wgpu::LoadOp::Clear(ctx.clear),
+                }));
+
+                // Composite the shadow behind the original content, within the computation bounds.
+                passes.push(RenderPlanPass::DropShadow(DropShadowPass {
+                    src: scratch_blurred,
+                    dst: srcdst,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: Some(scissor),
+                    mask_uniform_index,
+                    mask,
+                    offset_px: (s.offset_px.x.0, s.offset_px.y.0),
+                    color: s.color,
+                    load: wgpu::LoadOp::Load,
+                }));
             }
             fret_core::EffectStep::ColorAdjust {
                 saturation,
@@ -302,6 +558,15 @@ pub(super) fn color_adjust_enabled(
     }
     let full = estimate_texture_bytes(viewport_size, format, 1);
     full.saturating_mul(2) <= budget_bytes
+}
+
+pub(super) fn backdrop_warp_enabled(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+) -> bool {
+    // BackdropWarp v1 uses the same single-scratch texture pattern as color-adjust/matrix.
+    color_adjust_enabled(viewport_size, format, budget_bytes)
 }
 
 pub(super) fn pixelate_enabled(
@@ -581,6 +846,57 @@ fn append_color_adjust_in_place_single_scratch(
         dst_size: size,
         dst_scissor: None,
         load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+fn append_backdrop_warp_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: ScissorRect,
+    warp: fret_core::scene::BackdropWarpV1,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if scissor.w == 0 || scissor.h == 0 {
+        return;
+    }
+
+    // Scissored in-place pattern: preserve outside-region content by pre-blitting into scratch.
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        origin_px: (scissor.x, scissor.y),
+        bounds_size_px: (scissor.w, scissor.h),
+        dst_scissor: Some(scissor),
+        mask_uniform_index,
+        mask,
+        strength_px: warp.strength_px.0,
+        scale_px: warp.scale_px.0,
+        phase: warp.phase,
+        chromatic_aberration_px: warp.chromatic_aberration_px.0,
+        kind: warp.kind,
+        warp_image: None,
+        warp_uv: fret_core::scene::UvRect::FULL,
+        warp_sampling: fret_core::scene::ImageSamplingHint::Default,
+        warp_encoding: fret_core::scene::WarpMapEncodingV1::RgSigned,
+        load: wgpu::LoadOp::Load,
     }));
 }
 

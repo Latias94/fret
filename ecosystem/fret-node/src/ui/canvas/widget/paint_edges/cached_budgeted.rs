@@ -221,6 +221,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 origin: Point::new(text_x, text_y),
                 text: blob,
                 paint: (self.style.edge_label_text).into(),
+                outline: None,
+                shadow: None,
             });
         }
 

@@ -26,6 +26,15 @@ Active workstreams:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
+- `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
+- `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`
+- `docs/workstreams/renderer-drop-shadow-effect-v1.md`
+- `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
+- `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+- `docs/workstreams/renderer-clip-mask-closure-v1.md`
+- `docs/workstreams/renderer-clip-mask-closure-v1-todo.md`
+- `docs/workstreams/renderer-clip-mask-closure-v1-milestones.md`
 - `docs/workstreams/path-stroke-style-v2.md`
 - `docs/workstreams/path-stroke-style-v2-todo.md`
 - `docs/workstreams/path-stroke-style-v2-milestones.md`

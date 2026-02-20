@@ -2,11 +2,24 @@ mod common;
 mod font_catalog;
 mod imported_viewport_target;
 mod native_external_import;
+mod shared_allocation;
 mod streaming_upload;
 mod viewport_overlay_immediate_3d;
 mod viewport_target;
 mod yuv;
 mod yuv_gpu;
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
+pub mod windows_mf_video;
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "macos", target_os = "ios")
+))]
+pub mod apple_avfoundation_video;
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "android"))]
+pub mod android_mediacodec_video;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod desktop;
@@ -16,6 +29,7 @@ mod web;
 pub use common::*;
 pub use imported_viewport_target::*;
 pub use native_external_import::*;
+pub use shared_allocation::*;
 pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;
 

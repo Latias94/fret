@@ -1,7 +1,7 @@
 ---
 title: Text Paint Surface v1 — TODO
 status: active
-date: 2026-02-16
+date: 2026-02-17
 ---
 
 # Text Paint Surface v1 — TODO Tracker
@@ -57,3 +57,14 @@ renderer conformance tests for correctness-sensitive semantics.
 - [x] TPS-adopt-300 Wire one real consumer to use non-solid text paint:
   - pick a small demo surface (ui-gallery / editor diagnostics) to validate ergonomics.
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/selection_perf.rs` (gradient text label).
+
+## M4 — Text shadow (bounded) v1 (optional)
+
+- [x] TPS-shadow-010 Add a bounded, portable text shadow surface (single layer, no blur).
+  - ADR: `docs/adr/0283-text-shadow-surface-v1.md`
+  - Evidence: `crates/fret-core/src/scene/mod.rs` (`SceneOp::Text.shadow`, `TextShadowV1`)
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`encode_text_blob`, shadow prepass)
+  - Evidence: `crates/fret-render-wgpu/tests/text_paint_conformance.rs` (`gpu_text_shadow_v1_renders_a_separate_layer`)
+  - Gates:
+    - `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`

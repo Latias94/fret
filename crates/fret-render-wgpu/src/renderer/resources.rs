@@ -456,6 +456,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let backdrop_warp_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret backdrop-warp params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let color_matrix_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret color-matrix params buffer"),
             size: 256,
@@ -465,6 +472,13 @@ impl Renderer {
 
         let alpha_threshold_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret alpha-threshold params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let drop_shadow_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret drop-shadow params buffer"),
             size: 256,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -504,10 +518,12 @@ impl Renderer {
             viewport_vertices,
             text_pipeline_format: None,
             text_pipeline: None,
+            text_outline_pipeline: None,
             text_color_pipeline_format: None,
             text_color_pipeline: None,
             text_subpixel_pipeline_format: None,
             text_subpixel_pipeline: None,
+            text_subpixel_outline_pipeline: None,
             mask_pipeline_format: None,
             mask_pipeline: None,
             text_vertices,
@@ -546,6 +562,18 @@ impl Renderer {
             scale_param_buffer,
             scale_param_stride,
             scale_param_capacity,
+            backdrop_warp_pipeline_format: None,
+            backdrop_warp_pipeline: None,
+            backdrop_warp_masked_pipeline: None,
+            backdrop_warp_mask_pipeline: None,
+            backdrop_warp_bind_group_layout: None,
+            backdrop_warp_mask_bind_group_layout: None,
+            backdrop_warp_image_pipeline: None,
+            backdrop_warp_image_masked_pipeline: None,
+            backdrop_warp_image_mask_pipeline: None,
+            backdrop_warp_image_bind_group_layout: None,
+            backdrop_warp_image_mask_bind_group_layout: None,
+            backdrop_warp_param_buffer,
             color_adjust_pipeline_format: None,
             color_adjust_pipeline: None,
             color_adjust_masked_pipeline: None,
@@ -567,6 +595,13 @@ impl Renderer {
             alpha_threshold_bind_group_layout: None,
             alpha_threshold_mask_bind_group_layout: None,
             alpha_threshold_param_buffer,
+            drop_shadow_pipeline_format: None,
+            drop_shadow_pipeline: None,
+            drop_shadow_masked_pipeline: None,
+            drop_shadow_mask_pipeline: None,
+            drop_shadow_bind_group_layout: None,
+            drop_shadow_mask_bind_group_layout: None,
+            drop_shadow_param_buffer,
             path_vertices,
             path_intermediate: None,
             path_composite_vertices,
@@ -588,6 +623,7 @@ impl Renderer {
             svg_raster_epoch: 0,
             svg_perf_enabled: false,
             svg_perf: SvgPerfStats::default(),
+            clip_path_mask_cache: ClipPathMaskCache::new((256 * 1024 * 1024) / 8),
             perf_enabled: false,
             perf_svg_raster_cache_hits: 0,
             perf_svg_raster_cache_misses: 0,
@@ -599,6 +635,7 @@ impl Renderer {
             perf_pending_render_target_updates_by_ingest: [0;
                 fret_render_core::RenderTargetIngestStrategy::COUNT],
             perf_pending_render_target_updates_ingest_fallbacks: 0,
+            perf_pending_render_target_metadata_degradations_color_encoding_dropped: 0,
             perf: RenderPerfStats::default(),
             last_frame_perf: None,
             last_render_plan_segment_report: None,
@@ -672,6 +709,18 @@ impl Renderer {
         &mut self,
         desc: RenderTargetDescriptor,
     ) -> fret_core::RenderTargetId {
+        let mut desc = desc;
+        if Self::render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+            desc.color_space,
+            desc.metadata.color_encoding,
+        ) {
+            desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
+            if self.perf_enabled {
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
+                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
+                    .saturating_add(1);
+            }
+        }
         if self.perf_enabled {
             let effective_ix =
                 render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
@@ -731,6 +780,18 @@ impl Renderer {
         id: fret_core::RenderTargetId,
         desc: RenderTargetDescriptor,
     ) -> bool {
+        let mut desc = desc;
+        if Self::render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+            desc.color_space,
+            desc.metadata.color_encoding,
+        ) {
+            desc.metadata.color_encoding = fret_render_core::RenderTargetColorEncoding::default();
+            if self.perf_enabled {
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = self
+                    .perf_pending_render_target_metadata_degradations_color_encoding_dropped
+                    .saturating_add(1);
+            }
+        }
         if self.perf_enabled {
             let effective_ix =
                 render_target_ingest_strategy_perf_index(desc.metadata.ingest_strategy);
@@ -757,6 +818,50 @@ impl Renderer {
         self.viewport_bind_groups.remove(&id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
+    }
+
+    fn render_target_color_encoding_conflicts_with_portable_rgb_assumption(
+        color_space: fret_render_core::RenderTargetColorSpace,
+        encoding: fret_render_core::RenderTargetColorEncoding,
+    ) -> bool {
+        use fret_render_core::RenderTargetColorPrimaries;
+        use fret_render_core::RenderTargetColorRange;
+        use fret_render_core::RenderTargetMatrixCoefficients;
+        use fret_render_core::RenderTargetTransferFunction;
+
+        if encoding == fret_render_core::RenderTargetColorEncoding::default() {
+            return false;
+        }
+
+        let expected_transfer = match color_space {
+            fret_render_core::RenderTargetColorSpace::Srgb => RenderTargetTransferFunction::Srgb,
+            fret_render_core::RenderTargetColorSpace::Linear => {
+                RenderTargetTransferFunction::Linear
+            }
+        };
+
+        if encoding.primaries != RenderTargetColorPrimaries::Unknown
+            && encoding.primaries != RenderTargetColorPrimaries::Bt709
+        {
+            return true;
+        }
+        if encoding.transfer != RenderTargetTransferFunction::Unknown
+            && encoding.transfer != expected_transfer
+        {
+            return true;
+        }
+        if encoding.matrix != RenderTargetMatrixCoefficients::Unknown
+            && encoding.matrix != RenderTargetMatrixCoefficients::Rgb
+        {
+            return true;
+        }
+        if encoding.range != RenderTargetColorRange::Unknown
+            && encoding.range != RenderTargetColorRange::Full
+        {
+            return true;
+        }
+
+        false
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {

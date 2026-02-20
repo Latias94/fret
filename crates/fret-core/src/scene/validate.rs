@@ -130,6 +130,10 @@ impl SceneRecording {
             }
         }
 
+        fn text_shadow_is_finite(s: TextShadowV1) -> bool {
+            point_is_finite(s.offset) && color_is_finite(s.color)
+        }
+
         fn mask_is_finite(m: Mask) -> bool {
             match m {
                 Mask::LinearGradient(g) => {
@@ -310,6 +314,45 @@ impl SceneRecording {
                                 radius_px,
                                 downsample,
                             } => px_is_finite(radius_px) && downsample > 0,
+                            EffectStep::DropShadowV1(s) => {
+                                px_is_finite(s.offset_px.x)
+                                    && px_is_finite(s.offset_px.y)
+                                    && px_is_finite(s.blur_radius_px)
+                                    && s.downsample > 0
+                                    && s.color.r.is_finite()
+                                    && s.color.g.is_finite()
+                                    && s.color.b.is_finite()
+                                    && s.color.a.is_finite()
+                            }
+                            EffectStep::BackdropWarpV1(w) => {
+                                px_is_finite(w.strength_px)
+                                    && px_is_finite(w.scale_px)
+                                    && w.scale_px.0 > 0.0
+                                    && w.phase.is_finite()
+                                    && px_is_finite(w.chromatic_aberration_px)
+                            }
+                            EffectStep::BackdropWarpV2(w) => {
+                                let base_ok = px_is_finite(w.base.strength_px)
+                                    && px_is_finite(w.base.scale_px)
+                                    && w.base.scale_px.0 > 0.0
+                                    && w.base.phase.is_finite()
+                                    && px_is_finite(w.base.chromatic_aberration_px);
+                                if !base_ok {
+                                    false
+                                } else {
+                                    match w.field {
+                                        BackdropWarpFieldV2::Procedural => true,
+                                        BackdropWarpFieldV2::ImageDisplacementMap {
+                                            uv, ..
+                                        } => {
+                                            uv.u0.is_finite()
+                                                && uv.v0.is_finite()
+                                                && uv.u1.is_finite()
+                                                && uv.v1.is_finite()
+                                        }
+                                    }
+                                }
+                            }
                             EffectStep::ColorAdjust {
                                 saturation,
                                 brightness,
@@ -494,8 +537,19 @@ impl SceneRecording {
                         });
                     }
                 }
-                SceneOp::Text { origin, paint, .. } => {
-                    if !point_is_finite(origin) || !paint_is_finite(paint) {
+                SceneOp::Text {
+                    origin,
+                    paint,
+                    outline,
+                    shadow,
+                    ..
+                } => {
+                    if !point_is_finite(origin)
+                        || !paint_is_finite(paint)
+                        || outline
+                            .is_some_and(|o| !paint_is_finite(o.paint) || !o.width_px.0.is_finite())
+                        || shadow.is_some_and(|s| !text_shadow_is_finite(s))
+                    {
                         return Err(SceneValidationError {
                             index,
                             op,

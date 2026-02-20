@@ -105,9 +105,11 @@ pub(super) enum RenderPlanPass {
     CompositePremul(CompositePremulPass),
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
+    BackdropWarp(BackdropWarpPass),
     ColorAdjust(ColorAdjustPass),
     ColorMatrix(ColorMatrixPass),
     AlphaThreshold(AlphaThresholdPass),
+    DropShadow(DropShadowPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -121,6 +123,7 @@ pub(super) struct PathClipMaskPass {
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
+    pub(super) cache_key: u64,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -148,6 +151,29 @@ pub(super) struct BlurPass {
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) axis: BlurAxis,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct BackdropWarpPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) origin_px: (u32, u32),
+    pub(super) bounds_size_px: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) strength_px: f32,
+    pub(super) scale_px: f32,
+    pub(super) phase: f32,
+    pub(super) chromatic_aberration_px: f32,
+    pub(super) kind: fret_core::scene::BackdropWarpKindV1,
+    pub(super) warp_image: Option<fret_core::ImageId>,
+    pub(super) warp_uv: fret_core::scene::UvRect,
+    pub(super) warp_sampling: fret_core::scene::ImageSamplingHint,
+    pub(super) warp_encoding: fret_core::scene::WarpMapEncodingV1,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -190,6 +216,20 @@ pub(super) struct AlphaThresholdPass {
     pub(super) mask: Option<MaskRef>,
     pub(super) cutoff: f32,
     pub(super) soft: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct DropShadowPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) offset_px: (f32, f32),
+    pub(super) color: fret_core::scene::Color,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -387,6 +427,9 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::Blur(BlurPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::BackdropWarp(BackdropWarpPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::ColorAdjust(ColorAdjustPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
@@ -394,6 +437,9 @@ fn estimate_plan_peak_intermediate_bytes(
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
             RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
             RenderPlanPass::ReleaseTarget(t) => {
@@ -473,6 +519,13 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                     mark(mask.target);
                 }
             }
+            RenderPlanPass::BackdropWarp(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
             RenderPlanPass::ColorAdjust(p) => {
                 mark(p.src);
                 mark(p.dst);
@@ -493,6 +546,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 if let Some(mask) = p.mask {
                     mark(mask.target);
                 }
+            }
+            RenderPlanPass::DropShadow(p) => {
+                mark(p.src);
+                mark(p.dst);
             }
             RenderPlanPass::ClipMask(p) => mark(p.dst),
             RenderPlanPass::ReleaseTarget(_target) => {}

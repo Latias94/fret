@@ -58,6 +58,53 @@ impl Color {
     };
 }
 
+/// A bounded, portable text shadow surface (v1).
+///
+/// This is intentionally minimal (single layer, no blur) so it remains viable across wasm/mobile
+/// backends. Higher-level shadow recipes (multi-layer elevation, blur, color management) remain
+/// policy in ecosystem crates.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextShadowV1 {
+    /// Baseline-origin offset in logical pixels (pre-scale-factor).
+    pub offset: Point,
+    pub color: Color,
+}
+
+impl TextShadowV1 {
+    pub const fn new(offset: Point, color: Color) -> Self {
+        Self { offset, color }
+    }
+}
+
+/// A bounded, portable text outline/stroke surface (v1).
+///
+/// This is intentionally minimal so it can be implemented deterministically across wasm/mobile
+/// backends. More advanced strategies (e.g. SDF/MSDF atlases, multi-layer outlines) remain v2+.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextOutlineV1 {
+    pub paint: Paint,
+    /// Outline width in logical pixels (pre-scale-factor).
+    pub width_px: crate::Px,
+}
+
+impl TextOutlineV1 {
+    pub const MAX_WIDTH_PX: crate::Px = crate::Px(8.0);
+
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.width_px.0.is_finite() {
+            return None;
+        }
+        let width_px = crate::Px(self.width_px.0.clamp(0.0, Self::MAX_WIDTH_PX.0));
+        if width_px.0 <= 0.0 {
+            return None;
+        }
+        Some(Self {
+            paint: self.paint.sanitize(),
+            width_px,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectMode {
     /// Render children to an offscreen intermediate, then filter and composite the result.
@@ -80,12 +127,234 @@ pub enum DitherMode {
     Bayer4x4,
 }
 
+/// Bounded backdrop warp parameters (v1).
+///
+/// This is a mechanism-level surface intended to enable refraction-like liquid glass effects by
+/// sampling the already-rendered backdrop with a deterministic UV displacement. Higher-level
+/// recipes (normal-map assets, interaction curves, multi-layer stacks) remain ecosystem policy.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BackdropWarpV1 {
+    /// Displacement strength in logical pixels (pre-scale-factor).
+    pub strength_px: crate::Px,
+    /// Spatial scale for the warp field in logical pixels.
+    pub scale_px: crate::Px,
+    /// Deterministic phase/seed value (no hidden time dependency).
+    pub phase: f32,
+    /// Optional chromatic aberration magnitude in logical pixels.
+    pub chromatic_aberration_px: crate::Px,
+    pub kind: BackdropWarpKindV1,
+}
+
+impl BackdropWarpV1 {
+    pub const MAX_STRENGTH_PX: crate::Px = crate::Px(24.0);
+    pub const MIN_SCALE_PX: crate::Px = crate::Px(1.0);
+    pub const MAX_SCALE_PX: crate::Px = crate::Px(1024.0);
+    pub const MAX_CHROMATIC_ABERRATION_PX: crate::Px = crate::Px(8.0);
+
+    pub fn sanitize(self) -> Self {
+        let strength_px = if self.strength_px.0.is_finite() {
+            crate::Px(self.strength_px.0.clamp(0.0, Self::MAX_STRENGTH_PX.0))
+        } else {
+            crate::Px(0.0)
+        };
+
+        let scale_px = if self.scale_px.0.is_finite() {
+            crate::Px(
+                self.scale_px
+                    .0
+                    .clamp(Self::MIN_SCALE_PX.0, Self::MAX_SCALE_PX.0),
+            )
+        } else {
+            Self::MIN_SCALE_PX
+        };
+
+        let phase = if self.phase.is_finite() {
+            self.phase
+        } else {
+            0.0
+        };
+
+        let chromatic_aberration_px = if self.chromatic_aberration_px.0.is_finite() {
+            crate::Px(
+                self.chromatic_aberration_px
+                    .0
+                    .clamp(0.0, Self::MAX_CHROMATIC_ABERRATION_PX.0),
+            )
+        } else {
+            crate::Px(0.0)
+        };
+
+        Self {
+            strength_px,
+            scale_px,
+            phase,
+            chromatic_aberration_px,
+            kind: self.kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WarpMapEncodingV1 {
+    /// Decode displacement from RG in [0, 1] mapped to [-1, 1].
+    ///
+    /// This is a good default for authored displacement maps.
+    RgSigned,
+    /// Decode a normal from RGB in [0, 1] mapped to [-1, 1], and use XY as displacement.
+    ///
+    /// This is convenient when the warp field is stored as a normal map.
+    NormalRgb,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BackdropWarpFieldV2 {
+    /// Use the procedural v1 warp field (`BackdropWarpV1`).
+    Procedural,
+    /// Use an image-driven displacement/normal map as the warp field.
+    ImageDisplacementMap {
+        image: ImageId,
+        uv: UvRect,
+        sampling: ImageSamplingHint,
+        encoding: WarpMapEncodingV1,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BackdropWarpV2 {
+    /// The v1 parameters are retained as the portable base (and deterministic fallback).
+    pub base: BackdropWarpV1,
+    pub field: BackdropWarpFieldV2,
+}
+
+impl BackdropWarpV2 {
+    pub fn sanitize(self) -> Self {
+        let base = self.base.sanitize();
+        let field = match self.field {
+            BackdropWarpFieldV2::Procedural => BackdropWarpFieldV2::Procedural,
+            BackdropWarpFieldV2::ImageDisplacementMap {
+                image,
+                uv,
+                sampling,
+                encoding,
+            } => {
+                let uv = if uv.u0.is_finite()
+                    && uv.v0.is_finite()
+                    && uv.u1.is_finite()
+                    && uv.v1.is_finite()
+                {
+                    uv
+                } else {
+                    UvRect::FULL
+                };
+                let sampling = match sampling {
+                    ImageSamplingHint::Default => ImageSamplingHint::Default,
+                    ImageSamplingHint::Linear => ImageSamplingHint::Linear,
+                    ImageSamplingHint::Nearest => ImageSamplingHint::Nearest,
+                };
+                let encoding = match encoding {
+                    WarpMapEncodingV1::RgSigned => WarpMapEncodingV1::RgSigned,
+                    WarpMapEncodingV1::NormalRgb => WarpMapEncodingV1::NormalRgb,
+                };
+                BackdropWarpFieldV2::ImageDisplacementMap {
+                    image,
+                    uv,
+                    sampling,
+                    encoding,
+                }
+            }
+        };
+
+        Self { base, field }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackdropWarpKindV1 {
+    Wave,
+    /// Reserved for a lens-like warp in a future v1.x/v2. Renderers may treat this as `Wave`.
+    LensReserved,
+}
+
+/// Bounded drop shadow parameters (v1).
+///
+/// This is a mechanism-level, blur-based shadow surface intended for general UI content (cards,
+/// popovers, overlays). It is explicitly bounded and deterministic so it remains viable on
+/// wasm/WebGPU and mobile GPUs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DropShadowV1 {
+    /// Shadow offset in logical pixels (pre-scale-factor).
+    pub offset_px: Point,
+    /// Blur radius in logical pixels (pre-scale-factor).
+    pub blur_radius_px: crate::Px,
+    /// Downsample hint (1–4). Renderers may degrade deterministically under budgets.
+    pub downsample: u32,
+    /// Solid shadow color (unpremultiplied RGBA in [0, 1]).
+    pub color: Color,
+}
+
+impl DropShadowV1 {
+    pub const MAX_BLUR_RADIUS_PX: crate::Px = crate::Px(64.0);
+
+    pub fn sanitize(self) -> Self {
+        let offset_px = Point::new(
+            crate::Px(if self.offset_px.x.0.is_finite() {
+                self.offset_px.x.0
+            } else {
+                0.0
+            }),
+            crate::Px(if self.offset_px.y.0.is_finite() {
+                self.offset_px.y.0
+            } else {
+                0.0
+            }),
+        );
+        let blur_radius_px = if self.blur_radius_px.0.is_finite() {
+            crate::Px(self.blur_radius_px.0.clamp(0.0, Self::MAX_BLUR_RADIUS_PX.0))
+        } else {
+            crate::Px(0.0)
+        };
+        let downsample = self.downsample.clamp(1, 4);
+        let color = Color {
+            r: if self.color.r.is_finite() {
+                self.color.r.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            g: if self.color.g.is_finite() {
+                self.color.g.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            b: if self.color.b.is_finite() {
+                self.color.b.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+            a: if self.color.a.is_finite() {
+                self.color.a.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+        };
+
+        Self {
+            offset_px,
+            blur_radius_px,
+            downsample,
+            color,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectStep {
     GaussianBlur {
         radius_px: crate::Px,
         downsample: u32,
     },
+    DropShadowV1(DropShadowV1),
+    BackdropWarpV1(BackdropWarpV1),
+    BackdropWarpV2(BackdropWarpV2),
     ColorAdjust {
         saturation: f32,
         brightness: f32,
@@ -117,6 +386,9 @@ impl EffectStep {
                 }
                 EffectStep::ColorMatrix { m }
             }
+            EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
+            EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
+            EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },
@@ -235,6 +507,21 @@ impl SceneRecording {
                 mode,
                 chain: chain.sanitize(),
                 quality,
+            },
+            SceneOp::Text {
+                order,
+                origin,
+                text,
+                paint,
+                outline,
+                shadow,
+            } => SceneOp::Text {
+                order,
+                origin,
+                text,
+                paint: paint.sanitize(),
+                outline: outline.and_then(|o| o.sanitize()),
+                shadow,
             },
             other => other,
         };
@@ -511,6 +798,8 @@ pub enum SceneOp {
         origin: Point,
         text: TextBlobId,
         paint: Paint,
+        outline: Option<TextOutlineV1>,
+        shadow: Option<TextShadowV1>,
     },
 
     Path {

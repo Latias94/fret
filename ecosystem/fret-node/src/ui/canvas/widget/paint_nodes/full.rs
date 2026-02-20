@@ -88,6 +88,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     origin: Point::new(text_x, text_y),
                     text: blob,
                     paint: (self.style.context_menu_text).into(),
+                    outline: None,
+                    shadow: None,
                 });
             }
         }
@@ -162,6 +164,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     origin: Point::new(text_x, text_y),
                     text: blob,
                     paint: (self.style.context_menu_text).into(),
+                    outline: None,
+                    shadow: None,
                 });
             }
 
@@ -198,6 +202,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     origin: Point::new(text_x, Px(inner_y)),
                     text: blob,
                     paint: (self.style.context_menu_text).into(),
+                    outline: None,
+                    shadow: None,
                 });
             }
         }
@@ -234,6 +240,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 origin: Point::new(x, y),
                 text: blob,
                 paint: (self.style.context_menu_text).into(),
+                outline: None,
+                shadow: None,
             });
         }
 

@@ -190,7 +190,7 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
                 mode: fret_core::EffectMode::Backdrop,
                 chain: fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorAdjust {
                     saturation: 1.0,
-                    brightness: 0.0,
+                    brightness: 1.0,
                     contrast: 1.0,
                 }]),
                 quality: fret_core::EffectQuality::Auto,
@@ -292,7 +292,7 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
                 mode: fret_core::EffectMode::FilterContent,
                 chain: fret_core::EffectChain::from_steps(&[fret_core::EffectStep::ColorAdjust {
                     saturation: 1.0,
-                    brightness: 0.0,
+                    brightness: 1.0,
                     contrast: 1.0,
                 }]),
                 quality: fret_core::EffectQuality::Auto,

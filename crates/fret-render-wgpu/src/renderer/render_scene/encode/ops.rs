@@ -4,6 +4,67 @@ use super::mask;
 use super::state::{ClipPop, EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
 use fret_core::Paint;
+use slotmap::Key;
+
+fn mix_u64(mut state: u64, value: u64) -> u64 {
+    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    state = state.rotate_left(7);
+    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    state
+}
+
+fn mix_f32(state: u64, value: f32) -> u64 {
+    mix_u64(state, u64::from(value.to_bits()))
+}
+
+fn mix_transform(mut state: u64, t: Transform2D) -> u64 {
+    state = mix_f32(state, t.a);
+    state = mix_f32(state, t.b);
+    state = mix_f32(state, t.c);
+    state = mix_f32(state, t.d);
+    state = mix_f32(state, t.tx);
+    state = mix_f32(state, t.ty);
+    state
+}
+
+fn clip_path_mask_cache_key(
+    state: &EncodeState<'_>,
+    scissor: ScissorRect,
+    origin: Point,
+    path: fret_core::PathId,
+) -> u64 {
+    let mut key = 0x6b2d_4f8c_f3a1_6d77u64;
+    key = mix_u64(key, path.data().as_ffi());
+    key = mix_f32(key, state.scale_factor);
+    key = mix_transform(key, state.current_transform());
+    key = mix_f32(key, origin.x.0);
+    key = mix_f32(key, origin.y.0);
+    key = mix_u64(key, u64::from(scissor.x));
+    key = mix_u64(key, u64::from(scissor.y));
+    key = mix_u64(key, u64::from(scissor.w));
+    key = mix_u64(key, u64::from(scissor.h));
+
+    key = mix_u64(key, u64::from(state.clip_head));
+    key = mix_u64(key, u64::from(state.clip_count));
+    key = mix_u64(key, u64::from(state.mask_head));
+    key = mix_u64(key, u64::from(state.mask_count));
+    key = mix_u64(key, u64::from(state.mask_scope_head));
+    key = mix_u64(key, u64::from(state.mask_scope_count));
+
+    if let Some(sel) = state.mask_image {
+        key = mix_u64(key, sel.image.data().as_ffi());
+        key = mix_u64(
+            key,
+            match sel.sampling {
+                fret_core::scene::ImageSamplingHint::Default => 0,
+                fret_core::scene::ImageSamplingHint::Linear => 1,
+                fret_core::scene::ImageSamplingHint::Nearest => 2,
+            },
+        );
+    }
+
+    key
+}
 
 pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &SceneOp) {
     match *op {
@@ -68,12 +129,15 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 return;
             };
 
+            let cache_key = clip_path_mask_cache_key(state, scissor, origin, path);
+
             let mask_draw_index = state.clip_path_masks.len() as u32;
             state.clip_path_masks.push(ClipPathMaskDraw {
                 scissor,
                 uniform_index: mask_uniform_index,
                 first_vertex,
                 vertex_count,
+                cache_key,
             });
 
             state.effect_markers.push(EffectMarker {
@@ -327,9 +391,11 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             origin,
             text,
             paint,
+            outline,
+            shadow,
             ..
         } => {
-            draw::encode_text(renderer, state, origin, text, paint);
+            draw::encode_text(renderer, state, origin, text, paint, outline, shadow);
         }
         SceneOp::Path {
             origin,

@@ -145,6 +145,10 @@ impl Renderer {
             frame_perf.render_target_updates_ingest_fallbacks =
                 self.perf_pending_render_target_updates_ingest_fallbacks;
             self.perf_pending_render_target_updates_ingest_fallbacks = 0;
+
+            frame_perf.render_target_metadata_degradations_color_encoding_dropped =
+                self.perf_pending_render_target_metadata_degradations_color_encoding_dropped;
+            self.perf_pending_render_target_metadata_degradations_color_encoding_dropped = 0;
         }
 
         #[cfg(debug_assertions)]
@@ -568,6 +572,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::ColorAdjust(_)));
+        let needs_backdrop_warp = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::BackdropWarp(_)));
         let needs_color_matrix = plan
             .passes
             .iter()
@@ -576,6 +584,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::AlphaThreshold(_)));
+        let needs_drop_shadow = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::DropShadow(_)));
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
@@ -592,6 +604,9 @@ impl Renderer {
         if needs_composite && path_samples <= 1 {
             self.ensure_composite_pipeline(device, format);
         }
+        if needs_backdrop_warp {
+            self.ensure_backdrop_warp_pipeline(device, format);
+        }
         if needs_color_adjust {
             self.ensure_color_adjust_pipeline(device, format);
         }
@@ -600,6 +615,9 @@ impl Renderer {
         }
         if needs_alpha_threshold {
             self.ensure_alpha_threshold_pipeline(device, format);
+        }
+        if needs_drop_shadow {
+            self.ensure_drop_shadow_pipeline(device, format);
         }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_release_targets = plan
@@ -741,7 +759,10 @@ impl Renderer {
             label: Some("fret renderer encoder"),
         });
 
-        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::COPY_DST;
         let mut frame_targets = FrameTargets::default();
         let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
         let mut scale_param_cursor: u32 = 0;
@@ -920,9 +941,11 @@ impl Renderer {
                             RenderPlanPass::CompositePremul(_) => "composite_premul",
                             RenderPlanPass::ScaleNearest(_) => "scale_nearest",
                             RenderPlanPass::Blur(_) => "blur",
+                            RenderPlanPass::BackdropWarp(_) => "backdrop_warp",
                             RenderPlanPass::ColorAdjust(_) => "color_adjust",
                             RenderPlanPass::ColorMatrix(_) => "color_matrix",
                             RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+                            RenderPlanPass::DropShadow(_) => "drop_shadow",
                             RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
                             RenderPlanPass::ClipMask(_) => "clip_mask",
                             RenderPlanPass::ReleaseTarget(_) => "release_target",
@@ -958,9 +981,11 @@ impl Renderer {
                             Some((pass.dst_origin, pass.dst_size))
                         }
                         RenderPlanPass::Blur(pass) => Some(((0, 0), pass.dst_size)),
+                        RenderPlanPass::BackdropWarp(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
+                        RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
                         RenderPlanPass::ReleaseTarget(_) => None,
@@ -980,14 +1005,29 @@ impl Renderer {
                         RenderPlanPass::PathClipMask(mask_pass) => {
                             let target_size = mask_pass.dst_size;
 
-                            let pass_target_view = frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                mask_pass.dst,
+                            let (pass_target_texture, pass_target_view) = frame_targets
+                                .ensure_target_with_texture(
+                                    &mut self.intermediate_pool,
+                                    device,
+                                    mask_pass.dst,
+                                    target_size,
+                                    wgpu::TextureFormat::R8Unorm,
+                                    usage,
+                                );
+
+                            if self.clip_path_mask_cache.try_copy_into(
+                                &mut encoder,
+                                mask_pass.cache_key,
                                 target_size,
-                                wgpu::TextureFormat::R8Unorm,
-                                usage,
-                            );
+                                pass_target_texture,
+                                frame_index,
+                            ) {
+                                if perf_enabled {
+                                    frame_perf.clip_path_mask_cache_hits =
+                                        frame_perf.clip_path_mask_cache_hits.saturating_add(1);
+                                }
+                                continue;
+                            }
 
                             let uniform_offset = (mask_pass.uniform_index as u64)
                                 .saturating_mul(self.uniform_stride);
@@ -996,59 +1036,76 @@ impl Renderer {
                             let first = (mask_pass.first_vertex as u64).saturating_mul(vertex_size);
                             let size = (mask_pass.vertex_count as u64).saturating_mul(vertex_size);
 
-                            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: Some("fret path clip-mask pass"),
-                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: &pass_target_view,
-                                    depth_slice: None,
-                                    resolve_target: None,
-                                    ops: wgpu::Operations {
-                                        load: mask_pass.load,
-                                        store: wgpu::StoreOp::Store,
-                                    },
-                                })],
-                                depth_stencil_attachment: None,
-                                timestamp_writes: None,
-                                occlusion_query_set: None,
-                                multiview_mask: None,
-                            });
+                            {
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("fret path clip-mask pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: &pass_target_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: mask_pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
 
-                            let pipeline = self
-                                .path_clip_mask_pipeline
-                                .as_ref()
-                                .expect("path clip-mask pipeline must exist");
-                            rp.set_pipeline(pipeline);
-                            let mask_image = encoding
-                                .uniform_mask_images
-                                .get(mask_pass.uniform_index as usize)
-                                .copied()
-                                .flatten();
-                            let uniform_bind_group =
-                                self.pick_uniform_bind_group_for_mask_image(mask_image);
-                            rp.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset as u32, render_space_offset_u32],
-                            );
-
-                            if size != 0 {
-                                rp.set_vertex_buffer(
+                                let pipeline = self
+                                    .path_clip_mask_pipeline
+                                    .as_ref()
+                                    .expect("path clip-mask pipeline must exist");
+                                rp.set_pipeline(pipeline);
+                                let mask_image = encoding
+                                    .uniform_mask_images
+                                    .get(mask_pass.uniform_index as usize)
+                                    .copied()
+                                    .flatten();
+                                let uniform_bind_group =
+                                    self.pick_uniform_bind_group_for_mask_image(mask_image);
+                                rp.set_bind_group(
                                     0,
-                                    path_vertex_buffer.slice(first..first + size),
+                                    uniform_bind_group,
+                                    &[uniform_offset as u32, render_space_offset_u32],
                                 );
-                                let _ = set_scissor_rect_absolute(
-                                    &mut rp,
-                                    mask_pass.scissor,
-                                    mask_pass.dst_origin,
-                                    mask_pass.dst_size,
-                                );
-                                rp.draw(0..mask_pass.vertex_count, 0..1);
+
+                                if size != 0 {
+                                    rp.set_vertex_buffer(
+                                        0,
+                                        path_vertex_buffer.slice(first..first + size),
+                                    );
+                                    let _ = set_scissor_rect_absolute(
+                                        &mut rp,
+                                        mask_pass.scissor,
+                                        mask_pass.dst_origin,
+                                        mask_pass.dst_size,
+                                    );
+                                    rp.draw(0..mask_pass.vertex_count, 0..1);
+                                }
                             }
 
                             if perf_enabled {
                                 frame_perf.clip_mask_draw_calls =
                                     frame_perf.clip_mask_draw_calls.saturating_add(1);
+                                frame_perf.clip_path_mask_cache_misses =
+                                    frame_perf.clip_path_mask_cache_misses.saturating_add(1);
                             }
+
+                            self.clip_path_mask_cache.store_from(
+                                &mut self.intermediate_pool,
+                                device,
+                                &mut encoder,
+                                mask_pass.cache_key,
+                                target_size,
+                                pass_target_texture,
+                                frame_index,
+                            );
                         }
                         RenderPlanPass::SceneDrawRange(scene_pass) => {
                             debug_assert!(scene_pass.segment.0 < plan.segments.len());
@@ -1098,8 +1155,10 @@ impl Renderer {
                                     Quad,
                                     Viewport,
                                     TextMask,
+                                    TextMaskOutline,
                                     TextColor,
                                     TextSubpixel,
+                                    TextSubpixelOutline,
                                     Mask,
                                     Path,
                                 }
@@ -1119,6 +1178,10 @@ impl Renderer {
                                     .text_pipeline
                                     .as_ref()
                                     .expect("text pipeline must exist");
+                                let text_outline_pipeline = self
+                                    .text_outline_pipeline
+                                    .as_ref()
+                                    .expect("text outline pipeline must exist");
                                 let text_color_pipeline = self
                                     .text_color_pipeline
                                     .as_ref()
@@ -1127,6 +1190,10 @@ impl Renderer {
                                     .text_subpixel_pipeline
                                     .as_ref()
                                     .expect("text subpixel pipeline must exist");
+                                let text_subpixel_outline_pipeline = self
+                                    .text_subpixel_outline_pipeline
+                                    .as_ref()
+                                    .expect("text subpixel outline pipeline must exist");
                                 let mask_pipeline = self
                                     .mask_pipeline
                                     .as_ref()
@@ -1674,6 +1741,77 @@ impl Renderer {
                                                         active_text_page = Some(draw.atlas_page);
                                                     }
                                                 }
+                                                TextDrawKind::MaskOutline => {
+                                                    if !matches!(
+                                                        active_pipeline,
+                                                        ActivePipeline::TextMaskOutline
+                                                    ) {
+                                                        pass.set_pipeline(text_outline_pipeline);
+                                                        if perf_enabled {
+                                                            frame_perf.pipeline_switches =
+                                                                frame_perf
+                                                                    .pipeline_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .pipeline_switches_text_mask =
+                                                                frame_perf
+                                                                    .pipeline_switches_text_mask
+                                                                    .saturating_add(1);
+                                                        }
+                                                        pass.set_vertex_buffer(
+                                                            0,
+                                                            text_vertex_buffer.slice(..),
+                                                        );
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system.mask_atlas_bind_group(
+                                                                draw.atlas_page,
+                                                            ),
+                                                            &[],
+                                                        );
+                                                        pass.set_bind_group(
+                                                            2,
+                                                            &text_paint_bind_group,
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_pipeline =
+                                                            ActivePipeline::TextMaskOutline;
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    } else if active_text_page
+                                                        != Some(draw.atlas_page)
+                                                    {
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system.mask_atlas_bind_group(
+                                                                draw.atlas_page,
+                                                            ),
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    }
+                                                }
                                                 TextDrawKind::Color => {
                                                     if !matches!(
                                                         active_pipeline,
@@ -1793,6 +1931,81 @@ impl Renderer {
                                                         }
                                                         active_pipeline =
                                                             ActivePipeline::TextSubpixel;
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    } else if active_text_page
+                                                        != Some(draw.atlas_page)
+                                                    {
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system
+                                                                .subpixel_atlas_bind_group(
+                                                                    draw.atlas_page,
+                                                                ),
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_text_page = Some(draw.atlas_page);
+                                                    }
+                                                }
+                                                TextDrawKind::SubpixelOutline => {
+                                                    if !matches!(
+                                                        active_pipeline,
+                                                        ActivePipeline::TextSubpixelOutline
+                                                    ) {
+                                                        pass.set_pipeline(
+                                                            text_subpixel_outline_pipeline,
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.pipeline_switches =
+                                                                frame_perf
+                                                                    .pipeline_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .pipeline_switches_text_subpixel =
+                                                                frame_perf
+                                                                    .pipeline_switches_text_subpixel
+                                                                    .saturating_add(1);
+                                                        }
+                                                        pass.set_vertex_buffer(
+                                                            0,
+                                                            text_vertex_buffer.slice(..),
+                                                        );
+                                                        pass.set_bind_group(
+                                                            1,
+                                                            self.text_system
+                                                                .subpixel_atlas_bind_group(
+                                                                    draw.atlas_page,
+                                                                ),
+                                                            &[],
+                                                        );
+                                                        pass.set_bind_group(
+                                                            2,
+                                                            &text_paint_bind_group,
+                                                            &[],
+                                                        );
+                                                        if perf_enabled {
+                                                            frame_perf.bind_group_switches =
+                                                                frame_perf
+                                                                    .bind_group_switches
+                                                                    .saturating_add(1);
+                                                            frame_perf
+                                                                .texture_bind_group_switches =
+                                                                frame_perf
+                                                                    .texture_bind_group_switches
+                                                                    .saturating_add(1);
+                                                        }
+                                                        active_pipeline =
+                                                            ActivePipeline::TextSubpixelOutline;
                                                         active_text_page = Some(draw.atlas_page);
                                                     } else if active_text_page
                                                         != Some(draw.atlas_page)
@@ -2894,6 +3107,467 @@ impl Renderer {
                                 perf_enabled.then_some(&mut frame_perf),
                             );
                         }
+                        RenderPlanPass::BackdropWarp(pass) => {
+                            #[repr(C)]
+                            #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+                            struct BackdropWarpParams {
+                                origin_px: [f32; 2],
+                                bounds_size_px: [f32; 2],
+                                strength_px: f32,
+                                scale_px: f32,
+                                phase: f32,
+                                chroma_px: f32,
+                                kind: u32,
+                                warp_encoding: u32,
+                                warp_sampling: u32,
+                                _pad0: u32,
+                                uv0: [f32; 2],
+                                uv1: [f32; 2],
+                            }
+
+                            let kind = match pass.kind {
+                                fret_core::scene::BackdropWarpKindV1::Wave => 0u32,
+                                fret_core::scene::BackdropWarpKindV1::LensReserved => 1u32,
+                            };
+                            let warp_encoding = match pass.warp_encoding {
+                                fret_core::scene::WarpMapEncodingV1::RgSigned => 1u32,
+                                fret_core::scene::WarpMapEncodingV1::NormalRgb => 2u32,
+                            };
+                            let warp_sampling = match pass.warp_sampling {
+                                fret_core::scene::ImageSamplingHint::Nearest => 2u32,
+                                fret_core::scene::ImageSamplingHint::Default
+                                | fret_core::scene::ImageSamplingHint::Linear => 1u32,
+                            };
+                            queue.write_buffer(
+                                &self.backdrop_warp_param_buffer,
+                                0,
+                                bytemuck::bytes_of(&BackdropWarpParams {
+                                    origin_px: [pass.origin_px.0 as f32, pass.origin_px.1 as f32],
+                                    bounds_size_px: [
+                                        pass.bounds_size_px.0 as f32,
+                                        pass.bounds_size_px.1 as f32,
+                                    ],
+                                    strength_px: pass.strength_px,
+                                    scale_px: pass.scale_px,
+                                    phase: pass.phase,
+                                    chroma_px: pass.chromatic_aberration_px,
+                                    kind,
+                                    warp_encoding,
+                                    warp_sampling,
+                                    _pad0: 0,
+                                    uv0: [pass.warp_uv.u0, pass.warp_uv.v0],
+                                    uv1: [pass.warp_uv.u1, pass.warp_uv.v1],
+                                }),
+                            );
+                            if perf_enabled {
+                                frame_perf.uniform_bytes =
+                                    frame_perf.uniform_bytes.saturating_add(std::mem::size_of::<
+                                        BackdropWarpParams,
+                                    >(
+                                    )
+                                        as u64);
+                            }
+
+                            let warp_view =
+                                pass.warp_image.and_then(|image| self.images.get(image));
+
+                            let src_view = match pass.src {
+                                PlanTarget::Output
+                                | PlanTarget::Mask0
+                                | PlanTarget::Mask1
+                                | PlanTarget::Mask2 => {
+                                    debug_assert!(
+                                        false,
+                                        "BackdropWarp src cannot be Output/mask targets"
+                                    );
+                                    continue;
+                                }
+                                PlanTarget::Intermediate0
+                                | PlanTarget::Intermediate1
+                                | PlanTarget::Intermediate2 => {
+                                    frame_targets.require_target(pass.src, pass.src_size)
+                                }
+                            };
+
+                            let dst_view_owned = match pass.dst {
+                                PlanTarget::Output => None,
+                                PlanTarget::Intermediate0
+                                | PlanTarget::Intermediate1
+                                | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                                    &mut self.intermediate_pool,
+                                    device,
+                                    pass.dst,
+                                    pass.dst_size,
+                                    format,
+                                    usage,
+                                )),
+                                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                                    debug_assert!(false, "BackdropWarp dst cannot be mask targets");
+                                    None
+                                }
+                            };
+                            let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                            if let Some(mask) = pass.mask {
+                                debug_assert!(matches!(
+                                    mask.target,
+                                    PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                                ));
+                                debug_assert_eq!(
+                                    pass.dst_size, viewport_size,
+                                    "mask-based backdrop-warp expects full-size destination"
+                                );
+
+                                let mask_uniform_index = pass
+                                    .mask_uniform_index
+                                    .expect("mask backdrop-warp needs uniform index");
+                                let uniform_offset =
+                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                                let mask_view =
+                                    frame_targets.require_target(mask.target, mask.size);
+
+                                let (label, bind_group, pipeline) = if let Some(warp_view) =
+                                    warp_view
+                                {
+                                    let layout = self
+                                        .backdrop_warp_image_mask_bind_group_layout
+                                        .as_ref()
+                                        .expect(
+                                            "backdrop-warp image mask bind group layout must exist",
+                                        );
+                                    let bind_group =
+                                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                            label: Some("fret backdrop-warp image mask bind group"),
+                                            layout,
+                                            entries: &[
+                                                wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &src_view,
+                                                    ),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 1,
+                                                    resource: self
+                                                        .backdrop_warp_param_buffer
+                                                        .as_entire_binding(),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 2,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        warp_view,
+                                                    ),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 3,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &mask_view,
+                                                    ),
+                                                },
+                                            ],
+                                        });
+                                    let pipeline = self
+                                        .backdrop_warp_image_mask_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp image mask pipeline must exist");
+                                    ("fret backdrop-warp image mask pass", bind_group, pipeline)
+                                } else {
+                                    let layout = self
+                                        .backdrop_warp_mask_bind_group_layout
+                                        .as_ref()
+                                        .expect("backdrop-warp mask bind group layout must exist");
+                                    let bind_group =
+                                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                            label: Some("fret backdrop-warp mask bind group"),
+                                            layout,
+                                            entries: &[
+                                                wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &src_view,
+                                                    ),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 1,
+                                                    resource: self
+                                                        .backdrop_warp_param_buffer
+                                                        .as_entire_binding(),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 2,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &mask_view,
+                                                    ),
+                                                },
+                                            ],
+                                        });
+                                    let pipeline = self
+                                        .backdrop_warp_mask_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp mask pipeline must exist");
+                                    ("fret backdrop-warp mask pass", bind_group, pipeline)
+                                };
+
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some(label),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: dst_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
+                                rp.set_pipeline(pipeline);
+                                if perf_enabled {
+                                    frame_perf.pipeline_switches =
+                                        frame_perf.pipeline_switches.saturating_add(1);
+                                    frame_perf.pipeline_switches_fullscreen =
+                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                                }
+                                rp.set_bind_group(
+                                    0,
+                                    self.pick_uniform_bind_group_for_mask_image(
+                                        encoding
+                                            .uniform_mask_images
+                                            .get(mask_uniform_index as usize)
+                                            .copied()
+                                            .flatten(),
+                                    ),
+                                    &[uniform_offset, render_space_offset_u32],
+                                );
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.uniform_bind_group_switches =
+                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
+                                }
+                                rp.set_bind_group(1, &bind_group, &[]);
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.texture_bind_group_switches =
+                                        frame_perf.texture_bind_group_switches.saturating_add(1);
+                                }
+                                if let Some(scissor) = pass.dst_scissor
+                                    && scissor.w != 0
+                                    && scissor.h != 0
+                                {
+                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                    if perf_enabled {
+                                        frame_perf.scissor_sets =
+                                            frame_perf.scissor_sets.saturating_add(1);
+                                    }
+                                }
+                                rp.draw(0..3, 0..1);
+                                if perf_enabled {
+                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                                    frame_perf.fullscreen_draw_calls =
+                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
+                                }
+                            } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                                let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
+                                    let layout = self
+                                        .backdrop_warp_image_bind_group_layout
+                                        .as_ref()
+                                        .expect("backdrop-warp image bind group layout must exist");
+                                    let bind_group =
+                                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                            label: Some(
+                                                "fret backdrop-warp image masked bind group",
+                                            ),
+                                            layout,
+                                            entries: &[
+                                                wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &src_view,
+                                                    ),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 1,
+                                                    resource: self
+                                                        .backdrop_warp_param_buffer
+                                                        .as_entire_binding(),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 2,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        warp_view,
+                                                    ),
+                                                },
+                                            ],
+                                        });
+                                    let pipeline = self
+                                        .backdrop_warp_image_masked_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp image masked pipeline must exist");
+                                    (bind_group, pipeline)
+                                } else {
+                                    let layout = self
+                                        .backdrop_warp_bind_group_layout
+                                        .as_ref()
+                                        .expect("backdrop-warp bind group layout must exist");
+                                    let bind_group = create_texture_uniform_bind_group(
+                                        device,
+                                        "fret backdrop-warp bind group",
+                                        layout,
+                                        &src_view,
+                                        self.backdrop_warp_param_buffer.as_entire_binding(),
+                                    );
+                                    let pipeline = self
+                                        .backdrop_warp_masked_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp masked pipeline must exist");
+                                    (bind_group, pipeline)
+                                };
+                                let uniform_offset =
+                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("fret backdrop-warp masked pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: dst_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
+                                rp.set_pipeline(pipeline);
+                                if perf_enabled {
+                                    frame_perf.pipeline_switches =
+                                        frame_perf.pipeline_switches.saturating_add(1);
+                                    frame_perf.pipeline_switches_fullscreen =
+                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                                }
+                                rp.set_bind_group(
+                                    0,
+                                    self.pick_uniform_bind_group_for_mask_image(
+                                        encoding
+                                            .uniform_mask_images
+                                            .get(mask_uniform_index as usize)
+                                            .copied()
+                                            .flatten(),
+                                    ),
+                                    &[uniform_offset, render_space_offset_u32],
+                                );
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.uniform_bind_group_switches =
+                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
+                                }
+                                rp.set_bind_group(1, &bind_group, &[]);
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.texture_bind_group_switches =
+                                        frame_perf.texture_bind_group_switches.saturating_add(1);
+                                }
+                                if let Some(scissor) = pass.dst_scissor
+                                    && scissor.w != 0
+                                    && scissor.h != 0
+                                {
+                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                    if perf_enabled {
+                                        frame_perf.scissor_sets =
+                                            frame_perf.scissor_sets.saturating_add(1);
+                                    }
+                                }
+                                rp.draw(0..3, 0..1);
+                                if perf_enabled {
+                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                                    frame_perf.fullscreen_draw_calls =
+                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
+                                }
+                            } else {
+                                let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
+                                    let layout = self
+                                        .backdrop_warp_image_bind_group_layout
+                                        .as_ref()
+                                        .expect("backdrop-warp image bind group layout must exist");
+                                    let bind_group =
+                                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                            label: Some("fret backdrop-warp image bind group"),
+                                            layout,
+                                            entries: &[
+                                                wgpu::BindGroupEntry {
+                                                    binding: 0,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        &src_view,
+                                                    ),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 1,
+                                                    resource: self
+                                                        .backdrop_warp_param_buffer
+                                                        .as_entire_binding(),
+                                                },
+                                                wgpu::BindGroupEntry {
+                                                    binding: 2,
+                                                    resource: wgpu::BindingResource::TextureView(
+                                                        warp_view,
+                                                    ),
+                                                },
+                                            ],
+                                        });
+                                    let pipeline = self
+                                        .backdrop_warp_image_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp image pipeline must exist");
+                                    (bind_group, pipeline)
+                                } else {
+                                    let layout = self
+                                        .backdrop_warp_bind_group_layout
+                                        .as_ref()
+                                        .expect("backdrop-warp bind group layout must exist");
+                                    let bind_group = create_texture_uniform_bind_group(
+                                        device,
+                                        "fret backdrop-warp bind group",
+                                        layout,
+                                        &src_view,
+                                        self.backdrop_warp_param_buffer.as_entire_binding(),
+                                    );
+                                    let pipeline = self
+                                        .backdrop_warp_pipeline
+                                        .as_ref()
+                                        .expect("backdrop-warp pipeline must exist");
+                                    (bind_group, pipeline)
+                                };
+
+                                run_fullscreen_triangle_pass(
+                                    &mut encoder,
+                                    "fret backdrop-warp pass",
+                                    pipeline,
+                                    dst_view,
+                                    pass.load,
+                                    &bind_group,
+                                    &[],
+                                    pass.dst_scissor,
+                                    perf_enabled.then_some(&mut frame_perf),
+                                );
+                            }
+                        }
                         RenderPlanPass::ColorAdjust(pass) => {
                             queue.write_buffer(
                                 &self.color_adjust_param_buffer,
@@ -3755,6 +4429,296 @@ impl Renderer {
                                 );
                             }
                         }
+                        RenderPlanPass::DropShadow(pass) => {
+                            queue.write_buffer(
+                                &self.drop_shadow_param_buffer,
+                                0,
+                                bytemuck::cast_slice(&[
+                                    pass.offset_px.0,
+                                    pass.offset_px.1,
+                                    0.0,
+                                    0.0,
+                                    pass.color.r,
+                                    pass.color.g,
+                                    pass.color.b,
+                                    pass.color.a,
+                                ]),
+                            );
+                            if perf_enabled {
+                                frame_perf.uniform_bytes = frame_perf
+                                    .uniform_bytes
+                                    .saturating_add(std::mem::size_of::<[f32; 8]>() as u64);
+                            }
+
+                            let src_view = match pass.src {
+                                PlanTarget::Output
+                                | PlanTarget::Mask0
+                                | PlanTarget::Mask1
+                                | PlanTarget::Mask2 => {
+                                    debug_assert!(
+                                        false,
+                                        "DropShadow src cannot be Output/mask targets"
+                                    );
+                                    continue;
+                                }
+                                PlanTarget::Intermediate0
+                                | PlanTarget::Intermediate1
+                                | PlanTarget::Intermediate2 => {
+                                    frame_targets.require_target(pass.src, pass.src_size)
+                                }
+                            };
+
+                            let dst_view_owned = match pass.dst {
+                                PlanTarget::Output => None,
+                                PlanTarget::Intermediate0
+                                | PlanTarget::Intermediate1
+                                | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                                    &mut self.intermediate_pool,
+                                    device,
+                                    pass.dst,
+                                    pass.dst_size,
+                                    format,
+                                    usage,
+                                )),
+                                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                                    debug_assert!(false, "DropShadow dst cannot be mask targets");
+                                    None
+                                }
+                            };
+                            let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                            if let Some(mask) = pass.mask {
+                                debug_assert!(matches!(
+                                    mask.target,
+                                    PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                                ));
+                                debug_assert_eq!(
+                                    pass.dst_size, viewport_size,
+                                    "mask-based drop-shadow expects full-size destination"
+                                );
+
+                                let mask_uniform_index = pass
+                                    .mask_uniform_index
+                                    .expect("mask drop-shadow needs uniform index");
+                                let uniform_offset =
+                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                                let mask_view =
+                                    frame_targets.require_target(mask.target, mask.size);
+                                let layout = self
+                                    .drop_shadow_mask_bind_group_layout
+                                    .as_ref()
+                                    .expect("drop-shadow mask bind group layout must exist");
+                                let bind_group =
+                                    device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                        label: Some("fret drop-shadow mask bind group"),
+                                        layout,
+                                        entries: &[
+                                            wgpu::BindGroupEntry {
+                                                binding: 0,
+                                                resource: wgpu::BindingResource::TextureView(
+                                                    &src_view,
+                                                ),
+                                            },
+                                            wgpu::BindGroupEntry {
+                                                binding: 1,
+                                                resource: self
+                                                    .drop_shadow_param_buffer
+                                                    .as_entire_binding(),
+                                            },
+                                            wgpu::BindGroupEntry {
+                                                binding: 2,
+                                                resource: wgpu::BindingResource::TextureView(
+                                                    &mask_view,
+                                                ),
+                                            },
+                                        ],
+                                    });
+
+                                let pipeline = self
+                                    .drop_shadow_mask_pipeline
+                                    .as_ref()
+                                    .expect("drop-shadow mask pipeline must exist");
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("fret drop-shadow mask pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: dst_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
+                                rp.set_pipeline(pipeline);
+                                if perf_enabled {
+                                    frame_perf.pipeline_switches =
+                                        frame_perf.pipeline_switches.saturating_add(1);
+                                    frame_perf.pipeline_switches_fullscreen =
+                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                                }
+                                rp.set_bind_group(
+                                    0,
+                                    self.pick_uniform_bind_group_for_mask_image(
+                                        encoding
+                                            .uniform_mask_images
+                                            .get(mask_uniform_index as usize)
+                                            .copied()
+                                            .flatten(),
+                                    ),
+                                    &[uniform_offset, render_space_offset_u32],
+                                );
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.uniform_bind_group_switches =
+                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
+                                }
+                                rp.set_bind_group(1, &bind_group, &[]);
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.texture_bind_group_switches =
+                                        frame_perf.texture_bind_group_switches.saturating_add(1);
+                                }
+                                if let Some(scissor) = pass.dst_scissor
+                                    && scissor.w != 0
+                                    && scissor.h != 0
+                                {
+                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                    if perf_enabled {
+                                        frame_perf.scissor_sets =
+                                            frame_perf.scissor_sets.saturating_add(1);
+                                    }
+                                }
+                                rp.draw(0..3, 0..1);
+                                if perf_enabled {
+                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                                    frame_perf.fullscreen_draw_calls =
+                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
+                                }
+                            } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                                let layout = self
+                                    .drop_shadow_bind_group_layout
+                                    .as_ref()
+                                    .expect("drop-shadow bind group layout must exist");
+                                let bind_group = create_texture_uniform_bind_group(
+                                    device,
+                                    "fret drop-shadow bind group",
+                                    layout,
+                                    &src_view,
+                                    self.drop_shadow_param_buffer.as_entire_binding(),
+                                );
+                                let pipeline = self
+                                    .drop_shadow_masked_pipeline
+                                    .as_ref()
+                                    .expect("drop-shadow masked pipeline must exist");
+                                let uniform_offset =
+                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                                let mut rp =
+                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: Some("fret drop-shadow masked pass"),
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: dst_view,
+                                                depth_slice: None,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: pass.load,
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
+                                        multiview_mask: None,
+                                    });
+                                rp.set_pipeline(pipeline);
+                                if perf_enabled {
+                                    frame_perf.pipeline_switches =
+                                        frame_perf.pipeline_switches.saturating_add(1);
+                                    frame_perf.pipeline_switches_fullscreen =
+                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                                }
+                                rp.set_bind_group(
+                                    0,
+                                    self.pick_uniform_bind_group_for_mask_image(
+                                        encoding
+                                            .uniform_mask_images
+                                            .get(mask_uniform_index as usize)
+                                            .copied()
+                                            .flatten(),
+                                    ),
+                                    &[uniform_offset, render_space_offset_u32],
+                                );
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.uniform_bind_group_switches =
+                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
+                                }
+                                rp.set_bind_group(1, &bind_group, &[]);
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.texture_bind_group_switches =
+                                        frame_perf.texture_bind_group_switches.saturating_add(1);
+                                }
+                                if let Some(scissor) = pass.dst_scissor
+                                    && scissor.w != 0
+                                    && scissor.h != 0
+                                {
+                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                    if perf_enabled {
+                                        frame_perf.scissor_sets =
+                                            frame_perf.scissor_sets.saturating_add(1);
+                                    }
+                                }
+                                rp.draw(0..3, 0..1);
+                                if perf_enabled {
+                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                                    frame_perf.fullscreen_draw_calls =
+                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
+                                }
+                            } else {
+                                let layout = self
+                                    .drop_shadow_bind_group_layout
+                                    .as_ref()
+                                    .expect("drop-shadow bind group layout must exist");
+                                let bind_group = create_texture_uniform_bind_group(
+                                    device,
+                                    "fret drop-shadow bind group",
+                                    layout,
+                                    &src_view,
+                                    self.drop_shadow_param_buffer.as_entire_binding(),
+                                );
+                                let pipeline = self
+                                    .drop_shadow_pipeline
+                                    .as_ref()
+                                    .expect("drop-shadow pipeline must exist");
+                                run_fullscreen_triangle_pass(
+                                    &mut encoder,
+                                    "fret drop-shadow pass",
+                                    pipeline,
+                                    dst_view,
+                                    pass.load,
+                                    &bind_group,
+                                    &[],
+                                    pass.dst_scissor,
+                                    perf_enabled.then_some(&mut frame_perf),
+                                );
+                            }
+                        }
                         RenderPlanPass::CompositePremul(pass) => {
                             let pipeline_ix = pass.blend_mode.pipeline_index();
 
@@ -4144,6 +5108,9 @@ impl Renderer {
             frame_perf.svg_mask_atlas_page_evictions = self.perf_svg_mask_atlas_page_evictions;
             frame_perf.svg_mask_atlas_entries_evicted = self.perf_svg_mask_atlas_entries_evicted;
 
+            frame_perf.clip_path_mask_cache_bytes_live = self.clip_path_mask_cache.bytes_live();
+            frame_perf.clip_path_mask_cache_entries_live = self.clip_path_mask_cache.entries_live();
+
             let pool_perf = self.intermediate_pool.take_perf_snapshot();
             frame_perf.intermediate_pool_allocations = pool_perf.allocations;
             frame_perf.intermediate_pool_reuses = pool_perf.reuses;
@@ -4224,6 +5191,13 @@ impl Renderer {
                 .perf
                 .render_target_updates_ingest_fallbacks
                 .saturating_add(frame_perf.render_target_updates_ingest_fallbacks);
+            self.perf
+                .render_target_metadata_degradations_color_encoding_dropped = self
+                .perf
+                .render_target_metadata_degradations_color_encoding_dropped
+                .saturating_add(
+                    frame_perf.render_target_metadata_degradations_color_encoding_dropped,
+                );
 
             self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
             self.perf.svg_rasters_live =
@@ -4375,6 +5349,23 @@ impl Renderer {
                 .perf
                 .render_plan_degradations_composite_group_blend_to_over
                 .saturating_add(frame_perf.render_plan_degradations_composite_group_blend_to_over);
+
+            self.perf.clip_path_mask_cache_bytes_live = self
+                .perf
+                .clip_path_mask_cache_bytes_live
+                .max(frame_perf.clip_path_mask_cache_bytes_live);
+            self.perf.clip_path_mask_cache_entries_live = self
+                .perf
+                .clip_path_mask_cache_entries_live
+                .max(frame_perf.clip_path_mask_cache_entries_live);
+            self.perf.clip_path_mask_cache_hits = self
+                .perf
+                .clip_path_mask_cache_hits
+                .saturating_add(frame_perf.clip_path_mask_cache_hits);
+            self.perf.clip_path_mask_cache_misses = self
+                .perf
+                .clip_path_mask_cache_misses
+                .saturating_add(frame_perf.clip_path_mask_cache_misses);
 
             self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
             self.perf.quad_draw_calls = self
@@ -4569,6 +5560,8 @@ impl Renderer {
                     .render_target_updates_requested_ingest_cpu_upload,
                 render_target_updates_ingest_fallbacks: frame_perf
                     .render_target_updates_ingest_fallbacks,
+                render_target_metadata_degradations_color_encoding_dropped: frame_perf
+                    .render_target_metadata_degradations_color_encoding_dropped,
                 svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
                 svg_rasters_live: frame_perf.svg_rasters_live,
                 svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,
@@ -4661,6 +5654,10 @@ impl Renderer {
                 material_distinct: frame_perf.material_distinct,
                 material_unknown_ids: frame_perf.material_unknown_ids,
                 material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
+                clip_path_mask_cache_bytes_live: frame_perf.clip_path_mask_cache_bytes_live,
+                clip_path_mask_cache_entries_live: frame_perf.clip_path_mask_cache_entries_live,
+                clip_path_mask_cache_hits: frame_perf.clip_path_mask_cache_hits,
+                clip_path_mask_cache_misses: frame_perf.clip_path_mask_cache_misses,
             });
         }
 

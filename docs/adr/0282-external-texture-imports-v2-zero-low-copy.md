@@ -69,6 +69,12 @@ This ADR is tracked as a workstream:
 This ADR defines a bounded set of strategies. Concrete backend implementations may add internal
 details, but must map into one of these categories:
 
+0. **Owned (renderer-owned texture)**
+   - Example: the producer writes directly into a renderer-owned texture (e.g. shared allocation),
+     or the source already lives on the same device and is simply sampled via `TextureView` updates.
+   - This path exists to keep the UI contract stable even when "true external handle import" is
+     blocked, and is often a better fallback than doing extra copies.
+
 1. **Zero-copy (external texture sampling)**
    - Example: WebGPU `ExternalTexture` sampling for WebCodecs `VideoFrame`.
    - Requires explicit capability gating and a deterministic fallback.
@@ -89,8 +95,10 @@ be observable in diagnostics/perf snapshots.
 For a given target/backend, the effective strategy is selected by a deterministic ordered chain:
 
 1. Prefer **zero-copy** if the backend reports support and the source provides an eligible frame.
-2. Else prefer **low-copy GPU copy**.
-3. Else fall back to **CPU upload**.
+2. Else prefer **owned** when the source can be made available as a renderer-owned texture without
+   extra readback (e.g. shared allocation write paths).
+3. Else prefer **low-copy GPU copy**.
+4. Else fall back to **CPU upload**.
 
 This chain must be stable across machines for the same capability snapshot, and must not depend
 on timing or opportunistic resource availability.
@@ -131,15 +139,20 @@ becomes observable via a counter/hint (workstream TODOs).
   - Preserve across all strategies.
   - If a backend cannot apply the requested orientation, degrade deterministically to the identity
     orientation (`r0`, `mirror_x=false`) and record a counter/hint.
+- `color_encoding: RenderTargetColorEncoding` (bounded colorimetry hints)
+  - Best-effort hints for real media sources (video/camera/remote desktop):
+    - primaries, transfer function, matrix coefficients, and range.
+  - Preserve across all strategies when representable.
+  - If a backend cannot preserve the effective values for a strategy, degrade deterministically to
+    `unknown` values and record a counter/hint (see workstream `EXTV2-diag-040`).
 - `requested_ingest_strategy` vs `ingest_strategy`
   - Always populate both (or keep `unknown`) so capability-gated fallbacks are observable in perf
     snapshots/bundles.
 - `frame_timestamp_ns`
   - Diagnostics-only. If not available, set `None`. No correctness semantics depend on it.
 
-**Explicit deferral (non-goal):** real video colorimetry (transfer/matrix/range, ICC, HDR) is
-intentionally out of scope for v2. If/when we add it, it must be introduced as bounded enums with
-deterministic degradations and perf gates (this ADR’s exit criteria still applies).
+**Explicit deferral (non-goal):** full color management (ICC profiles, HDR tone mapping, arbitrary
+transfer functions) remains out of scope for v2.
 
 ## Capability matrix (expected reality)
 
@@ -156,6 +169,79 @@ capability-gated (query, do not assume).
 - Mobile (iOS/Android):
   - Strategy availability depends heavily on the backend + OS primitives; assume “copy-first” until
     proven and gated by real device perf baselines.
+
+## Mobile plan (iOS/Android) — capability-gated and honest
+
+This section documents a **capability-gated plan** for mobile. It is intentionally explicit about
+prerequisites, because “zero-copy” on mobile is frequently blocked by upstream APIs and/or
+platform constraints.
+
+The workstream goal on mobile is *not* “force a zero-copy path”; it is:
+
+1. keep the UI contract stable (`RenderTargetId` + `ViewportSurface`),
+2. keep strategy selection bounded + deterministic,
+3. preserve metadata semantics (alpha/orientation/color encoding) as far as the target allows,
+4. and gate with real-device perf baselines (power matters).
+
+### iOS (AVFoundation / CoreVideo)
+
+Typical frame source shapes:
+
+- `CVPixelBuffer` (often bi-planar YUV such as NV12),
+- or a producer that can render into a `MTLTexture`/IOSurface-backed texture.
+
+Candidate ingestion paths (ordered by desirability, but capability-gated):
+
+1. **Owned (shared allocation)**
+   - Runner/renderer allocates a `wgpu::Texture` that is backed by a `MTLTexture`/IOSurface (or an
+     equivalent shareable allocation).
+   - The producer/decoder writes directly into that allocation (no intermediate copy within Fret).
+   - This is “no-copy” in practice while classifying as `Owned` in the bounded strategy set.
+2. **GpuCopy**
+   - Producer yields a `MTLTexture` (or a `CVPixelBuffer` that can be bound as a Metal texture) and
+     we blit/copy into a renderer-owned texture.
+   - Still GPU-only, but introduces an extra pass + bandwidth cost.
+3. **CpuUpload**
+   - Producer yields bytes (or we map a pixel buffer) and upload via `Queue::write_texture`.
+   - Always available, but often too expensive for high-frequency 1080p/4K sources.
+4. **ExternalZeroCopy**
+   - Treat as **blocked** until upstream exposes a supported way to import a foreign Metal/IOSurface
+     texture handle into `wgpu::Texture` safely and portably.
+
+Prerequisites checklist (must be explicit before landing anything beyond `CpuUpload`):
+
+- A backend-supported shared allocation story (or a GPU-only copy story) on the chosen wgpu backend.
+- A deterministic “orientation + alpha + color encoding” mapping for the mobile rendering pipeline.
+- A real-device perf baseline for each landed path (iPhone/iPad classes).
+
+### Android (MediaCodec / AHardwareBuffer)
+
+Typical frame source shapes:
+
+- `MediaCodec` output to a `Surface`/`SurfaceTexture` (often GPU-backed),
+- `ImageReader` images (YUV planes, often mapped on CPU),
+- or `AHardwareBuffer` handles (shareable GPU allocations on modern Android).
+
+Candidate ingestion paths (ordered by desirability, but capability-gated):
+
+1. **Owned (shared allocation)**
+   - Runner/renderer allocates a renderer-owned `wgpu::Texture` whose underlying allocation can be
+     exported as an `AHardwareBuffer` (or equivalent), then hands it to the producer to write into.
+2. **GpuCopy**
+   - Producer yields a GPU allocation (e.g. `AHardwareBuffer`) and we copy/blit into a renderer-owned
+     texture on-GPU.
+3. **CpuUpload**
+   - Producer yields CPU-visible planes; we convert (if needed) and upload.
+4. **ExternalZeroCopy**
+   - Treat as **blocked** until wgpu exposes a supported import path for Android external image
+     handles into `wgpu::Texture` that remains portable (Vulkan/Metal backends differ).
+
+Prerequisites checklist:
+
+- A backend-supported export/import story for `AHardwareBuffer` (or a GPU copy path) that we can
+  capability-gate deterministically.
+- A YUV → RGB strategy that is stable on mobile GPUs (precision, banding, sampler state).
+- Real-device baselines (Android device classes vary widely; capture representative low/mid/high).
 
 ## Perf gates (must be explicit)
 

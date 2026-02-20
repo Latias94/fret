@@ -199,7 +199,7 @@ Current v3 implementation is intentionally minimal and focuses on proving the su
 - MVP supported effect steps:
   - `EffectMode::Backdrop` + `EffectStep::GaussianBlur { .. }` (bounded by `bounds` and current clip/scissor).
   - `EffectMode::FilterContent` + `EffectStep::GaussianBlur { .. }` (scissored in-place filtering, then premul over composite).
-  - `EffectStep::ColorAdjust { saturation, brightness, contrast }` (scissored, in-place via scratch target).
+  - `EffectStep::ColorAdjust { saturation, brightness, contrast }` (scissored, in-place via scratch target; `1.0` is the identity value for all three parameters).
   - `EffectStep::Pixelate { scale }` (bounded + scissored, implemented via nearest downsample -> upscale passes).
 - Not yet implemented (treated as a no-op by the renderer):
   - `Dither` as an effect step (debug-only postprocess exists separately).

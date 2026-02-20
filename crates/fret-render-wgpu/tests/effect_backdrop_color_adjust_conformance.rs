@@ -198,7 +198,7 @@ fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
         mode: EffectMode::Backdrop,
         chain: EffectChain::from_steps(&[EffectStep::ColorAdjust {
             saturation: 0.0,
-            brightness: 0.0,
+            brightness: 1.0,
             contrast: 1.0,
         }]),
         quality: EffectQuality::Auto,
@@ -234,5 +234,73 @@ fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
     assert!(
         fg[1] > 200 && fg[0] < 40 && fg[2] < 40 && fg[3] > 200,
         "foreground quad should remain visible on top of the adjusted backdrop"
+    );
+}
+
+#[test]
+fn gpu_backdrop_color_adjust_brightness_is_a_multiplier_with_identity_1() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            // No adapter/device available (common in some headless environments).
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    let size = (64u32, 64u32);
+    let mut base = Scene::default();
+
+    // Use non-saturated colors so "brightness as add" would clamp to white, while
+    // "brightness as multiply" stays in range.
+    base.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 0.25,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    base.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.25,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+
+    let mut with_effect = base;
+    with_effect.push(SceneOp::PushEffect {
+        bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        mode: EffectMode::Backdrop,
+        chain: EffectChain::from_steps(&[EffectStep::ColorAdjust {
+            saturation: 1.0,
+            brightness: 1.02,
+            contrast: 1.0,
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    with_effect.push(SceneOp::PopEffect);
+
+    let adjusted = render_and_readback(&ctx, &mut renderer, &with_effect, size);
+
+    let px = pixel_rgba(&adjusted, size.0, 8, 32);
+    assert!(
+        px[0] > 40 && px[0] < 240 && px[1] < 40 && px[2] < 40 && px[3] > 240,
+        "brightness should not clamp to white; got rgba={:?}",
+        px
     );
 }

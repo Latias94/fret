@@ -1553,6 +1553,8 @@ impl<H: UiHost> Widget<H> for TextArea {
             origin: text_origin,
             text: blob,
             paint: fret_core::scene::Paint::Solid(self.style.text_color),
+            outline: None,
+            shadow: None,
         });
 
         if cx.focus != Some(cx.node) {

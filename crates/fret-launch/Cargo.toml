@@ -30,6 +30,7 @@ fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 fret-render = { version = "0.1.0", package = "fret-render-wgpu", path = "../fret-render-wgpu" }
 fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
+anyhow.workspace = true
 bytemuck.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -72,6 +73,16 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std"
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Direct3D11on12",
+    "Win32_Graphics_Direct3D12",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Media_MediaFoundation",
+    "Win32_System_Com",
+] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "linux"))'.dependencies]
 zbus.workspace = true

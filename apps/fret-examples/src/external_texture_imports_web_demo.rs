@@ -401,38 +401,50 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
             #[cfg(target_arch = "wasm32")]
             {
                 if let Some(ext) = state.external.as_ref() {
-                    state.target.push_update_with_ingest_strategies(
+                    state.target.push_update_with_fallbacks(
                         &mut update,
-                        view.clone(),
-                        state.target_px_size,
-                        metadata,
                         RenderTargetIngestStrategy::ExternalZeroCopy,
-                        RenderTargetIngestStrategy::GpuCopy,
+                        fret_launch::ImportedViewportFallbacks {
+                            gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                                view.clone(),
+                                state.target_px_size,
+                                metadata,
+                                Some(EngineFrameKeepalive::new(ext.canvas.clone())),
+                            )),
+                            ..Default::default()
+                        },
                     );
-                    update
-                        .keepalive
-                        .push(EngineFrameKeepalive::new(ext.canvas.clone()));
                 } else {
-                    state.target.push_update_with_ingest_strategies(
+                    state.target.push_update_with_fallbacks(
                         &mut update,
-                        view.clone(),
-                        state.target_px_size,
-                        metadata,
                         RenderTargetIngestStrategy::ExternalZeroCopy,
-                        RenderTargetIngestStrategy::GpuCopy,
+                        fret_launch::ImportedViewportFallbacks {
+                            gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                                view.clone(),
+                                state.target_px_size,
+                                metadata,
+                                None,
+                            )),
+                            ..Default::default()
+                        },
                     );
                 }
             }
 
             #[cfg(not(target_arch = "wasm32"))]
             {
-                state.target.push_update_with_ingest_strategies(
+                state.target.push_update_with_fallbacks(
                     &mut update,
-                    view.clone(),
-                    state.target_px_size,
-                    metadata,
                     RenderTargetIngestStrategy::ExternalZeroCopy,
-                    RenderTargetIngestStrategy::GpuCopy,
+                    fret_launch::ImportedViewportFallbacks {
+                        gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                            view.clone(),
+                            state.target_px_size,
+                            metadata,
+                            None,
+                        )),
+                        ..Default::default()
+                    },
                 );
             }
         }

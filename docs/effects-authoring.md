@@ -50,6 +50,10 @@ Notes:
 - `EffectMode::FilterContent` renders the subtree to an offscreen intermediate and filters that output.
 - Use `EffectLayerProps.quality` (`Auto/Low/Medium/High`) when you need predictable trade-offs; otherwise keep `Auto` and
   rely on budgets + deterministic degradation (ADR 0118).
+- `EffectStep::ColorAdjust` parameters are **multipliers** with `1.0` as the identity value:
+  - `saturation`: `0` = grayscale, `1` = unchanged.
+  - `brightness`: `0` = black, `1` = unchanged.
+  - `contrast`: `0` = flat mid-gray, `1` = unchanged.
 
 ## Glass recipe template (fret-ui-kit)
 

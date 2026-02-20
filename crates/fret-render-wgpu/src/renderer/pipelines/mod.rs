@@ -1,10 +1,12 @@
 mod alpha_threshold;
+mod backdrop_warp;
 mod blit;
 mod blur;
 mod clip_mask;
 mod color_adjust;
 mod color_matrix;
 mod composite;
+mod drop_shadow;
 mod mask;
 mod path;
 mod path_clip_mask;

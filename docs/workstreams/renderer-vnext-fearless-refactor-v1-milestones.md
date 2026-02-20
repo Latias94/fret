@@ -204,6 +204,23 @@ Progress record (Image masks v1):
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
 
+Progress record (Clip/Mask cache stability closure):
+
+- Date: 2026-02-18
+- Commits:
+  - `e16392d7` (clip-path mask cache: GPU copy reuse + deterministic eviction)
+  - `92dcb8e8` (headless gate invariants for clip-path cache stability)
+- Summary:
+  - Clip-path slow-path intermediates are cached as R8 textures and reused via GPU copy.
+  - Cache is budgeted and evicted deterministically (LRU by last-used frame).
+  - Gate asserts cache stability (hits present, misses bounded, entries bounded) on a deterministic workload.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`RenderPlanPass::PathClipMask`)
+  - `apps/fret-clip-mask-stress/src/main.rs`
+  - `tools/perf/headless_clip_mask_stress_gate.py`
+  - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
@@ -229,6 +246,32 @@ Progress record (Material fallbacks v1):
   - `crates/fret-render-wgpu/tests/materials_conformance.rs` (unknown id + budget pressure)
 - Gates run:
   - `cargo nextest run -p fret-render-wgpu --test materials_conformance`
+
+Progress record (Gradient tile modes: Repeat/Mirror):
+
+- Date: 2026-02-17
+- Status: Landed (wgpu default renderer; portable WGSL tiling function)
+- Evidence anchors:
+  - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `tile_mode`)
+  - `crates/fret-core/src/scene/mask.rs` (`Mask::sanitize` preserves `tile_mode`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`gradient_tile_mode_apply`)
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (repeat/mirror smoke)
+  - `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs` (repeat/mirror smoke)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance --test mask_gradient_conformance`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
+Progress record (Gradient color space: Oklab):
+
+- Date: 2026-02-17
+- Status: Landed (wgpu default renderer; Oklab stop interpolation in WGSL)
+- Evidence anchors:
+  - `crates/fret-core/src/scene/paint.rs` (`Paint::sanitize` preserves `color_space`)
+  - `crates/fret-render-wgpu/src/renderer/shaders.rs` (`paint_mix_colorspace`, Oklab conversions)
+  - `crates/fret-render-wgpu/tests/paint_gradient_conformance.rs` (Oklab midpoint vs sRGB/linear)
+- Gates run:
+  - `cargo nextest run -p fret-render-wgpu --test paint_gradient_conformance`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
 ### M4b — Optional contract expansion (only if required)
 

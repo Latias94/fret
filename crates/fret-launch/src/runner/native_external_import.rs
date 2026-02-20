@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 use crate::runner::EngineFrameKeepalive;
+use fret_render::RenderTargetIngestStrategy;
 
 /// Error returned by a native external texture import attempt (ADR 0234 D1/D3).
 #[derive(Debug, Error)]
@@ -43,4 +44,38 @@ pub trait NativeExternalTextureFrame: 'static {
         ctx: &fret_render::WgpuContext,
         caps: &fret_render::RendererCapabilities,
     ) -> Result<NativeExternalImportedFrame, NativeExternalImportError>;
+}
+
+/// Runner-local frame wrapper for a texture that already lives on the renderer device.
+///
+/// This is useful for contract-path demos and adapter plumbing where the "import" step is
+/// effectively just producing a `TextureView` plus metadata attribution.
+#[derive(Debug)]
+pub struct OwnedWgpuTextureFrame {
+    pub texture: wgpu::Texture,
+    pub size: (u32, u32),
+    pub ingest_strategy: RenderTargetIngestStrategy,
+}
+
+impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
+    fn import(
+        self: Box<Self>,
+        _ctx: &fret_render::WgpuContext,
+        _caps: &fret_render::RendererCapabilities,
+    ) -> Result<NativeExternalImportedFrame, NativeExternalImportError> {
+        let view = self
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut metadata = fret_render::RenderTargetMetadata::default();
+        metadata.requested_ingest_strategy = self.ingest_strategy;
+        metadata.ingest_strategy = self.ingest_strategy;
+
+        Ok(NativeExternalImportedFrame {
+            view,
+            size: self.size,
+            metadata,
+            keepalive: EngineFrameKeepalive::new(self),
+        })
+    }
 }
