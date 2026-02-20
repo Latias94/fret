@@ -1128,6 +1128,168 @@ impl TaffyLayoutEngine {
         self.styles.get(node)
     }
 
+    fn apply_flex_wrap_intrinsic_main_min_size_patches(
+        &mut self,
+        root_node: NodeId,
+        sf: f32,
+        measure: &mut impl FnMut(NodeId, LayoutConstraints) -> Size,
+    ) {
+        use taffy::style::{
+            AvailableSpace as TaffyAvailableSpace, Dimension, Display, FlexDirection, FlexWrap,
+        };
+
+        #[derive(Clone, Copy)]
+        enum MainAxis {
+            Row,
+            Column,
+        }
+
+        let mut stack: Vec<NodeId> = vec![root_node];
+        while let Some(node) = stack.pop() {
+            let children = self.children.get(node).cloned().unwrap_or_default();
+
+            if let Some(style) = self.styles.get(node).cloned()
+                && style.display == Display::Flex
+                && style.flex_wrap == FlexWrap::Wrap
+            {
+                let main_axis = match style.flex_direction {
+                    FlexDirection::Row | FlexDirection::RowReverse => MainAxis::Row,
+                    FlexDirection::Column | FlexDirection::ColumnReverse => MainAxis::Column,
+                };
+
+                for child in children.iter().copied() {
+                    let Some(mut child_style) = self.styles.get(child).cloned() else {
+                        continue;
+                    };
+
+                    let overflow_visible_in_main = match main_axis {
+                        MainAxis::Row => child_style.overflow.x == taffy::style::Overflow::Visible,
+                        MainAxis::Column => {
+                            child_style.overflow.y == taffy::style::Overflow::Visible
+                        }
+                    };
+                    if !overflow_visible_in_main {
+                        continue;
+                    }
+
+                    // Only patch `auto`-sized items that rely on flex-wrap to avoid squishing.
+                    //
+                    // This mirrors the web default `min-width: auto` / `min-height: auto` behavior
+                    // that prevents wrapped flex items (e.g. `flex-1` buttons) from shrinking below
+                    // their intrinsic min-content size unless an explicit min-size override (e.g.
+                    // `min-w-0`) is applied.
+                    let (main_size_is_auto, main_min_is_auto) = match main_axis {
+                        MainAxis::Row => (
+                            child_style.size.width.is_auto(),
+                            child_style.min_size.width.is_auto(),
+                        ),
+                        MainAxis::Column => (
+                            child_style.size.height.is_auto(),
+                            child_style.min_size.height.is_auto(),
+                        ),
+                    };
+                    if !main_size_is_auto || !main_min_is_auto {
+                        continue;
+                    }
+
+                    let Some(child_id) = self.layout_id_for_node(child) else {
+                        continue;
+                    };
+
+                    let avail = match main_axis {
+                        MainAxis::Row => taffy::geometry::Size {
+                            width: TaffyAvailableSpace::MinContent,
+                            height: TaffyAvailableSpace::MaxContent,
+                        },
+                        MainAxis::Column => taffy::geometry::Size {
+                            width: TaffyAvailableSpace::MaxContent,
+                            height: TaffyAvailableSpace::MinContent,
+                        },
+                    };
+
+                    let result = self.tree.compute_layout_with_measure(
+                        child_id.0,
+                        avail,
+                        |known, avail, _id, ctx, _style| {
+                            let Some(ctx) = ctx else {
+                                return taffy::geometry::Size::default();
+                            };
+                            if !ctx.measured {
+                                return taffy::geometry::Size::default();
+                            }
+
+                            let constraints = LayoutConstraints::new(
+                                LayoutSize::new(
+                                    known.width.map(|w| Px(w / sf)),
+                                    known.height.map(|h| Px(h / sf)),
+                                ),
+                                LayoutSize::new(
+                                    match avail.width {
+                                        TaffyAvailableSpace::Definite(w) => {
+                                            AvailableSpace::Definite(Px(w / sf))
+                                        }
+                                        TaffyAvailableSpace::MinContent => {
+                                            if ctx.min_content_width_as_max {
+                                                AvailableSpace::MaxContent
+                                            } else {
+                                                AvailableSpace::MinContent
+                                            }
+                                        }
+                                        TaffyAvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                    match avail.height {
+                                        TaffyAvailableSpace::Definite(h) => {
+                                            AvailableSpace::Definite(Px(h / sf))
+                                        }
+                                        TaffyAvailableSpace::MinContent => {
+                                            AvailableSpace::MinContent
+                                        }
+                                        TaffyAvailableSpace::MaxContent => {
+                                            AvailableSpace::MaxContent
+                                        }
+                                    },
+                                ),
+                            );
+
+                            let s = measure(ctx.node, constraints);
+                            taffy::geometry::Size {
+                                width: s.width.0 * sf,
+                                height: s.height.0 * sf,
+                            }
+                        },
+                    );
+                    if result.is_err() {
+                        continue;
+                    }
+
+                    let Ok(layout) = self.tree.layout(child_id.0) else {
+                        continue;
+                    };
+                    let main_dp = match main_axis {
+                        MainAxis::Row => layout.size.width,
+                        MainAxis::Column => layout.size.height,
+                    };
+                    if !main_dp.is_finite() || main_dp <= 0.0 {
+                        continue;
+                    }
+
+                    match main_axis {
+                        MainAxis::Row => child_style.min_size.width = Dimension::length(main_dp),
+                        MainAxis::Column => {
+                            child_style.min_size.height = Dimension::length(main_dp)
+                        }
+                    }
+                    self.set_style(child, child_style);
+                }
+            }
+
+            // Continue traversing the subtree.
+            stack.extend(children);
+        }
+    }
+
     #[stacksafe::stacksafe]
     pub fn compute_root_with_measure(
         &mut self,
@@ -1182,6 +1344,11 @@ impl TaffyLayoutEngine {
             tracing::Span::none()
         };
         let _span_guard = span.enter();
+
+        let root_node = self.node_for_layout_id(root);
+        if let Some(root_node) = root_node {
+            self.apply_flex_wrap_intrinsic_main_min_size_patches(root_node, sf, &mut measure);
+        }
 
         let taffy_available = taffy::geometry::Size {
             width: match available.width {
@@ -1334,7 +1501,6 @@ impl TaffyLayoutEngine {
             self.last_solve_measure_hotspots.clear();
         }
 
-        let root_node = self.node_for_layout_id(root);
         if let Err(err) = result {
             Self::warn_taffy_error_once("compute_layout_with_measure", err);
             if let Some(root_node) = root_node {
