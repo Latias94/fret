@@ -187,6 +187,105 @@ impl fret_core::MaterialService for ZeroHeightCaretTextService {
 }
 
 #[derive(Default)]
+struct ZeroHeightSelectionRectTextService {}
+
+impl TextService for ZeroHeightSelectionRectTextService {
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        _constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        (
+            fret_core::TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(10.0), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn first_line_metrics(&mut self, _blob: fret_core::TextBlobId) -> Option<TextLineMetrics> {
+        Some(TextLineMetrics {
+            ascent: Px(8.0),
+            descent: Px(2.0),
+            line_height: Px(10.0),
+        })
+    }
+
+    fn selection_rects_clipped(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        range: (usize, usize),
+        _clip: Rect,
+        out: &mut Vec<Rect>,
+    ) {
+        out.clear();
+        let (start, end) = range;
+        if start >= end {
+            return;
+        }
+
+        out.push(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px((end - start) as f32), Px(0.0)),
+        ));
+    }
+
+    fn caret_rect(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        index: usize,
+        _affinity: CaretAffinity,
+    ) -> Rect {
+        Rect::new(
+            Point::new(Px(index as f32), Px(0.0)),
+            Size::new(Px(1.0), Px(10.0)),
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for ZeroHeightSelectionRectTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for ZeroHeightSelectionRectTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for ZeroHeightSelectionRectTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
+#[derive(Default)]
 struct AutoscrollTextService {
     next_blob: u64,
     by_blob_text: HashMap<fret_core::TextBlobId, String>,
@@ -525,6 +624,50 @@ fn right_click_focuses_and_preserves_selection_for_context_menus() {
         snap1.selection_utf16,
         Some((8, 8)),
         "expected right-click outside selection to collapse it to the caret position"
+    );
+}
+
+#[test]
+fn selection_highlight_is_visible_when_backend_reports_zero_height_selection_rects() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        ..Default::default()
+    };
+
+    let mut widget = TextArea::new("hello").with_style(style);
+    widget.selection_anchor = 0;
+    widget.caret = 5;
+
+    let area = ui.create_node(widget);
+    ui.set_root(area);
+    ui.set_focus(None);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = ZeroHeightSelectionRectTextService::default();
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selection_quad_height = scene.ops().iter().find_map(|op| match op {
+        SceneOp::Quad { rect, .. } if (rect.size.width.0 - 5.0).abs() < 0.01 => {
+            Some(rect.size.height)
+        }
+        _ => None,
+    });
+
+    assert_eq!(
+        selection_quad_height,
+        Some(Px(10.0)),
+        "expected zero-height selection rects to be expanded using line metrics so selection highlights remain visible"
     );
 }
 

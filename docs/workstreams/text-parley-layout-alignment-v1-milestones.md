@@ -60,6 +60,11 @@ Status: Done.
     - `crates/fret-ui/src/text/coords.rs` (shared vertical placement + baseline mapping helper)
     - `crates/fret-ui/src/text/input/widget.rs` (paint + platform geometry queries reuse shared mapping)
     - `crates/fret-ui/src/text/input/input.rs` (`caret_rect` uses shared mapping + first-line metrics when available)
+- M6: Done.
+  - Evidence:
+    - `crates/fret-ui/src/text/area/widget.rs` (selection/preedit quads expand zero-height rects using line metrics)
+    - `crates/fret-ui/src/text/area/widget.rs` (platform caret bounds fall back to line metrics when caret rect height is zero)
+    - `crates/fret-ui/src/text/area/tests.rs` (unit test gate: `selection_highlight_is_visible_when_backend_reports_zero_height_selection_rects`)
 
 ## M2 — Mixed-direction selection rectangles are segment-accurate
 
@@ -121,5 +126,20 @@ Exit criteria:
 - `TextInput` paint uses `compute_text_vertical_offset_and_baseline`.
 - Platform geometry queries use the same vertical placement offset as paint.
 - `TextInput::caret_rect` uses the same mapping and consults `first_line_metrics` when available.
+
+Status: Done.
+
+## M6 — TextArea highlight + platform bounds robustness
+
+Goal:
+
+- Keep `TextArea` selection/preedit visuals and platform geometry queries deterministic even when
+  a backend reports zero-height rectangles.
+
+Exit criteria:
+
+- Paint expands zero-height selection/preedit rects using best-effort line metrics.
+- Platform `bounds_for_range` caret path falls back to line metrics when caret height is zero.
+- Add a unit test gate for the selection highlight fallback.
 
 Status: Done.

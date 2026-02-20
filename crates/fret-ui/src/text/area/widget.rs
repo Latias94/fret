@@ -218,9 +218,26 @@ impl<H: UiHost> Widget<H> for TextArea {
         let inner = self.content_bounds();
 
         if bs == be {
-            let caret = cx
+            let metrics = self.metrics?;
+            let mut caret = cx
                 .services
                 .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
+            if caret.size.height.0 <= 0.0 {
+                if let Some(line) = cx.services.first_line_metrics(blob) {
+                    let top = Px((metrics.baseline.0 - line.ascent.0).max(0.0));
+                    caret.origin.y = top;
+                    caret.size.height = line.line_height.max(Px(1.0));
+                } else {
+                    let line_height = self
+                        .text_style
+                        .line_height
+                        .unwrap_or(Px(self.text_style.size.0 * 1.2))
+                        .max(Px(1.0));
+                    let top = Px((metrics.baseline.0 - line_height.0 * 0.8).max(0.0));
+                    caret.origin.y = top;
+                    caret.size.height = line_height;
+                }
+            }
             let rect = Rect::new(
                 fret_core::Point::new(
                     inner.origin.x + caret.origin.x - self.offset_x,
@@ -1495,13 +1512,27 @@ impl<H: UiHost> Widget<H> for TextArea {
         } else {
             cx.theme().color_token("selection.inactive.background")
         };
+        let fallback_line_height = cx
+            .services
+            .first_line_metrics(blob)
+            .map(|m| m.line_height.max(Px(1.0)))
+            .unwrap_or_else(|| {
+                self.text_style
+                    .line_height
+                    .unwrap_or(Px(self.text_style.size.0 * 1.2))
+                    .max(Px(1.0))
+            });
         for r in &self.selection_rects {
+            let mut size = r.size;
+            if size.height.0 <= 0.0 {
+                size.height = fallback_line_height;
+            }
             let rect = Rect::new(
                 fret_core::Point::new(
                     inner.origin.x + r.origin.x - self.offset_x,
                     Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
                 ),
-                r.size,
+                size,
             );
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
@@ -1523,12 +1554,16 @@ impl<H: UiHost> Widget<H> for TextArea {
                 &mut self.preedit_rects,
             );
             for r in &self.preedit_rects {
+                let mut size = r.size;
+                if size.height.0 <= 0.0 {
+                    size.height = fallback_line_height;
+                }
                 let rect = Rect::new(
                     fret_core::Point::new(
                         inner.origin.x + r.origin.x - self.offset_x,
                         Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
                     ),
-                    r.size,
+                    size,
                 );
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(0),
@@ -1649,14 +1684,21 @@ impl<H: UiHost> Widget<H> for TextArea {
 
                 for r in &self.preedit_rects {
                     if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
-                        continue;
+                        if r.size.width.0 <= 0.0 {
+                            continue;
+                        }
                     }
 
                     let x0 = (inner.origin.x + r.origin.x).0;
                     let y0 = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0;
                     let x0 = x0 - self.offset_x.0;
                     let x1 = x0 + r.size.width.0;
-                    let y1 = y0 + r.size.height.0;
+                    let h = if r.size.height.0 <= 0.0 {
+                        fallback_line_height.0
+                    } else {
+                        r.size.height.0
+                    };
+                    let y1 = y0 + h;
 
                     min_x = min_x.min(x0);
                     min_y = min_y.min(y0);
@@ -1691,11 +1733,15 @@ impl<H: UiHost> Widget<H> for TextArea {
 
             if !self.preedit_rects.is_empty() {
                 for r in &self.preedit_rects {
-                    if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
+                    if r.size.width.0 <= 0.0 {
                         continue;
                     }
-                    let y = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0 + r.size.height.0
-                        - hairline.0;
+                    let h = if r.size.height.0 <= 0.0 {
+                        fallback_line_height.0
+                    } else {
+                        r.size.height.0
+                    };
+                    let y = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0 + h - hairline.0;
                     let underline = Rect::new(
                         fret_core::Point::new(inner.origin.x + r.origin.x - self.offset_x, Px(y)),
                         Size::new(Px(r.size.width.0.max(hairline.0)), hairline),

@@ -9,6 +9,7 @@ This is a living task list. Keep items small enough to land with a tight regress
 - [x] Centralize “text-local <-> element-local” mapping (includes vertical placement offset).
       (Shared helpers used by paint + selectable-text pointer hit-testing.)
 - [x] Reuse the same vertical placement mapping in `TextInput` paint + platform text-input queries.
+- [x] Keep `TextArea` selection/preedit highlights visible when backends report zero-height rects.
 - [x] Ensure span background quads are positioned using the same vertical placement offset as the
       text draw op for:
       - `SelectableText`
