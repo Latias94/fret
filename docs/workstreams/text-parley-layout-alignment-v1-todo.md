@@ -6,8 +6,8 @@ This is a living task list. Keep items small enough to land with a tight regress
 
 ## P0 — Coordinate space alignment (UI correctness)
 
-- [ ] Centralize “text-local -> element-local” mapping (includes vertical placement offset).
-      (Partial: span background + selection + interactive-span bounds are aligned; remaining event-side mapping still needs a pass.)
+- [x] Centralize “text-local <-> element-local” mapping (includes vertical placement offset).
+      (Shared helpers used by paint + selectable-text pointer hit-testing.)
 - [x] Ensure span background quads are positioned using the same vertical placement offset as the
       text draw op for:
       - `SelectableText`

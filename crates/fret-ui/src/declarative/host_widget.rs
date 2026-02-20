@@ -9,6 +9,7 @@ mod layout;
 mod measure;
 mod paint;
 mod semantics;
+mod text_coords;
 
 fn interactive_resize_text_width_cache_entries() -> usize {
     crate::runtime_config::ui_runtime_config().interactive_resize_text_width_cache_entries

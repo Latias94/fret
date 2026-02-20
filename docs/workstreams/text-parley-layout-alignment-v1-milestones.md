@@ -50,6 +50,11 @@ Status: Done.
     - `crates/fret-ui/src/text/input/widget.rs` (tolerant `platform_text_input_replace_and_mark_text_in_range_utf16`)
     - `crates/fret-ui/src/text/area/widget.rs` (tolerant `platform_text_input_replace_and_mark_text_in_range_utf16`)
     - `crates/fret-ui/src/tree/tests/platform_text_input.rs` (unit test gate: replacement-range commit + marked mismatch)
+- M4: Done.
+  - Evidence:
+    - `crates/fret-ui/src/declarative/host_widget/text_coords.rs` (shared vertical placement mapping helper)
+    - `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (pointer hit-testing uses text-local coordinates)
+    - `crates/fret-ui/src/declarative/tests/selection_indices.rs` (unit test gate: `selectable_text_pointer_hit_test_uses_text_local_coordinates`)
 
 ## M2 — Mixed-direction selection rectangles are segment-accurate
 
@@ -78,5 +83,20 @@ Exit criteria:
 - Reduce “return false” failure modes in `platform_text_input_replace_and_mark_text_in_range_utf16`
   while keeping invariants documented and tested.
 - Add tests for at least one non-trivial IME-marked scenario.
+
+Status: Done.
+
+## M4 — Pointer hit-testing uses the same coordinate mapping as paint
+
+Goal:
+
+- Ensure selectable-text pointer hit-testing passes **text-local** coordinates to `TextService`
+  (matching the coordinate space used by `selection_rects` / `caret_rect` and the paint mapping).
+
+Exit criteria:
+
+- Shared helper for computing vertical placement offsets is used by both paint and pointer hit-testing.
+- Add a unit test gate that clicks inside vertically centered text and asserts `hit_test_point`
+  receives text-local coordinates.
 
 Status: Done.

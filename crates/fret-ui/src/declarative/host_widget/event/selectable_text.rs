@@ -54,6 +54,42 @@ pub(super) fn handle_selectable_text<H: UiHost>(
     props: crate::element::SelectableTextProps,
     event: &Event,
 ) {
+    let text_local_from_window_position =
+        |this: &ElementHostWidget,
+         cx: &mut EventCx<'_, H>,
+         props: &crate::element::SelectableTextProps,
+         position: fret_core::Point| {
+            let element_local = fret_core::Point::new(
+                fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
+                fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
+            );
+
+            let Some(blob) = this.text_cache.blob else {
+                return element_local;
+            };
+            let Some(metrics) = this.text_cache.metrics else {
+                return element_local;
+            };
+
+            let bounds_height = cx.bounds.size.height;
+            let vertical_placement = props
+                .resolved_text_style(cx.theme().snapshot())
+                .vertical_placement;
+            let (vertical_offset, _) =
+                super::super::text_coords::compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
+                    bounds_height,
+                    metrics,
+                    vertical_placement,
+                );
+
+            fret_core::Point::new(
+                element_local.x,
+                fret_core::Px(element_local.y.0 - vertical_offset.0),
+            )
+        };
+
     // Keep the stored selection model stable even if the underlying text changes or external
     // surfaces (a11y, platform input) publish indices that are no longer valid.
     crate::elements::with_element_state(
@@ -474,10 +510,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 _ => return,
             }
 
-            let local = fret_core::Point::new(
-                fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
-                fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
-            );
+            let local = text_local_from_window_position(this, cx, &props, *position);
 
             let hit = this
                 .text_cache
@@ -575,10 +608,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
         }
         Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
-            let local = fret_core::Point::new(
-                fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
-                fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
-            );
+            let local = text_local_from_window_position(this, cx, &props, *position);
 
             let hit = this
                 .text_cache
@@ -696,10 +726,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 if (dx * dx + dy * dy)
                     <= (ACTIVATION_DRAG_THRESHOLD_PX * ACTIVATION_DRAG_THRESHOLD_PX)
                 {
-                    let local = fret_core::Point::new(
-                        fret_core::Px(position.x.0 - cx.bounds.origin.x.0),
-                        fret_core::Px(position.y.0 - cx.bounds.origin.y.0),
-                    );
+                    let local = text_local_from_window_position(this, cx, &props, *position);
                     let hit = this
                         .text_cache
                         .blob
