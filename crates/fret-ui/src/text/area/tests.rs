@@ -3,8 +3,8 @@ use crate::UiTree;
 use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
-    AppWindowId, CaretAffinity, Event, Point, Px, Rect, Scene, Size, TextConstraints, TextMetrics,
-    TextService,
+    AppWindowId, CaretAffinity, Color, Event, Paint, Point, Px, Rect, Scene, SceneOp, Size,
+    TextConstraints, TextLineMetrics, TextMetrics, TextService,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 use slotmap::KeyData;
@@ -94,6 +94,86 @@ impl fret_core::SvgService for FakeTextService {
 }
 
 impl fret_core::MaterialService for FakeTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
+#[derive(Default)]
+struct ZeroHeightCaretTextService {}
+
+impl TextService for ZeroHeightCaretTextService {
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        _constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        (
+            fret_core::TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(10.0), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn first_line_metrics(&mut self, _blob: fret_core::TextBlobId) -> Option<TextLineMetrics> {
+        Some(TextLineMetrics {
+            ascent: Px(8.0),
+            descent: Px(2.0),
+            line_height: Px(10.0),
+        })
+    }
+
+    fn caret_rect(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        index: usize,
+        _affinity: CaretAffinity,
+    ) -> Rect {
+        Rect::new(
+            Point::new(Px(index as f32), Px(0.0)),
+            Size::new(Px(1.0), Px(0.0)),
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for ZeroHeightCaretTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for ZeroHeightCaretTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for ZeroHeightCaretTextService {
     fn register_material(
         &mut self,
         _desc: fret_core::MaterialDescriptor,
@@ -231,6 +311,58 @@ impl fret_core::MaterialService for AutoscrollTextService {
     fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         false
     }
+}
+
+#[test]
+fn caret_is_visible_even_when_backend_reports_zero_height_caret_rect() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let caret_color = Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.2,
+        a: 1.0,
+    };
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        caret_color,
+        ..Default::default()
+    };
+
+    let area = ui.create_node(TextArea::new("").with_style(style));
+    ui.set_root(area);
+    ui.set_focus(Some(area));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ZeroHeightCaretTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let caret_rect = scene.ops().iter().rev().find_map(|op| match op {
+        SceneOp::Quad {
+            rect, background, ..
+        } if *background == Paint::Solid(caret_color) => Some(*rect),
+        _ => None,
+    });
+
+    let Some(caret_rect) = caret_rect else {
+        panic!("expected a caret quad to be present in the scene");
+    };
+
+    assert!(
+        caret_rect.size.height.0 > 0.0,
+        "expected caret height to be > 0 (got {:?})",
+        caret_rect.size.height
+    );
 }
 
 fn command_cx<'a>(

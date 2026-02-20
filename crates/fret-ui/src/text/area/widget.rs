@@ -1567,7 +1567,26 @@ impl<H: UiHost> Widget<H> for TextArea {
             } else {
                 CaretAffinity::Downstream
             };
-            let caret = cx.services.caret_rect(blob, caret_index, affinity);
+            let mut caret = cx.services.caret_rect(blob, caret_index, affinity);
+            if caret.size.height.0 <= 0.0 {
+                // Some text backends may report a zero-height caret for empty blobs. Fall back to
+                // the best-effort first-line metrics (or an approximation from `TextStyle`) so the
+                // caret remains visible in empty text areas.
+                if let Some(line) = cx.services.first_line_metrics(blob) {
+                    let top = Px((metrics.baseline.0 - line.ascent.0).max(0.0));
+                    caret.origin.y = top;
+                    caret.size.height = line.line_height.max(Px(1.0));
+                } else {
+                    let line_height = self
+                        .text_style
+                        .line_height
+                        .unwrap_or(Px(self.text_style.size.0 * 1.2))
+                        .max(Px(1.0));
+                    let top = Px((metrics.baseline.0 - line_height.0 * 0.8).max(0.0));
+                    caret.origin.y = top;
+                    caret.size.height = line_height;
+                }
+            }
             let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
             if self.ensure_caret_visible {
                 let settings = cx
