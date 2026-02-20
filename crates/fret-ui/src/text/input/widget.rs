@@ -1572,6 +1572,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             cx.bounds.origin.y + padding_top + vertical_offset + baseline,
         );
 
+        let mut preedit_underline: Option<(Px, Px)> = None;
         if self.preedit.is_empty() {
             if show_placeholder {
                 if let Some(blob) = self.placeholder_blob {
@@ -1603,6 +1604,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .preedit_metrics
                 .map(|m| m.size.width)
                 .unwrap_or(Px(0.0));
+
+            preedit_underline = Some((prefix_w, pre_w));
 
             if let Some(blob) = self.prefix_blob {
                 cx.scene.push(SceneOp::Text {
@@ -1655,6 +1658,30 @@ impl<H: UiHost> Widget<H> for TextInput {
             ),
             caret_local.size,
         );
+
+        if self.is_ime_composing()
+            && !self.preedit.is_empty()
+            && let Some((prefix_w, pre_w)) = preedit_underline
+            && pre_w.0 > 0.0
+        {
+            let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
+            let y = caret.origin.y.0 + caret.size.height.0 - hairline.0;
+            let underline = Rect::new(
+                fret_core::Point::new(
+                    cx.bounds.origin.x + padding_left + prefix_w - self.offset_x,
+                    Px(y),
+                ),
+                Size::new(Px(pre_w.0.max(hairline.0)), hairline),
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: underline,
+                background: Paint::Solid(self.chrome_style.preedit_underline_color),
+                border: fret_core::geometry::Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT),
+                corner_radii: self.chrome_style.corner_radii,
+            });
+        }
 
         // Anchor IME UI to the *visual* caret position (including preedit cursor offset).
         //

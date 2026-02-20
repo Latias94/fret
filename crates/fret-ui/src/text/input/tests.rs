@@ -548,6 +548,73 @@ fn text_input_draws_caret_when_focused_and_empty() {
 }
 
 #[test]
+fn text_input_draws_preedit_underline_when_composing() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let underline_color = fret_core::Color {
+        r: 0.2,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+
+    let mut input = TextInput::new().with_text("hello");
+    input.set_chrome_style(TextInputStyle {
+        preedit_underline_color: underline_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((2, 2)),
+        }),
+    );
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let underline_rect = scene.ops().iter().rev().find_map(|op| match op {
+        fret_core::SceneOp::Quad {
+            rect, background, ..
+        } if *background == fret_core::Paint::Solid(underline_color)
+            && rect.size.height.0 > 0.0
+            && rect.size.height.0 <= 1.1 =>
+        {
+            Some(*rect)
+        }
+        _ => None,
+    });
+
+    let Some(underline_rect) = underline_rect else {
+        panic!("expected a preedit underline quad to be present in the scene");
+    };
+
+    assert!(
+        underline_rect.size.width.0 > 0.1,
+        "expected underline width to be > 0 (got {:?})",
+        underline_rect.size.width
+    );
+}
+
+#[test]
 fn ime_commit_replaces_original_selection_after_preedit_starts() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();
