@@ -2969,7 +2969,7 @@ impl TextSystem {
                             width: Px((line_visual_width_px / scale).max(0.0)),
                             y_top: Px((line_top_px / scale).max(0.0)),
                             y_baseline: Px((baseline_pos_px / scale).max(0.0)),
-                            height: Px((line_height_px / scale).max(0.0)),
+                            height: Px(((line_height_px / scale).max(0.0)).max(1.0)),
                             ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
                             descent: Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
@@ -3280,7 +3280,7 @@ impl TextSystem {
                                 width: Px((s.width_px / scale).max(0.0)),
                                 y_top: Px((line_top_px / scale).max(0.0)),
                                 y_baseline: Px((baseline_pos_px / scale).max(0.0)),
-                                height: Px((line_height_px / scale).max(0.0)),
+                                height: Px(((line_height_px / scale).max(0.0)).max(1.0)),
                                 ascent: Px((unwrapped.ascent.max(0.0) / scale).max(0.0)),
                                 descent: Px((unwrapped.descent.max(0.0) / scale).max(0.0)),
                                 caret_stops,
@@ -6403,6 +6403,53 @@ mod tests {
         assert!(
             caret.size.height.0 > 0.1,
             "expected a non-zero caret rect height for empty string, got {caret:?}"
+        );
+
+        text.release(blob);
+    }
+
+    #[test]
+    fn selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            line_height: Some(Px(0.0)),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, _metrics) = text.prepare("a", &style, constraints);
+
+        let caret = text
+            .caret_rect(blob, 0, CaretAffinity::Downstream)
+            .expect("caret rect");
+        assert!(
+            caret.size.height.0 > 0.1,
+            "expected a non-zero caret rect height even with a zero line-height override, got {caret:?}"
+        );
+
+        let mut rects: Vec<Rect> = Vec::new();
+        text.selection_rects(blob, (0, 1), &mut rects)
+            .expect("selection rects");
+        assert!(
+            rects.iter().any(|r| r.size.height.0 > 0.1),
+            "expected selection rects to have non-zero height even with a zero line-height override, got {rects:?}"
         );
 
         text.release(blob);
