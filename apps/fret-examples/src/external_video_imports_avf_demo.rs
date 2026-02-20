@@ -12,6 +12,7 @@ use fret_ui::element::{
     ViewportSurfaceProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme};
+use std::time::{Duration, Instant};
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use fret_launch::runner::apple_avfoundation_video as avf;
@@ -21,6 +22,26 @@ enum ExternalVideoImportsMode {
     CheckerGpu,
     #[cfg(target_os = "macos")]
     AvfVideoCpuUpload,
+}
+
+fn env_flag_default_true(name: &str) -> bool {
+    let Ok(raw) = std::env::var(name) else {
+        return true;
+    };
+    matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "" | "1" | "true" | "yes" | "on"
+    )
+}
+
+fn env_fps(name: &str, default: f32) -> f32 {
+    let Some(fps) = std::env::var(name)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<f32>().ok())
+    else {
+        return default;
+    };
+    fps.clamp(1.0, 240.0)
 }
 
 struct ExternalVideoImportsState {
@@ -34,6 +55,12 @@ struct ExternalVideoImportsState {
 
     #[cfg(target_os = "macos")]
     avf_importer: Option<avf::AvfVideoNativeExternalImporter>,
+    #[cfg(target_os = "macos")]
+    avf_pacing_enabled: bool,
+    #[cfg(target_os = "macos")]
+    avf_frame_interval: Duration,
+    #[cfg(target_os = "macos")]
+    avf_last_decode_at: Option<Instant>,
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState {
@@ -50,6 +77,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ExternalVideoImportsState
         mode: ExternalVideoImportsMode::CheckerGpu,
         #[cfg(target_os = "macos")]
         avf_importer: None,
+        #[cfg(target_os = "macos")]
+        avf_pacing_enabled: env_flag_default_true("FRET_AVF_PACING"),
+        #[cfg(target_os = "macos")]
+        avf_frame_interval: Duration::from_secs_f32(1.0 / env_fps("FRET_AVF_TARGET_FPS", 30.0)),
+        #[cfg(target_os = "macos")]
+        avf_last_decode_at: None,
     }
 }
 
@@ -89,6 +122,7 @@ fn on_event(
         #[cfg(target_os = "macos")]
         {
             st.avf_importer = None;
+            st.avf_last_decode_at = None;
         }
         st.checker_texture = None;
         app.request_redraw(window);
@@ -198,6 +232,7 @@ fn record_engine_frame(
         #[cfg(target_os = "macos")]
         {
             st.avf_importer = None;
+            st.avf_last_decode_at = None;
         }
         return update;
     }
@@ -304,8 +339,21 @@ fn record_engine_frame(
                 tracing::info!("FRET_AVF_VIDEO_PATH is not set; falling back to checker mode");
                 st.mode = ExternalVideoImportsMode::CheckerGpu;
                 st.avf_importer = None;
+                st.avf_last_decode_at = None;
                 return update;
             };
+
+            let now = Instant::now();
+            let should_decode = !st.target.is_registered()
+                || !st.avf_pacing_enabled
+                || st
+                    .avf_last_decode_at
+                    .is_none_or(|t| now.saturating_duration_since(t) >= st.avf_frame_interval);
+
+            if !should_decode {
+                app.push_effect(fret_app::Effect::RequestAnimationFrame(window));
+                return update;
+            }
 
             let recreate = st
                 .avf_importer
@@ -314,6 +362,7 @@ fn record_engine_frame(
                 .unwrap_or(true);
             if recreate {
                 st.avf_importer = Some(avf::AvfVideoNativeExternalImporter::new(path));
+                st.avf_last_decode_at = None;
             }
 
             let caps = app
@@ -336,6 +385,7 @@ fn record_engine_frame(
                     if let Some(size) = st.avf_importer.as_ref().and_then(|v| v.last_size()) {
                         st.target_px_size = size;
                     }
+                    st.avf_last_decode_at = Some(now);
                 }
                 Err(err) => {
                     tracing::warn!(
@@ -344,6 +394,7 @@ fn record_engine_frame(
                     );
                     st.mode = ExternalVideoImportsMode::CheckerGpu;
                     st.avf_importer = None;
+                    st.avf_last_decode_at = None;
                 }
             }
         }

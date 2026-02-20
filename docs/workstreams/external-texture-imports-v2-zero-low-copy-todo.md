@@ -165,6 +165,9 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-devtools-ws`
     - Run the demo:
       - `FRET_DIAG_SCREENSHOTS=1 FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> FRET_AVF_VIDEO_PATH=<dir_or_file> cargo run -p fret-demo --features devtools-ws --bin external_video_imports_avf_demo`
+      - Pacing (optional, on by default in the demo):
+        - `FRET_AVF_PACING=0` to disable (decode/upload every frame; stress path).
+        - `FRET_AVF_TARGET_FPS=30` to override the pacing target fps.
       - Press `I` to toggle into AVFoundation mode (or use the script).
     - List sessions and run the correctness script:
       - `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ cargo run -p fret-diag-export -- --list-sessions --token <token>`
