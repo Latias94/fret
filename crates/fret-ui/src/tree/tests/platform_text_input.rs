@@ -123,6 +123,98 @@ impl fret_core::MaterialService for PlatformTextTestServices {
     }
 }
 
+#[derive(Default)]
+struct ZeroHeightCaretRectTextServices {
+    next_blob: u64,
+}
+
+impl fret_core::TextService for ZeroHeightCaretRectTextServices {
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let blob = fret_core::TextBlobId::from(KeyData::from_ffi(self.next_blob));
+        self.next_blob = self.next_blob.wrapping_add(1);
+
+        let w = constraints
+            .max_width
+            .map(|w| w.0.max(0.0))
+            .unwrap_or(1000.0);
+        (
+            blob,
+            TextMetrics {
+                size: Size::new(Px(w), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn first_line_metrics(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+    ) -> Option<fret_core::TextLineMetrics> {
+        Some(fret_core::TextLineMetrics {
+            ascent: Px(8.0),
+            descent: Px(2.0),
+            line_height: Px(10.0),
+        })
+    }
+
+    fn caret_rect(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        index: usize,
+        _affinity: fret_core::CaretAffinity,
+    ) -> Rect {
+        Rect::new(
+            Point::new(Px(index as f32), Px(0.0)),
+            Size::new(Px(1.0), Px(0.0)),
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for ZeroHeightCaretRectTextServices {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for ZeroHeightCaretRectTextServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for ZeroHeightCaretRectTextServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 #[test]
 fn platform_text_input_query_can_get_text_ranges_bounds_and_replace() {
     let mut app = crate::test_host::TestHost::new();
@@ -245,6 +337,54 @@ fn platform_text_input_query_can_get_text_ranges_bounds_and_replace() {
         full,
         fret_runtime::PlatformTextInputQueryResult::Text(Some("aXb".to_string()))
     );
+}
+
+#[test]
+fn platform_text_input_bounds_for_range_inflates_zero_height_caret_rect_for_text_input() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut input = crate::text_input::TextInput::new().with_text("abc");
+    let style = crate::TextInputStyle {
+        padding: Edges::all(Px(0.0)),
+        ..Default::default()
+    };
+    input.set_chrome_style(style);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(input);
+    ui.add_child(root, text);
+    ui.set_root(root);
+    ui.set_focus(Some(text));
+
+    let mut services = ZeroHeightCaretRectTextServices::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(20.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let bounds_for = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::BoundsForRange {
+            range: fret_runtime::Utf16Range::new(1, 1),
+        },
+    );
+    let fret_runtime::PlatformTextInputQueryResult::Bounds(Some(rect)) = bounds_for else {
+        panic!("expected Bounds(Some(_)), got {bounds_for:?}");
+    };
+
+    assert!(
+        rect.size.height.0 > 0.0,
+        "expected a positive caret rect height for platform IME anchoring (got {rect:?})"
+    );
+    assert!((rect.origin.x.0 - 1.0).abs() < 0.01);
+    assert!((rect.origin.y.0 - 5.0).abs() < 0.01);
 }
 
 #[test]
