@@ -1,5 +1,5 @@
 use crate::parley_shaper::ShapedCluster;
-use fret_core::{CaretAffinity, HitTestResult, Point, Rect, Size, geometry::Px};
+use fret_core::{CaretAffinity, HitTestResult, Point, Rect, Size, TextMetrics, geometry::Px};
 use std::ops::Range;
 
 fn utf8_grapheme_boundaries(text: &str) -> Vec<usize> {
@@ -157,6 +157,113 @@ pub fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
         }
     }
     best
+}
+
+pub fn shaped_line_visual_x_bounds_px(line: &crate::parley_shaper::ShapedLineLayout) -> (f32, f32) {
+    let fallback_max = line.width.max(0.0);
+    if line.clusters.is_empty() {
+        return (0.0, fallback_max);
+    }
+
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    for c in &line.clusters {
+        let a = c.x0;
+        let b = c.x1;
+        min_x = min_x.min(a.min(b));
+        max_x = max_x.max(a.max(b));
+    }
+
+    if !min_x.is_finite() || !max_x.is_finite() || max_x < min_x {
+        return (0.0, fallback_max);
+    }
+
+    (min_x, max_x.max(min_x))
+}
+
+pub fn shaped_line_visual_width_px(line: &crate::parley_shaper::ShapedLineLayout) -> f32 {
+    let (min_x, max_x) = shaped_line_visual_x_bounds_px(line);
+    (max_x - min_x).max(0.0)
+}
+
+pub fn metrics_from_wrapped_lines(
+    lines: &[crate::parley_shaper::ShapedLineLayout],
+    scale: f32,
+) -> TextMetrics {
+    let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
+    let mut first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    if snap_vertical && let Some(first) = lines.first() {
+        let top_px = 0.0_f32;
+        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let height_px = (bottom_px - top_px).max(0.0);
+        first_baseline_px = (top_px + first.baseline.max(0.0))
+            .round()
+            .clamp(top_px, top_px + height_px);
+    }
+
+    let mut max_w_px = 0.0_f32;
+    let mut total_h_px = 0.0_f32;
+    if snap_vertical {
+        let mut top_px = 0.0_f32;
+        for line in lines {
+            max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
+            let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
+            top_px = bottom_px;
+        }
+        total_h_px = top_px;
+    } else {
+        for line in lines {
+            max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
+            total_h_px += line.line_height.max(0.0);
+        }
+    }
+
+    TextMetrics {
+        size: fret_core::Size::new(
+            Px((max_w_px / scale).max(0.0)),
+            Px((total_h_px / scale).max(0.0)),
+        ),
+        baseline: Px((first_baseline_px / scale).max(0.0)),
+    }
+}
+
+pub fn metrics_for_uniform_lines(
+    max_w_px: f32,
+    line_count: usize,
+    baseline_px: f32,
+    line_height_px: f32,
+    scale: f32,
+) -> TextMetrics {
+    let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
+    let mut first_baseline_px = baseline_px.max(0.0);
+    if snap_vertical {
+        let top_px = 0.0_f32;
+        let bottom_px = (top_px + line_height_px.max(0.0)).round().max(top_px);
+        let height_px = (bottom_px - top_px).max(0.0);
+        first_baseline_px = (top_px + baseline_px.max(0.0))
+            .round()
+            .clamp(top_px, top_px + height_px);
+    }
+
+    let total_h_px = if snap_vertical {
+        let mut top_px = 0.0_f32;
+        for _ in 0..line_count.max(1) {
+            top_px = (top_px + line_height_px.max(0.0)).round().max(top_px);
+        }
+        top_px
+    } else {
+        line_height_px.max(0.0) * (line_count.max(1) as f32)
+    };
+
+    TextMetrics {
+        size: fret_core::Size::new(
+            Px((max_w_px.max(0.0) / scale).max(0.0)),
+            Px((total_h_px / scale).max(0.0)),
+        ),
+        baseline: Px((first_baseline_px / scale).max(0.0)),
+    }
 }
 
 #[derive(Debug, Clone)]
