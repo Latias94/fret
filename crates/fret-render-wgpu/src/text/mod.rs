@@ -1,8 +1,8 @@
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
-    AttributedText, CaretAffinity, HitTestResult, Point, Rect, TextAlign, TextBlobId,
-    TextConstraints, TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle,
-    TextWrap, geometry::Px,
+    AttributedText, CaretAffinity, HitTestResult, Point, Rect, TextBlobId, TextConstraints,
+    TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle, TextWrap,
+    geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -25,9 +25,7 @@ use fret_render_text::fallback_policy::TextFallbackPolicyV1;
 use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::{FontTraceFamilyResolved, FontTraceState};
-use fret_render_text::geometry::{
-    metrics_for_uniform_lines, metrics_from_wrapped_lines, shaped_line_visual_x_bounds_px,
-};
+use fret_render_text::geometry::{metrics_for_uniform_lines, metrics_from_wrapped_lines};
 use fret_render_text::spans::{
     paint_span_for_text_range, resolve_spans_for_text, sanitize_spans_for_text,
 };
@@ -1680,28 +1678,242 @@ impl TextSystem {
 
                 let mut glyphs: Vec<GlyphInstance> = Vec::new();
                 let mut face_usage: HashMap<FontFaceKey, (u32, u32)> = HashMap::new();
-                let mut missing_glyphs: u32 = 0;
                 let mut lines: Vec<TextLine> = Vec::new();
-                let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
-                let mut line_top_px = 0.0_f32;
 
-                let align_offset_px_for_line = |line_min_x_px: f32,
-                                                line_visual_width_px: f32|
-                 -> f32 {
-                    let container_width_px = constraints
-                        .max_width
-                        .map(|w| w.0 * scale)
-                        .unwrap_or_else(|| line_visual_width_px.max(0.0));
-                    let slack_px = (container_width_px - line_visual_width_px.max(0.0)).max(0.0);
-                    let target_left_px = match constraints.align {
-                        TextAlign::Start => 0.0,
-                        TextAlign::Center => slack_px * 0.5,
-                        TextAlign::End => slack_px,
-                    };
-                    target_left_px - line_min_x_px
+                let (metrics, missing_glyphs, first_line_caret_stops) = {
+                    let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(
+                        text.as_ref(),
+                        wrapped,
+                        constraints,
+                        scale,
+                        snap_vertical,
+                    );
+
+                    let metrics = prepared.metrics;
+                    let missing_glyphs = prepared.missing_glyphs;
+                    let first_line_caret_stops = prepared.first_line_caret_stops;
+
+                    lines.reserve(prepared.lines.len().max(1));
+                    for prepared_line in prepared.lines {
+                        lines.push(prepared_line.layout);
+
+                        for g in prepared_line.glyphs {
+                            let Ok(glyph_id) = u16::try_from(g.id) else {
+                                continue;
+                            };
+                            let font_data_id = g.font.data.id();
+                            let face_index = g.font.index;
+                            self.font_data_by_face
+                                .entry((font_data_id, face_index))
+                                .or_insert_with(|| g.font.clone());
+
+                            let variation_key =
+                                variation_key_from_normalized_coords(&g.normalized_coords);
+                            let synthesis_embolden = g.synthesis.embolden();
+                            let synthesis_skew_degrees = g
+                                .synthesis
+                                .skew()
+                                .unwrap_or(0.0)
+                                .clamp(i8::MIN as f32, i8::MAX as f32)
+                                as i8;
+
+                            let face_key = FontFaceKey {
+                                font_data_id,
+                                face_index,
+                                variation_key,
+                                synthesis_embolden,
+                                synthesis_skew_degrees,
+                            };
+                            if !g.normalized_coords.is_empty() {
+                                self.font_instance_coords_by_face
+                                    .entry(face_key)
+                                    .or_insert_with(|| g.normalized_coords.clone());
+                            }
+
+                            let usage = face_usage.entry(face_key).or_insert((0, 0));
+                            usage.0 = usage.0.saturating_add(1);
+                            if g.id == 0 {
+                                usage.1 = usage.1.saturating_add(1);
+                            }
+
+                            let (x, x_bin) = subpixel_bin_q4(g.x);
+                            let (y, y_bin) = subpixel_bin_y(g.y);
+
+                            let paint_span = resolved_spans.as_deref().and_then(|spans| {
+                                paint_span_for_text_range(spans, &g.text_range, g.is_rtl)
+                            });
+
+                            let size_bits = g.font_size.to_bits();
+                            let mut atlas_hit: Option<(GlyphKey, GlyphAtlasEntry)> = None;
+                            let color_key = GlyphKey {
+                                font: face_key,
+                                glyph_id: g.id,
+                                size_bits,
+                                x_bin,
+                                y_bin,
+                                kind: GlyphQuadKind::Color,
+                            };
+                            if let Some(entry) = self.color_atlas.get(color_key, epoch) {
+                                atlas_hit = Some((color_key, entry));
+                            } else {
+                                let subpixel_key = GlyphKey {
+                                    font: face_key,
+                                    glyph_id: g.id,
+                                    size_bits,
+                                    x_bin,
+                                    y_bin,
+                                    kind: GlyphQuadKind::Subpixel,
+                                };
+                                if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
+                                    atlas_hit = Some((subpixel_key, entry));
+                                } else {
+                                    let mask_key = GlyphKey {
+                                        font: face_key,
+                                        glyph_id: g.id,
+                                        size_bits,
+                                        x_bin,
+                                        y_bin,
+                                        kind: GlyphQuadKind::Mask,
+                                    };
+                                    if let Some(entry) = self.mask_atlas.get(mask_key, epoch) {
+                                        atlas_hit = Some((mask_key, entry));
+                                    }
+                                }
+                            }
+
+                            let (glyph_key, x0_px, y0_px, w_px, h_px) =
+                                if let Some((glyph_key, entry)) = atlas_hit {
+                                    (
+                                        glyph_key,
+                                        x as f32 + entry.placement_left as f32,
+                                        y as f32 - entry.placement_top as f32,
+                                        entry.w as f32,
+                                        entry.h as f32,
+                                    )
+                                } else {
+                                    let Some(font_ref) = parley::swash::FontRef::from_index(
+                                        g.font.data.data(),
+                                        g.font.index as usize,
+                                    ) else {
+                                        continue;
+                                    };
+
+                                    let mut scaler_builder = self
+                                        .parley_scale
+                                        .builder(font_ref)
+                                        .size(g.font_size.max(1.0))
+                                        .hint(false);
+                                    if !g.normalized_coords.is_empty() {
+                                        scaler_builder = scaler_builder
+                                            .normalized_coords(g.normalized_coords.iter());
+                                    }
+                                    let mut scaler = scaler_builder.build();
+
+                                    let offset_px = parley::swash::zeno::Vector::new(
+                                        subpixel_bin_as_float(x_bin),
+                                        subpixel_bin_as_float(y_bin),
+                                    );
+
+                                    let Some(image) = parley::swash::scale::Render::new(&[
+                                        parley::swash::scale::Source::ColorOutline(0),
+                                        parley::swash::scale::Source::ColorBitmap(
+                                            parley::swash::scale::StrikeWith::BestFit,
+                                        ),
+                                        parley::swash::scale::Source::Outline,
+                                    ])
+                                    .offset(offset_px)
+                                    .render(&mut scaler, glyph_id) else {
+                                        continue;
+                                    };
+
+                                    if image.placement.width == 0 || image.placement.height == 0 {
+                                        continue;
+                                    }
+
+                                    let placement = image.placement;
+                                    let (kind, bytes_per_pixel) = match image.content {
+                                        parley::swash::scale::image::Content::Mask => {
+                                            (GlyphQuadKind::Mask, 1)
+                                        }
+                                        parley::swash::scale::image::Content::Color => {
+                                            (GlyphQuadKind::Color, 4)
+                                        }
+                                        parley::swash::scale::image::Content::SubpixelMask => {
+                                            (GlyphQuadKind::Subpixel, 4)
+                                        }
+                                    };
+
+                                    let glyph_key = GlyphKey {
+                                        font: face_key,
+                                        glyph_id: g.id,
+                                        size_bits,
+                                        x_bin,
+                                        y_bin,
+                                        kind,
+                                    };
+
+                                    let data = image.data;
+                                    match kind {
+                                        GlyphQuadKind::Mask => {
+                                            let _ = self.mask_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                        GlyphQuadKind::Color => {
+                                            let _ = self.color_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                        GlyphQuadKind::Subpixel => {
+                                            let _ = self.subpixel_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                    }
+
+                                    (
+                                        glyph_key,
+                                        x as f32 + placement.left as f32,
+                                        y as f32 - placement.top as f32,
+                                        placement.width as f32,
+                                        placement.height as f32,
+                                    )
+                                };
+
+                            glyphs.push(GlyphInstance {
+                                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                                paint_span,
+                                key: glyph_key,
+                            });
+                        }
+                    }
+
+                    (metrics, missing_glyphs, first_line_caret_stops)
                 };
 
-                let metrics = {
+                #[cfg(any())]
+                let _metrics_legacy = {
                     let kept_end = wrapped.kept_end;
 
                     let first_baseline_px = wrapped
@@ -3118,6 +3330,7 @@ impl TextSystem {
     }
 }
 
+#[cfg(test)]
 fn caret_stops_for_slice(
     slice: &str,
     base_offset: usize,
