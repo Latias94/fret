@@ -26,6 +26,32 @@ pub struct TextDecorationMetricsPx {
     pub stroke_size_px: f32,
 }
 
+pub fn decoration_metrics_px_for_font_bytes(
+    font_bytes: &[u8],
+    face_index: u32,
+    coords: &[i16],
+    ppem: f32,
+) -> Option<TextDecorationMetricsPx> {
+    if !ppem.is_finite() || ppem <= 0.0 {
+        return None;
+    }
+
+    let font_ref = parley::swash::FontRef::from_index(font_bytes, face_index as usize)?;
+    let m = font_ref.metrics(coords).scale(ppem);
+    if !m.underline_offset.is_finite()
+        || !m.strikeout_offset.is_finite()
+        || !m.stroke_size.is_finite()
+    {
+        return None;
+    }
+
+    Some(TextDecorationMetricsPx {
+        underline_offset_px: m.underline_offset,
+        strikeout_offset_px: m.strikeout_offset,
+        stroke_size_px: m.stroke_size,
+    })
+}
+
 pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
     lines: &[L],
     spans: &[ResolvedSpan],

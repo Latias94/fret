@@ -2546,9 +2546,6 @@ impl TextSystem {
         let font_data = self
             .font_data_by_face
             .get(&(usage.font_data_id, usage.face_index))?;
-        let font_ref =
-            parley::swash::FontRef::from_index(font_data.data.data(), usage.face_index as usize)?;
-
         let coords: &[i16] = self
             .font_instance_coords_by_face
             .get(&face_key)
@@ -2556,23 +2553,12 @@ impl TextSystem {
             .unwrap_or(&[]);
 
         let ppem = style.size.0 * scale;
-        if !ppem.is_finite() || ppem <= 0.0 {
-            return None;
-        }
-
-        let m = font_ref.metrics(coords).scale(ppem);
-        if !m.underline_offset.is_finite()
-            || !m.strikeout_offset.is_finite()
-            || !m.stroke_size.is_finite()
-        {
-            return None;
-        }
-
-        Some(TextDecorationMetricsPx {
-            underline_offset_px: m.underline_offset,
-            strikeout_offset_px: m.strikeout_offset,
-            stroke_size_px: m.stroke_size,
-        })
+        fret_render_text::decorations::decoration_metrics_px_for_font_bytes(
+            font_data.data.data(),
+            usage.face_index,
+            coords,
+            ppem,
+        )
     }
 
     fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
