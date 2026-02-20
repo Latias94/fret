@@ -63,6 +63,7 @@ impl ConversationEmptyState {
             slant: Default::default(),
             line_height: Some(theme.metric_token("font.line_height")),
             letter_spacing_em: None,
+            ..Default::default()
         };
 
         let title = cx.text_props(TextProps {

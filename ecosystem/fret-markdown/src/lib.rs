@@ -316,6 +316,7 @@ fn render_rich_text_inline<H: UiHost>(
         slant: TextSlant::Normal,
         line_height: base.line_height,
         letter_spacing_em: None,
+        ..Default::default()
     });
     props.color = Some(base.color);
     // Markdown prose frequently contains long tokens (URLs, paths, identifiers). Default to a
@@ -514,6 +515,7 @@ fn render_math_block_builtin<H: UiHost>(
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
@@ -976,6 +978,7 @@ fn render_inline_token<H: UiHost>(
                     slant: TextSlant::Normal,
                     line_height,
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(markdown_theme.inline_code_fg),
                 // Inline code participates in Markdown prose layout; allow break-words to avoid
@@ -1078,6 +1081,7 @@ fn render_inline_text_token<H: UiHost>(
                 slant,
                 line_height,
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(color),
             wrap,
@@ -1105,6 +1109,7 @@ fn render_inline_text_token<H: UiHost>(
                 slant,
                 line_height,
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(color),
             wrap,
@@ -1194,6 +1199,7 @@ fn render_image_placeholder<H: UiHost>(
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.line_height")),
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(markdown_theme.link),
                 wrap: TextWrap::None,
@@ -1214,6 +1220,7 @@ fn render_image_placeholder<H: UiHost>(
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
             letter_spacing_em: None,
+            ..Default::default()
         }),
         color: Some(markdown_theme.muted),
         wrap: TextWrap::None,
@@ -1274,6 +1281,7 @@ fn render_inline_math_builtin<H: UiHost>(
                 slant: TextSlant::Normal,
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(markdown_theme.inline_math_fg),
             wrap: TextWrap::None,

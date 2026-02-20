@@ -41,6 +41,7 @@ fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 

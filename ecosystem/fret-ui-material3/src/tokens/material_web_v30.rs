@@ -2,7 +2,7 @@
 //
 // Source: Material Web v30 sassvars in `repo-ref\material-web\tokens\versions\v30_0\sass`
 
-use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
+use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle, TextVerticalPlacement};
 use fret_ui::{ThemeConfig, theme::CubicBezier};
 
 pub(crate) fn inject_sys_state(cfg: &mut ThemeConfig) {
@@ -576,6 +576,7 @@ pub(crate) fn inject_sys_typescale(
                 slant: TextSlant::Normal,
                 line_height: Some(line_height_px),
                 letter_spacing_em: Some(tracking_em),
+                vertical_placement: TextVerticalPlacement::CenterMetricsBox,
             },
         );
     }

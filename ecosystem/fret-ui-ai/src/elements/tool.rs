@@ -214,6 +214,7 @@ impl ToolHeader {
                 slant: Default::default(),
                 line_height: Some(text_sm_line_height),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
@@ -489,6 +490,7 @@ impl ToolOutput {
                         slant: Default::default(),
                         line_height: Some(text_xs_line_height),
                         letter_spacing_em: None,
+                        ..Default::default()
                     }),
                     color: theme
                         .color_by_key("destructive")
@@ -629,6 +631,7 @@ impl ToolSectionTitle {
                 line_height: Some(text_xs_line_height),
                 // Tailwind `tracking-wide` is 0.025em.
                 letter_spacing_em: Some(0.025),
+                ..Default::default()
             }),
             color: theme.color_by_key("muted-foreground"),
             wrap: TextWrap::Word,

@@ -86,6 +86,7 @@ fn tab_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: None,
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 

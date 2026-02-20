@@ -647,6 +647,7 @@ fn render_code_block_header<H: UiHost>(
                             slant: Default::default(),
                             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                             letter_spacing_em: None,
+                            ..Default::default()
                         }),
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
@@ -1040,6 +1041,7 @@ fn render_code_block_line_row<H: UiHost>(
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
         letter_spacing_em: None,
+        ..Default::default()
     };
 
     let code = cx.styled_text_props(StyledTextProps {
@@ -1073,6 +1075,7 @@ fn render_code_block_line_row<H: UiHost>(
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
         letter_spacing_em: None,
+        ..Default::default()
     };
 
     let number = cx.text_props(TextProps {
@@ -1360,6 +1363,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
+        ..Default::default()
     };
 
     let line_numbers_text = cx.text_props(TextProps {
@@ -1427,6 +1431,7 @@ fn render_code_block_text<H: UiHost>(
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
+        ..Default::default()
     };
     let fg = theme.color_token("foreground");
 

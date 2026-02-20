@@ -479,6 +479,7 @@ impl QueueSectionLabel {
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(fg),
             wrap: TextWrap::None,
@@ -878,6 +879,7 @@ impl QueueItemContent {
                 theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
             ),
             letter_spacing_em: None,
+            ..Default::default()
         };
 
         let el = if self.completed {
@@ -979,6 +981,7 @@ impl QueueItemDescription {
                 theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
             ),
             letter_spacing_em: None,
+            ..Default::default()
         };
 
         let mut layout = decl_style::layout_style(&theme, self.layout);
@@ -1376,6 +1379,7 @@ impl QueueItemFile {
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(fg),
             wrap: TextWrap::None,

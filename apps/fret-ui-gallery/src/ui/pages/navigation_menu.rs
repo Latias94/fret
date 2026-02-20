@@ -49,6 +49,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                 slant: Default::default(),
                 line_height: None,
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: None,
             wrap: TextWrap::None,
@@ -65,6 +66,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                 slant: Default::default(),
                 line_height: None,
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(muted_foreground),
             wrap: TextWrap::Word,

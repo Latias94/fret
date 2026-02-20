@@ -162,6 +162,7 @@ pub(super) fn render_mermaid_header_label<H: UiHost>(
             slant: Default::default(),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
             letter_spacing_em: None,
+            ..Default::default()
         }),
         color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,

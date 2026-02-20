@@ -90,6 +90,7 @@ fn monospace_text_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyl
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 
@@ -390,6 +391,7 @@ impl CommitMessage {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
@@ -462,6 +464,7 @@ impl CommitSeparator {
                 slant: Default::default(),
                 line_height: Some(Px(16.0)),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
@@ -570,6 +573,7 @@ impl CommitTimestamp {
                 slant: Default::default(),
                 line_height: Some(Px(16.0)),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,

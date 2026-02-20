@@ -40,6 +40,7 @@ fn text_xs_style(theme: &Theme, weight: FontWeight) -> TextStyle {
         slant: TextSlant::Normal,
         line_height: Some(line_height),
         letter_spacing_em: None,
+        ..Default::default()
     }
 }
 

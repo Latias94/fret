@@ -622,6 +622,7 @@ impl FileTreeName {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,

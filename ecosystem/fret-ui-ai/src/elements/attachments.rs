@@ -770,6 +770,7 @@ impl AttachmentInfo {
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
@@ -794,6 +795,7 @@ impl AttachmentInfo {
                             theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                         ),
                         letter_spacing_em: None,
+                        ..Default::default()
                     }),
                     color: Some(muted_fg),
                     wrap: TextWrap::None,
@@ -992,6 +994,7 @@ impl AttachmentEmpty {
                         theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                     ),
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(fg),
                 wrap: TextWrap::None,

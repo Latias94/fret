@@ -766,6 +766,7 @@ fn render_menu_from_runtime<H: UiHost>(
             slant: Default::default(),
             line_height: Some(font_line_height),
             letter_spacing_em: None,
+            ..Default::default()
         };
 
         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
@@ -935,6 +936,7 @@ fn request_menu_overlay<H: UiHost>(
         slant: Default::default(),
         line_height: Some(item_line_height),
         letter_spacing_em: None,
+        ..Default::default()
     };
 
     let row_height = Px(item_line_height.0 + 8.0);

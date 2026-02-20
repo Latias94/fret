@@ -908,6 +908,7 @@ impl WebPreviewBody {
                     slant: Default::default(),
                     line_height: Some(theme.metric_token("component.text.sm_line_height")),
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::Word,
@@ -1254,6 +1255,7 @@ impl WebPreviewConsole {
                             slant: Default::default(),
                             line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
+                            ..Default::default()
                         }),
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
@@ -1271,6 +1273,7 @@ impl WebPreviewConsole {
                             slant: Default::default(),
                             line_height: Some(theme.metric_token("component.text.xs_line_height")),
                             letter_spacing_em: None,
+                            ..Default::default()
                         }),
                         color: Some(fg),
                         wrap: TextWrap::Word,

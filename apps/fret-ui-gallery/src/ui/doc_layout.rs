@@ -176,6 +176,7 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
             slant: fret_core::TextSlant::Normal,
             line_height,
             letter_spacing_em: None,
+            ..Default::default()
         };
         let color = theme
             .color_by_key("muted-foreground")
@@ -462,6 +463,7 @@ fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyEl
         slant: fret_core::TextSlant::Normal,
         line_height: theme.metric_by_key("font.line_height"),
         letter_spacing_em: None,
+        ..Default::default()
     };
 
     cx.text_props(TextProps {

@@ -457,6 +457,7 @@ impl CodeBlockFilename {
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::None,
