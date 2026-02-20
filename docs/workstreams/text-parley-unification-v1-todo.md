@@ -23,9 +23,9 @@ Tracking format:
 - [x] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).
   - Evidence:
     - `crates/fret-ui/src/text/input/tests.rs`
-      (`text_input_caret_is_visible_even_when_backend_reports_zero_height_metrics_for_empty_text`)
+      (`text_input_draws_caret_when_focused_and_empty`)
     - `crates/fret-ui/src/text/area/tests.rs`
-      (`caret_is_visible_even_when_backend_reports_zero_height_caret_rect`)
+      (`caret_is_visible_when_text_area_is_focused_and_empty`)
 
 - [x] TPU-render-002 Decide and document the renderer contract for selection/preedit rect height:
   - Option A: renderer guarantees `height > 0` for all returned rects,

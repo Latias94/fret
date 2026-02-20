@@ -495,77 +495,8 @@ fn text_input_renders_placeholder_when_empty() {
     );
 }
 
-#[derive(Default)]
-struct ZeroHeightMetricsTextService {
-    prepared: Vec<String>,
-}
-
-impl TextService for ZeroHeightMetricsTextService {
-    fn prepare(
-        &mut self,
-        input: &fret_core::TextInput,
-        _constraints: TextConstraints,
-    ) -> (fret_core::TextBlobId, TextMetrics) {
-        let text = input.text();
-        self.prepared.push(text.to_string());
-        let metrics = if text.is_empty() {
-            TextMetrics {
-                size: Size::new(Px(0.0), Px(0.0)),
-                baseline: Px(0.0),
-            }
-        } else {
-            TextMetrics {
-                size: Size::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
-            }
-        };
-        (fret_core::TextBlobId::default(), metrics)
-    }
-
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
-}
-
-impl fret_core::PathService for ZeroHeightMetricsTextService {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for ZeroHeightMetricsTextService {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        false
-    }
-}
-
-impl fret_core::MaterialService for ZeroHeightMetricsTextService {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        false
-    }
-}
-
 #[test]
-fn text_input_caret_is_visible_even_when_backend_reports_zero_height_metrics_for_empty_text() {
+fn text_input_draws_caret_when_focused_and_empty() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
 
@@ -591,7 +522,7 @@ fn text_input_caret_is_visible_even_when_backend_reports_zero_height_metrics_for
 
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
-    let mut text = ZeroHeightMetricsTextService::default();
+    let mut text = FakeTextService::default();
 
     let _ = ui.layout(&mut app, &mut text, root, bounds.size, 1.0);
 
