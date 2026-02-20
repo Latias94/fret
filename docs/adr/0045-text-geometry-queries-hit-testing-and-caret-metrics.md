@@ -79,6 +79,24 @@ Geometry queries must not require rasterizing glyph images.
 Implementations are expected to compute caret/hit-test data from the shaping/layout results (e.g. line layout clusters),
 and cache them on the blob where appropriate.
 
+### 5) Geometry rectangles must be non-degenerate
+
+Geometry query outputs are user-visible: they are used for caret painting, selection highlighting,
+and platform IME candidate window placement. Implementations must therefore avoid returning
+degenerate rectangles.
+
+For a conforming `TextService` implementation:
+
+- `caret_rect(blob, index, affinity)` must return a rectangle with **positive height** in logical pixels.
+- `selection_rects(blob, (a, b), out)` must produce rectangles with **positive height** for any
+  non-empty selection range (where `a != b`), and should avoid emitting zero-width rectangles.
+- These guarantees must hold even for edge cases such as:
+  - empty strings (caret at index 0),
+  - explicit `TextStyle.line_height` overrides that would otherwise collapse line height.
+
+Widgets may defensively clamp/inflate results for non-conforming backends, but the renderer-owned
+text backends should satisfy these invariants directly.
+
 ## API Shape (Core Contract)
 
 `fret-core::TextService` provides default geometry query hooks.

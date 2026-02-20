@@ -27,9 +27,15 @@ Tracking format:
     - `crates/fret-ui/src/text/area/tests.rs`
       (`caret_is_visible_even_when_backend_reports_zero_height_caret_rect`)
 
-- [ ] TPU-render-002 Decide and document the renderer contract for selection/preedit rect height:
+- [x] TPU-render-002 Decide and document the renderer contract for selection/preedit rect height:
   - Option A: renderer guarantees `height > 0` for all returned rects,
   - Option B: UI inflates by line metrics (keep behavior gated either way).
+  - Decision: Option A (renderer guarantees non-degenerate geometry rects).
+  - Evidence:
+    - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+      (section “Geometry rectangles must be non-degenerate”)
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override`)
 
 ## M1 — Coordinate mapping unification
 
