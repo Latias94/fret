@@ -8173,7 +8173,8 @@ impl UiDiagnosticsService {
             }
         };
 
-        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
+        let mut bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
+        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::from_env());
 
         let mut bundle_json_bytes: Option<u64> = None;
 

@@ -1,19 +1,13 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use crate::json_bundle::{
+    pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id, snapshot_semantics_nodes,
+    snapshot_window_snapshot_seq,
+};
+
 fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
-}
-
-fn pick_last_snapshot_after_warmup<'a>(
-    snaps: &'a [serde_json::Value],
-    warmup_frames: u64,
-) -> Option<&'a serde_json::Value> {
-    snaps
-        .iter()
-        .rev()
-        .find(|s| s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0) >= warmup_frames)
-        .or_else(|| snaps.last())
 }
 
 fn sanitize_test_id_for_filename(test_id: &str) -> String {
@@ -64,6 +58,7 @@ pub(crate) fn cmd_slice(
     let mut bundle_arg: Option<String> = None;
     let mut test_id: Option<String> = None;
     let mut frame_id: Option<u64> = None;
+    let mut window_snapshot_seq: Option<u64> = None;
     let mut window_id: Option<u64> = None;
     let mut max_matches: usize = 20;
     let mut max_ancestors: usize = 64;
@@ -88,6 +83,17 @@ pub(crate) fn cmd_slice(
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --frame-id (expected u64)".to_string())?,
                 );
+                i += 1;
+            }
+            "--snapshot-seq" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --snapshot-seq".to_string());
+                };
+                window_snapshot_seq =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --snapshot-seq (expected u64)".to_string()
+                    })?);
                 i += 1;
             }
             "--window" => {
@@ -167,12 +173,7 @@ pub(crate) fn cmd_slice(
     }
 
     fn snapshot_has_test_id(snapshot: &serde_json::Value, target: &str) -> bool {
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
         nodes.iter().any(|n| {
             n.get("test_id")
                 .and_then(|v| v.as_str())
@@ -193,15 +194,23 @@ pub(crate) fn cmd_slice(
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
         let snapshot = if let Some(req_frame) = frame_id {
+            snaps.iter().find(|s| snapshot_frame_id(s) == req_frame)
+        } else if let Some(req_seq) = window_snapshot_seq {
             snaps
                 .iter()
-                .find(|s| s.get("frame_id").and_then(|v| v.as_u64()) == Some(req_frame))
+                .find(|s| snapshot_window_snapshot_seq(s) == Some(req_seq))
         } else {
-            pick_last_snapshot_after_warmup(snaps, warmup_frames)
+            pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
         };
         let Some(snapshot) = snapshot else {
             continue;
         };
+        if snapshot_semantics_nodes(snapshot).is_none() {
+            if frame_id.is_some() || window_snapshot_seq.is_some() {
+                return Err("selected snapshot has no exported semantics (try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)".to_string());
+            }
+            continue;
+        }
         if snapshot_has_test_id(snapshot, &test_id) {
             picked = Some(Picked {
                 window: w_id,
@@ -222,22 +231,16 @@ pub(crate) fn cmd_slice(
     };
 
     let snapshot = picked.snapshot;
-    let frame_id = snapshot
-        .get("frame_id")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
+    let frame_id = snapshot_frame_id(snapshot);
+    let snapshot_seq = snapshot_window_snapshot_seq(snapshot);
     let ts = snapshot
         .get("timestamp_unix_ms")
         .and_then(|v| v.as_u64())
         .or_else(|| snapshot.get("timestamp_ms").and_then(|v| v.as_u64()));
     let window_bounds = snapshot.get("window_bounds").cloned();
 
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "bundle snapshot missing debug.semantics.nodes".to_string())?;
+    let nodes = snapshot_semantics_nodes(snapshot)
+        .ok_or_else(|| "bundle snapshot missing semantics nodes".to_string())?;
 
     let mut by_id: HashMap<u64, usize> = HashMap::new();
     let mut parent: HashMap<u64, u64> = HashMap::new();
@@ -247,6 +250,9 @@ pub(crate) fn cmd_slice(
             continue;
         };
         by_id.insert(id, idx);
+        if let Some(p) = n.get("parent").and_then(|v| v.as_u64()) {
+            parent.entry(id).or_insert(p);
+        }
         if let Some(children) = n.get("children").and_then(|v| v.as_array()) {
             for c in children {
                 let Some(cid) = c.as_u64() else {
@@ -328,6 +334,7 @@ pub(crate) fn cmd_slice(
         "warmup_frames": warmup_frames,
         "window": picked.window,
         "frame_id": frame_id,
+        "window_snapshot_seq": snapshot_seq,
         "timestamp_unix_ms": ts,
         "window_bounds": window_bounds,
         "test_id": test_id,

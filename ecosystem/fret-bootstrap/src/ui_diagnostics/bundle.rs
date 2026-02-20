@@ -2,6 +2,29 @@ use serde::{Deserialize, Serialize};
 
 use super::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BundleSemanticsModeV1 {
+    All,
+    Changed,
+    Last,
+    Off,
+}
+
+impl BundleSemanticsModeV1 {
+    pub(super) fn from_env() -> Self {
+        let v = std::env::var("FRET_DIAG_BUNDLE_SEMANTICS_MODE")
+            .ok()
+            .map(|v| v.trim().to_ascii_lowercase());
+        match v.as_deref() {
+            None | Some("") | Some("all") => Self::All,
+            Some("changed") | Some("changed_only") | Some("changed-only") => Self::Changed,
+            Some("last") | Some("last_only") | Some("last-only") => Self::Last,
+            Some("off") | Some("none") => Self::Off,
+            Some(_) => Self::All,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleV1 {
     pub schema_version: u32,
@@ -144,6 +167,59 @@ impl UiDiagnosticsBundleV1 {
                     snapshots: take_last_vecdeque(&ring.snapshots, dump_max_snapshots),
                 })
                 .collect(),
+        }
+    }
+
+    pub(super) fn apply_semantics_mode_v1(&mut self, mode: BundleSemanticsModeV1) {
+        match mode {
+            BundleSemanticsModeV1::All => {}
+            BundleSemanticsModeV1::Off => {
+                for w in &mut self.windows {
+                    for s in &mut w.snapshots {
+                        s.debug.semantics = None;
+                    }
+                }
+            }
+            BundleSemanticsModeV1::Last => {
+                for w in &mut self.windows {
+                    let mut keep_idx: Option<usize> = None;
+                    for (idx, s) in w.snapshots.iter().enumerate() {
+                        if s.debug.semantics.is_some() {
+                            keep_idx = Some(idx);
+                        }
+                    }
+                    for (idx, s) in w.snapshots.iter_mut().enumerate() {
+                        if Some(idx) != keep_idx {
+                            s.debug.semantics = None;
+                        }
+                    }
+                }
+            }
+            BundleSemanticsModeV1::Changed => {
+                for w in &mut self.windows {
+                    let mut last_kept_fingerprint: Option<u64> = None;
+                    for (idx, s) in w.snapshots.iter_mut().enumerate() {
+                        if s.debug.semantics.is_none() {
+                            continue;
+                        }
+                        let is_last = idx + 1 == w.snapshots.len();
+                        if is_last {
+                            last_kept_fingerprint = s.semantics_fingerprint;
+                            continue;
+                        }
+                        let keep = match (last_kept_fingerprint, s.semantics_fingerprint) {
+                            (None, _) => true,
+                            (_, None) => true,
+                            (Some(a), Some(b)) => a != b,
+                        };
+                        if keep {
+                            last_kept_fingerprint = s.semantics_fingerprint;
+                        } else {
+                            s.debug.semantics = None;
+                        }
+                    }
+                }
+            }
         }
     }
 }

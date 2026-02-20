@@ -70,7 +70,7 @@ Usage:
   fretboard diag meta <bundle_dir|bundle.json> [--warmup-frames <n>] [--json] [--out <path>]
   fretboard diag test-ids <bundle_dir|bundle.json> [--warmup-frames <n>] [--max-test-ids <n>] [--json] [--out <path>]
   fretboard diag query test-id [<bundle_dir|bundle.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json] [--out <path>]
-  fretboard diag slice [<bundle_dir|bundle.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json] [--out <path>]
+  fretboard diag slice [<bundle_dir|bundle.json>] --test-id <test_id> [--frame-id <n>] [--snapshot-seq <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json] [--out <path>]
   fretboard diag inspect on|off|toggle|status [--consume-clicks <bool>]
   fretboard diag pick-arm
   fretboard diag pick

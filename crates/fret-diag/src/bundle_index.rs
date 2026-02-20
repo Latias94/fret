@@ -3,16 +3,9 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-fn pick_last_snapshot_after_warmup<'a>(
-    snaps: &'a [Value],
-    warmup_frames: u64,
-) -> Option<&'a Value> {
-    snaps
-        .iter()
-        .rev()
-        .find(|s| s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0) >= warmup_frames)
-        .or_else(|| snaps.last())
-}
+use crate::json_bundle::{
+    pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id, snapshot_semantics_nodes,
+};
 
 fn read_json_value(path: &Path) -> Option<Value> {
     let bytes = std::fs::read(path).ok()?;
@@ -102,7 +95,8 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             .map_or(&[][..], |v| v);
         total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
 
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
+        else {
             out_windows.push(json!({
                 "window": window_id,
                 "snapshots_total": snaps.len(),
@@ -125,12 +119,7 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             .and_then(|v| v.as_u64())
             .or_else(|| snapshot.get("timestamp_ms").and_then(|v| v.as_u64()));
 
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<&str, u64> = HashMap::new();
         for n in nodes {
@@ -198,7 +187,8 @@ fn build_test_ids_payload(
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
+        else {
             continue;
         };
 
@@ -206,12 +196,7 @@ fn build_test_ids_payload(
             .get("frame_id")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {
@@ -302,20 +287,13 @@ fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Resul
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
+        else {
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let frame_id = snapshot_frame_id(snapshot);
+        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {

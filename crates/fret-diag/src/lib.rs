@@ -30,6 +30,7 @@ mod commands;
 mod compare;
 pub mod devtools;
 mod gates;
+mod json_bundle;
 mod lint;
 mod paths;
 mod perf_seed_policy;
