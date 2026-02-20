@@ -16,7 +16,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
                         cx.text("Bookmark"),
                     ])
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-toggle-demo-bookmark"),
             ]
         },
     )
@@ -34,7 +35,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic")),
                         cx.text("Italic"),
                     ])
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-toggle-outline-italic"),
                 shadcn::Toggle::uncontrolled(false)
                     .variant(shadcn::ToggleVariant::Outline)
                     .a11y_label("Toggle bold")
@@ -42,7 +44,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold")),
                         cx.text("Bold"),
                     ])
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-toggle-outline-bold"),
             ]
         },
     )

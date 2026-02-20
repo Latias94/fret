@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Edges, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -319,7 +319,7 @@ impl Toggle {
             let pad_x = toggle_pad_x(theme, size_token);
             let pressable_layout = decl_style::layout_style(
                 theme,
-                LayoutRefinement::default().min_h(h).min_w(h).merge(layout),
+                LayoutRefinement::default().h_px(h).min_w(h).merge(layout),
             );
 
             let fg_default = theme.color_token("foreground");
@@ -449,6 +449,11 @@ impl Toggle {
                 vec![cx.flex(
                     FlexProps {
                         direction: fret_core::Axis::Horizontal,
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
                         gap: {
                             let theme = Theme::global(&*cx.app);
                             MetricRef::space(Space::N2).resolve(theme)
