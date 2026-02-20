@@ -216,16 +216,17 @@ impl<H: UiHost> Widget<H> for TextArea {
         );
 
         let inner = self.content_bounds();
+        let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+            inner.origin.x - self.offset_x,
+            Px(inner.origin.y.0 - self.offset_y.0),
+        ));
 
         if bs == be {
             let caret = cx
                 .services
                 .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
             let rect = Rect::new(
-                fret_core::Point::new(
-                    inner.origin.x + caret.origin.x - self.offset_x,
-                    Px(inner.origin.y.0 + caret.origin.y.0 - self.offset_y.0),
-                ),
+                mapping.text_local_to_window_point(caret.origin),
                 Size::new(Px(caret.size.width.0.max(1.0)), caret.size.height),
             );
             return Some(rect);
@@ -254,8 +255,8 @@ impl<H: UiHost> Widget<H> for TextArea {
 
         Some(Rect::new(
             fret_core::Point::new(
-                Px(inner.origin.x.0 + min_x - self.offset_x.0),
-                Px(inner.origin.y.0 + min_y - self.offset_y.0),
+                Px(mapping.box_origin.x.0 + min_x),
+                Px(mapping.box_origin.y.0 + min_y),
             ),
             Size::new(Px((max_x - min_x).max(1.0)), Px((max_y - min_y).max(1.0))),
         ))
@@ -327,10 +328,11 @@ impl<H: UiHost> Widget<H> for TextArea {
         };
 
         let inner = self.content_bounds();
-        let local = fret_core::Point::new(
-            point.x - inner.origin.x + self.offset_x,
-            Px(point.y.0 - inner.origin.y.0 + self.offset_y.0),
-        );
+        let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+            inner.origin.x - self.offset_x,
+            Px(inner.origin.y.0 - self.offset_y.0),
+        ));
+        let local = mapping.window_to_text_local(point);
         let hit = cx.services.hit_test_point(blob, local);
 
         let u16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
@@ -590,10 +592,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                         let (sel_start, sel_end) = self.selection_range();
 
                         let inner = self.content_bounds();
-                        let local = fret_core::Point::new(
-                            position.x - inner.origin.x + self.offset_x,
-                            Px(position.y.0 - inner.origin.y.0 + self.offset_y.0),
-                        );
+                        let mapping =
+                            crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+                                inner.origin.x - self.offset_x,
+                                Px(inner.origin.y.0 - self.offset_y.0),
+                            ));
+                        let local = mapping.window_to_text_local(*position);
                         let hit = cx.services.hit_test_point(blob, local);
                         let caret_at_point = hit.index;
 
@@ -641,11 +645,12 @@ impl<H: UiHost> Widget<H> for TextArea {
                         self.dragging_thumb = false;
 
                         let inner = self.content_bounds();
-                        let local = fret_core::Point::new(
-                            position.x - inner.origin.x + self.offset_x,
-                            position.y - inner.origin.y,
-                        );
-                        let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
+                        let mapping =
+                            crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+                                inner.origin.x - self.offset_x,
+                                Px(inner.origin.y.0 - self.offset_y.0),
+                            ));
+                        let local = mapping.window_to_text_local(*position);
                         self.set_caret_from_point(cx, local);
                         self.selection_anchor = self.caret;
                         self.clear_preedit();
@@ -693,11 +698,11 @@ impl<H: UiHost> Widget<H> for TextArea {
 
                 let had_preedit = !self.preedit.is_empty();
                 let inner = self.content_bounds();
-                let local = fret_core::Point::new(
-                    position.x - inner.origin.x + self.offset_x,
-                    position.y - inner.origin.y,
-                );
-                let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
+                let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+                    inner.origin.x - self.offset_x,
+                    Px(inner.origin.y.0 - self.offset_y.0),
+                ));
+                let local = mapping.window_to_text_local(*position);
                 self.set_caret_from_point(cx, local);
                 match *click_count {
                     2 => {
@@ -781,11 +786,11 @@ impl<H: UiHost> Widget<H> for TextArea {
                 self.last_pointer_pos = Some(*position);
                 self.ensure_selection_autoscroll_timer(cx);
                 let inner = self.content_bounds();
-                let local = fret_core::Point::new(
-                    position.x - inner.origin.x + self.offset_x,
-                    position.y - inner.origin.y,
-                );
-                let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
+                let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+                    inner.origin.x - self.offset_x,
+                    Px(inner.origin.y.0 - self.offset_y.0),
+                ));
+                let local = mapping.window_to_text_local(*position);
                 self.set_caret_from_point(cx, local);
                 self.ensure_caret_visible = true;
                 self.selection_autoscroll_tick(cx);
@@ -1460,6 +1465,10 @@ impl<H: UiHost> Widget<H> for TextArea {
         let inner = self.content_bounds();
         let max_offset_x = Px((self.last_content_width.0 - inner.size.width.0).max(0.0));
         self.offset_x = Px(self.offset_x.0.clamp(0.0, max_offset_x.0));
+        let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+            inner.origin.x - self.offset_x,
+            Px(inner.origin.y.0 - self.offset_y.0),
+        ));
         cx.scene.push(SceneOp::PushClipRect { rect: inner });
 
         let map_base_to_display = |idx: usize| -> usize {
@@ -1496,13 +1505,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.theme().color_token("selection.inactive.background")
         };
         for r in &self.selection_rects {
-            let rect = Rect::new(
-                fret_core::Point::new(
-                    inner.origin.x + r.origin.x - self.offset_x,
-                    Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
-                ),
-                r.size,
-            );
+            let rect = mapping.text_local_to_window_rect(*r);
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect,
@@ -1523,13 +1526,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 &mut self.preedit_rects,
             );
             for r in &self.preedit_rects {
-                let rect = Rect::new(
-                    fret_core::Point::new(
-                        inner.origin.x + r.origin.x - self.offset_x,
-                        Px(inner.origin.y.0 + r.origin.y.0 - self.offset_y.0),
-                    ),
-                    r.size,
-                );
+                let rect = mapping.text_local_to_window_rect(*r);
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(0),
                     rect,
@@ -1543,10 +1540,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             self.preedit_rects.clear();
         }
 
-        let text_origin = fret_core::Point::new(
-            inner.origin.x - self.offset_x,
-            Px(inner.origin.y.0 + metrics.baseline.0 - self.offset_y.0),
-        );
+        let text_origin = mapping.baseline_origin(metrics.baseline);
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(0),
             origin: text_origin,
@@ -1615,10 +1609,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
 
             let caret_rect = Rect::new(
-                fret_core::Point::new(
-                    inner.origin.x + caret.origin.x - self.offset_x,
-                    Px(inner.origin.y.0 + caret.origin.y.0 - self.offset_y.0),
-                ),
+                mapping.text_local_to_window_point(caret.origin),
                 Size::new(Px(hairline.0.max(1.0)), caret.size.height),
             );
 
@@ -1633,11 +1624,11 @@ impl<H: UiHost> Widget<H> for TextArea {
                         continue;
                     }
 
-                    let x0 = (inner.origin.x + r.origin.x).0;
-                    let y0 = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0;
-                    let x0 = x0 - self.offset_x.0;
-                    let x1 = x0 + r.size.width.0;
-                    let y1 = y0 + r.size.height.0;
+                    let rect = mapping.text_local_to_window_rect(*r);
+                    let x0 = rect.origin.x.0;
+                    let y0 = rect.origin.y.0;
+                    let x1 = x0 + rect.size.width.0;
+                    let y1 = y0 + rect.size.height.0;
 
                     min_x = min_x.min(x0);
                     min_y = min_y.min(y0);
@@ -1675,10 +1666,10 @@ impl<H: UiHost> Widget<H> for TextArea {
                     if r.size.width.0 <= 0.0 {
                         continue;
                     }
-                    let y = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0 + r.size.height.0
-                        - hairline.0;
+                    let rect = mapping.text_local_to_window_rect(*r);
+                    let y = rect.origin.y.0 + rect.size.height.0 - hairline.0;
                     let underline = Rect::new(
-                        fret_core::Point::new(inner.origin.x + r.origin.x - self.offset_x, Px(y)),
+                        fret_core::Point::new(rect.origin.x, Px(y)),
                         Size::new(Px(r.size.width.0.max(hairline.0)), hairline),
                     );
                     cx.scene.push(SceneOp::Quad {
@@ -1848,10 +1839,12 @@ impl TextArea {
         self.offset_x = Px(next_offset);
 
         let had_preedit = !self.preedit.is_empty();
-        let local = Point::new(
-            Px((pos.x.0 - inner.origin.x.0 + self.offset_x.0).max(0.0)),
-            Px(pos.y.0 - inner.origin.y.0 + self.offset_y.0),
-        );
+        let mapping = crate::text::coords::TextBoxMapping::new(fret_core::Point::new(
+            inner.origin.x - self.offset_x,
+            Px(inner.origin.y.0 - self.offset_y.0),
+        ));
+        let local = mapping.window_to_text_local(pos);
+        let local = Point::new(Px(local.x.0.max(0.0)), local.y);
         self.set_caret_from_point(cx, local);
         self.ensure_caret_visible = true;
 

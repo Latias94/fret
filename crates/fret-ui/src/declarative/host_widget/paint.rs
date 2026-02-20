@@ -867,13 +867,14 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
-                    cx.services.text(),
-                    blob,
-                    cx.bounds.size.height,
-                    metrics,
-                    style.vertical_placement,
-                );
+                let (mapping, vertical_offset, baseline) =
+                    crate::text::coords::compute_text_box_mapping_for_vertical_placement(
+                        cx.services.text(),
+                        blob,
+                        cx.bounds,
+                        metrics,
+                        style.vertical_placement,
+                    );
                 let clip = fret_core::Rect::new(
                     fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
                     cx.bounds.size,
@@ -887,10 +888,7 @@ impl ElementHostWidget {
                     cx.bounds.origin,
                     vertical_offset,
                 );
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + baseline,
-                );
+                let origin = mapping.baseline_origin(baseline);
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -1092,13 +1090,14 @@ impl ElementHostWidget {
                     },
                 );
 
-                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
-                    cx.services.text(),
-                    blob,
-                    cx.bounds.size.height,
-                    metrics,
-                    style.vertical_placement,
-                );
+                let (mapping, vertical_offset, baseline) =
+                    crate::text::coords::compute_text_box_mapping_for_vertical_placement(
+                        cx.services.text(),
+                        blob,
+                        cx.bounds,
+                        metrics,
+                        style.vertical_placement,
+                    );
 
                 let focused = cx.focus == Some(cx.node);
                 let (dragging, last_pointer_pos) = crate::elements::with_element_state(
@@ -1112,19 +1111,8 @@ impl ElementHostWidget {
                     && dragging
                     && let Some(pointer_pos) = last_pointer_pos
                 {
-                    let local = fret_core::Point::new(
-                        fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
-                        fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
-                    );
-                    // `hit_test_point` expects text-local coordinates (y=0 at top of the text box).
-                    // Our text may be vertically placed within the element bounds.
-                    let hit = cx.services.hit_test_point(
-                        blob,
-                        fret_core::Point::new(
-                            local.x,
-                            fret_core::Px(local.y.0 - vertical_offset.0),
-                        ),
-                    );
+                    let local = mapping.window_to_text_local(pointer_pos);
+                    let hit = cx.services.hit_test_point(blob, local);
                     crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
@@ -1248,15 +1236,7 @@ impl ElementHostWidget {
                         cx.theme().color_token("selection.inactive.background")
                     };
                     for r in rects {
-                        let rect = fret_core::Rect::new(
-                            fret_core::Point::new(
-                                fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
-                                fret_core::Px(
-                                    cx.bounds.origin.y.0 + vertical_offset.0 + r.origin.y.0,
-                                ),
-                            ),
-                            r.size,
-                        );
+                        let rect = mapping.text_local_to_window_rect(r);
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect,
@@ -1268,10 +1248,7 @@ impl ElementHostWidget {
                     }
                 }
 
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + baseline,
-                );
+                let origin = mapping.baseline_origin(baseline);
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,

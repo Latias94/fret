@@ -46,9 +46,20 @@ Tracking format:
     - `crates/fret-ui/src/text/input/input.rs` (caret placement uses the helper)
     - `crates/fret-ui/src/text/input/widget.rs` (selection box uses the helper)
 
-- [ ] TPU-ui-011 Verify hit-testing and selection mapping use the same content→box transform across widgets.
+- [x] TPU-ui-011 Verify hit-testing and selection mapping use the same content→box transform across widgets.
   - Target widgets:
     - TextInput, TextArea, SelectableText
+  - Evidence:
+    - `crates/fret-ui/src/text/coords.rs` (`TextBoxMapping`,
+      `compute_text_box_mapping_for_vertical_placement`)
+    - `crates/fret-ui/src/text/area/widget.rs` (hit-testing + caret/selection mapping via
+      `TextBoxMapping`)
+    - `crates/fret-ui/src/declarative/host_widget/paint.rs` (SelectableText hit-testing + selection
+      rect mapping via `TextBoxMapping`)
+    - `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (SelectableText event
+      hit-testing uses the same mapping helper as paint)
+    - `crates/fret-ui/src/declarative/tests/selection_indices.rs`
+      (`selectable_text_pointer_hit_test_uses_text_local_coordinates`)
 
 ## M2 — Parley-only shaping path (remove drift)
 

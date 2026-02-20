@@ -71,23 +71,19 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 return element_local;
             };
 
-            let bounds_height = cx.bounds.size.height;
             let vertical_placement = props
                 .resolved_text_style(cx.theme().snapshot())
                 .vertical_placement;
-            let (vertical_offset, _) =
-                crate::text::coords::compute_text_vertical_offset_and_baseline(
+            let (mapping, _, _) =
+                crate::text::coords::compute_text_box_mapping_for_vertical_placement(
                     cx.services.text(),
                     blob,
-                    bounds_height,
+                    cx.bounds,
                     metrics,
                     vertical_placement,
                 );
 
-            fret_core::Point::new(
-                element_local.x,
-                fret_core::Px(element_local.y.0 - vertical_offset.0),
-            )
+            mapping.window_to_text_local(position)
         };
 
     // Keep the stored selection model stable even if the underlying text changes or external

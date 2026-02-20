@@ -316,7 +316,8 @@ impl<H: UiHost> Widget<H> for TextInput {
             Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
         );
 
-        let local = fret_core::Point::new(point.x - origin.x, point.y - origin.y);
+        let mapping = crate::text::coords::TextBoxMapping::new(origin);
+        let local = mapping.window_to_text_local(point);
         let hit = cx.services.hit_test_point(blob, local);
         cx.services.text().release(blob);
 
