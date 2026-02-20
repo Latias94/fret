@@ -1,3 +1,4 @@
+pub mod geometry;
 pub mod parley_shaper;
 pub mod wrapper;
 
