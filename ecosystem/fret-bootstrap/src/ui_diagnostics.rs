@@ -37,6 +37,18 @@ use std::sync::{Arc, Once};
 #[cfg(feature = "diagnostics-ws")]
 use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
+mod semantics;
+pub use semantics::{
+    UiSemanticsActionsV1, UiSemanticsFlagsV1, UiSemanticsNodeV1, UiSemanticsRootV1,
+    UiSemanticsSnapshotV1,
+};
+
+mod bundle;
+pub use bundle::{
+    UiDiagnosticsBundleConfigV1, UiDiagnosticsBundleV1, UiDiagnosticsEnvDiagnosticsV1,
+    UiDiagnosticsEnvFingerprintV1, UiDiagnosticsWindowBundleV1,
+};
+
 // Split out the DevTools WS wiring to reduce churn in this file.
 #[path = "ui_diagnostics/ui_diagnostics_devtools_ws.rs"]
 mod ui_diagnostics_devtools_ws;
@@ -7717,10 +7729,14 @@ impl UiDiagnosticsService {
             .global::<fret_render::WgpuAdapterSelectionSnapshot>()
             .and_then(|snapshot| serde_json::to_value(snapshot).ok());
 
+        let window_snapshot_seq = ring.snapshot_seq;
+        ring.snapshot_seq = ring.snapshot_seq.saturating_add(1);
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
             frame_id: app.frame_id().0,
+            window_snapshot_seq,
             window: window.data().as_ffi(),
             timestamp_unix_ms: unix_ms_now(),
             scale_factor,
@@ -8531,6 +8547,7 @@ struct WindowRing {
     last_pointer_type: Option<fret_core::PointerType>,
     events: VecDeque<RecordedUiEventV1>,
     snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
+    snapshot_seq: u64,
     viewport_input_this_frame: Vec<UiViewportInputEventV1>,
     last_changed_models: Vec<u64>,
     last_changed_globals: Vec<String>,
@@ -8582,6 +8599,7 @@ impl WindowRing {
         self.last_pointer_type = None;
         self.events.clear();
         self.snapshots.clear();
+        self.snapshot_seq = 0;
         self.viewport_input_this_frame.clear();
         self.last_changed_models.clear();
         self.last_changed_globals.clear();
@@ -8602,208 +8620,7 @@ impl WindowRing {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UiDiagnosticsBundleV1 {
-    pub schema_version: u32,
-    pub exported_unix_ms: u64,
-    pub out_dir: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub env: Option<UiDiagnosticsEnvFingerprintV1>,
-    pub config: UiDiagnosticsBundleConfigV1,
-    pub windows: Vec<UiDiagnosticsWindowBundleV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiDiagnosticsEnvFingerprintV1 {
-    pub schema_version: u32,
-    pub runner_kind: String,
-    pub target_os: String,
-    pub target_family: String,
-    pub target_arch: String,
-    pub debug_assertions: bool,
-    pub diagnostics: UiDiagnosticsEnvDiagnosticsV1,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub capabilities: Vec<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub scale_factors_seen: Vec<f32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiDiagnosticsEnvDiagnosticsV1 {
-    pub enabled: bool,
-    pub capture_semantics: bool,
-    pub redact_text: bool,
-    pub screenshots_enabled: bool,
-    pub screenshot_on_dump: bool,
-    pub max_events: usize,
-    pub max_snapshots: usize,
-    pub devtools_ws_configured: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UiDiagnosticsBundleConfigV1 {
-    pub trigger_path: String,
-    pub max_events: usize,
-    pub max_snapshots: usize,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dump_max_snapshots: Option<usize>,
-    pub capture_semantics: bool,
-    #[serde(default)]
-    pub max_semantics_nodes: usize,
-    #[serde(default)]
-    pub semantics_test_ids_only: bool,
-    pub script_path: String,
-    pub script_trigger_path: String,
-    pub script_result_path: String,
-    pub script_result_trigger_path: String,
-    pub script_auto_dump: bool,
-    pub pick_trigger_path: String,
-    pub pick_result_path: String,
-    pub pick_result_trigger_path: String,
-    pub pick_auto_dump: bool,
-    #[serde(default)]
-    pub inspect_path: String,
-    #[serde(default)]
-    pub inspect_trigger_path: String,
-    pub redact_text: bool,
-    pub max_debug_string_bytes: usize,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub frame_clock_fixed_delta_ms: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UiDiagnosticsWindowBundleV1 {
-    pub window: u64,
-    pub events: Vec<RecordedUiEventV1>,
-    pub snapshots: Vec<UiDiagnosticsSnapshotV1>,
-}
-
-impl UiDiagnosticsBundleV1 {
-    fn from_service(
-        exported_unix_ms: u64,
-        out_dir: &Path,
-        svc: &UiDiagnosticsService,
-        dump_max_snapshots: usize,
-    ) -> Self {
-        Self {
-            schema_version: 1,
-            exported_unix_ms,
-            out_dir: sanitize_path_for_bundle(&svc.cfg.out_dir, out_dir),
-            env: Some(UiDiagnosticsEnvFingerprintV1::from_service(svc)),
-            config: UiDiagnosticsBundleConfigV1 {
-                trigger_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.trigger_path),
-                max_events: svc.cfg.max_events,
-                max_snapshots: svc.cfg.max_snapshots,
-                dump_max_snapshots: (dump_max_snapshots != svc.cfg.max_snapshots)
-                    .then_some(dump_max_snapshots),
-                capture_semantics: svc.cfg.capture_semantics,
-                max_semantics_nodes: svc.cfg.max_semantics_nodes,
-                semantics_test_ids_only: svc.cfg.semantics_test_ids_only,
-                script_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.script_path),
-                script_trigger_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.script_trigger_path,
-                ),
-                script_result_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.script_result_path,
-                ),
-                script_result_trigger_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.script_result_trigger_path,
-                ),
-                script_auto_dump: svc.cfg.script_auto_dump,
-                pick_trigger_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.pick_trigger_path,
-                ),
-                pick_result_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.pick_result_path,
-                ),
-                pick_result_trigger_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.pick_result_trigger_path,
-                ),
-                pick_auto_dump: svc.cfg.pick_auto_dump,
-                inspect_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.inspect_path),
-                inspect_trigger_path: sanitize_path_for_bundle(
-                    &svc.cfg.out_dir,
-                    &svc.cfg.inspect_trigger_path,
-                ),
-                redact_text: svc.cfg.redact_text,
-                max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
-                frame_clock_fixed_delta_ms: svc.cfg.frame_clock_fixed_delta_ms,
-            },
-            windows: svc
-                .per_window
-                .iter()
-                .map(|(window, ring)| UiDiagnosticsWindowBundleV1 {
-                    window: window.data().as_ffi(),
-                    events: ring.events.iter().cloned().collect(),
-                    snapshots: take_last_vecdeque(&ring.snapshots, dump_max_snapshots),
-                })
-                .collect(),
-        }
-    }
-}
-
-impl UiDiagnosticsEnvFingerprintV1 {
-    fn from_service(svc: &UiDiagnosticsService) -> Self {
-        let runner_kind = if cfg!(target_arch = "wasm32") {
-            "web".to_string()
-        } else {
-            "native".to_string()
-        };
-
-        let mut capabilities: Vec<String> = vec!["diag.script_v2".to_string()];
-        if svc.cfg.screenshots_enabled {
-            capabilities.push("diag.screenshot_png".to_string());
-        }
-        capabilities.push("diag.inject_ime".to_string());
-        capabilities.push("diag.text_ime_trace".to_string());
-        capabilities.push("diag.text_input_snapshot".to_string());
-        capabilities.push("diag.shortcut_routing_trace".to_string());
-        capabilities.push("diag.overlay_placement_trace".to_string());
-        capabilities.sort();
-        capabilities.dedup();
-
-        let mut scale_factors_seen: Vec<f32> = Vec::new();
-        for (_window, ring) in svc.per_window.iter() {
-            if let Some(last) = ring.snapshots.back() {
-                let sf = last.scale_factor;
-                if !scale_factors_seen
-                    .iter()
-                    .any(|v| (*v - sf).abs() < f32::EPSILON)
-                {
-                    scale_factors_seen.push(sf);
-                }
-            }
-        }
-        scale_factors_seen.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        Self {
-            schema_version: 1,
-            runner_kind,
-            target_os: std::env::consts::OS.to_string(),
-            target_family: std::env::consts::FAMILY.to_string(),
-            target_arch: std::env::consts::ARCH.to_string(),
-            debug_assertions: cfg!(debug_assertions),
-            diagnostics: UiDiagnosticsEnvDiagnosticsV1 {
-                enabled: svc.cfg.enabled,
-                capture_semantics: svc.cfg.capture_semantics,
-                redact_text: svc.cfg.redact_text,
-                screenshots_enabled: svc.cfg.screenshots_enabled,
-                screenshot_on_dump: svc.cfg.screenshot_on_dump,
-                max_events: svc.cfg.max_events,
-                max_snapshots: svc.cfg.max_snapshots,
-                devtools_ws_configured: svc.ws_is_configured(),
-            },
-            capabilities,
-            scale_factors_seen,
-        }
-    }
-}
+// Bundle serialization types live in `ui_diagnostics/bundle.rs`.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameClockSnapshotV1 {
@@ -8818,6 +8635,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub schema_version: u32,
     pub tick_id: u64,
     pub frame_id: u64,
+    /// Per-window monotonic snapshot sequence (contiguous within a run).
+    pub window_snapshot_seq: u64,
     pub window: u64,
     pub timestamp_unix_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -13359,161 +13178,7 @@ impl UiInvalidationWalkV1 {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiSemanticsSnapshotV1 {
-    pub window: u64,
-    pub roots: Vec<UiSemanticsRootV1>,
-    pub barrier_root: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub focus_barrier_root: Option<u64>,
-    pub focus: Option<u64>,
-    pub captured: Option<u64>,
-    pub nodes: Vec<UiSemanticsNodeV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiSemanticsRootV1 {
-    pub root: u64,
-    pub visible: bool,
-    pub blocks_underlay_input: bool,
-    pub hit_testable: bool,
-    pub z_index: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiSemanticsNodeV1 {
-    pub id: u64,
-    pub parent: Option<u64>,
-    pub role: String,
-    pub bounds: RectV1,
-    pub flags: UiSemanticsFlagsV1,
-    pub test_id: Option<String>,
-    pub active_descendant: Option<u64>,
-    pub pos_in_set: Option<u32>,
-    pub set_size: Option<u32>,
-    pub label: Option<String>,
-    pub value: Option<String>,
-    pub text_selection: Option<(u32, u32)>,
-    pub text_composition: Option<(u32, u32)>,
-    pub actions: UiSemanticsActionsV1,
-    pub labelled_by: Vec<u64>,
-    pub described_by: Vec<u64>,
-    pub controls: Vec<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiSemanticsFlagsV1 {
-    pub focused: bool,
-    pub captured: bool,
-    pub disabled: bool,
-    pub selected: bool,
-    pub expanded: bool,
-    pub checked: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiSemanticsActionsV1 {
-    pub focus: bool,
-    pub invoke: bool,
-    pub set_value: bool,
-    pub set_text_selection: bool,
-}
-
-impl UiSemanticsSnapshotV1 {
-    fn from_snapshot(
-        snapshot: &fret_core::SemanticsSnapshot,
-        redact_text: bool,
-        max_string_bytes: usize,
-        max_nodes: usize,
-        test_ids_only: bool,
-    ) -> Self {
-        Self {
-            window: snapshot.window.data().as_ffi(),
-            roots: snapshot
-                .roots
-                .iter()
-                .map(|r| UiSemanticsRootV1 {
-                    root: key_to_u64(r.root),
-                    visible: r.visible,
-                    blocks_underlay_input: r.blocks_underlay_input,
-                    hit_testable: r.hit_testable,
-                    z_index: r.z_index,
-                })
-                .collect(),
-            barrier_root: snapshot.barrier_root.map(key_to_u64),
-            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
-            focus: snapshot.focus.map(key_to_u64),
-            captured: snapshot.captured.map(key_to_u64),
-            nodes: snapshot
-                .nodes
-                .iter()
-                .filter(|n| !test_ids_only || n.test_id.is_some())
-                .take(max_nodes)
-                .map(|n| UiSemanticsNodeV1::from_node(n, redact_text, max_string_bytes))
-                .collect(),
-        }
-    }
-}
-
-impl UiSemanticsNodeV1 {
-    fn from_node(
-        node: &fret_core::SemanticsNode,
-        redact_text: bool,
-        max_string_bytes: usize,
-    ) -> Self {
-        let mut label = node
-            .label
-            .as_deref()
-            .map(|s| maybe_redact_string(s, redact_text));
-        let mut value = node
-            .value
-            .as_deref()
-            .map(|s| maybe_redact_string(s, redact_text));
-        let mut test_id = node.test_id.clone();
-
-        if let Some(s) = &mut label {
-            truncate_string_bytes(s, max_string_bytes);
-        }
-        if let Some(s) = &mut value {
-            truncate_string_bytes(s, max_string_bytes);
-        }
-        if let Some(s) = &mut test_id {
-            truncate_string_bytes(s, max_string_bytes);
-        }
-
-        Self {
-            id: key_to_u64(node.id),
-            parent: node.parent.map(key_to_u64),
-            role: semantics_role_label(node.role).to_string(),
-            bounds: RectV1::from(node.bounds),
-            flags: UiSemanticsFlagsV1 {
-                focused: node.flags.focused,
-                captured: node.flags.captured,
-                disabled: node.flags.disabled,
-                selected: node.flags.selected,
-                expanded: node.flags.expanded,
-                checked: node.flags.checked,
-            },
-            test_id,
-            active_descendant: node.active_descendant.map(key_to_u64),
-            pos_in_set: node.pos_in_set,
-            set_size: node.set_size,
-            label,
-            value,
-            text_selection: node.text_selection,
-            text_composition: node.text_composition,
-            actions: UiSemanticsActionsV1 {
-                focus: node.actions.focus,
-                invoke: node.actions.invoke,
-                set_value: node.actions.set_value,
-                set_text_selection: node.actions.set_text_selection,
-            },
-            labelled_by: node.labelled_by.iter().copied().map(key_to_u64).collect(),
-            described_by: node.described_by.iter().copied().map(key_to_u64).collect(),
-            controls: node.controls.iter().copied().map(key_to_u64).collect(),
-        }
-    }
-}
+// Semantics bundle types live in `ui_diagnostics/semantics.rs`.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
