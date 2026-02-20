@@ -320,6 +320,10 @@ fn command_text_input<H: UiHost>(
     chrome.text_color = fg;
     chrome.placeholder_color = placeholder_fg;
     chrome.caret_color = fg;
+    // Prefer browser-like IME composition visuals: keep the composed text in the normal color and
+    // rely on underline for feedback (instead of tinting preedit with the theme "primary" color).
+    chrome.preedit_color = chrome.text_color;
+    chrome.preedit_underline_color = chrome.text_color;
 
     let mut props = TextInputProps::new(model);
     props.a11y_label = Some(a11y_label);

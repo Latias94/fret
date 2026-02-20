@@ -477,6 +477,8 @@ impl InputGroup {
                             chrome.text_color = resolved.text_color;
                             chrome.caret_color = resolved.text_color;
                             chrome.selection_color = resolved.selection_color;
+                            chrome.preedit_color = chrome.text_color;
+                            chrome.preedit_underline_color = chrome.text_color;
 
                             let mut input = TextInputProps::new(model.clone());
                             input.a11y_label = a11y_label.clone();
@@ -714,6 +716,8 @@ impl InputGroup {
                     chrome.text_color = resolved.text_color;
                     chrome.caret_color = resolved.text_color;
                     chrome.selection_color = resolved.selection_color;
+                    chrome.preedit_color = chrome.text_color;
+                    chrome.preedit_underline_color = chrome.text_color;
 
                     let mut input = TextInputProps::new(model);
                     input.a11y_label = a11y_label;

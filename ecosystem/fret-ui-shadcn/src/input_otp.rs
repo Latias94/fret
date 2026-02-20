@@ -402,6 +402,7 @@ impl InputOtp {
                 chrome.selection_color = Color::TRANSPARENT;
                 chrome.caret_color = Color::TRANSPARENT;
                 chrome.preedit_color = Color::TRANSPARENT;
+                chrome.preedit_underline_color = Color::TRANSPARENT;
 
                 let mut input = TextInputProps::new(self.model);
                 input.chrome = chrome;

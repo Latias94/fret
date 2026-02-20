@@ -328,6 +328,8 @@ fn input_with_style_and_submit<H: UiHost>(
         .unwrap_or(chrome.placeholder_color);
     chrome.caret_color = resolved.text_color;
     chrome.selection_color = resolved.selection_color;
+    chrome.preedit_color = chrome.text_color;
+    chrome.preedit_underline_color = chrome.text_color;
 
     if let Some(bg) = style_override.background {
         chrome.background = bg.resolve(theme);
