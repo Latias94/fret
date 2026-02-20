@@ -43,6 +43,79 @@ fn compute_text_vertical_offset_and_baseline(
     }
 }
 
+fn push_attributed_span_background_quads(
+    scene: &mut fret_core::Scene,
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+    spans: &[fret_core::TextSpan],
+    clip: Rect,
+    bounds_origin: Point,
+    vertical_offset: Px,
+) {
+    let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
+    let mut rects: Vec<fret_core::Rect> = Vec::new();
+
+    let mut offset = 0usize;
+    let mut active_bg: Option<(usize, Color)> = None;
+
+    for span in spans {
+        let end = offset.saturating_add(span.len);
+
+        match (active_bg, span.paint.bg) {
+            (Some((start, bg)), Some(next)) if bg == next => {}
+            (Some((start, bg)), Some(next)) => {
+                if start < offset {
+                    bg_runs.push((start, offset, bg));
+                }
+                active_bg = Some((offset, next));
+            }
+            (Some((start, bg)), None) => {
+                if start < offset {
+                    bg_runs.push((start, offset, bg));
+                }
+                active_bg = None;
+            }
+            (None, Some(next)) => {
+                active_bg = Some((offset, next));
+            }
+            (None, None) => {}
+        }
+
+        offset = end;
+    }
+
+    if let Some((start, bg)) = active_bg
+        && start < offset
+    {
+        bg_runs.push((start, offset, bg));
+    }
+
+    for (start, end, bg) in bg_runs {
+        if start >= end {
+            continue;
+        }
+        rects.clear();
+        services.selection_rects_clipped(blob, (start, end), clip, &mut rects);
+        for r in rects.iter() {
+            let rect = fret_core::Rect::new(
+                fret_core::Point::new(
+                    fret_core::Px(bounds_origin.x.0 + r.origin.x.0),
+                    fret_core::Px(bounds_origin.y.0 + vertical_offset.0 + r.origin.y.0),
+                ),
+                r.size,
+            );
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect,
+                background: Paint::Solid(bg),
+                border: fret_core::Edges::all(fret_core::Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT),
+                corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+            });
+        }
+    }
+}
+
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -632,17 +705,19 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
-                    cx.services.text(),
-                    blob,
-                    cx.bounds.size.height,
-                    metrics,
-                    style.vertical_placement,
-                );
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + vertical_offset + baseline,
-                );
+                let origin = {
+                    let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                        cx.services.text(),
+                        blob,
+                        cx.bounds.size.height,
+                        metrics,
+                        style.vertical_placement,
+                    );
+                    fret_core::Point::new(
+                        cx.bounds.origin.x,
+                        cx.bounds.origin.y + vertical_offset + baseline,
+                    )
+                };
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -835,6 +910,19 @@ impl ElementHostWidget {
                     cx.bounds.size.height,
                     metrics,
                     style.vertical_placement,
+                );
+                let clip = fret_core::Rect::new(
+                    fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                    cx.bounds.size,
+                );
+                push_attributed_span_background_quads(
+                    cx.scene,
+                    cx.services,
+                    blob,
+                    props.rich.spans.as_ref(),
+                    clip,
+                    cx.bounds.origin,
+                    vertical_offset,
                 );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
@@ -1041,6 +1129,14 @@ impl ElementHostWidget {
                     },
                 );
 
+                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                    cx.services.text(),
+                    blob,
+                    cx.bounds.size.height,
+                    metrics,
+                    style.vertical_placement,
+                );
+
                 let focused = cx.focus == Some(cx.node);
                 let (dragging, last_pointer_pos) = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -1057,7 +1153,15 @@ impl ElementHostWidget {
                         fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
                         fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
                     );
-                    let hit = cx.services.hit_test_point(blob, local);
+                    // `hit_test_point` expects text-local coordinates (y=0 at top of the text box).
+                    // Our text may be vertically placed within the element bounds.
+                    let hit = cx.services.hit_test_point(
+                        blob,
+                        fret_core::Point::new(
+                            local.x,
+                            fret_core::Px(local.y.0 - vertical_offset.0),
+                        ),
+                    );
                     crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
@@ -1107,9 +1211,9 @@ impl ElementHostWidget {
                         let mut y1 = f32::NEG_INFINITY;
                         for r in rects.iter() {
                             x0 = x0.min(r.origin.x.0);
-                            y0 = y0.min(r.origin.y.0);
+                            y0 = y0.min(r.origin.y.0 + vertical_offset.0);
                             x1 = x1.max(r.origin.x.0 + r.size.width.0);
-                            y1 = y1.max(r.origin.y.0 + r.size.height.0);
+                            y1 = y1.max(r.origin.y.0 + r.size.height.0 + vertical_offset.0);
                         }
                         if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite()
                         {
@@ -1144,69 +1248,15 @@ impl ElementHostWidget {
                     },
                 );
 
-                let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
-                let mut rects: Vec<fret_core::Rect> = Vec::new();
-
-                let mut offset = 0usize;
-                let mut active_bg: Option<(usize, Color)> = None;
-
-                for span in props.rich.spans.as_ref() {
-                    let end = offset.saturating_add(span.len);
-
-                    match (active_bg, span.paint.bg) {
-                        (Some((start, bg)), Some(next)) if bg == next => {}
-                        (Some((start, bg)), Some(next)) => {
-                            if start < offset {
-                                bg_runs.push((start, offset, bg));
-                            }
-                            active_bg = Some((offset, next));
-                        }
-                        (Some((start, bg)), None) => {
-                            if start < offset {
-                                bg_runs.push((start, offset, bg));
-                            }
-                            active_bg = None;
-                        }
-                        (None, Some(next)) => {
-                            active_bg = Some((offset, next));
-                        }
-                        (None, None) => {}
-                    }
-
-                    offset = end;
-                }
-
-                if let Some((start, bg)) = active_bg
-                    && start < offset
-                {
-                    bg_runs.push((start, offset, bg));
-                }
-
-                for (start, end, bg) in bg_runs {
-                    if start >= end {
-                        continue;
-                    }
-                    rects.clear();
-                    cx.services
-                        .selection_rects_clipped(blob, (start, end), clip, &mut rects);
-                    for r in rects.iter() {
-                        let rect = fret_core::Rect::new(
-                            fret_core::Point::new(
-                                fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
-                                fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
-                            ),
-                            r.size,
-                        );
-                        cx.scene.push(SceneOp::Quad {
-                            order: DrawOrder(0),
-                            rect,
-                            background: Paint::Solid(bg),
-                            border: fret_core::Edges::all(fret_core::Px(0.0)),
-                            border_paint: Paint::Solid(Color::TRANSPARENT),
-                            corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
-                        });
-                    }
-                }
+                push_attributed_span_background_quads(
+                    cx.scene,
+                    cx.services,
+                    blob,
+                    props.rich.spans.as_ref(),
+                    clip,
+                    cx.bounds.origin,
+                    vertical_offset,
+                );
 
                 let (anchor, caret) = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -1238,7 +1288,9 @@ impl ElementHostWidget {
                         let rect = fret_core::Rect::new(
                             fret_core::Point::new(
                                 fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
-                                fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
+                                fret_core::Px(
+                                    cx.bounds.origin.y.0 + vertical_offset.0 + r.origin.y.0,
+                                ),
                             ),
                             r.size,
                         );

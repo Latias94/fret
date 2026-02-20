@@ -5217,6 +5217,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         slant: TextSlant::Normal,
                         line_height: None,
                         letter_spacing_em: None,
+                        vertical_placement: Default::default(),
                     };
                     let text_constraints = TextConstraints {
                         max_width: None,
@@ -6188,6 +6189,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         slant: TextSlant::Normal,
                         line_height: None,
                         letter_spacing_em: None,
+                        vertical_placement: Default::default(),
                     };
                     let overlay_constraints = TextConstraints {
                         max_width: None,
@@ -6909,6 +6911,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     slant: TextSlant::Normal,
                     line_height: None,
                     letter_spacing_em: None,
+                    vertical_placement: Default::default(),
                 };
                 let constraints = TextConstraints {
                     max_width: None,
@@ -7367,6 +7370,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
+            vertical_placement: Default::default(),
         };
         let indicator_constraints = TextConstraints {
             max_width: None,
@@ -7675,6 +7679,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 slant: TextSlant::Normal,
                 line_height: None,
                 letter_spacing_em: None,
+                vertical_placement: Default::default(),
             };
             let constraints = TextConstraints {
                 max_width: None,
@@ -7746,6 +7751,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     slant: TextSlant::Normal,
                     line_height: None,
                     letter_spacing_em: None,
+                    vertical_placement: Default::default(),
                 };
                 let constraints = TextConstraints {
                     max_width: None,
@@ -8124,6 +8130,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 slant: TextSlant::Normal,
                 line_height: None,
                 letter_spacing_em: None,
+                vertical_placement: Default::default(),
             };
             let constraints = TextConstraints {
                 max_width: None,

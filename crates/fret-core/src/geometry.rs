@@ -12,6 +12,20 @@ impl From<f32> for Px {
     }
 }
 
+impl Px {
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+
+    pub fn clamp(self, min: Self, max: Self) -> Self {
+        Self(self.0.clamp(min.0, max.0))
+    }
+}
+
 impl Add for Px {
     type Output = Self;
 
