@@ -1340,6 +1340,35 @@ impl BundleStatsReport {
             self.p50_paint_text_prepare_time_us,
             self.p95_paint_text_prepare_time_us
         );
+        if self.p95_renderer_encode_scene_us > 0
+            || self.p95_renderer_upload_us > 0
+            || self.p95_renderer_record_passes_us > 0
+            || self.p95_renderer_encoder_finish_us > 0
+            || self.p95_renderer_prepare_text_us > 0
+            || self.p95_renderer_prepare_svg_us > 0
+            || self.max_renderer_encode_scene_us > 0
+            || self.max_renderer_upload_us > 0
+            || self.max_renderer_record_passes_us > 0
+            || self.max_renderer_encoder_finish_us > 0
+            || self.max_renderer_prepare_text_us > 0
+            || self.max_renderer_prepare_svg_us > 0
+        {
+            println!(
+                "renderer p95/max (us): upload={}/{} record={}/{} finish={}/{} encode={}/{} text={}/{} svg={}/{}",
+                self.p95_renderer_upload_us,
+                self.max_renderer_upload_us,
+                self.p95_renderer_record_passes_us,
+                self.max_renderer_record_passes_us,
+                self.p95_renderer_encoder_finish_us,
+                self.max_renderer_encoder_finish_us,
+                self.p95_renderer_encode_scene_us,
+                self.max_renderer_encode_scene_us,
+                self.p95_renderer_prepare_text_us,
+                self.max_renderer_prepare_text_us,
+                self.p95_renderer_prepare_svg_us,
+                self.max_renderer_prepare_svg_us,
+            );
+        }
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
             let mode = if self.pointer_move_frames_present {
                 "pointer_move"

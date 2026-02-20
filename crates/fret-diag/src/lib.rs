@@ -11340,19 +11340,25 @@ pub(crate) fn triage_json_from_stats(
 
     let worst_row = report.top.first();
     let worst = worst_row.map(|row| {
-        json!({
-            "window": row.window,
-            "tick_id": row.tick_id,
-            "frame_id": row.frame_id,
-            "timestamp_unix_ms": row.timestamp_unix_ms,
-            "total_time_us": row.total_time_us,
-            "layout_time_us": row.layout_time_us,
-            "prepaint_time_us": row.prepaint_time_us,
-            "paint_time_us": row.paint_time_us,
-            "layout_observation_record_time_us": row.layout_observation_record_time_us,
-            "layout_observation_record_models_items": row.layout_observation_record_models_items,
-            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
-            "paint_observation_record_time_us": row.paint_observation_record_time_us,
+	        json!({
+	            "window": row.window,
+	            "tick_id": row.tick_id,
+	            "frame_id": row.frame_id,
+	            "timestamp_unix_ms": row.timestamp_unix_ms,
+	            "total_time_us": row.total_time_us,
+	            "layout_time_us": row.layout_time_us,
+	            "prepaint_time_us": row.prepaint_time_us,
+	            "paint_time_us": row.paint_time_us,
+	            "renderer_encode_scene_us": row.renderer_encode_scene_us,
+	            "renderer_upload_us": row.renderer_upload_us,
+	            "renderer_record_passes_us": row.renderer_record_passes_us,
+	            "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
+	            "renderer_prepare_text_us": row.renderer_prepare_text_us,
+	            "renderer_prepare_svg_us": row.renderer_prepare_svg_us,
+	            "layout_observation_record_time_us": row.layout_observation_record_time_us,
+	            "layout_observation_record_models_items": row.layout_observation_record_models_items,
+	            "layout_observation_record_globals_items": row.layout_observation_record_globals_items,
+	            "paint_observation_record_time_us": row.paint_observation_record_time_us,
             "paint_text_prepare_time_us": row.paint_text_prepare_time_us,
             "paint_text_prepare_calls": row.paint_text_prepare_calls,
             "invalidation_walk_calls": row.invalidation_walk_calls,
@@ -16967,28 +16973,31 @@ mod tests {
         std::fs::create_dir_all(&root).expect("create temp root");
 
         let bundle = serde_json::json!({
-            "schema_version": 1,
-            "windows": [{
+        "schema_version": 1,
+        "windows": [{
+            "window": 1,
+            "events": [],
+            "snapshots": [{
+                "schema_version": 1,
+                "tick_id": 1,
+                "frame_id": 1,
                 "window": 1,
-                "events": [],
-                "snapshots": [{
-                    "schema_version": 1,
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "window": 1,
-                    "timestamp_unix_ms": 123,
-                    "debug": { "stats": {
-                        "layout_time_us": 10_000,
-                        "prepaint_time_us": 0,
-                        "paint_time_us": 0,
-                        "layout_engine_solves": 1,
-                        "layout_engine_solve_time_us": 7_000,
-                        "layout_observation_record_time_us": 3_000,
-                        "layout_observation_record_models_items": 100,
+                "timestamp_unix_ms": 123,
+                "debug": { "stats": {
+                    "layout_time_us": 10_000,
+                    "prepaint_time_us": 0,
+                    "paint_time_us": 0,
+                    "layout_engine_solves": 1,
+                    "layout_engine_solve_time_us": 7_000,
+                    "layout_observation_record_time_us": 3_000,
+                    "layout_observation_record_models_items": 100,
                         "layout_observation_record_globals_items": 0,
                         "paint_text_prepare_time_us": 2_500,
                         "paint_text_prepare_calls": 10,
                         "paint_text_prepare_reason_text_changed": 10,
+                        "renderer_upload_us": 123,
+                        "renderer_record_passes_us": 45,
+                        "renderer_encoder_finish_us": 67,
                         "renderer_text_atlas_upload_bytes": 2_000_000,
                     } }
                 }]
@@ -17019,6 +17028,31 @@ mod tests {
         assert!(codes.contains(&"layout.solve_heavy"));
         assert!(codes.contains(&"paint.text_prepare_churn"));
         assert!(codes.contains(&"renderer.upload_churn"));
+
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_upload_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            123
+        );
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_record_passes_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            45
+        );
+        assert_eq!(
+            triage
+                .get("worst")
+                .and_then(|v| v.get("renderer_encoder_finish_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            67
+        );
 
         assert_eq!(
             triage
