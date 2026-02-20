@@ -1,6 +1,8 @@
 use super::super::super::*;
 
 pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     #[derive(Default, Clone)]
     struct TableModels {
         actions_open_1: Option<Model<bool>>,
@@ -42,41 +44,6 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ("INV006", "Pending", "$200.00", "Bank Transfer"),
         ("INV007", "Unpaid", "$300.00", "Credit Card"),
     ];
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
 
     let align_end = |cx: &mut ElementContext<'_, App>, child: AnyElement| {
         stack::hstack(
@@ -120,6 +87,8 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .iter()
                 .copied()
                 .map(|(invoice, status, amount, method)| {
+                    let invoice_slug = invoice.to_ascii_lowercase();
+                    let row_test_id = format!("{test_id}-row-{invoice_slug}");
                     shadcn::TableRow::new(
                         4,
                         vec![
@@ -141,6 +110,7 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                         ],
                     )
                     .into_element(cx)
+                    .test_id(row_test_id)
                 })
                 .collect::<Vec<_>>();
 
@@ -186,16 +156,44 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
 
     let demo = {
         let table = make_invoice_table(cx, &invoices, true, "ui-gallery-table-demo");
-        let table_shell = shell(cx, table);
-        let body = centered(cx, table_shell);
-        section(cx, "Demo", body)
+        DocSection::new("Demo", table)
+            .description("Matches the shadcn table demo structure (header + body + caption).")
+            .max_w(Px(760.0))
+            .code(
+                "rust",
+                r#"let table = shadcn::Table::new([
+    shadcn::TableHeader::new([
+        shadcn::TableRow::new(4, [
+            shadcn::TableHead::new("Invoice").into_element(cx),
+            shadcn::TableHead::new("Status").into_element(cx),
+            shadcn::TableHead::new("Method").into_element(cx),
+            shadcn::TableHead::new("Amount").into_element(cx),
+        ])
+        .border_bottom(true)
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::TableBody::new([
+        shadcn::TableRow::new(4, [
+            shadcn::TableCell::new(cx.text("INV001")).into_element(cx),
+            shadcn::TableCell::new(cx.text("Paid")).into_element(cx),
+            shadcn::TableCell::new(cx.text("Credit Card")).into_element(cx),
+            shadcn::TableCell::new(cx.text("$250.00")).into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx),
+])
+.into_element(cx);"#,
+            )
     };
 
     let footer = {
         let table = make_invoice_table(cx, &invoices[..3], true, "ui-gallery-table-footer");
-        let table_shell = shell(cx, table);
-        let body = centered(cx, table_shell);
-        section(cx, "Footer", body)
+        DocSection::new("Footer", table)
+            .description("Adds a <TableFooter /> section.")
+            .max_w(Px(760.0))
     };
 
     let actions = {
@@ -204,6 +202,7 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                           price: &'static str,
                           open_model: Model<bool>,
                           key: &'static str| {
+            let row_test_id = format!("ui-gallery-table-actions-row-{key}");
             let trigger_id = format!("ui-gallery-table-actions-trigger-{key}");
             let dropdown = shadcn::DropdownMenu::new(open_model.clone()).into_element(
                 cx,
@@ -241,6 +240,7 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ],
             )
             .into_element(cx)
+            .test_id(row_test_id)
         };
 
         let table = shadcn::Table::new(vec![
@@ -274,39 +274,32 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         .into_element(cx)
         .test_id("ui-gallery-table-actions");
 
-        let table_shell = shell(cx, table);
-        let body = centered(cx, table_shell);
-        section(cx, "Actions", body)
+        DocSection::new("Actions", table)
+            .description("Uses <DropdownMenu /> as an actions column.")
+            .max_w(Px(760.0))
     };
 
     let rtl = {
-        let rtl_table = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let rows: [(&str, &str, &str, &str); 3] = [
-                    ("INV001", "Paid", "$250.00", "Credit Card"),
-                    ("INV002", "Pending", "$150.00", "PayPal"),
-                    ("INV003", "Unpaid", "$350.00", "Bank Transfer"),
-                ];
-                make_invoice_table(cx, &rows, true, "ui-gallery-table-rtl")
-            },
-        );
+        let rtl_table = doc_layout::rtl(cx, |cx| {
+            let rows: [(&str, &str, &str, &str); 3] = [
+                ("INV001", "Paid", "$250.00", "Credit Card"),
+                ("INV002", "Pending", "$150.00", "PayPal"),
+                ("INV003", "Unpaid", "$350.00", "Bank Transfer"),
+            ];
+            make_invoice_table(cx, &rows, true, "ui-gallery-table-rtl")
+        });
 
-        let table_shell = shell(cx, rtl_table);
-        let body = centered(cx, table_shell);
-        section(cx, "RTL", body)
+        DocSection::new("RTL", rtl_table)
+            .description("Validates right-to-left direction support.")
+            .max_w(Px(760.0))
     };
 
-    vec![
-        cx.text("A responsive table component."),
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![demo, footer, actions, rtl],
-        ),
-    ]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("A responsive table component."),
+        vec![demo, footer, actions, rtl],
+    )
+    .test_id("ui-gallery-table-root");
+
+    vec![page]
 }

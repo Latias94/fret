@@ -4,7 +4,8 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, Elements, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
+    AnyElement, CrossAlign, ElementKind, Elements, FlexProps, GridProps, MainAlign, Overflow,
+    PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -56,6 +57,25 @@ fn muted_fg(theme: &Theme) -> fret_core::Color {
 
 fn foreground(theme: &Theme) -> fret_core::Color {
     theme.color_token("foreground")
+}
+
+fn apply_table_cell_text_defaults(mut child: AnyElement) -> AnyElement {
+    match &mut child.kind {
+        ElementKind::Text(props) => {
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::StyledText(props) => {
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::SelectableText(props) => {
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        _ => {}
+    }
+    child
 }
 
 /// shadcn/ui `Table` root.
@@ -543,7 +563,7 @@ impl TableCell {
             ChromeRefinement::default(),
             LayoutRefinement::default().flex_1().min_w_0(),
         );
-        let child = self.child;
+        let child = apply_table_cell_text_defaults(self.child);
         cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {
