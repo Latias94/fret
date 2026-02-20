@@ -57,7 +57,12 @@ fn selectable_text_paints_span_background_quads() {
         window,
         bounds,
         "selectable-text-paints-span-background-quads",
-        |cx| vec![cx.selectable_text(rich.clone())],
+        |cx| {
+            let mut props = crate::element::SelectableTextProps::new(rich.clone());
+            // Force a fixed-height allocation so we exercise vertical placement mapping.
+            props.layout.size.height = crate::element::Length::Px(Px(60.0));
+            vec![cx.selectable_text_props(props)]
+        },
     );
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -68,6 +73,12 @@ fn selectable_text_paints_span_background_quads() {
     let quad_index = scene.ops().iter().position(|op| match op {
         SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg),
         _ => false,
+    });
+    let quad_y = scene.ops().iter().find_map(|op| match op {
+        SceneOp::Quad {
+            background, rect, ..
+        } if *background == fret_core::Paint::Solid(bg) => Some(rect.origin.y),
+        _ => None,
     });
     let text_index = scene
         .ops()
@@ -85,6 +96,110 @@ fn selectable_text_paints_span_background_quads() {
     assert!(
         quad_index.unwrap() < text_index.unwrap(),
         "expected bg quads to be pushed before the text draw op"
+    );
+
+    // `FakeTextService` returns a 10px-tall metrics box; the element is 60px tall, so the text is
+    // vertically centered with a 25px offset.
+    let expected_vertical_offset = Px((60.0 - 10.0) * 0.5);
+    assert_eq!(
+        quad_y,
+        Some(expected_vertical_offset),
+        "expected bg quads to include the same vertical placement offset as the text draw op"
+    );
+}
+
+#[test]
+fn styled_text_paints_span_background_quads() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let text = "a code b";
+    let bg = Color {
+        r: 0.2,
+        g: 0.4,
+        b: 0.6,
+        a: 1.0,
+    };
+
+    let spans = [
+        fret_core::TextSpan {
+            len: "a ".len(),
+            ..Default::default()
+        },
+        fret_core::TextSpan {
+            len: "code".len(),
+            paint: fret_core::TextPaintStyle {
+                bg: Some(bg),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        fret_core::TextSpan {
+            len: " b".len(),
+            ..Default::default()
+        },
+    ];
+    let rich = fret_core::AttributedText::new(Arc::<str>::from(text), spans);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "styled-text-paints-span-background-quads",
+        |cx| {
+            let mut props = crate::element::StyledTextProps::new(rich.clone());
+            // Force a fixed-height allocation so we exercise vertical placement mapping.
+            props.layout.size.height = crate::element::Length::Px(Px(60.0));
+            vec![cx.styled_text_props(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let quad_index = scene.ops().iter().position(|op| match op {
+        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg),
+        _ => false,
+    });
+    let quad_y = scene.ops().iter().find_map(|op| match op {
+        SceneOp::Quad {
+            background, rect, ..
+        } if *background == fret_core::Paint::Solid(bg) => Some(rect.origin.y),
+        _ => None,
+    });
+    let text_index = scene
+        .ops()
+        .iter()
+        .position(|op| matches!(op, SceneOp::Text { .. }));
+
+    assert!(
+        quad_index.is_some(),
+        "expected a background quad for bg spans"
+    );
+    assert!(
+        text_index.is_some(),
+        "expected text op to be present in scene"
+    );
+    assert!(
+        quad_index.unwrap() < text_index.unwrap(),
+        "expected bg quads to be pushed before the text draw op"
+    );
+
+    let expected_vertical_offset = Px((60.0 - 10.0) * 0.5);
+    assert_eq!(
+        quad_y,
+        Some(expected_vertical_offset),
+        "expected bg quads to include the same vertical placement offset as the text draw op"
     );
 }
 

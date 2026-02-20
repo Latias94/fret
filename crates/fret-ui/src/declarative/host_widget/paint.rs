@@ -1305,13 +1305,6 @@ impl ElementHostWidget {
                     }
                 }
 
-                let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
-                    cx.services.text(),
-                    blob,
-                    cx.bounds.size.height,
-                    metrics,
-                    style.vertical_placement,
-                );
                 let origin = fret_core::Point::new(
                     cx.bounds.origin.x,
                     cx.bounds.origin.y + vertical_offset + baseline,
