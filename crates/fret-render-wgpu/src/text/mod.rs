@@ -22,6 +22,7 @@ use fret_render_text::cache_keys::spans_paint_fingerprint;
 pub use fret_render_text::decorations::{TextDecoration, TextDecorationKind};
 pub(crate) use fret_render_text::effective_text_scale_factor;
 use fret_render_text::fallback_policy::TextFallbackPolicyV1;
+use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
 use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::font_trace::{FontTraceFamilyResolved, FontTraceState};
 use fret_render_text::geometry::{
@@ -94,27 +95,6 @@ pub(crate) struct TextFontFaceUsage {
 }
 
 pub use fret_render_text::line_layout::TextLineLayout as TextLine;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct FontFaceKey {
-    font_data_id: u64,
-    face_index: u32,
-    variation_key: u64,
-    synthesis_embolden: bool,
-    /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
-    synthesis_skew_degrees: i8,
-}
-
-fn variation_key_from_normalized_coords(coords: &[i16]) -> u64 {
-    if coords.is_empty() {
-        return 0;
-    }
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.font_instance.v0".hash(&mut hasher);
-    coords.hash(&mut hasher);
-    let key = hasher.finish();
-    if key == 0 { 1 } else { key }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct GlyphKey {

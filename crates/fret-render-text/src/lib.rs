@@ -2,6 +2,7 @@ pub mod cache_keys;
 pub mod cache_tuning;
 pub mod decorations;
 pub mod fallback_policy;
+pub mod font_instance_key;
 pub mod font_names;
 pub mod font_stack;
 pub mod font_trace;
