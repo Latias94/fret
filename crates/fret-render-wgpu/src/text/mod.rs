@@ -6507,6 +6507,124 @@ mod tests {
     }
 
     #[test]
+    fn selection_rects_clipped_handles_mixed_bidi_word_wrap_and_clips_to_rect() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        // Ensure mixed directionality plus enough content to reliably wrap.
+        let content = "hello אבג def ghi jkl אבג mno pqr stu אבג vwx yz";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let max_width = Px(80.0);
+        let constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(
+            blob_ref.shape.lines.len() >= 2,
+            "expected mixed bidi content to wrap"
+        );
+        let line0 = &blob_ref.shape.lines[0];
+        let line1 = &blob_ref.shape.lines[1];
+
+        // Clip both X and Y so we exercise trimming of partially visible runs/lines.
+        let clip_y0 = line0.y_top.0 + (line0.height.0 * 0.5);
+        let clip_y1 = line1.y_top.0 + (line1.height.0 * 0.5);
+        let clip_width = Px((max_width.0 * 0.5).max(1.0));
+        let clip_height = Px((clip_y1 - clip_y0).max(1.0));
+        let clip = Rect::new(
+            Point::new(Px(0.0), Px(clip_y0)),
+            Size::new(clip_width, clip_height),
+        );
+
+        let clip_x0 = clip.origin.x.0;
+        let clip_y0 = clip.origin.y.0;
+        let clip_x1 = clip_x0 + clip.size.width.0;
+        let clip_y1 = clip_y0 + clip.size.height.0;
+
+        // Sanity: unclipped selection should extend beyond our clip width on at least one line.
+        let mut full_rects: Vec<Rect> = Vec::new();
+        text.selection_rects(blob, (0, content.len()), &mut full_rects)
+            .expect("selection rects");
+        assert!(
+            full_rects
+                .iter()
+                .any(|r| r.origin.x.0 + r.size.width.0 > clip_x1 + 0.5),
+            "expected unclipped selection to extend beyond clip_x1"
+        );
+
+        let mut rects: Vec<Rect> = Vec::new();
+        text.selection_rects_clipped(blob, (0, content.len()), clip, &mut rects)
+            .expect("selection rects clipped");
+
+        assert!(!rects.is_empty(), "expected clipped selection rects");
+        assert!(
+            rects.iter().any(|r| (r.origin.y.0 - clip_y0).abs() < 0.02),
+            "expected at least one rect to be trimmed at clip_y0"
+        );
+        assert!(
+            rects
+                .iter()
+                .any(|r| ((r.origin.y.0 + r.size.height.0) - clip_y1).abs() < 0.02),
+            "expected at least one rect to be trimmed at clip_y1"
+        );
+
+        let eps = 0.02;
+        for r in &rects {
+            assert!(
+                r.size.width.0 > 0.1 && r.size.height.0 > 0.1,
+                "expected non-degenerate clipped rect, got {r:?}"
+            );
+            assert!(
+                r.origin.x.0 + eps >= clip_x0
+                    && r.origin.y.0 + eps >= clip_y0
+                    && (r.origin.x.0 + r.size.width.0) <= clip_x1 + eps
+                    && (r.origin.y.0 + r.size.height.0) <= clip_y1 + eps,
+                "expected rect to be inside clip; rect={r:?} clip={clip:?}"
+            );
+        }
+
+        // Rects should already be coalesced; ensure no overlap within the same (clipped) line slice.
+        rects.sort_by(|a, b| {
+            a.origin
+                .y
+                .0
+                .total_cmp(&b.origin.y.0)
+                .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
+                .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
+        });
+        for w in rects.windows(2) {
+            let a = &w[0];
+            let b = &w[1];
+            if a.origin.y == b.origin.y && a.size.height == b.size.height {
+                assert!(
+                    b.origin.x.0 + 0.001 >= a.origin.x.0 + a.size.width.0,
+                    "expected rects on the same line slice to not overlap; a={a:?} b={b:?}"
+                );
+            }
+        }
+
+        text.release(blob);
+    }
+
+    #[test]
     fn caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
