@@ -80,6 +80,15 @@ pub fn set_ime_cursor_area(window: &dyn Window, rect: Rect) {
     set_ime_cursor_area_via_imm(window, rect);
 }
 
+pub(crate) fn winit_cursor_area_from_rect(rect: Rect) -> (f32, f32, f32, f32) {
+    // See `set_ime_cursor_area_via_winit` for rationale.
+    let x = rect.origin.x.0;
+    let y = rect.origin.y.0 + rect.size.height.0;
+    let w = rect.size.width.0.max(1.0);
+    let h = 1.0;
+    (x, y, w, h)
+}
+
 fn hwnd_for_window(window: &dyn Window) -> Option<windows_sys::Win32::Foundation::HWND> {
     let handle = window.window_handle().ok()?;
     let RawWindowHandle::Win32(handle) = handle.as_raw() else {
@@ -100,10 +109,14 @@ fn set_ime_cursor_area_via_winit(window: &dyn Window, rect: Rect) {
     }
 
     // Forward logical coordinates and let winit apply per-backend conversion rules.
+    //
+    // On Windows, winit's cursor-area path is used by TSF/IMM to place the composition/candidate UI.
+    // Passing the caret rect's top-left tends to anchor the IME UI above the insertion point.
+    // Prefer anchoring at the caret rect's bottom-left (insertion baseline vicinity).
+    let (anchor_x, anchor_y, anchor_w, anchor_h) = winit_cursor_area_from_rect(rect);
     let request_data = winit::window::ImeRequestData::default().with_cursor_area(
-        winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-        winit::dpi::LogicalSize::new(rect.size.width.0.max(1.0), rect.size.height.0.max(1.0))
-            .into(),
+        winit::dpi::LogicalPosition::new(anchor_x, anchor_y).into(),
+        winit::dpi::LogicalSize::new(anchor_w, anchor_h).into(),
     );
     let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
 }
@@ -191,5 +204,25 @@ fn set_ime_cursor_area_via_imm(window: &dyn Window, rect: Rect) {
             );
         }
         ImmReleaseContext(hwnd, himc);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{Point, Px, Size};
+
+    #[test]
+    fn winit_cursor_area_is_anchored_at_bottom_left_of_caret_rect() {
+        let rect = Rect {
+            origin: Point::new(Px(10.0), Px(20.0)),
+            size: Size::new(Px(3.0), Px(15.0)),
+        };
+
+        let (x, y, w, h) = winit_cursor_area_from_rect(rect);
+        assert_eq!(x, 10.0);
+        assert_eq!(y, 35.0);
+        assert_eq!(w, 3.0);
+        assert_eq!(h, 1.0);
     }
 }
