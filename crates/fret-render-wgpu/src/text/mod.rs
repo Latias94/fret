@@ -4483,10 +4483,12 @@ fn paint_span_for_text_range(
         .map(|s| s.slot)
 }
 
-fn utf8_char_boundaries(text: &str) -> Vec<usize> {
+fn utf8_grapheme_boundaries(text: &str) -> Vec<usize> {
+    use unicode_segmentation::UnicodeSegmentation as _;
+
     let mut out: Vec<usize> = Vec::with_capacity(text.chars().count().saturating_add(2));
     out.push(0);
-    for (i, _) in text.char_indices() {
+    for (i, _) in text.grapheme_indices(true) {
         out.push(i);
     }
     out.push(text.len());
@@ -4504,7 +4506,7 @@ fn caret_stops_for_slice(
     kept_end: usize,
 ) -> Vec<(usize, Px)> {
     let mut out: Vec<(usize, Px)> = Vec::new();
-    let boundaries = utf8_char_boundaries(slice);
+    let boundaries = utf8_grapheme_boundaries(slice);
 
     if boundaries.is_empty() {
         return vec![(base_offset, Px(0.0))];
@@ -5171,6 +5173,40 @@ mod tests {
         assert_eq!(x_at(2), 20.0);
         assert_eq!(x_at(3), 10.0);
         assert_eq!(x_at(4), 0.0);
+    }
+
+    #[test]
+    fn caret_stops_for_slice_use_grapheme_boundaries_for_combining_marks_and_emoji_sequences() {
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let cases = [
+            ("e\u{0301}x", "combining mark (e + acute)"),
+            ("1\u{FE0F}\u{20E3}", "keycap sequence"),
+            ("\u{1F1FA}\u{1F1F8}", "flag sequence"),
+            ("\u{1F469}\u{200D}\u{1F4BB}", "zwj emoji sequence"),
+        ];
+
+        for (text, label) in cases {
+            let clusters = vec![crate::text::parley_shaper::ShapedCluster {
+                text_range: 0..text.len(),
+                x0: 0.0,
+                x1: 40.0,
+                is_rtl: false,
+            }];
+
+            let stops = super::caret_stops_for_slice(text, 0, &clusters, 40.0, 1.0, text.len());
+            let indices: Vec<usize> = stops.iter().map(|(idx, _)| *idx).collect();
+
+            let mut expected: Vec<usize> = text.grapheme_indices(true).map(|(i, _)| i).collect();
+            expected.push(text.len());
+            expected.sort_unstable();
+            expected.dedup();
+
+            assert_eq!(
+                indices, expected,
+                "expected caret stops to land on grapheme boundaries ({label}): text={text:?} stops={indices:?} expected={expected:?}"
+            );
+        }
     }
 
     fn is_synthetic_rtl_char(ch: char) -> bool {
