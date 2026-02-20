@@ -160,8 +160,12 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `tools/diag-scripts/external-video-imports-avf-cpu-upload-correctness.json`
     - Perf script:
       - `tools/diag-scripts/external-video-imports-avf-cpu-upload-perf-steady.json`
+    - Perf stress script (run with `FRET_AVF_PACING=0`):
+      - `tools/diag-scripts/external-video-imports-avf-cpu-upload-perf-stress.json`
     - Perf baseline (macOS, Apple M4 Pro):
       - `docs/workstreams/perf-baselines/external-video-imports-avf-cpu-upload.macos-m4pro.v1.json`
+    - Perf stress baseline (macOS, Apple M4 Pro; renderer thresholds only):
+      - `docs/workstreams/perf-baselines/external-video-imports-avf-cpu-upload-stress.macos-m4pro.v1.json`
   - Local verification (macOS, 2026-02-20):
     - Start a devtools WS hub (token can be fixed for repeatable scripts):
       - `FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-devtools-ws`
