@@ -593,15 +593,33 @@ pub struct TextLine {
     pub ascent: Px,
     pub descent: Px,
     pub caret_stops: Vec<(usize, Px)>,
-    clusters: Arc<[TextLineCluster]>,
+    clusters: Arc<[fret_render_text::geometry::TextLineCluster]>,
 }
 
-#[derive(Debug, Clone)]
-struct TextLineCluster {
-    text_range: std::ops::Range<usize>,
-    x0: Px,
-    x1: Px,
-    is_rtl: bool,
+impl fret_render_text::geometry::TextLineGeometry for TextLine {
+    fn start(&self) -> usize {
+        self.start
+    }
+
+    fn end(&self) -> usize {
+        self.end
+    }
+
+    fn y_top(&self) -> Px {
+        self.y_top
+    }
+
+    fn height(&self) -> Px {
+        self.height
+    }
+
+    fn caret_stops(&self) -> &[(usize, Px)] {
+        self.caret_stops.as_ref()
+    }
+
+    fn clusters(&self) -> &[fret_render_text::geometry::TextLineCluster] {
+        self.clusters.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2864,32 +2882,33 @@ impl TextSystem {
                             align_offset_px_for_line(line_min_x_px, line_visual_width_px);
                         let line_align_offset = Px(line_align_offset_px / scale);
 
-                        let clusters: Arc<[TextLineCluster]> = if line.clusters.is_empty() {
-                            Arc::from([])
-                        } else {
-                            let mut out: Vec<TextLineCluster> =
-                                Vec::with_capacity(line.clusters.len());
-                            for c in &line.clusters {
-                                let start = (range.start + c.text_range.start).min(kept_end);
-                                let end = (range.start + c.text_range.end).min(kept_end);
-                                if start >= end {
-                                    continue;
+                        let clusters: Arc<[fret_render_text::geometry::TextLineCluster]> =
+                            if line.clusters.is_empty() {
+                                Arc::from([])
+                            } else {
+                                let mut out: Vec<fret_render_text::geometry::TextLineCluster> =
+                                    Vec::with_capacity(line.clusters.len());
+                                for c in &line.clusters {
+                                    let start = (range.start + c.text_range.start).min(kept_end);
+                                    let end = (range.start + c.text_range.end).min(kept_end);
+                                    if start >= end {
+                                        continue;
+                                    }
+
+                                    let x0 = ((c.x0 + line_align_offset_px) / scale).max(0.0);
+                                    let x1 = ((c.x1 + line_align_offset_px) / scale).max(0.0);
+                                    let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
+                                    let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
+
+                                    out.push(fret_render_text::geometry::TextLineCluster {
+                                        text_range: start..end,
+                                        x0,
+                                        x1,
+                                        is_rtl: c.is_rtl,
+                                    });
                                 }
-
-                                let x0 = ((c.x0 + line_align_offset_px) / scale).max(0.0);
-                                let x1 = ((c.x1 + line_align_offset_px) / scale).max(0.0);
-                                let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
-                                let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
-
-                                out.push(TextLineCluster {
-                                    text_range: start..end,
-                                    x0,
-                                    x1,
-                                    is_rtl: c.is_rtl,
-                                });
-                            }
-                            Arc::from(out)
-                        };
+                                Arc::from(out)
+                            };
 
                         let mut caret_stops = caret_stops_for_slice(
                             slice,
@@ -4140,20 +4159,7 @@ impl TextSystem {
             );
         }
         let stops = blob.shape.caret_stops.as_ref();
-        if stops.is_empty() {
-            return Some(Px(0.0));
-        }
-        if let Some((_, x)) = stops.iter().find(|(i, _)| *i == index) {
-            return Some(*x);
-        }
-        let mut last = Px(0.0);
-        for (i, x) in stops {
-            if *i > index {
-                break;
-            }
-            last = *x;
-        }
-        Some(last)
+        Some(fret_render_text::geometry::caret_x_from_stops(stops, index))
     }
 
     pub fn hit_test_x(&self, blob: TextBlobId, x: Px) -> Option<usize> {
@@ -4163,19 +4169,7 @@ impl TextSystem {
             return Some(self.hit_test_point(blob_id, Point::new(x, Px(0.0)))?.index);
         }
         let stops = blob.shape.caret_stops.as_ref();
-        if stops.is_empty() {
-            return Some(0);
-        }
-        let mut best = stops[0].0;
-        let mut best_dist = (stops[0].1.0 - x.0).abs();
-        for (idx, px) in stops {
-            let dist = (px.0 - x.0).abs();
-            if dist < best_dist {
-                best = *idx;
-                best_dist = dist;
-            }
-        }
-        Some(best)
+        Some(fret_render_text::geometry::hit_test_x_from_stops(stops, x))
     }
 
     pub fn caret_stops(&self, blob: TextBlobId) -> Option<&[(usize, Px)]> {
@@ -4189,12 +4183,16 @@ impl TextSystem {
         affinity: CaretAffinity,
     ) -> Option<Rect> {
         let blob = self.blobs.get(blob)?;
-        caret_rect_from_lines(blob.shape.lines.as_ref(), index, affinity)
+        fret_render_text::geometry::caret_rect_from_lines(
+            blob.shape.lines.as_ref(),
+            index,
+            affinity,
+        )
     }
 
     pub fn hit_test_point(&self, blob: TextBlobId, point: Point) -> Option<HitTestResult> {
         let blob = self.blobs.get(blob)?;
-        hit_test_point_from_lines(blob.shape.lines.as_ref(), point)
+        fret_render_text::geometry::hit_test_point_from_lines(blob.shape.lines.as_ref(), point)
     }
 
     pub fn selection_rects(
@@ -4204,7 +4202,11 @@ impl TextSystem {
         out: &mut Vec<Rect>,
     ) -> Option<()> {
         let blob = self.blobs.get(blob)?;
-        selection_rects_from_lines(blob.shape.lines.as_ref(), range, out);
+        fret_render_text::geometry::selection_rects_from_lines(
+            blob.shape.lines.as_ref(),
+            range,
+            out,
+        );
         Some(())
     }
 
@@ -4216,7 +4218,12 @@ impl TextSystem {
         out: &mut Vec<Rect>,
     ) -> Option<()> {
         let blob = self.blobs.get(blob)?;
-        selection_rects_from_lines_clipped(blob.shape.lines.as_ref(), range, clip, out);
+        fret_render_text::geometry::selection_rects_from_lines_clipped(
+            blob.shape.lines.as_ref(),
+            range,
+            clip,
+            out,
+        );
         Some(())
     }
 
@@ -4501,324 +4508,6 @@ fn caret_stops_for_slice(
     )
 }
 
-fn caret_x_from_stops(stops: &[(usize, Px)], index: usize) -> Px {
-    if stops.is_empty() {
-        return Px(0.0);
-    }
-    if let Ok(pos) = stops.binary_search_by_key(&index, |(idx, _)| *idx) {
-        return stops[pos].1;
-    }
-    match stops.partition_point(|(idx, _)| *idx <= index) {
-        0 => stops[0].1,
-        n => stops[n.saturating_sub(1)].1,
-    }
-}
-
-fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
-    if stops.is_empty() {
-        return 0;
-    }
-    let mut best = stops[0].0;
-    let mut best_dist = (stops[0].1.0 - x.0).abs();
-    for (idx, px) in stops {
-        let dist = (px.0 - x.0).abs();
-        if dist < best_dist {
-            best = *idx;
-            best_dist = dist;
-        }
-    }
-    best
-}
-
-fn caret_rect_from_lines(
-    lines: &[TextLine],
-    index: usize,
-    affinity: CaretAffinity,
-) -> Option<Rect> {
-    if lines.is_empty() {
-        return None;
-    }
-
-    let mut candidates: Vec<usize> = Vec::new();
-    for (i, line) in lines.iter().enumerate() {
-        if index >= line.start && index <= line.end {
-            candidates.push(i);
-        }
-    }
-
-    let line_idx = match candidates.as_slice() {
-        [] => {
-            if index <= lines[0].start {
-                0
-            } else {
-                lines.len().saturating_sub(1)
-            }
-        }
-        [only] => *only,
-        many => match affinity {
-            CaretAffinity::Upstream => many[0],
-            CaretAffinity::Downstream => many[many.len().saturating_sub(1)],
-        },
-    };
-
-    let line = &lines[line_idx];
-    let x = caret_x_from_stops(&line.caret_stops, index);
-    Some(Rect::new(
-        Point::new(x, line.y_top),
-        Size::new(Px(1.0), line.height),
-    ))
-}
-
-fn hit_test_point_from_lines(lines: &[TextLine], point: Point) -> Option<HitTestResult> {
-    if lines.is_empty() {
-        return None;
-    }
-
-    let mut line_idx = 0usize;
-    for (i, line) in lines.iter().enumerate() {
-        let y0 = line.y_top.0;
-        let y1 = (line.y_top.0 + line.height.0).max(y0);
-        if point.y.0 >= y0 && point.y.0 < y1 {
-            line_idx = i;
-            break;
-        }
-        if point.y.0 >= y1 {
-            line_idx = i;
-        }
-    }
-
-    let line = &lines[line_idx];
-    let index = hit_test_x_from_stops(&line.caret_stops, point.x);
-
-    let mut affinity = CaretAffinity::Downstream;
-    if line_idx + 1 < lines.len() && index == line.end && lines[line_idx + 1].start == index {
-        affinity = CaretAffinity::Upstream;
-    }
-
-    Some(HitTestResult { index, affinity })
-}
-
-fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &mut Vec<Rect>) {
-    out.clear();
-    if lines.is_empty() {
-        return;
-    }
-
-    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
-    if a == b {
-        return;
-    }
-
-    for line in lines {
-        let start = a.max(line.start);
-        let end = b.min(line.end);
-        if start >= end {
-            continue;
-        }
-
-        if !line.clusters.is_empty() {
-            for c in line.clusters.iter() {
-                let seg_start = start.max(c.text_range.start);
-                let seg_end = end.min(c.text_range.end);
-                if seg_start >= seg_end {
-                    continue;
-                }
-
-                let x0 = cluster_x_from_range(c, seg_start);
-                let x1 = cluster_x_from_range(c, seg_end);
-                let left = x0.0.min(x1.0);
-                let right = x0.0.max(x1.0);
-                if right <= left {
-                    continue;
-                }
-
-                out.push(Rect::new(
-                    Point::new(Px(left), line.y_top),
-                    Size::new(Px((right - left).max(0.0)), line.height),
-                ));
-            }
-        } else {
-            // Fallback for synthetic lines that do not carry cluster geometry.
-            let x0 = caret_x_from_stops(&line.caret_stops, start);
-            let x1 = caret_x_from_stops(&line.caret_stops, end);
-            let left = Px(x0.0.min(x1.0));
-            let right = Px(x0.0.max(x1.0));
-
-            out.push(Rect::new(
-                Point::new(left, line.y_top),
-                Size::new(Px((right.0 - left.0).max(0.0)), line.height),
-            ));
-        }
-    }
-
-    coalesce_selection_rects_in_place(out);
-}
-
-fn cluster_x_from_range(cluster: &TextLineCluster, boundary: usize) -> Px {
-    let start = cluster.text_range.start;
-    let end = cluster.text_range.end;
-    if start == end {
-        return cluster.x0;
-    }
-
-    if boundary <= start {
-        return if cluster.is_rtl {
-            cluster.x1
-        } else {
-            cluster.x0
-        };
-    }
-    if boundary >= end {
-        return if cluster.is_rtl {
-            cluster.x0
-        } else {
-            cluster.x1
-        };
-    }
-
-    let denom = (end - start) as f32;
-    if denom <= 0.0 {
-        return cluster.x0;
-    }
-
-    let mut t = ((boundary - start) as f32 / denom).clamp(0.0, 1.0);
-    if cluster.is_rtl {
-        t = 1.0 - t;
-    }
-    let w = (cluster.x1.0 - cluster.x0.0).max(0.0);
-    Px((cluster.x0.0 + w * t).max(0.0))
-}
-
-fn selection_rects_from_lines_clipped(
-    lines: &[TextLine],
-    range: (usize, usize),
-    clip: Rect,
-    out: &mut Vec<Rect>,
-) {
-    out.clear();
-    if lines.is_empty() {
-        return;
-    }
-
-    let clip_x0 = clip.origin.x.0;
-    let clip_y0 = clip.origin.y.0;
-    let clip_x1 = clip_x0 + clip.size.width.0;
-    let clip_y1 = clip_y0 + clip.size.height.0;
-    if clip_x1 <= clip_x0 || clip_y1 <= clip_y0 {
-        return;
-    }
-
-    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
-    if a == b {
-        return;
-    }
-
-    let start_idx = lines.partition_point(|line| {
-        let y0 = line.y_top.0;
-        let y1 = (line.y_top.0 + line.height.0).max(y0);
-        y1 <= clip_y0
-    });
-    let end_idx = lines.partition_point(|line| line.y_top.0 < clip_y1);
-    let start_idx = start_idx.min(end_idx);
-    if start_idx >= end_idx {
-        return;
-    }
-
-    for line in &lines[start_idx..end_idx] {
-        let start = a.max(line.start);
-        let end = b.min(line.end);
-        if start >= end {
-            continue;
-        }
-
-        let y0 = line.y_top.0;
-        let y1 = (line.y_top.0 + line.height.0).max(y0);
-
-        let iy0 = y0.max(clip_y0);
-        let iy1 = y1.min(clip_y1);
-        if iy1 <= iy0 {
-            continue;
-        }
-
-        if !line.clusters.is_empty() {
-            for c in line.clusters.iter() {
-                let seg_start = start.max(c.text_range.start);
-                let seg_end = end.min(c.text_range.end);
-                if seg_start >= seg_end {
-                    continue;
-                }
-
-                let x0 = cluster_x_from_range(c, seg_start).0;
-                let x1 = cluster_x_from_range(c, seg_end).0;
-                let left = x0.min(x1);
-                let right = x0.max(x1);
-
-                let ix0 = left.max(clip_x0);
-                let ix1 = right.min(clip_x1);
-                if ix1 <= ix0 {
-                    continue;
-                }
-
-                out.push(Rect::new(
-                    Point::new(Px(ix0), Px(iy0)),
-                    Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
-                ));
-            }
-        } else {
-            let x0 = caret_x_from_stops(&line.caret_stops, start).0;
-            let x1 = caret_x_from_stops(&line.caret_stops, end).0;
-            let left = x0.min(x1);
-            let right = x0.max(x1);
-
-            let ix0 = left.max(clip_x0);
-            let ix1 = right.min(clip_x1);
-            if ix1 <= ix0 {
-                continue;
-            }
-
-            out.push(Rect::new(
-                Point::new(Px(ix0), Px(iy0)),
-                Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
-            ));
-        }
-    }
-
-    coalesce_selection_rects_in_place(out);
-}
-
-fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
-    if rects.len() <= 1 {
-        return;
-    }
-
-    rects.sort_by(|a, b| {
-        a.origin
-            .y
-            .0
-            .total_cmp(&b.origin.y.0)
-            .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
-            .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
-    });
-
-    let mut out: Vec<Rect> = Vec::with_capacity(rects.len());
-    for r in rects.drain(..) {
-        match out.last_mut() {
-            Some(prev)
-                if prev.origin.y == r.origin.y
-                    && prev.size.height == r.size.height
-                    && r.origin.x.0 <= prev.origin.x.0 + prev.size.width.0 =>
-            {
-                let x0 = prev.origin.x.0.min(r.origin.x.0);
-                let x1 = (prev.origin.x.0 + prev.size.width.0).max(r.origin.x.0 + r.size.width.0);
-                prev.origin.x = Px(x0);
-                prev.size.width = Px((x1 - x0).max(0.0));
-            }
-            _ => out.push(r),
-        }
-    }
-    *rects = out;
-}
-
 #[derive(Debug, Clone, Copy)]
 struct TextDecorationMetricsPx {
     underline_offset_px: f32,
@@ -4928,8 +4617,8 @@ fn decorations_for_lines(
                 continue;
             }
 
-            let x0 = caret_x_from_stops(&line.caret_stops, start);
-            let x1 = caret_x_from_stops(&line.caret_stops, end);
+            let x0 = fret_render_text::geometry::caret_x_from_stops(&line.caret_stops, start);
+            let x1 = fret_render_text::geometry::caret_x_from_stops(&line.caret_stops, end);
             let left = Px(x0.0.min(x1.0));
             let right = Px(x0.0.max(x1.0));
             let width = Px((right.0 - left.0).max(thickness.0));
@@ -5130,17 +4819,18 @@ mod tests {
         out
     }
 
-    fn empty_line_clusters() -> Arc<[super::TextLineCluster]> {
-        Arc::from(Vec::<super::TextLineCluster>::new())
+    fn empty_line_clusters() -> Arc<[fret_render_text::geometry::TextLineCluster]> {
+        Arc::from(Vec::<fret_render_text::geometry::TextLineCluster>::new())
     }
 
     fn line_clusters_from_shaped(
         base_offset: usize,
         clusters: &[crate::text::parley_shaper::ShapedCluster],
-    ) -> Arc<[super::TextLineCluster]> {
-        let mut out: Vec<super::TextLineCluster> = Vec::with_capacity(clusters.len());
+    ) -> Arc<[fret_render_text::geometry::TextLineCluster]> {
+        let mut out: Vec<fret_render_text::geometry::TextLineCluster> =
+            Vec::with_capacity(clusters.len());
         for c in clusters {
-            out.push(super::TextLineCluster {
+            out.push(fret_render_text::geometry::TextLineCluster {
                 text_range: (base_offset + c.text_range.start)..(base_offset + c.text_range.end),
                 x0: Px(c.x0.max(0.0)),
                 x1: Px(c.x1.max(0.0)),
@@ -5173,7 +4863,7 @@ mod tests {
         };
 
         let mut rects = Vec::new();
-        super::selection_rects_from_lines(&[line], (0, 4), &mut rects);
+        fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 4), &mut rects);
         assert_eq!(rects.len(), 1);
         assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
         assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
@@ -5201,14 +4891,14 @@ mod tests {
             clusters: line_clusters_from_shaped(0, &clusters),
         };
 
-        let left = super::hit_test_point_from_lines(
+        let left = fret_render_text::geometry::hit_test_point_from_lines(
             std::slice::from_ref(&line),
             fret_core::Point::new(Px(0.0), Px(5.0)),
         )
         .expect("hit test");
         assert_eq!(left.index, 4);
 
-        let right = super::hit_test_point_from_lines(
+        let right = fret_render_text::geometry::hit_test_point_from_lines(
             std::slice::from_ref(&line),
             fret_core::Point::new(Px(40.0), Px(5.0)),
         )
@@ -5246,7 +4936,11 @@ mod tests {
         let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
 
         let mut rects = Vec::new();
-        super::selection_rects_from_lines(&[line], (rtl_start, rtl_end), &mut rects);
+        fret_render_text::geometry::selection_rects_from_lines(
+            &[line],
+            (rtl_start, rtl_end),
+            &mut rects,
+        );
         assert_eq!(rects.len(), 1);
         assert!(
             rects[0].size.width.0 > 0.1,
@@ -5295,7 +4989,7 @@ mod tests {
         };
 
         let mut rects = Vec::new();
-        super::selection_rects_from_lines(&[line], (0, 11), &mut rects);
+        fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 11), &mut rects);
 
         assert_eq!(
             rects.len(),
@@ -5336,7 +5030,12 @@ mod tests {
             Size::new(Px(100.0), Px(100.0)),
         );
         let mut rects = Vec::new();
-        super::selection_rects_from_lines_clipped(&lines, (0, 4000), clip, &mut rects);
+        fret_render_text::geometry::selection_rects_from_lines_clipped(
+            &lines,
+            (0, 4000),
+            clip,
+            &mut rects,
+        );
 
         assert_eq!(rects.len(), 10);
         for r in &rects {
@@ -5361,7 +5060,12 @@ mod tests {
         };
         let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
         let mut rects = Vec::new();
-        super::selection_rects_from_lines_clipped(&[line], (0, 4), clip, &mut rects);
+        fret_render_text::geometry::selection_rects_from_lines_clipped(
+            &[line],
+            (0, 4),
+            clip,
+            &mut rects,
+        );
 
         assert_eq!(rects.len(), 1);
         assert!((rects[0].origin.y.0 - 5.0).abs() < 0.001);
@@ -7688,7 +7392,8 @@ mod tests {
 
         let x = Px((line_layout.width - 1.0).max(0.0));
         let hit =
-            super::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
+            fret_render_text::geometry::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0)))
+                .expect("hit test");
         assert_eq!(hit.index, kept_end);
     }
 
