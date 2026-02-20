@@ -6456,6 +6456,57 @@ mod tests {
     }
 
     #[test]
+    fn selection_rects_clipped_do_not_return_zero_height_rects() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello world hello world hello world";
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let (blob, _metrics) = text.prepare(content, &style, constraints);
+
+        let mut rects: Vec<Rect> = Vec::new();
+        text.selection_rects_clipped(
+            blob,
+            (0, content.len()),
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(20.0))),
+            &mut rects,
+        )
+        .expect("selection rects clipped");
+
+        assert!(
+            !rects.is_empty(),
+            "expected selection_rects_clipped to produce at least one rect"
+        );
+        for r in &rects {
+            assert!(
+                r.size.height.0 > 0.1,
+                "expected clipped selection rect height to be non-zero, got {r:?}"
+            );
+        }
+
+        text.release(blob);
+    }
+
+    #[test]
     fn trailing_space_at_soft_wrap_is_selectable() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
