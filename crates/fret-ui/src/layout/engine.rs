@@ -20,6 +20,7 @@ pub(crate) use flow::{build_viewport_flow_subtree, layout_children_from_engine_i
 struct NodeContext {
     node: NodeId,
     measured: bool,
+    min_content_width_as_max: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,6 +54,9 @@ pub struct TaffyLayoutEngine {
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
     measure_cache_scratch: FxHashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
+    batch_root_scratch: Option<TaffyNodeId>,
+    batch_root_children_scratch: Vec<TaffyNodeId>,
+    batch_root_style_size_bits: Option<(u32, u32)>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
@@ -63,6 +67,26 @@ pub struct TaffyLayoutEngine {
     measure_profiling_enabled: bool,
     last_solve_measure_time: Duration,
     last_solve_measure_hotspots: Vec<LayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub(crate) struct ChildLayoutRectSolvedStampDebug {
+    pub(crate) frame_id: FrameId,
+    pub(crate) solve_generation: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub(crate) struct ChildLayoutRectMissDebug {
+    pub(crate) solve_generation: u64,
+    pub(crate) engine_frame_id: Option<FrameId>,
+    pub(crate) parent_stamp: Option<ChildLayoutRectSolvedStampDebug>,
+    pub(crate) child_stamp: Option<ChildLayoutRectSolvedStampDebug>,
+    pub(crate) parent_seen: bool,
+    pub(crate) child_seen: bool,
+    pub(crate) child_engine_parent: Option<NodeId>,
+    pub(crate) child_layout_id_present: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -117,6 +141,9 @@ impl Default for TaffyLayoutEngine {
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
             measure_cache_scratch: FxHashMap::default(),
+            batch_root_scratch: None,
+            batch_root_children_scratch: Vec::new(),
+            batch_root_style_size_bits: None,
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -172,6 +199,28 @@ impl TaffyLayoutEngine {
             self.root_solve_stamp.remove(parent);
             node = parent;
         }
+    }
+
+    fn ensure_batch_root_scratch(&mut self) -> Option<TaffyNodeId> {
+        if let Some(id) = self.batch_root_scratch {
+            return Some(id);
+        }
+        let id = match self.tree.new_leaf_with_context(
+            Default::default(),
+            NodeContext {
+                node: NodeId::default(),
+                measured: false,
+                min_content_width_as_max: false,
+            },
+        ) {
+            Ok(id) => id,
+            Err(err) => {
+                Self::warn_taffy_error_once("new_leaf_with_context(batch_root)", err);
+                return None;
+            }
+        };
+        self.batch_root_scratch = Some(id);
+        Some(id)
     }
 
     pub fn begin_frame(&mut self, frame_id: FrameId) {
@@ -305,6 +354,30 @@ impl TaffyLayoutEngine {
             .map(|id| self.layout_rect(id))
     }
 
+    pub(crate) fn debug_child_layout_rect_miss(
+        &self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> ChildLayoutRectMissDebug {
+        fn stamp_debug(stamp: Option<SolvedStamp>) -> Option<ChildLayoutRectSolvedStampDebug> {
+            stamp.map(|s| ChildLayoutRectSolvedStampDebug {
+                frame_id: s.frame_id,
+                solve_generation: s.solve_generation,
+            })
+        }
+
+        ChildLayoutRectMissDebug {
+            solve_generation: self.solve_generation,
+            engine_frame_id: self.frame_id,
+            parent_stamp: stamp_debug(self.node_solved_stamp.get(parent).copied()),
+            child_stamp: stamp_debug(self.node_solved_stamp.get(child).copied()),
+            parent_seen: self.is_seen(parent),
+            child_seen: self.is_seen(child),
+            child_engine_parent: self.parent.get(child).copied(),
+            child_layout_id_present: self.layout_id_for_node(child).is_some(),
+        }
+    }
+
     pub fn root_is_solved_for(
         &self,
         root: NodeId,
@@ -370,12 +443,12 @@ impl TaffyLayoutEngine {
     /// many child roots. Solving them one-by-one can amplify fixed per-solve overhead into
     /// tail-latency spikes (e.g. virtual list "jump to bottom").
     ///
-    /// Safety: this batches roots only when all of the following hold:
-    /// - each root is a layout root in the engine (no recorded parent in `self.parent`)
-    /// - each root has a *definite* available size in both axes
-    /// - each root is not already solved for its `(available, scale_factor)` key
+    /// Safety: this batches a *subset* of roots only when all of the following hold for that root:
+    /// - the root is a layout root in the engine (no recorded parent in `self.parent`)
+    /// - the root has a *definite* available size in both axes
+    /// - the root is not already solved for its `(available, scale_factor)` key
     ///
-    /// When the preconditions do not hold, this falls back to per-root compute.
+    /// Non-batchable roots fall back to per-root compute.
     pub(crate) fn compute_independent_roots_with_measure_if_needed(
         &mut self,
         roots: &[(NodeId, LayoutSize<AvailableSpace>)],
@@ -388,9 +461,25 @@ impl TaffyLayoutEngine {
             1.0
         };
 
-        let mut pending: Vec<(NodeId, LayoutId, LayoutSize<AvailableSpace>)> =
+        fn compute_individual<F: FnMut(NodeId, LayoutConstraints) -> Size>(
+            engine: &mut TaffyLayoutEngine,
+            roots: &[(NodeId, LayoutSize<AvailableSpace>)],
+            scale_factor: f32,
+            measure: &mut F,
+        ) {
+            for &(root, available) in roots {
+                let _ = engine.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    scale_factor,
+                    &mut *measure,
+                );
+            }
+        }
+
+        let mut batchable: Vec<(NodeId, LayoutId, LayoutSize<AvailableSpace>)> =
             Vec::with_capacity(roots.len());
-        let mut can_batch = true;
+        let mut fallback: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
         for &(root, available) in roots {
             let Some(layout_id) = self.layout_id_for_node(root) else {
                 continue;
@@ -402,8 +491,21 @@ impl TaffyLayoutEngine {
 
             // Only batch truly-independent roots. If the engine already knows about a parent,
             // computing under a synthetic wrapper could interfere with the parent solve stamp.
-            if self.parent.get(root).is_some() {
-                can_batch = false;
+            //
+            // Note: `self.parent` may contain stale entries when a node was previously attached
+            // under a parent but has since been detached without an explicit `set_children` update
+            // (e.g. sweep/retention edge cases). Treat "parent points to a node that doesn't list
+            // us as a child" as stale and clear it so independent-root batching can proceed.
+            if let Some(parent) = self.parent.get(root).copied() {
+                let linked = self
+                    .children
+                    .get(parent)
+                    .is_some_and(|children| children.as_slice().contains(&root));
+                if linked {
+                    fallback.push((root, available));
+                    continue;
+                }
+                self.parent.remove(root);
             }
 
             // Batching relies on roots being sized via `build_viewport_flow_subtree`'s
@@ -412,31 +514,33 @@ impl TaffyLayoutEngine {
             if !matches!(available.width, AvailableSpace::Definite(_))
                 || !matches!(available.height, AvailableSpace::Definite(_))
             {
-                can_batch = false;
+                fallback.push((root, available));
+                continue;
             }
 
-            pending.push((root, layout_id, available));
+            batchable.push((root, layout_id, available));
         }
 
-        if pending.is_empty() {
+        if batchable.is_empty() {
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
-        if pending.len() == 1 || !can_batch {
-            for (root, _layout_id, available) in pending {
-                let _ = self.compute_root_for_node_with_measure_if_needed(
-                    root,
-                    available,
-                    sf,
-                    &mut measure,
-                );
-            }
+        if batchable.len() == 1 {
+            let (root, _layout_id, available) = batchable[0];
+            let _ = self.compute_root_for_node_with_measure_if_needed(
+                root,
+                available,
+                sf,
+                &mut measure,
+            );
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
         let mut scratch_w_dp: f32 = 0.0;
         let mut scratch_h_dp: f32 = 0.0;
-        for &(_root, _id, available) in &pending {
+        for &(_root, _id, available) in &batchable {
             let (AvailableSpace::Definite(w), AvailableSpace::Definite(h)) =
                 (available.width, available.height)
             else {
@@ -454,38 +558,25 @@ impl TaffyLayoutEngine {
         scratch_w_dp = scratch_w_dp.max(1.0);
         scratch_h_dp = scratch_h_dp.max(1.0);
 
-        let scratch_id = match self.tree.new_leaf_with_context(
-            Default::default(),
-            NodeContext {
-                node: NodeId::default(),
-                measured: false,
-            },
-        ) {
-            Ok(id) => id,
-            Err(err) => {
-                Self::warn_taffy_error_once("new_leaf_with_context(batch_root)", err);
-                // Fall back to per-root compute on allocation failure.
-                for (root, _layout_id, available) in pending {
-                    let _ = self.compute_root_for_node_with_measure_if_needed(
-                        root,
-                        available,
-                        sf,
-                        &mut measure,
-                    );
-                }
-                return;
+        let Some(scratch_id) = self.ensure_batch_root_scratch() else {
+            for (root, _layout_id, available) in batchable {
+                let _ = self.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    &mut measure,
+                );
             }
-        };
-
-        let cleanup_scratch = |engine: &mut Self| {
-            let _ = engine.tree.set_children(scratch_id, &[]);
-            let _ = engine.tree.remove(scratch_id);
+            compute_individual(self, &fallback, sf, &mut measure);
+            return;
         };
 
         let scratch_style = taffy::Style {
-            display: taffy::style::Display::Flex,
-            flex_direction: taffy::style::FlexDirection::Column,
-            flex_wrap: taffy::style::FlexWrap::NoWrap,
+            // A minimal, definite-sized containing block for batching independent root solves.
+            //
+            // `Display::Block` avoids flex layout machinery on the synthetic parent while still
+            // allowing children to resolve percent-based sizes against a stable containing block.
+            display: taffy::style::Display::Block,
             size: taffy::geometry::Size {
                 width: taffy::style::Dimension::length(scratch_w_dp),
                 height: taffy::style::Dimension::length(scratch_h_dp),
@@ -496,10 +587,13 @@ impl TaffyLayoutEngine {
             },
             ..Default::default()
         };
-        if let Err(err) = self.tree.set_style(scratch_id, scratch_style) {
+        let scratch_bits = (scratch_w_dp.to_bits(), scratch_h_dp.to_bits());
+        if self.batch_root_style_size_bits != Some(scratch_bits)
+            && let Err(err) = self.tree.set_style(scratch_id, scratch_style)
+        {
             Self::warn_taffy_error_once("set_style(batch_root)", err);
-            cleanup_scratch(self);
-            for (root, _layout_id, available) in pending {
+            let _ = self.tree.set_children(scratch_id, &[]);
+            for (root, _layout_id, available) in batchable {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
                     available,
@@ -507,14 +601,23 @@ impl TaffyLayoutEngine {
                     &mut measure,
                 );
             }
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
+        self.batch_root_style_size_bits = Some(scratch_bits);
 
-        let mut child_ids: Vec<TaffyNodeId> = pending.iter().map(|(_, id, _)| id.0).collect();
-        if let Err(err) = self.tree.set_children(scratch_id, &child_ids) {
+        self.batch_root_children_scratch.clear();
+        self.batch_root_children_scratch.reserve(batchable.len());
+        for (_root, id, _available) in &batchable {
+            self.batch_root_children_scratch.push(id.0);
+        }
+        if let Err(err) = self
+            .tree
+            .set_children(scratch_id, &self.batch_root_children_scratch)
+        {
             Self::warn_taffy_error_once("set_children(batch_root)", err);
-            cleanup_scratch(self);
-            for (root, _layout_id, available) in pending {
+            let _ = self.tree.set_children(scratch_id, &[]);
+            for (root, _layout_id, available) in batchable {
                 let _ = self.compute_root_for_node_with_measure_if_needed(
                     root,
                     available,
@@ -522,6 +625,7 @@ impl TaffyLayoutEngine {
                     &mut measure,
                 );
             }
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
@@ -587,10 +691,19 @@ impl TaffyLayoutEngine {
                     let quantized = (value * quantum).round() / quantum;
                     quantized.to_bits()
                 }
-                fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+                fn avail_key(
+                    avail: taffy::style::AvailableSpace,
+                    min_content_as_max: bool,
+                ) -> (u8, u32) {
                     match avail {
                         taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
-                        taffy::style::AvailableSpace::MinContent => (1, 0),
+                        taffy::style::AvailableSpace::MinContent => {
+                            if min_content_as_max {
+                                (2, 0)
+                            } else {
+                                (1, 0)
+                            }
+                        }
                         taffy::style::AvailableSpace::MaxContent => (2, 0),
                     }
                 }
@@ -599,8 +712,8 @@ impl TaffyLayoutEngine {
                     node: ctx.node,
                     known_w: known.width.map(quantize_size_key_bits),
                     known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width),
-                    avail_h: avail_key(avail.height),
+                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                    avail_h: avail_key(avail.height, false),
                 };
                 if let Some(size) = measure_cache.get(&key) {
                     measure_cache_hits = measure_cache_hits.saturating_add(1);
@@ -625,7 +738,13 @@ impl TaffyLayoutEngine {
                             taffy::style::AvailableSpace::Definite(w) => {
                                 AvailableSpace::Definite(Px(w / sf))
                             }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MinContent => {
+                                if ctx.min_content_width_as_max {
+                                    AvailableSpace::MaxContent
+                                } else {
+                                    AvailableSpace::MinContent
+                                }
+                            }
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
                         },
                         match avail.height {
@@ -697,7 +816,7 @@ impl TaffyLayoutEngine {
 
         if let Err(err) = result {
             Self::warn_taffy_error_once("compute_layout_with_measure(batch_root)", err);
-            cleanup_scratch(self);
+            let _ = self.tree.set_children(scratch_id, &[]);
             self.last_solve_root = None;
             self.last_solve_elapsed = started.elapsed();
             span.record("elapsed_us", self.last_solve_elapsed.as_micros() as u64);
@@ -705,11 +824,12 @@ impl TaffyLayoutEngine {
             span.record("measure_cache_hits", measure_cache_hits);
             span.record("measure_us", measure_time.as_micros() as u64);
             self.last_solve_time += self.last_solve_elapsed;
+            compute_individual(self, &fallback, sf, &mut measure);
             return;
         }
 
         self.solve_generation = self.solve_generation.saturating_add(1);
-        let stamp_root = pending[0].0;
+        let stamp_root = batchable[0].0;
         span.record("root", tracing::field::debug(stamp_root));
         self.last_solve_root = Some(stamp_root);
 
@@ -721,7 +841,7 @@ impl TaffyLayoutEngine {
             }
         }
         if let Some(frame_id) = self.frame_id {
-            for &(root, _id, available) in &pending {
+            for &(root, _id, available) in &batchable {
                 self.mark_solved_subtree(root);
                 self.root_solve_stamp.insert(
                     root,
@@ -744,25 +864,10 @@ impl TaffyLayoutEngine {
         span.record("measure_us", measure_time.as_micros() as u64);
         self.last_solve_time += self.last_solve_elapsed;
 
-        cleanup_scratch(self);
-        // Keep `child_ids` alive until after cleanup so we don't accidentally shrink and reallocate
-        // in tight loops when barriers repeatedly batch-solve.
-        child_ids.clear();
-    }
+        // Detach roots from the synthetic parent so they remain independent roots in the engine.
+        let _ = self.tree.set_children(scratch_id, &[]);
 
-    pub(crate) fn mark_seen_subtree_from_cached_children(&mut self, root: NodeId) {
-        if self.layout_id_for_node(root).is_none() {
-            return;
-        }
-        self.mark_seen_stack_scratch.clear();
-        self.mark_seen_stack_scratch.push(root);
-        while let Some(node) = self.mark_seen_stack_scratch.pop() {
-            self.mark_seen(node);
-            if let Some(children) = self.children.get(node) {
-                self.mark_seen_stack_scratch
-                    .extend(children.iter().copied());
-            }
-        }
+        compute_individual(self, &fallback, sf, &mut measure);
     }
 
     pub(crate) fn set_viewport_root_override_size(
@@ -802,6 +907,7 @@ impl TaffyLayoutEngine {
             NodeContext {
                 node,
                 measured: false,
+                min_content_width_as_max: false,
             },
         ) {
             Ok(id) => id,
@@ -825,17 +931,59 @@ impl TaffyLayoutEngine {
             .tree
             .get_node_context(id)
             .copied()
-            .unwrap_or(NodeContext { node, measured });
+            .unwrap_or(NodeContext {
+                node,
+                measured,
+                min_content_width_as_max: false,
+            });
         if ctx.node == node && ctx.measured == measured {
             return;
         }
         self.node_solved_stamp.remove(node);
         self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
-        if let Err(err) = self
+        if let Err(err) = self.tree.set_node_context(
+            id,
+            Some(NodeContext {
+                node,
+                measured,
+                min_content_width_as_max: ctx.min_content_width_as_max,
+            }),
+        ) {
+            Self::warn_taffy_error_once("set_node_context", err);
+        }
+        if let Err(err) = self.tree.mark_dirty(id) {
+            Self::warn_taffy_error_once("mark_dirty", err);
+        }
+    }
+
+    pub fn set_measure_min_content_width_as_max(&mut self, node: NodeId, enabled: bool) {
+        let Some(id) = self.request_layout_node(node).map(|id| id.0) else {
+            return;
+        };
+        let ctx = self
             .tree
-            .set_node_context(id, Some(NodeContext { node, measured }))
-        {
+            .get_node_context(id)
+            .copied()
+            .unwrap_or(NodeContext {
+                node,
+                measured: false,
+                min_content_width_as_max: enabled,
+            });
+        if ctx.node == node && ctx.min_content_width_as_max == enabled {
+            return;
+        }
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
+        self.invalidate_solved_ancestors(node);
+        if let Err(err) = self.tree.set_node_context(
+            id,
+            Some(NodeContext {
+                node,
+                measured: ctx.measured,
+                min_content_width_as_max: enabled,
+            }),
+        ) {
             Self::warn_taffy_error_once("set_node_context", err);
         }
         if let Err(err) = self.tree.mark_dirty(id) {
@@ -867,6 +1015,17 @@ impl TaffyLayoutEngine {
     }
 
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
+        // Fast path: `build_flow_subtree` calls `set_children` for every visited node, and most
+        // nodes keep their child lists stable across frames. Avoid per-frame dedupe work for large
+        // child lists (e.g. long stacks/lists).
+        if self
+            .children
+            .get(node)
+            .is_some_and(|prev| prev.as_slice() == children)
+        {
+            return;
+        }
+
         let original_len = children.len();
         let mut child_unique_scratch = std::mem::take(&mut self.child_unique_scratch);
         let mut child_dedupe_set_scratch = std::mem::take(&mut self.child_dedupe_set_scratch);
@@ -914,16 +1073,6 @@ impl TaffyLayoutEngine {
                 unique_len = children.len(),
                 "layout engine set_children received duplicate children; deduping to avoid taffy panic"
             );
-        }
-
-        if self
-            .children
-            .get(node)
-            .is_some_and(|prev| prev.as_slice() == children)
-        {
-            self.child_unique_scratch = child_unique_scratch;
-            self.child_dedupe_set_scratch = child_dedupe_set_scratch;
-            return;
         }
 
         let Some(parent) = self.request_layout_node(node).map(|id| id.0) else {
@@ -996,10 +1145,16 @@ impl TaffyLayoutEngine {
             quantized.to_bits()
         }
 
-        fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+        fn avail_key(avail: taffy::style::AvailableSpace, min_content_as_max: bool) -> (u8, u32) {
             match avail {
                 taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
-                taffy::style::AvailableSpace::MinContent => (1, 0),
+                taffy::style::AvailableSpace::MinContent => {
+                    if min_content_as_max {
+                        (2, 0)
+                    } else {
+                        (1, 0)
+                    }
+                }
                 taffy::style::AvailableSpace::MaxContent => (2, 0),
             }
         }
@@ -1073,8 +1228,8 @@ impl TaffyLayoutEngine {
                     node: ctx.node,
                     known_w: known.width.map(quantize_size_key_bits),
                     known_h: known.height.map(quantize_size_key_bits),
-                    avail_w: avail_key(avail.width),
-                    avail_h: avail_key(avail.height),
+                    avail_w: avail_key(avail.width, ctx.min_content_width_as_max),
+                    avail_h: avail_key(avail.height, false),
                 };
                 if let Some(size) = measure_cache.get(&key) {
                     measure_cache_hits = measure_cache_hits.saturating_add(1);
@@ -1104,7 +1259,13 @@ impl TaffyLayoutEngine {
                             taffy::style::AvailableSpace::Definite(w) => {
                                 AvailableSpace::Definite(Px(w / sf))
                             }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MinContent => {
+                                if ctx.min_content_width_as_max {
+                                    AvailableSpace::MaxContent
+                                } else {
+                                    AvailableSpace::MinContent
+                                }
+                            }
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
                         },
                         match avail.height {
@@ -1422,9 +1583,24 @@ impl TaffyLayoutEngine {
         let Some(frame_id) = self.frame_id else {
             return;
         };
+        // Only stamp nodes that are part of the engine's current "seen" set for this frame.
+        //
+        // The engine can retain stale `children` edges (e.g. when a node was previously attached
+        // but later detached without an explicit `set_children` update). Stamping through those
+        // stale edges needlessly inflates per-solve work and can amplify tail-latency spikes on
+        // multi-root frames (window roots + overlays + detached flow roots).
+        //
+        // Using the "seen" set keeps stamping proportional to the subtree that was actually
+        // requested/built for the current frame.
+        if !self.is_seen(root) {
+            return;
+        }
         self.mark_solved_stack_scratch.clear();
         self.mark_solved_stack_scratch.push(root);
         while let Some(node) = self.mark_solved_stack_scratch.pop() {
+            if !self.is_seen(node) {
+                continue;
+            }
             self.node_solved_stamp.insert(
                 node,
                 SolvedStamp {
@@ -1433,8 +1609,11 @@ impl TaffyLayoutEngine {
                 },
             );
             if let Some(children) = self.children.get(node) {
-                self.mark_solved_stack_scratch
-                    .extend(children.iter().copied());
+                for &child in children {
+                    if self.is_seen(child) {
+                        self.mark_solved_stack_scratch.push(child);
+                    }
+                }
             }
         }
     }

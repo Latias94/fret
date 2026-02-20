@@ -116,6 +116,7 @@ mod tests {
             slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         };
         let a = text_style_key(&style);
         let b = text_style_key(&TextStyle {

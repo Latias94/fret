@@ -59,6 +59,7 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         }),
         color: Some(fg),
         wrap: TextWrap::None,
@@ -132,10 +133,12 @@ pub fn selectable_label<H: UiHost>(
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         }),
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        interactive_spans: Arc::from([]),
     })
 }

@@ -18,7 +18,9 @@ impl ElementHostWidget {
             }
             ElementInstance::SelectableText(props) => {
                 cx.set_role(SemanticsRole::Text);
-                cx.set_label(props.rich.text.as_ref().to_string());
+                let text = props.rich.text.as_ref();
+                cx.set_label(text.to_string());
+                cx.set_value(text.to_string());
                 cx.set_text_selection_supported(true);
                 if cx.focus == Some(cx.node) {
                     let (anchor, caret) = crate::elements::with_element_state(
@@ -28,16 +30,32 @@ impl ElementHostWidget {
                         crate::element::SelectableTextState::default,
                         |state| (state.selection_anchor, state.caret),
                     );
-                    let mut anchor = anchor.min(props.rich.text.len());
-                    let mut caret = caret.min(props.rich.text.len());
+                    let mut anchor = anchor.min(text.len());
+                    let mut caret = caret.min(text.len());
                     crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
-                        &props.rich.text,
+                        text,
                         &mut anchor,
                         &mut caret,
                     );
                     cx.set_text_selection(anchor as u32, caret as u32);
                 } else {
                     cx.clear_text_selection();
+                }
+
+                for span in props.interactive_spans.iter() {
+                    let start = span.range.start.min(text.len());
+                    let end = span.range.end.min(text.len());
+                    if start > end {
+                        debug_assert!(false, "interactive span range start > end");
+                        continue;
+                    }
+                    if !text.is_char_boundary(start) || !text.is_char_boundary(end) {
+                        debug_assert!(false, "interactive span range not on utf-8 boundary");
+                        continue;
+                    }
+                    if let (Ok(start), Ok(end)) = (u32::try_from(start), u32::try_from(end)) {
+                        cx.push_inline_link_span(start, end, Some(span.tag.as_ref().to_string()));
+                    }
                 }
             }
             ElementInstance::Semantics(props) => {

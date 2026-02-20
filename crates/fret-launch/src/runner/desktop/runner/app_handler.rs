@@ -1484,10 +1484,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         scale_factor = scale_factor,
                     );
                     let _render_guard = render_span.enter();
+                    let render_text_debug_enabled =
+                        std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
                     let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
                         .is_some_and(|v| !v.is_empty())
-                        || std::env::var_os("FRET_RENDER_TEXT_DEBUG")
-                            .is_some_and(|v| !v.is_empty());
+                        || render_text_debug_enabled;
                     if render_text_diag_enabled {
                         renderer.begin_text_diagnostics_frame();
                     }
@@ -1707,12 +1708,36 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             },
                         );
                         if render_text_diag_enabled {
-                            self.app
-                                .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
-                            self.app
-                                .set_global(renderer.text_font_trace_snapshot(self.frame_id));
-                            self.app
-                                .set_global(renderer.text_fallback_policy_snapshot(self.frame_id));
+                            let diagnostics = renderer.text_diagnostics_snapshot(self.frame_id);
+                            let trace = renderer.text_font_trace_snapshot(self.frame_id);
+                            let policy = renderer.text_fallback_policy_snapshot(self.frame_id);
+
+                            if render_text_debug_enabled {
+                                self.app.set_global(diagnostics);
+                                self.app.set_global(trace);
+                                self.app.set_global(policy);
+                            } else {
+                                // Avoid turning per-frame diagnostics snapshots into global-change
+                                // propagation / invalidation work during perf-sensitive runs.
+                                self.app.with_global_mut_untracked(
+                                    fret_core::RendererTextPerfSnapshot::default,
+                                    |slot, _app| {
+                                        *slot = diagnostics;
+                                    },
+                                );
+                                self.app.with_global_mut_untracked(
+                                    fret_core::RendererTextFontTraceSnapshot::default,
+                                    |slot, _app| {
+                                        *slot = trace;
+                                    },
+                                );
+                                self.app.with_global_mut_untracked(
+                                    fret_core::RendererTextFallbackPolicySnapshot::default,
+                                    |slot, _app| {
+                                        *slot = policy;
+                                    },
+                                );
+                            }
                         }
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")

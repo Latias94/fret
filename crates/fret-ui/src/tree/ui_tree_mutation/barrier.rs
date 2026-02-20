@@ -138,6 +138,42 @@ impl<H: UiHost> UiTree<H> {
         self.pending_barrier_relayouts.push(parent);
     }
 
+    /// Schedule a contained relayout for an explicit layout barrier without forcing ancestor
+    /// relayout.
+    ///
+    /// This is intended for barrier-internal follow-up work (e.g. deferred probes) where the
+    /// barrier viewport/bounds are stable and do not depend on the size of its children.
+    pub(crate) fn schedule_barrier_relayout_with_source_and_detail(
+        &mut self,
+        parent: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        if self.nodes.get(parent).is_none() {
+            return;
+        }
+
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+        if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
+            let layout_before = n.invalidation.layout;
+            n.invalidation.mark(Invalidation::Layout);
+            record_layout_invalidation_transition(
+                &mut self.layout_invalidations_count,
+                layout_before,
+                n.invalidation.layout,
+            );
+            counter_update = Some((prev, n.invalidation));
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
+        }
+
+        // Ensure routing/painting sees the follow-up frame, but avoid bubbling a full relayout.
+        self.invalidate_with_source_and_detail(parent, Invalidation::HitTestOnly, source, detail);
+        self.pending_barrier_relayouts.push(parent);
+    }
+
     #[cfg(feature = "diagnostics")]
     pub(super) fn debug_is_reachable_from_layer_roots(&mut self, node: NodeId) -> bool {
         if !self.debug_enabled {

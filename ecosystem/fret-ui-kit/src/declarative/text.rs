@@ -191,6 +191,15 @@ pub fn text_base<H: UiHost>(
 ///
 /// This uses a larger baseline than `text_base` so examples like `typography-table` can match
 /// upstream web goldens (16px / 24px by default under the shadcn theme).
+///
+/// Wrapping notes:
+/// - This defaults to `TextWrap::Word` (wrap at word boundaries; do not break long tokens).
+/// - For body copy that may contain long URLs/paths/identifiers, prefer [`text_prose_break_words`]
+///   so a single token cannot force horizontal overflow.
+/// - For editor-like surfaces that must always wrap even within tokens, prefer `TextWrap::Grapheme`.
+/// - `WordBreak`/`Grapheme` behave best when the parent provides a definite width (`w_full`,
+///   `Length::Fill`, `max_w`, etc.); in shrink-wrapped layouts they can legitimately measure
+///   narrower under min-content constraints.
 pub fn text_prose<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
@@ -205,6 +214,27 @@ pub fn text_prose<H: UiHost>(
         style: Some(style),
         color: None,
         wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+    })
+}
+
+/// `text_prose` variant that matches Tailwind's `break-words` intent:
+/// prefer wrapping at word boundaries, but allow breaking long tokens when needed.
+pub fn text_prose_break_words<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::WordBreak,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
     })
@@ -251,9 +281,40 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
             slant: Default::default(),
             line_height: Some(line_height),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         },
         line_height,
     )
+}
+
+/// Declarative helper intended for code-like inline text.
+///
+/// Defaults:
+/// - monospace font (`metric.font.mono_size` / `metric.font.mono_line_height`)
+/// - `TextWrap::Grapheme` so long tokens (paths/URLs/identifiers) can still wrap when needed
+pub fn text_code_wrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        TextStyle {
+            font: FontId::monospace(),
+            size: theme.metric_token("metric.font.mono_size"),
+            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+            ..Default::default()
+        }
+    };
+
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::Grapheme,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+    })
 }
 
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).

@@ -10,6 +10,34 @@ use fret_runtime::{ModelId, TimerToken};
 
 use super::{ElementRuntime, GlobalElementId, WindowElementState};
 
+pub(crate) fn with_observed_deps_for_element<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    f: impl FnOnce(&[(ModelId, Invalidation)], &[(TypeId, Invalidation)]) -> R,
+) -> R {
+    let frame_id = app.frame_id();
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+
+        let models = window_state
+            .observed_models_next
+            .get(&element)
+            .or_else(|| window_state.observed_models_rendered.get(&element))
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        let globals = window_state
+            .observed_globals_next
+            .get(&element)
+            .or_else(|| window_state.observed_globals_rendered.get(&element))
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+
+        f(models, globals)
+    })
+}
+
 pub fn with_element_state<H: UiHost, S: Any, R>(
     app: &mut H,
     window: AppWindowId,
@@ -22,43 +50,6 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
         window_state.with_state_mut(element, init, f)
-    })
-}
-
-pub(crate) fn with_observed_models_for_element<H: UiHost, R>(
-    app: &mut H,
-    window: AppWindowId,
-    element: GlobalElementId,
-    f: impl FnOnce(&[(ModelId, Invalidation)]) -> R,
-) -> R {
-    let frame_id = app.frame_id();
-    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
-        runtime.prepare_window_for_frame(window, frame_id);
-        let window_state = runtime.for_window_mut(window);
-        let items = window_state
-            .observed_models_next
-            .get(&element)
-            .or_else(|| window_state.observed_models_rendered.get(&element))
-            .map(Vec::as_slice)
-            .unwrap_or(&[]);
-        f(items)
-    })
-}
-
-pub(crate) fn with_observed_globals_for_element<H: UiHost, R>(
-    app: &mut H,
-    window: AppWindowId,
-    element: GlobalElementId,
-    f: impl FnOnce(&[(TypeId, Invalidation)]) -> R,
-) -> R {
-    with_window_state(app, window, |window_state| {
-        let items = window_state
-            .observed_globals_next
-            .get(&element)
-            .or_else(|| window_state.observed_globals_rendered.get(&element))
-            .map(Vec::as_slice)
-            .unwrap_or(&[]);
-        f(items)
     })
 }
 

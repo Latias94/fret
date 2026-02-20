@@ -627,7 +627,14 @@ fn navigation_rail_item<H: UiHost>(
                 if let Some(label_el) = label_el {
                     children.push(label_el);
                 }
-                vec![cx.flex(col, move |_cx| children)]
+                let chrome_test_id = test_id
+                    .as_ref()
+                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                let mut chrome = cx.flex(col, move |_cx| children);
+                if let Some(test_id) = chrome_test_id {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 

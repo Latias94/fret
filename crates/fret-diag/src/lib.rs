@@ -4622,6 +4622,8 @@ See: `docs/tracy.md`.\n";
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
             let is_ui_gallery_text_ime_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-ime";
+            let is_ui_gallery_text_wrap_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-wrap";
             let is_ui_gallery_combobox_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-combobox";
             let is_ui_gallery_select_suite =
@@ -4828,6 +4830,19 @@ See: `docs/tracy.md`.\n";
                 } else if is_ui_gallery_text_ime_suite {
                     (
                         ui_gallery_text_ime_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_text_wrap_suite {
+                    // Text wrap/baseline gates rely on screenshots and should run with deterministic
+                    // bundled fonts on desktop.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
+
+                    (
+                        ui_gallery_text_wrap_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -8346,6 +8361,10 @@ See: `docs/tracy.md`.\n";
                                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 Some(bundle_path.as_path()),
                                 Some(0),
+                                None,
+                                None,
+                                None,
+                                None,
                             ));
                         }
 
@@ -8392,6 +8411,8 @@ See: `docs/tracy.md`.\n";
                     Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf, u64)> = None;
+                let mut script_worst_layout: Option<(u64, PathBuf, u64)> = None;
+                let mut script_worst_solve: Option<(u64, PathBuf, u64)> = None;
 
                 for run_index in 0..repeat {
                     if !reuse_process {
@@ -9002,6 +9023,20 @@ See: `docs/tracy.md`.\n";
                         Some((prev_us, _, _)) if *prev_us >= top_total => {}
                         _ => {
                             script_worst = Some((top_total, bundle_path.clone(), run_index as u64))
+                        }
+                    }
+                    match &script_worst_layout {
+                        Some((prev_us, _, _)) if *prev_us >= top_layout => {}
+                        _ => {
+                            script_worst_layout =
+                                Some((top_layout, bundle_path.clone(), run_index as u64))
+                        }
+                    }
+                    match &script_worst_solve {
+                        Some((prev_us, _, _)) if *prev_us >= top_solve => {}
+                        _ => {
+                            script_worst_solve =
+                                Some((top_solve, bundle_path.clone(), run_index as u64))
                         }
                     }
 
@@ -9890,6 +9925,14 @@ See: `docs/tracy.md`.\n";
                                 .as_ref()
                                 .map(|(_us, bundle, _run)| bundle.as_path()),
                             script_worst.as_ref().map(|(_us, _bundle, run)| *run),
+                            script_worst_layout
+                                .as_ref()
+                                .map(|(_us, bundle, _run)| bundle.as_path()),
+                            script_worst_layout.as_ref().map(|(_us, _bundle, run)| *run),
+                            script_worst_solve
+                                .as_ref()
+                                .map(|(_us, bundle, _run)| bundle.as_path()),
+                            script_worst_solve.as_ref().map(|(_us, _bundle, run)| *run),
                         ));
                     }
                 }
@@ -10972,6 +11015,41 @@ pub(crate) fn triage_json_from_stats(
                         "gpu_copy": worst.renderer_viewport_draw_calls_ingest_gpu_copy,
                         "cpu_upload": worst.renderer_viewport_draw_calls_ingest_cpu_upload,
                     },
+                }
+            }));
+        }
+
+        // view_cache.cache_key_mismatch
+        if worst.view_cache_roots_cache_key_mismatch > 0 {
+            let examples: Vec<serde_json::Value> = worst
+                .top_cache_roots
+                .iter()
+                .filter(|r| r.reuse_reason.as_deref() == Some("cache_key_mismatch"))
+                .take(3)
+                .map(|r| {
+                    json!({
+                        "root_node": r.root_node,
+                        "element": r.element,
+                        "element_path": r.element_path.clone(),
+                        "reused": r.reused,
+                        "contained_layout": r.contained_layout,
+                        "paint_replayed_ops": r.paint_replayed_ops,
+                        "reuse_reason": r.reuse_reason.clone(),
+                        "root_role": r.root_role.clone(),
+                        "root_test_id": r.root_test_id.clone(),
+                    })
+                })
+                .collect();
+
+            out.push(json!({
+                "code": "view_cache.cache_key_mismatch",
+                "severity": "warn",
+                "message": "View-cache roots were not reused due to cache key mismatches in the worst frame.",
+                "evidence": {
+                    "view_cache_roots_cache_key_mismatch": worst.view_cache_roots_cache_key_mismatch,
+                    "view_cache_roots_total": worst.view_cache_roots_total,
+                    "view_cache_roots_reused": worst.view_cache_roots_reused,
+                    "examples": examples,
                 }
             }));
         }
@@ -12115,6 +12193,16 @@ fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
 
 fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json"]
+}
+
+fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 5] {
+    [
+        "tools/diag-scripts/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
+        "tools/diag-scripts/ui-gallery-markdown-wrap-long-tokens-screenshots.json",
+        "tools/diag-scripts/ui-gallery-markdown-span-link-gate-activate.json",
+        "tools/diag-scripts/ui-gallery-text-measure-overlay-wrap-modes-screenshots.json",
+        "tools/diag-scripts/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json",
+    ]
 }
 
 fn ui_gallery_combobox_suite_scripts() -> [&'static str; 9] {
@@ -19932,7 +20020,7 @@ mod tests {
                 max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
-                max_pointer_move_global_changes: Some(0),
+                max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
@@ -19963,6 +20051,10 @@ mod tests {
             0,
             None,
             None,
+            None,
+            None,
+            None,
+            None,
         );
         assert!(failures.is_empty());
     }
@@ -19982,7 +20074,7 @@ mod tests {
                 max_frame_p95_solve_us: None,
                 max_pointer_move_dispatch_us: Some(2000),
                 max_pointer_move_hit_test_us: Some(1500),
-                max_pointer_move_global_changes: Some(0),
+                max_pointer_move_global_changes: Some(1),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: None,
                 max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
@@ -20008,11 +20100,15 @@ mod tests {
             true,
             2001,
             1501,
-            1,
+            2,
             0,
             0,
             Some(Path::new("bundle.json")),
             Some(7),
+            None,
+            None,
+            None,
+            None,
         );
         assert_eq!(failures.len(), 6);
         for failure in &failures {

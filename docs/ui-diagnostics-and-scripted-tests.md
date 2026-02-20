@@ -434,6 +434,7 @@ Core:
 
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
+- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -456,6 +457,12 @@ Privacy / size:
 - `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
+
+Practical bundle size controls (recommended for scripted repros you want to share):
+
+- Prefer smaller dumps: `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=10` (or `5` for very small bundles).
+- Bound path/debug strings: `FRET_DIAG_MAX_DEBUG_STRING_BYTES=2048` (or `1024`).
+- If you mostly target `test_id`, consider `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1` to keep semantics exports smaller.
 
 Script harness:
 

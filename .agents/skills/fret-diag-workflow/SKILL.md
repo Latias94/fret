@@ -135,6 +135,7 @@ See: `references/perf-handoff.md`.
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
 - Prefer `diag meta` / `diag query test-id` / `diag slice` over grepping `bundle.json` (bounded output, cached, shareable).
+- When searching the repo, prefer `tools/rg-safe.ps1` over raw `rg` to avoid scanning `bundle.json` artifacts under `target/fret-diag/`.
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
 - Use suites/repros when you want standardized runs:
   - `cargo run -p fretboard -- diag suite <suite-name>`

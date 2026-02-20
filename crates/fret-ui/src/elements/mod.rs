@@ -25,8 +25,7 @@ pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, record_timer_target, record_timer_target_node,
     record_transient_event, set_pressed_pressable, timer_target_node, update_hovered_hover_region,
     update_hovered_pressable, update_hovered_pressable_raw,
-    update_hovered_pressable_raw_below_barrier, with_observed_globals_for_element,
-    with_observed_models_for_element, with_window_state,
+    update_hovered_pressable_raw_below_barrier, with_observed_deps_for_element, with_window_state,
 };
 pub(crate) use queries::{record_bounds_for_element, record_visual_bounds_for_element};
 pub(crate) use runtime::{ActiveTextSelection, NodeEntry};

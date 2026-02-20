@@ -102,4 +102,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) code_editor_soft_wrap: Model<bool>,
     pub(crate) code_editor_folds: Model<bool>,
     pub(crate) code_editor_inlays: Model<bool>,
+
+    pub(crate) markdown_link_gate_last_activation: Model<Option<Arc<str>>>,
 }

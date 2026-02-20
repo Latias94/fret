@@ -69,6 +69,7 @@ Scripted repros (existing):
 - `tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json`
 - `tools/diag-scripts/ui-gallery-context-menu-shift-f10.json`
 - `tools/diag-scripts/ui-gallery-context-menu-overlay-right-click-open-close.json` (gate: open + select + closes)
+- `tools/diag-scripts/ui-gallery-context-menu-submenu-safe-corridor-sweep.json`
 - `tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json`
 
 ---

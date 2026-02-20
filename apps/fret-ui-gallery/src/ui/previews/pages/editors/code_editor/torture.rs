@@ -192,10 +192,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                         ]
                     },
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                         let reset_handle = header_handle_controls.clone();
                         let preedit_handle = header_handle_controls.clone();
                         let clear_preedit_handle = header_handle_controls.clone();
@@ -367,14 +364,13 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-inlays-set-on")
                                 .on_activate(set_inlays_on.clone())
                                 .into_element(cx),
-                            cx.text(if inlays_enabled {
-                                "Inlays: fixture"
-                            } else {
-                                "Inlays: off"
-                            }),
+                             cx.text(if inlays_enabled {
+                                 "Inlays: fixture"
+                             } else {
+                                 "Inlays: off"
+                             }),
                         ]
-                    },
-                ),
+                    }),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),

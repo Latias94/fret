@@ -138,6 +138,7 @@ pub fn native_select<H: UiHost>(
         slant: Default::default(),
         line_height: Some(theme.metric_token("font.line_height")),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     };
 
     let mut border_color = resolved.border_color;

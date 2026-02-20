@@ -1106,6 +1106,9 @@ fn autocomplete_listbox_panel<H: UiHost>(
                         let query = query.clone();
                         let option_test_id =
                             option_test_ids.get(idx).cloned().unwrap_or(None);
+                        let option_chrome_test_id = option_test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
                         let open_for_select = open.clone();
                         let suppress_open_for_select = suppress_open.clone();
@@ -1235,7 +1238,12 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                 move |_cx| vec![text],
                             );
 
-                            (props, vec![child])
+                            let mut chrome = child;
+                            if let Some(test_id) = option_chrome_test_id.clone() {
+                                chrome = chrome.test_id(test_id);
+                            }
+
+                            (props, vec![chrome])
                         });
 
                         out.push(row);

@@ -548,6 +548,7 @@ fn combobox_with_patch<H: UiHost>(
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_token("font.line_height"))),
             letter_spacing_em: None,
+            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         };
 
         let min_h = chrome_patch

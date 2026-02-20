@@ -18,25 +18,23 @@ impl ElementHostWidget {
         };
 
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-            crate::elements::record_bounds_for_element(
-                &mut *cx.app,
-                window,
-                self.element,
-                cx.bounds,
-            );
+            cx.tree
+                .queue_layout_bounds_for_element(self.element, cx.bounds);
         }
 
-        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
-            for &(model, invalidation) in items {
-                (cx.observe_model)(model, invalidation);
-            }
-        });
-
-        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
-            for &(global, invalidation) in items {
-                (cx.observe_global)(global, invalidation);
-            }
-        });
+        crate::elements::with_observed_deps_for_element(
+            cx.app,
+            window,
+            self.element,
+            |models, globals| {
+                for &(model, invalidation) in models {
+                    (cx.observe_model)(model, invalidation);
+                }
+                for &(global, invalidation) in globals {
+                    (cx.observe_global)(global, invalidation);
+                }
+            },
+        );
 
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return Size::new(Px(0.0), Px(0.0));
@@ -854,20 +852,7 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let style = props.resolved_text_style(cx.theme().snapshot());
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
@@ -985,20 +970,7 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let style = props.resolved_text_style(cx.theme().snapshot());
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
@@ -1128,20 +1100,7 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let style = props.resolved_text_style(cx.theme().snapshot());
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,

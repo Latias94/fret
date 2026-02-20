@@ -508,6 +508,9 @@ impl TimePickerDialog {
                         }
                         (st.scrim.clone(), st.panel.clone())
                     });
+                let scrim_chrome_test_id = scrim_test_id
+                    .as_ref()
+                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
                 let overlay_root = cx.named("time_picker_overlay_root", |cx| {
                     cx.focus_scope(
@@ -549,7 +552,7 @@ impl TimePickerDialog {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut l = LayoutStyle::default();
@@ -561,7 +564,11 @@ impl TimePickerDialog {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });
@@ -1105,6 +1112,7 @@ fn time_input_field<H: UiHost>(
         );
         (width, height, corner_radii, focus_ring)
     };
+    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
 
     let mut hover_layout = LayoutStyle::default();
     hover_layout.size.width = Length::Px(width);
@@ -1316,10 +1324,12 @@ fn time_input_field<H: UiHost>(
             cx.container(overlay, |_cx| Vec::new())
         });
 
-        vec![match overlay {
+        let mut chrome = match overlay {
             Some(overlay) => cx.container(container, move |_cx| vec![overlay, field]),
             None => cx.container(container, move |_cx| vec![field]),
-        }]
+        };
+        chrome = chrome.test_id(chrome_test_id.clone());
+        vec![chrome]
     })
 }
 
@@ -1422,6 +1432,7 @@ fn time_selector_field<H: UiHost>(
             material_focus_ring_for_component(theme, time_tokens::COMPONENT_PREFIX, corner_radii);
         (corner_radii, container_w, container_h, focus_ring)
     };
+    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
@@ -1591,7 +1602,9 @@ fn time_selector_field<H: UiHost>(
                 center.layout.size.height = Length::Fill;
                 let content = cx.flex(center, move |_cx| vec![label_el]);
 
-                vec![cx.container(chrome, move |_cx| vec![overlay, content])]
+                let mut chrome = cx.container(chrome, move |_cx| vec![overlay, content]);
+                chrome = chrome.test_id(chrome_test_id.clone());
+                vec![chrome]
             })
         });
 
@@ -1628,6 +1641,7 @@ fn time_picker_clock_dial<H: UiHost>(
     let (labels, selected_idx) = dial_labels(time_now, selection, is_24h);
     let center = size.0 * 0.5;
     let radius = center - (handle_size.0 * 0.5) - 8.0;
+    let chrome_test_id = Arc::<str>::from("time-picker-clock-dial.chrome");
 
     cx.semantics(
         fret_ui::element::SemanticsProps {
@@ -1636,7 +1650,7 @@ fn time_picker_clock_dial<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            vec![cx.container(container, move |cx| {
+            let mut chrome = cx.container(container, move |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
                 for (idx, (label, value)) in labels.iter().enumerate() {
                     let selected = idx == selected_idx;
@@ -1822,7 +1836,9 @@ fn time_picker_clock_dial<H: UiHost>(
                 }
 
                 out
-            })]
+            });
+            chrome = chrome.test_id(chrome_test_id.clone());
+            vec![chrome]
         },
     )
 }

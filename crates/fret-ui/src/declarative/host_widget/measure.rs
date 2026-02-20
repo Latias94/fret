@@ -172,15 +172,13 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
             // For `TextWrap::Grapheme`, min-content can legitimately approach the width of a single
             // cluster, so a "near-zero" wrap width is a reasonable approximation.
             //
-            // For `TextWrap::Word`, treating min-content as near-zero is *pathological* for common
-            // UI labels/headings: it forces mid-word wrapping during intrinsic sizing, and when the
-            // parent uses those intrinsic widths (e.g. `items_start()` stacks), it produces narrow
-            // text nodes like `Multipl\ne`.
+            // For `TextWrap::WordBreak`, long tokens are explicitly allowed to break when needed,
+            // so a "near-zero" min-content approximation is also reasonable.
             //
-            // Until we have a proper "longest word" intrinsic measurement path, treat word-wrap
-            // min-content as unconstrained (max-content) to avoid surprising layout.
-            TextWrap::Grapheme => Some(Px(0.0)),
-            TextWrap::Word => None,
+            // For `TextWrap::Word`, we want min-content to approach the "longest unbreakable
+            // segment" width (CSS-like). Using a near-zero wrap width achieves this as long as
+            // the text backend does not break within tokens for word-wrap (no mid-word breaks).
+            TextWrap::Grapheme | TextWrap::WordBreak | TextWrap::Word => Some(Px(0.0)),
             TextWrap::None => None,
         },
     }
@@ -209,7 +207,7 @@ fn normalize_text_measure_constraints(
 
     constraints.available.width = match wrap {
         TextWrap::Word | TextWrap::None => AvailableSpace::MaxContent,
-        TextWrap::Grapheme => AvailableSpace::MinContent,
+        TextWrap::Grapheme | TextWrap::WordBreak => AvailableSpace::MinContent,
     };
     constraints
 }
@@ -274,18 +272,24 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
-        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
-            for &(model, invalidation) in items {
-                (cx.observe_model)(model, invalidation);
-            }
-        });
-        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
-            for &(global, invalidation) in items {
-                (cx.observe_global)(global, invalidation);
-            }
-        });
+        crate::elements::with_observed_deps_for_element(
+            cx.app,
+            window,
+            self.element,
+            |models, globals| {
+                for &(model, invalidation) in models {
+                    (cx.observe_model)(model, invalidation);
+                }
+                for &(global, invalidation) in globals {
+                    (cx.observe_global)(global, invalidation);
+                }
+            },
+        );
 
-        let Some(instance) = element_record_for_node(cx.app, window, cx.node).map(|r| r.instance)
+        let Some(instance) =
+            crate::declarative::frame::with_element_record_for_node(cx.app, window, cx.node, |r| {
+                r.instance.clone()
+            })
         else {
             return Size::new(Px(0.0), Px(0.0));
         };
@@ -546,9 +550,10 @@ impl ElementHostWidget {
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
-        let theme = cx.theme().snapshot();
-        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let theme = cx.theme();
+        let theme_revision = theme.revision();
+        let input = props.build_text_input(theme.snapshot());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -563,7 +568,41 @@ impl ElementHostWidget {
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
         let metrics = cx.services.text().measure(&input, text_constraints);
-        clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints)
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+
+        if props.wrap == TextWrap::None {
+            let font_stack_key = cx
+                .app
+                .global::<fret_runtime::TextFontStackKey>()
+                .map(|k| k.0)
+                .unwrap_or(0);
+            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                &props.text,
+                props.style.as_ref(),
+                theme_revision,
+                props.overflow,
+                props.align,
+                cx.scale_factor,
+                font_stack_key,
+            );
+            let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
+                (clamped.height == metrics.size.height)
+                    .then_some(Size::new(Px(0.0), metrics.size.height))
+            } else {
+                (clamped == metrics.size).then_some(metrics.size)
+            };
+            if let Some(cached_size) = cached_size {
+                cx.tree
+                    .set_node_text_wrap_none_measure_cache(cx.node, fingerprint, cached_size);
+            } else {
+                cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            }
+        } else {
+            cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+        }
+
+        clamped
     }
 
     fn measure_styled_text<H: UiHost>(
@@ -573,9 +612,10 @@ impl ElementHostWidget {
     ) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
-        let theme = cx.theme().snapshot();
-        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let theme = cx.theme();
+        let theme_revision = theme.revision();
+        let input = props.build_text_input(theme.snapshot());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -590,7 +630,41 @@ impl ElementHostWidget {
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
         let metrics = cx.services.text().measure(&input, text_constraints);
-        clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints)
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+
+        if props.wrap == TextWrap::None {
+            let font_stack_key = cx
+                .app
+                .global::<fret_runtime::TextFontStackKey>()
+                .map(|k| k.0)
+                .unwrap_or(0);
+            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                &props.rich,
+                props.style.as_ref(),
+                theme_revision,
+                props.overflow,
+                props.align,
+                cx.scale_factor,
+                font_stack_key,
+            );
+            let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
+                (clamped.height == metrics.size.height)
+                    .then_some(Size::new(Px(0.0), metrics.size.height))
+            } else {
+                (clamped == metrics.size).then_some(metrics.size)
+            };
+            if let Some(cached_size) = cached_size {
+                cx.tree
+                    .set_node_text_wrap_none_measure_cache(cx.node, fingerprint, cached_size);
+            } else {
+                cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            }
+        } else {
+            cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+        }
+
+        clamped
     }
 
     fn measure_selectable_text<H: UiHost>(
@@ -600,9 +674,10 @@ impl ElementHostWidget {
     ) -> Size {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
-        let theme = cx.theme().snapshot();
-        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let theme = cx.theme();
+        let theme_revision = theme.revision();
+        let input = props.build_text_input(theme.snapshot());
         let max_width = max_width.map(|v| crate::pixel_snap::snap_px_ceil(v, cx.scale_factor));
         let max_width = cx
             .tree
@@ -617,7 +692,41 @@ impl ElementHostWidget {
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
         let metrics = cx.services.text().measure(&input, text_constraints);
-        clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints)
+        let clamped =
+            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+
+        if props.wrap == TextWrap::None {
+            let font_stack_key = cx
+                .app
+                .global::<fret_runtime::TextFontStackKey>()
+                .map(|k| k.0)
+                .unwrap_or(0);
+            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                &props.rich,
+                props.style.as_ref(),
+                theme_revision,
+                props.overflow,
+                props.align,
+                cx.scale_factor,
+                font_stack_key,
+            );
+            let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
+                (clamped.height == metrics.size.height)
+                    .then_some(Size::new(Px(0.0), metrics.size.height))
+            } else {
+                (clamped == metrics.size).then_some(metrics.size)
+            };
+            if let Some(cached_size) = cached_size {
+                cx.tree
+                    .set_node_text_wrap_none_measure_cache(cx.node, fingerprint, cached_size);
+            } else {
+                cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            }
+        } else {
+            cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+        }
+
+        clamped
     }
 
     fn measure_text_input<H: UiHost>(

@@ -1293,6 +1293,26 @@ pub struct SelectableTextProps {
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
     pub align: TextAlign,
+    /// Optional interactive span ranges (e.g. link spans).
+    ///
+    /// The runtime owns hit-testing and event routing; component/ecosystem code decides what
+    /// activation does via `ElementContext::selectable_text_on_activate_span*` hooks.
+    pub interactive_spans: std::sync::Arc<[SelectableTextInteractiveSpan]>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectableTextInteractiveSpan {
+    pub range: std::ops::Range<usize>,
+    /// A stable, component-defined tag for the span (e.g. a URL for markdown links).
+    pub tag: std::sync::Arc<str>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SelectableTextInteractiveSpanBounds {
+    pub range: std::ops::Range<usize>,
+    pub tag: std::sync::Arc<str>,
+    /// Span bounds in local widget coordinates (relative to the widget's bounds origin).
+    pub bounds_local: fret_core::Rect,
 }
 
 #[derive(Debug, Clone)]
@@ -1303,6 +1323,10 @@ pub struct SelectableTextState {
     pub preferred_x: Option<Px>,
     pub dragging: bool,
     pub last_pointer_pos: Option<fret_core::Point>,
+    pub pointer_down_pos: Option<fret_core::Point>,
+    pub pending_span_activation: Option<crate::action::SelectableTextSpanActivation>,
+    pub pending_span_click_count: u8,
+    pub interactive_span_bounds: Vec<SelectableTextInteractiveSpanBounds>,
 }
 
 impl Default for SelectableTextState {
@@ -1314,6 +1338,10 @@ impl Default for SelectableTextState {
             preferred_x: None,
             dragging: false,
             last_pointer_pos: None,
+            pointer_down_pos: None,
+            pending_span_activation: None,
+            pending_span_click_count: 0,
+            interactive_span_bounds: Vec::new(),
         }
     }
 }
@@ -1754,6 +1782,7 @@ impl SelectableTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            interactive_spans: std::sync::Arc::from([]),
         }
     }
 
@@ -1962,6 +1991,13 @@ pub struct VirtualListState {
     pub(crate) items_len: usize,
     pub(crate) key_cache: VirtualListKeyCacheMode,
     pub(crate) keys: Vec<crate::ItemKey>,
+    pub(crate) layout_scratch: VirtualListLayoutScratch,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct VirtualListLayoutScratch {
+    pub(crate) measured_updates: Vec<(NodeId, usize, Px)>,
+    pub(crate) barrier_roots: Vec<(NodeId, Rect)>,
 }
 
 #[derive(Debug, Clone)]

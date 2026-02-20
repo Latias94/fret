@@ -59,12 +59,16 @@ impl<H: UiHost> UiTree<H> {
         };
         let _span_guard = span.enter();
 
-        if let Some(window) = self.window
+        if self.window.is_some()
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
             let (_, record_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                let visual = rect_aabb_transformed(bounds, current_transform);
-                crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+                let visual = if current_transform == Transform2D::IDENTITY {
+                    bounds
+                } else {
+                    rect_aabb_transformed(bounds, current_transform)
+                };
+                self.scratch_visual_bounds_records.push((element, visual));
             });
             if let Some(record_elapsed) = record_elapsed {
                 self.debug_stats.paint_record_visual_bounds_time = self
@@ -145,8 +149,13 @@ impl<H: UiHost> UiTree<H> {
                     && let Some(prev_visual) =
                         crate::elements::with_window_state(app, window, |st| {
                             st.last_visual_bounds(element)
+                                .or_else(|| st.last_bounds(element))
                         }) {
-                    let current_visual = rect_aabb_transformed(bounds, current_transform);
+                    let current_visual = if current_transform == Transform2D::IDENTITY {
+                        bounds
+                    } else {
+                        rect_aabb_transformed(bounds, current_transform)
+                    };
                     let size_dx = (current_visual.size.width.0 - prev_visual.size.width.0).abs();
                     let size_dy = (current_visual.size.height.0 - prev_visual.size.height.0).abs();
                     if size_dx <= 0.01 && size_dy <= 0.01 {
@@ -337,6 +346,7 @@ impl<H: UiHost> UiTree<H> {
                             && let Some(prev_visual) =
                                 crate::elements::with_window_state(app, window, |st| {
                                     st.last_visual_bounds(element)
+                                        .or_else(|| st.last_bounds(element))
                                 })
                         {
                             let visual = Rect::new(
@@ -484,49 +494,63 @@ impl<H: UiHost> UiTree<H> {
                     .saturating_add(inclusive_scene_ops_delta);
             }
 
-            let element = self.nodes.get(node).and_then(|n| n.element);
-            let element_kind = self.window.and_then(|window| {
-                crate::declarative::frame::element_record_for_node(app, window, node)
-                    .map(|record| record.instance.kind_name())
-            });
-            let element_path = if self.debug_enabled {
-                #[cfg(feature = "diagnostics")]
-                {
-                    self.window.and_then(|window| {
-                        element.and_then(|element| {
-                            crate::elements::with_window_state(app, window, |st| {
-                                st.debug_path_for_element(element)
+            // Hotspot recording can be relatively expensive (element-kind lookup, debug path, list
+            // insertion). Fast-path the common case where this node can't make it into the top-N.
+            let should_record_hotspot =
+                if self.debug_paint_widget_hotspots.len() < MAX_PAINT_WIDGET_HOTSPOTS {
+                    true
+                } else {
+                    self.debug_paint_widget_hotspots
+                        .last()
+                        .is_some_and(|h| h.exclusive_time < exclusive_time)
+                };
+
+            if should_record_hotspot {
+                let element = self.nodes.get(node).and_then(|n| n.element);
+                let element_kind = self.window.and_then(|window| {
+                    crate::declarative::frame::element_record_for_node(app, window, node)
+                        .map(|record| record.instance.kind_name())
+                });
+                let element_path = if self.debug_enabled {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        self.window.and_then(|window| {
+                            element.and_then(|element| {
+                                crate::elements::with_window_state(app, window, |st| {
+                                    st.debug_path_for_element(element)
+                                })
                             })
                         })
-                    })
-                }
-                #[cfg(not(feature = "diagnostics"))]
-                {
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        None
+                    }
+                } else {
                     None
+                };
+
+                let record = UiDebugPaintWidgetHotspot {
+                    node,
+                    element,
+                    element_kind,
+                    element_path,
+                    widget_type,
+                    inclusive_time,
+                    exclusive_time,
+                    inclusive_scene_ops_delta,
+                    exclusive_scene_ops_delta,
+                };
+                let idx = self
+                    .debug_paint_widget_hotspots
+                    .iter()
+                    .position(|h| h.exclusive_time < record.exclusive_time)
+                    .unwrap_or(self.debug_paint_widget_hotspots.len());
+                self.debug_paint_widget_hotspots.insert(idx, record);
+                if self.debug_paint_widget_hotspots.len() > MAX_PAINT_WIDGET_HOTSPOTS {
+                    self.debug_paint_widget_hotspots
+                        .truncate(MAX_PAINT_WIDGET_HOTSPOTS);
                 }
-            } else {
-                None
-            };
-            let record = UiDebugPaintWidgetHotspot {
-                node,
-                element,
-                element_kind,
-                element_path,
-                widget_type,
-                inclusive_time,
-                exclusive_time,
-                inclusive_scene_ops_delta,
-                exclusive_scene_ops_delta,
-            };
-            let idx = self
-                .debug_paint_widget_hotspots
-                .iter()
-                .position(|h| h.exclusive_time < record.exclusive_time)
-                .unwrap_or(self.debug_paint_widget_hotspots.len());
-            self.debug_paint_widget_hotspots.insert(idx, record);
-            if self.debug_paint_widget_hotspots.len() > MAX_PAINT_WIDGET_HOTSPOTS {
-                self.debug_paint_widget_hotspots
-                    .truncate(MAX_PAINT_WIDGET_HOTSPOTS);
             }
         }
 

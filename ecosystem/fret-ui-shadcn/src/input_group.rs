@@ -908,6 +908,7 @@ impl InputGroupText {
                 slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
+                vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
             }),
             color: Some(color),
             wrap: TextWrap::None,
@@ -1154,6 +1155,8 @@ impl InputGroupButton {
                                 slant: Default::default(),
                                 line_height: Some(line_height),
                                 letter_spacing_em: None,
+                                vertical_placement:
+                                    fret_core::TextVerticalPlacement::CenterMetricsBox,
                             }),
                             color: Some(fg),
                             wrap: TextWrap::None,

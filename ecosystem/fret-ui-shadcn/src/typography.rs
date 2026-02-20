@@ -47,6 +47,7 @@ fn base_text_style(theme: &Theme) -> TextStyle {
         slant: TextSlant::Normal,
         line_height,
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -278,7 +279,7 @@ pub fn list<H: UiHost>(
                             gap: Px(8.0),
                             padding: Edges::all(Px(0.0)),
                             justify: MainAlign::Start,
-                            align: CrossAlign::Center,
+                            align: CrossAlign::Start,
                             wrap: false,
                         },
                         move |cx| {

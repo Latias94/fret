@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+#[cfg(windows)]
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
@@ -606,6 +608,14 @@ pub(crate) fn maybe_launch_demo(
             ..Default::default()
         }),
         screenshots_enabled: Some(wants_screenshots),
+        // Keep script-driven bundle dumps reasonably small by default.
+        //
+        // The runtime exports full frame snapshots; large dump windows can easily produce
+        // 10s of MB per bundle, which makes sharing/triage harder and increases the chance
+        // of accidental output explosions.
+        script_dump_max_snapshots: Some(10),
+        // Bound the length of exported debug strings (paths, etc).
+        max_debug_string_bytes: Some(2048),
         ..Default::default()
     };
     if let Some((_, v)) = launch_env
@@ -1696,11 +1706,25 @@ pub(super) fn scan_perf_threshold_failures(
     max_pointer_move_global_changes: u64,
     max_run_paint_cache_hit_test_only_replay_allowed: u64,
     max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch: u64,
-    evidence_bundle: Option<&Path>,
-    evidence_run_index: Option<u64>,
+    evidence_bundle_total: Option<&Path>,
+    evidence_run_index_total: Option<u64>,
+    evidence_bundle_layout: Option<&Path>,
+    evidence_run_index_layout: Option<u64>,
+    evidence_bundle_solve: Option<&Path>,
+    evidence_run_index_solve: Option<u64>,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
-    let evidence_bundle = evidence_bundle.map(|p| p.display().to_string());
+    let evidence_bundle_total = evidence_bundle_total.map(|p| p.display().to_string());
+    let evidence_bundle_layout = evidence_bundle_layout
+        .map(|p| p.display().to_string())
+        .or_else(|| evidence_bundle_total.clone());
+    let evidence_bundle_solve = evidence_bundle_solve
+        .map(|p| p.display().to_string())
+        .or_else(|| evidence_bundle_total.clone());
+    let evidence_bundle = evidence_bundle_total.clone();
+    let evidence_run_index_layout = evidence_run_index_layout.or(evidence_run_index_total);
+    let evidence_run_index_solve = evidence_run_index_solve.or(evidence_run_index_total);
+    let evidence_run_index = evidence_run_index_total;
     let (threshold_total, source_total) =
         resolve_threshold(cli.max_top_total_us, baseline.max_top_total_us);
     let (threshold_layout, source_layout) =
@@ -1757,8 +1781,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_total_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
-            "evidence_bundle": evidence_bundle,
-            "evidence_run_index": evidence_run_index,
+            "evidence_bundle": evidence_bundle_total,
+            "evidence_run_index": evidence_run_index_total,
         }));
     }
     if let Some(threshold_us) = threshold_layout
@@ -1775,8 +1799,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_layout_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
-            "evidence_bundle": evidence_bundle,
-            "evidence_run_index": evidence_run_index,
+            "evidence_bundle": evidence_bundle_layout,
+            "evidence_run_index": evidence_run_index_layout,
         }));
     }
     if let Some(threshold_us) = threshold_solve
@@ -1793,8 +1817,8 @@ pub(super) fn scan_perf_threshold_failures(
             "outlier_suspected": p95_layout_engine_solve_time_us <= threshold_us,
             "script": script,
             "sort": sort.as_str(),
-            "evidence_bundle": evidence_bundle,
-            "evidence_run_index": evidence_run_index,
+            "evidence_bundle": evidence_bundle_solve,
+            "evidence_run_index": evidence_run_index_solve,
         }));
     }
     const FRAME_P95_TOTAL_EPS_US: u64 = 100;

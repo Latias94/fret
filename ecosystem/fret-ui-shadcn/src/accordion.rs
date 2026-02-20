@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Color, Edges, FontId, FontWeight, Point, Px, TextStyle, Transform2D};
+use fret_core::{
+    Color, Edges, FontId, FontWeight, Point, Px, TextOverflow, TextStyle, TextWrap, Transform2D,
+};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -43,6 +45,7 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -284,7 +287,8 @@ pub mod composable {
                                                 .text_size_px(text_style.size)
                                                 .font_weight(text_style.weight)
                                                 .text_color(ColorRef::Color(fg))
-                                                .nowrap();
+                                                .wrap(TextWrap::Word)
+                                                .overflow(TextOverflow::Clip);
                                             if let Some(line_height) = text_style.line_height {
                                                 label_text = label_text.line_height_px(line_height);
                                             }
@@ -1107,7 +1111,8 @@ impl AccordionTrigger {
                                             .text_size_px(text_style.size)
                                             .font_weight(text_style.weight)
                                             .text_color(ColorRef::Color(fg))
-                                            .nowrap();
+                                            .wrap(TextWrap::Word)
+                                            .overflow(TextOverflow::Clip);
                                         if let Some(line_height) = text_style.line_height {
                                             label_text = label_text.line_height_px(line_height);
                                         }

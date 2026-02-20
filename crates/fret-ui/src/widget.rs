@@ -1187,6 +1187,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) labelled_by: &'a mut Vec<NodeId>,
     pub(crate) described_by: &'a mut Vec<NodeId>,
     pub(crate) controls: &'a mut Vec<NodeId>,
+    pub(crate) inline_spans: &'a mut Vec<fret_core::SemanticsInlineSpan>,
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
@@ -1306,6 +1307,18 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
             return;
         }
         self.controls.push(node);
+    }
+
+    pub fn push_inline_span(&mut self, span: fret_core::SemanticsInlineSpan) {
+        self.inline_spans.push(span);
+    }
+
+    pub fn push_inline_link_span(&mut self, start_utf8: u32, end_utf8: u32, tag: Option<String>) {
+        self.push_inline_span(fret_core::SemanticsInlineSpan {
+            range_utf8: (start_utf8, end_utf8),
+            role: SemanticsRole::Link,
+            tag,
+        });
     }
 
     pub fn clear_controls(&mut self) {

@@ -45,6 +45,7 @@ struct ScrollLayoutProbeKey {
 struct ScrollLayoutProbeCacheState {
     frame_id: FrameId,
     entries: Vec<(ScrollLayoutProbeKey, Size)>,
+    last_max_child: Size,
 }
 
 fn available_space_cache_key(space: AvailableSpace) -> u64 {
@@ -98,6 +99,7 @@ impl ElementHostWidget {
             prev_offset_y,
             prev_viewport_w,
             prev_viewport_h,
+            mut layout_scratch,
         ) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -120,6 +122,7 @@ impl ElementHostWidget {
                     state.offset_y,
                     state.viewport_w,
                     state.viewport_h,
+                    std::mem::take(&mut state.layout_scratch),
                 )
             },
         );
@@ -172,12 +175,12 @@ impl ElementHostWidget {
             },
         });
 
-        let prev_offset = props.scroll_handle.offset();
-        let prev_offset_axis = match axis {
-            fret_core::Axis::Vertical => prev_offset.y,
-            fret_core::Axis::Horizontal => prev_offset.x,
+        let handle_offset = props.scroll_handle.offset();
+        let handle_offset_axis = match axis {
+            fret_core::Axis::Vertical => handle_offset.y,
+            fret_core::Axis::Horizontal => handle_offset.x,
         };
-        let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
+        let mut offset = metrics.clamp_offset(handle_offset_axis, viewport);
         let deferred_scroll_to_item = props.scroll_handle.deferred_scroll_to_item().is_some();
         let mut deferred_scroll_consumed = false;
 
@@ -201,7 +204,7 @@ impl ElementHostWidget {
 
         offset = metrics.clamp_offset(offset, viewport);
 
-        if (prev_offset_axis.0 - offset.0).abs() > 0.01 {
+        if (handle_offset_axis.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
 
@@ -212,8 +215,8 @@ impl ElementHostWidget {
             Px((offset.0 - start.0).max(0.0))
         });
 
-        let mut measured_updates: Vec<(fret_core::NodeId, usize, Px)> =
-            Vec::with_capacity(cx.children.len());
+        layout_scratch.measured_updates.clear();
+        layout_scratch.measured_updates.reserve(cx.children.len());
 
         match props.measure_mode {
             crate::element::VirtualListMeasureMode::Measured => {
@@ -242,9 +245,12 @@ impl ElementHostWidget {
 
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let should_measure = !metrics.is_measured(idx)
-                        || (cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
-                            && cx.tree.node_needs_layout(child));
+                    // Treat `items_revision` as the mechanism-level contract for "size-affecting
+                    // content changed". Avoid forcing re-measure just because the widget subtree
+                    // was (re)mounted or otherwise marked layout-invalidated: the virtualizer can
+                    // legitimately reuse a cached extent for a previously measured index.
+                    let should_measure =
+                        should_remeasure_visible_items || !metrics.is_measured(idx);
                     let measured_extent = if should_measure {
                         #[cfg(test)]
                         crate::virtual_list::debug_record_virtual_list_item_measure();
@@ -257,11 +263,13 @@ impl ElementHostWidget {
                         metrics.height_at(idx)
                     };
 
-                    measured_updates.push((child, idx, measured_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, measured_extent));
                 }
 
                 let mut any_measured_change = false;
-                for (_, idx, measured_extent) in &measured_updates {
+                for (_, idx, measured_extent) in &layout_scratch.measured_updates {
                     if metrics.set_measured_height(*idx, *measured_extent) {
                         any_measured_change = true;
                     }
@@ -288,14 +296,18 @@ impl ElementHostWidget {
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
                     let estimated_extent = metrics.height_at(idx);
-                    measured_updates.push((child, idx, estimated_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, estimated_extent));
                 }
             }
             crate::element::VirtualListMeasureMode::Known => {
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
                     let known_extent = metrics.height_at(idx);
-                    measured_updates.push((child, idx, known_extent));
+                    layout_scratch
+                        .measured_updates
+                        .push((child, idx, known_extent));
                 }
             }
         }
@@ -342,9 +354,62 @@ impl ElementHostWidget {
             },
         });
 
-        let mut child_rects: Vec<(NodeId, Rect)> = Vec::with_capacity(measured_updates.len());
-        for (child, idx, measured_extent) in &measured_updates {
-            let start = metrics.offset_for_index(*idx);
+        layout_scratch.barrier_roots.clear();
+        layout_scratch
+            .barrier_roots
+            .reserve(layout_scratch.measured_updates.len());
+        let mut should_defer_overscan_layout = false;
+        if !is_probe_layout && props.overscan > 0 && viewport.0 > 0.0 {
+            if deferred_scroll_consumed {
+                // On large scroll-to-item jumps, laying out the full overscan window in a single
+                // frame can create tail spikes. Prioritize the true visible window and let
+                // overscanned rows catch up on subsequent frames.
+                should_defer_overscan_layout = true;
+            } else {
+                // `scroll_to_bottom()` / `scroll_to_item()` may update the handle immediately
+                // (without a deferred-scroll marker). Detect large jumps by comparing against the
+                // last committed offset from the element state.
+                let prev_state_viewport_axis = match axis {
+                    fret_core::Axis::Vertical => prev_viewport_h,
+                    fret_core::Axis::Horizontal => prev_viewport_w,
+                };
+                let prev_state_offset_axis = match axis {
+                    fret_core::Axis::Vertical => prev_offset_y,
+                    fret_core::Axis::Horizontal => prev_offset_x,
+                };
+
+                let viewport_unchanged = (prev_state_viewport_axis.0 - viewport.0).abs() <= 0.01
+                    && prev_state_viewport_axis.0 > 0.0;
+
+                if viewport_unchanged {
+                    let prev_clamped = metrics.clamp_offset(prev_state_offset_axis, viewport);
+                    let prev_visible = metrics.visible_range(prev_clamped, viewport, 0);
+
+                    let large_index_jump = match (prev_visible, visible_range) {
+                        (Some(prev), Some(now)) => {
+                            let prev_len = prev
+                                .end_index
+                                .saturating_sub(prev.start_index)
+                                .saturating_add(1);
+                            let threshold = prev_len
+                                .saturating_mul(4)
+                                .max(props.overscan.saturating_mul(8));
+                            now.start_index.abs_diff(prev.start_index) > threshold
+                        }
+                        _ => {
+                            let delta_px = (offset.0 - prev_clamped.0).abs();
+                            delta_px > (viewport.0 * 3.0)
+                        }
+                    };
+
+                    if large_index_jump {
+                        should_defer_overscan_layout = true;
+                    }
+                }
+            }
+        }
+
+        let bounds_for_start_and_extent = |start: Px, extent: Px| -> Rect {
             let origin = match axis {
                 fret_core::Axis::Vertical => {
                     let y = cx.bounds.origin.y.0 + start.0;
@@ -355,22 +420,62 @@ impl ElementHostWidget {
                     fret_core::Point::new(Px(x), cx.bounds.origin.y)
                 }
             };
-            let child_bounds = match axis {
-                fret_core::Axis::Vertical => {
-                    Rect::new(origin, Size::new(size.width, *measured_extent))
-                }
-                fret_core::Axis::Horizontal => {
-                    Rect::new(origin, Size::new(*measured_extent, size.height))
-                }
+            match axis {
+                fret_core::Axis::Vertical => Rect::new(origin, Size::new(size.width, extent)),
+                fret_core::Axis::Horizontal => Rect::new(origin, Size::new(extent, size.height)),
+            }
+        };
+
+        let use_visible_item_starts = props.measure_mode
+            != crate::element::VirtualListMeasureMode::Measured
+            && layout_scratch.measured_updates.len() == props.visible_items.len();
+
+        let mut prev_idx: Option<usize> = None;
+        let mut prev_start: Px = Px(0.0);
+        let mut prev_extent: Px = Px(0.0);
+        let gap = metrics.gap();
+
+        for (pos, (child, idx, measured_extent)) in
+            layout_scratch.measured_updates.iter().enumerate()
+        {
+            let start = if use_visible_item_starts {
+                props
+                    .visible_items
+                    .get(pos)
+                    .map(|item| item.start)
+                    .unwrap_or_else(|| metrics.offset_for_index(*idx))
+            } else {
+                let start = if let Some(prev) = prev_idx
+                    && *idx == prev.saturating_add(1)
+                {
+                    Px(prev_start.0 + prev_extent.0 + gap.0)
+                } else {
+                    metrics.offset_for_index(*idx)
+                };
+                prev_idx = Some(*idx);
+                prev_start = start;
+                prev_extent = *measured_extent;
+                start
             };
-            child_rects.push((*child, child_bounds));
+
+            if should_defer_overscan_layout {
+                let Some(visible) = visible_range else {
+                    continue;
+                };
+                if *idx < visible.start_index || *idx > visible.end_index {
+                    continue;
+                }
+            }
+
+            let child_bounds = bounds_for_start_and_extent(start, *measured_extent);
+            layout_scratch.barrier_roots.push((*child, child_bounds));
         }
 
         if !is_probe_layout {
-            cx.solve_barrier_child_roots_if_needed(&child_rects);
+            cx.solve_barrier_child_roots_if_needed(&layout_scratch.barrier_roots);
         }
 
-        for (child, child_bounds) in &child_rects {
+        for (child, child_bounds) in &layout_scratch.barrier_roots {
             let _ = cx.layout_in(*child, *child_bounds);
         }
 
@@ -386,31 +491,33 @@ impl ElementHostWidget {
             self.element,
             crate::element::VirtualListState::default,
             |state| {
-                match axis {
-                    fret_core::Axis::Vertical => {
-                        state.offset_y = offset;
-                        if state.viewport_h != viewport {
-                            state.viewport_h = viewport;
-                            needs_redraw = true;
-                        }
-                    }
-                    fret_core::Axis::Horizontal => {
-                        state.offset_x = offset;
-                        if state.viewport_w != viewport {
-                            state.viewport_w = viewport;
-                            needs_redraw = true;
-                        }
-                    }
-                }
-                if !is_probe_layout && viewport.0 > 0.0 {
-                    state.has_final_viewport = true;
-                }
                 if !is_probe_layout {
+                    match axis {
+                        fret_core::Axis::Vertical => {
+                            state.offset_y = offset;
+                            if state.viewport_h != viewport {
+                                state.viewport_h = viewport;
+                                needs_redraw = true;
+                            }
+                        }
+                        fret_core::Axis::Horizontal => {
+                            state.offset_x = offset;
+                            if state.viewport_w != viewport {
+                                state.viewport_w = viewport;
+                                needs_redraw = true;
+                            }
+                        }
+                    }
+                    if viewport.0 > 0.0 {
+                        state.has_final_viewport = true;
+                    }
+
                     state.window_range = window_range;
                     state.deferred_scroll_offset_hint = None;
                 }
                 state.items_revision = props.items_revision;
                 state.metrics = metrics;
+                state.layout_scratch = layout_scratch;
             },
         );
 
@@ -611,16 +718,19 @@ impl ElementHostWidget {
         // This keeps scroll probing stable across probe/final passes and avoids accidental
         // "infinite window" layouts (e.g. text reflowing as a single long line) during probes.
         let external_handle = props.scroll_handle.clone();
-        let handle = crate::elements::with_element_state(
+        let (handle, intrinsic_measure_cache) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::element::ScrollState::default,
             |state| {
-                external_handle
-                    .as_ref()
-                    .unwrap_or(&state.scroll_handle)
-                    .clone()
+                (
+                    external_handle
+                        .as_ref()
+                        .unwrap_or(&state.scroll_handle)
+                        .clone(),
+                    state.intrinsic_measure_cache,
+                )
             },
         );
 
@@ -651,33 +761,28 @@ impl ElementHostWidget {
             ),
         );
 
+        let mut intrinsic_cached_max_child: Option<Size> = None;
         let mut cached_max_child: Option<Size> = None;
         if !is_probe_layout && cx.children.len() == 1 {
             let child = cx.children[0];
-            if !cx.tree.node_needs_layout(child) {
-                let cache_key = crate::element::ScrollIntrinsicMeasureCacheKey {
-                    avail_w: available_space_cache_key(child_constraints.available.width),
-                    avail_h: available_space_cache_key(child_constraints.available.height),
-                    axis: match props.axis {
-                        crate::element::ScrollAxis::X => 0,
-                        crate::element::ScrollAxis::Y => 1,
-                        crate::element::ScrollAxis::Both => 2,
-                    },
-                    probe_unbounded: props.probe_unbounded,
-                    scale_bits: cx.scale_factor.to_bits(),
-                };
+            let cache_key = crate::element::ScrollIntrinsicMeasureCacheKey {
+                avail_w: available_space_cache_key(child_constraints.available.width),
+                avail_h: available_space_cache_key(child_constraints.available.height),
+                axis: match props.axis {
+                    crate::element::ScrollAxis::X => 0,
+                    crate::element::ScrollAxis::Y => 1,
+                    crate::element::ScrollAxis::Both => 2,
+                },
+                probe_unbounded: props.probe_unbounded,
+                scale_bits: cx.scale_factor.to_bits(),
+            };
 
-                cached_max_child = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::ScrollState::default,
-                    |state| {
-                        state
-                            .intrinsic_measure_cache
-                            .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child))
-                    },
-                );
+            intrinsic_cached_max_child = intrinsic_measure_cache
+                .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child));
+            // Safe fast path: only use intrinsic size caching as a substitute for measuring the
+            // child when the child subtree does not need layout this frame.
+            if !cx.tree.node_needs_layout(child) {
+                cached_max_child = intrinsic_cached_max_child;
             }
         }
 
@@ -687,72 +792,101 @@ impl ElementHostWidget {
         let defer_probe_on_resize = scroll_defer_unbounded_probe_on_resize_enabled();
         let defer_probe_on_invalidation = scroll_defer_unbounded_probe_on_invalidation_enabled();
         let prev_viewport = handle.viewport_size();
-        let viewport_changed = prev_viewport.width.0 > 0.0
-            && prev_viewport.height.0 > 0.0
+        let viewport_known = prev_viewport.width.0 > 0.0 && prev_viewport.height.0 > 0.0;
+        let viewport_changed = viewport_known
             && (prev_viewport.width.0.to_bits() != available.width.0.to_bits()
                 || prev_viewport.height.0.to_bits() != available.height.0.to_bits());
 
-        let should_defer_unbounded_probe_on_resize =
-            wants_unbounded_probe && defer_probe_on_resize && viewport_changed;
+        let can_defer_probe_with_cached_max_child = intrinsic_cached_max_child
+            .or(cached_max_child)
+            .is_some_and(|size| size != Size::default());
+        let can_defer_probe_with_cached_children = can_defer_probe_with_cached_max_child
+            || cx.children.iter().copied().any(|child| {
+                cx.tree
+                    .node_measured_size(child)
+                    .is_some_and(|size| size != Size::default())
+            });
+        let viewport_became_known_during_resize = !viewport_known
+            && cx.tree.interactive_resize_active()
+            && available.width.0 > 0.0
+            && available.height.0 > 0.0
+            && can_defer_probe_with_cached_children;
+
+        let should_defer_unbounded_probe_on_resize = wants_unbounded_probe
+            && defer_probe_on_resize
+            && (viewport_changed || viewport_became_known_during_resize);
+        let children_layout_invalidated = cx
+            .children
+            .iter()
+            .copied()
+            .any(|child| cx.tree.node_layout_invalidated(child));
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
             && defer_probe_on_invalidation
-            && cx
-                .children
-                .iter()
-                .copied()
-                .any(|child| cx.tree.node_layout_invalidated(child));
+            && can_defer_probe_with_cached_children
+            && children_layout_invalidated;
 
-        let mut defer_state = crate::elements::with_element_state(
+        let stable_frames_required = scroll_defer_unbounded_probe_stable_frames();
+        let (defer_state, defer_this_frame) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             ScrollDeferredUnboundedProbeState::default,
-            |state| *state,
-        );
-
-        let stable_frames_required = scroll_defer_unbounded_probe_stable_frames();
-        let mut defer_this_frame = false;
-        if should_defer_unbounded_probe_on_resize {
-            defer_this_frame = true;
-            defer_state.kind = ScrollDeferredUnboundedProbeKind::Resize;
-            defer_state.stable_frames = 0;
-        } else {
-            match defer_state.kind {
-                ScrollDeferredUnboundedProbeKind::Resize => {
-                    if stable_frames_required == 0 {
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                        defer_state.stable_frames = 0;
-                    } else {
-                        defer_state.stable_frames = defer_state.stable_frames.saturating_add(1);
-                        if defer_state.stable_frames < stable_frames_required {
-                            defer_this_frame = true;
-                        } else {
-                            defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                            defer_state.stable_frames = 0;
+            |state| {
+                let mut defer_this_frame = false;
+                if should_defer_unbounded_probe_on_resize {
+                    defer_this_frame = true;
+                    state.kind = ScrollDeferredUnboundedProbeKind::Resize;
+                    state.stable_frames = 0;
+                } else {
+                    match state.kind {
+                        ScrollDeferredUnboundedProbeKind::Resize => {
+                            if stable_frames_required == 0 {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else {
+                                state.stable_frames = state.stable_frames.saturating_add(1);
+                                if state.stable_frames < stable_frames_required {
+                                    defer_this_frame = true;
+                                } else {
+                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                    state.stable_frames = 0;
+                                }
+                            }
+                        }
+                        ScrollDeferredUnboundedProbeKind::Invalidation => {
+                            // Under view-cache reconciliation, descendants can remain layout-invalidated
+                            // for multiple frames. Keep deferring while invalidated, and only allow the
+                            // expensive unbounded probe once the subtree stabilizes for a few frames.
+                            if !wants_unbounded_probe || !defer_probe_on_invalidation {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else if children_layout_invalidated {
+                                defer_this_frame = true;
+                                state.stable_frames = 0;
+                            } else if stable_frames_required == 0 {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else {
+                                state.stable_frames = state.stable_frames.saturating_add(1);
+                                if state.stable_frames < stable_frames_required {
+                                    defer_this_frame = true;
+                                } else {
+                                    state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                    state.stable_frames = 0;
+                                }
+                            }
+                        }
+                        ScrollDeferredUnboundedProbeKind::None => {
+                            if should_defer_unbounded_probe_on_invalidation {
+                                defer_this_frame = true;
+                                state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
+                                state.stable_frames = 0;
+                            }
                         }
                     }
                 }
-                ScrollDeferredUnboundedProbeKind::Invalidation => {
-                    // Consume the pending deferral by running the unbounded probe on this frame.
-                    defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
-                    defer_state.stable_frames = 0;
-                }
-                ScrollDeferredUnboundedProbeKind::None => {
-                    if should_defer_unbounded_probe_on_invalidation {
-                        defer_this_frame = true;
-                        defer_state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
-                        defer_state.stable_frames = 0;
-                    }
-                }
-            }
-        }
-
-        crate::elements::with_element_state(
-            &mut *cx.app,
-            window,
-            self.element,
-            ScrollDeferredUnboundedProbeState::default,
-            |state| *state = defer_state,
+                (*state, defer_this_frame)
+            },
         );
 
         if defer_this_frame {
@@ -762,9 +896,8 @@ impl ElementHostWidget {
                 ScrollDeferredUnboundedProbeKind::None => false,
             };
             if schedule_follow_up {
-                cx.tree.invalidate_with_source_and_detail(
+                cx.tree.schedule_barrier_relayout_with_source_and_detail(
                     cx.node,
-                    Invalidation::Layout,
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::ScrollDeferredProbe,
                 );
@@ -779,7 +912,7 @@ impl ElementHostWidget {
             avail_h: available_space_cache_key(child_constraints.available.height),
         };
         let frame_id = cx.app.frame_id();
-        let cached = crate::elements::with_element_state(
+        let (cached, last_max_child) = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
@@ -789,10 +922,14 @@ impl ElementHostWidget {
                     state.frame_id = frame_id;
                     state.entries.clear();
                 }
-                state
+                let cached = state
                     .entries
                     .iter()
-                    .find_map(|(k, v)| (*k == key).then_some(*v))
+                    .find_map(|(k, v)| (*k == key).then_some(*v));
+                if let Some(cached) = cached {
+                    state.last_max_child = cached;
+                }
+                (cached, state.last_max_child)
             },
         );
 
@@ -801,16 +938,39 @@ impl ElementHostWidget {
         } else if let Some(cached) = cached {
             cached
         } else if defer_this_frame {
-            // Use the previous measured size as a best-effort estimate and avoid a deep measure
-            // walk on this frame.
-            let mut max_child = Size::new(Px(0.0), Px(0.0));
-            for &child in cx.children {
-                if let Some(child_size) = cx.tree.node_measured_size(child) {
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+            if last_max_child != Size::default() {
+                // Best-effort: reuse the last measured max-child size while deferring the expensive
+                // unbounded probe during interactive resize/unstable frames.
+                last_max_child
+            } else {
+                // Fallback: if we have no cached max-child size yet, scan the last measured child
+                // sizes and avoid a deep measure walk on this frame. Persist the result so future
+                // deferred frames can reuse it without scanning.
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    if let Some(child_size) = cx.tree.node_measured_size(child) {
+                        max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                        max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                    }
                 }
+                if max_child != Size::default() {
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        ScrollLayoutProbeCacheState::default,
+                        |state| state.last_max_child = max_child,
+                    );
+                }
+                max_child
             }
-            max_child
+        } else if let Some(cached) = intrinsic_cached_max_child
+            && cached != Size::default()
+        {
+            // Best-effort: reuse intrinsic sizing caches even when the child subtree is currently
+            // marked `needs_layout`. This avoids deep unbounded probe walks on transient
+            // invalidation frames (common under view-cache reconciliation).
+            cached
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -834,6 +994,7 @@ impl ElementHostWidget {
                         state.entries.clear();
                     }
                     state.entries.push((key, max_child));
+                    state.last_max_child = max_child;
                 },
             );
 
@@ -947,9 +1108,16 @@ impl ElementHostWidget {
 
         if !is_probe_layout {
             let solve_started = profile_cfg.is_some().then(Instant::now);
-            let roots: Vec<(NodeId, Rect)> =
-                cx.children.iter().map(|&c| (c, content_bounds)).collect();
-            cx.solve_barrier_child_roots_if_needed(&roots);
+            match cx.children {
+                [child] => {
+                    cx.solve_barrier_child_root_if_needed(*child, content_bounds);
+                }
+                children => {
+                    let roots: Vec<(NodeId, Rect)> =
+                        children.iter().map(|&c| (c, content_bounds)).collect();
+                    cx.solve_barrier_child_roots_if_needed(&roots);
+                }
+            }
             if let Some(started) = solve_started {
                 t_solve_barrier = started.elapsed();
             }

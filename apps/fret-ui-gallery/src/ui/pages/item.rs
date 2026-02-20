@@ -394,8 +394,8 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         cx.container(props, |cx| {
             vec![item_row_icon(
                 cx,
-                "???? ??????",
-                "???? ???? ??? ?????",
+                "لوحة التحكم",
+                "نظرة عامة على حسابك ونشاطك",
                 "lucide.layout-dashboard",
                 shadcn::ItemVariant::Default,
                 shadcn::ItemSize::Default,
@@ -602,16 +602,16 @@ let media = shadcn::ItemMedia::new([placeholder])
                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| {
-        shadcn::Item::new([shadcn::ItemContent::new([
-            shadcn::ItemTitle::new("???? ??????").into_element(cx),
+     |cx| {
+         shadcn::Item::new([shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("لوحة التحكم").into_element(cx),
             shadcn::ItemDescription::new("...").into_element(cx),
         ])
         .into_element(cx)])
         .into_element(cx)
-    },
+     },
 );"#,
-                ),
+                 ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and implementation notes.")
                 .max_w(Px(820.0)),

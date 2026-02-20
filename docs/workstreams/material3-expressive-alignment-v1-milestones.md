@@ -62,6 +62,7 @@ Evidence anchors:
   - `tools/diag-scripts/ui-gallery-material3-switch-handle-screenshots.json`
   - `tools/diag-scripts/ui-gallery-material3-switch-chrome-crossfade-timeline-screenshots.json`
   - `tools/diag-scripts/ui-gallery-material3-switch-focus-chroming-screenshots.json`
+  - `tools/diag-scripts/ui-gallery-material3-switch-icons-state-matrix-screenshots.json`
 
 ### M2 — Text field parity baseline
 
@@ -91,4 +92,3 @@ Acceptance criteria:
 - Overlay correctness is gated via scripts (dismiss + focus restore + placement invariants).
 
 Status: Not started.
-

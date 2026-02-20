@@ -575,8 +575,9 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_style: TextStyle,
+    chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    vec![cx.container(
+    let child = cx.container(
         ContainerProps {
             layout: {
                 let mut layout = LayoutStyle::default();
@@ -687,8 +688,14 @@ fn menu_row_children<H: UiHost>(
                 move |_cx| row.clone(),
             )]
         },
-    )]
-    .into()
+    );
+
+    let mut chrome = child;
+    if let Some(test_id) = chrome_test_id {
+        chrome = chrome.test_id(test_id);
+    }
+
+    vec![chrome].into()
 }
 
 fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
@@ -1220,6 +1227,7 @@ impl MenubarMenuEntries {
                 slant: Default::default(),
                 line_height: Some(font_line_height),
                 letter_spacing_em: None,
+                vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
             };
 
             let label = self.menu.label.clone();
@@ -1885,6 +1893,7 @@ impl MenubarMenuEntries {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_style.clone(),
+                                                                        None,
                                                                     );
 
                                                                     (props, children)
@@ -2067,6 +2076,7 @@ impl MenubarMenuEntries {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_style.clone(),
+                                                                        None,
                                                                     );
 
                                                                     (props, children)
@@ -2155,10 +2165,13 @@ impl MenubarMenuEntries {
                                                                    submenu_for_content.clone();
                                                                let trigger_registry =
                                                                    trigger_registry_for_overlay_for_content.clone();
-                                                              let value = item.value.clone();
-                                                              let test_id = item.test_id.clone();
-                                                               let pad_left =
-                                                                   if item.inset { pad_x_inset } else { pad_x };
+                                                               let value = item.value.clone();
+                                                               let test_id = item.test_id.clone();
+                                                               let chrome_test_id = test_id
+                                                                   .clone()
+                                                                   .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                                                let pad_left =
+                                                                    if item.inset { pad_x_inset } else { pad_x };
                                                             let _theme = theme.clone();
                                                                 let overlay_root_name_for_controls =
                                                                     overlay_root_name_for_controls.clone();
@@ -2319,22 +2332,23 @@ impl MenubarMenuEntries {
                                                                         })
                                                                     };
 
-                                                                    let children = menu_row_children(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        leading.clone(),
-                                                                        reserve_leading_slot,
-                                                                        trailing,
-                                                                        None,
-                                                                        has_submenu,
-                                                                        bg,
-                                                                        fg,
-                                                                        pad_left,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_style.clone(),
-                                                                    );
+                                                                     let children = menu_row_children(
+                                                                         cx,
+                                                                         label.clone(),
+                                                                         leading.clone(),
+                                                                         reserve_leading_slot,
+                                                                         trailing,
+                                                                         None,
+                                                                         has_submenu,
+                                                                         bg,
+                                                                         fg,
+                                                                         pad_left,
+                                                                         pad_x,
+                                                                         pad_y,
+                                                                         radius_sm,
+                                                                         text_style.clone(),
+                                                                         chrome_test_id.clone(),
+                                                                     );
 
                                                                     (props, children)
                                                                 })
@@ -2961,6 +2975,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    None,
                                                                                 );
 
                                                                                 (props, children)
@@ -3114,6 +3129,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    None,
                                                                                 );
 
                                                                                 (props, children)
@@ -3128,6 +3144,9 @@ impl MenubarMenuEntries {
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let test_id = item.test_id.clone();
+                                                                        let chrome_test_id = test_id
+                                                                            .clone()
+                                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                                         let command = item.command.clone();
                                                                         let item_enabled = !item.disabled
                                                                             && !crate::command_gating::command_is_disabled_by_gating(
@@ -3272,6 +3291,7 @@ impl MenubarMenuEntries {
                                                                                     pad_y,
                                                                                     radius_sm,
                                                                                     text_style.clone(),
+                                                                                    chrome_test_id.clone(),
                                                                                 );
 
                                                                                 (props, children)

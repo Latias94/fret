@@ -650,6 +650,9 @@ fn select_trigger_element<H: UiHost>(
     open_model: Model<bool>,
     style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
+    let chrome_test_id = test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
     let hovered_out: Cell<bool> = Cell::new(false);
     let focused_out: Cell<bool> = Cell::new(false);
@@ -1080,7 +1083,7 @@ fn select_trigger_element<H: UiHost>(
 
                 let style_override = style.clone();
 
-                vec![cx.container(chrome, move |cx| {
+                let mut chrome = cx.container(chrome, move |cx| {
                     let mut children = vec![overlay];
 
                     let leading_icon_el = leading_icon.as_ref().map(|icon| {
@@ -1147,7 +1150,11 @@ fn select_trigger_element<H: UiHost>(
                         children.push(indicator_el);
                     }
                     children
-                })]
+                });
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 
@@ -1886,6 +1893,10 @@ fn select_list_item<H: UiHost>(
             select_tokens::menu_list_item_height(theme, variant)
         }
     };
+    let chrome_test_id = item
+        .test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
@@ -2098,7 +2109,7 @@ fn select_list_item<H: UiHost>(
                     },
                 };
 
-                vec![cx.container(chrome, move |cx| {
+                let mut chrome = cx.container(chrome, move |cx| {
                     vec![cx.flex(row, move |cx| {
                         let body_slot = if has_secondary_text {
                             let headline_el = {
@@ -2213,7 +2224,11 @@ fn select_list_item<H: UiHost>(
                         }
                         children
                     })]
-                })]
+                });
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         });
 

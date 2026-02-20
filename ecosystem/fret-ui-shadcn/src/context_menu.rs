@@ -250,7 +250,12 @@ fn context_menu_cancel_open_item_pointer_up_handler(
             up.position,
             up.button,
         );
-        // 右键释放不应走 Pressable 默认激活链路。
+        // Right-button release should not go through the Pressable default activation path.
+        //
+        // Base UI opens via the `contextmenu` event and then installs a guarded `mouseup` listener
+        // to potentially cancel-open (after a delay). See:
+        // - `repo-ref/base-ui/packages/react/src/context-menu/trigger/ContextMenuTrigger.tsx`
+        // - `repo-ref/base-ui/packages/react/src/context-menu/trigger/ContextMenuTrigger.test.tsx`
         if up.button == fret_core::MouseButton::Right {
             PressablePointerUpResult::SkipActivate
         } else {
@@ -911,6 +916,9 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1022,6 +1030,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1135,6 +1144,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    None,
                 );
 
                 (props, children)
@@ -1254,6 +1264,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    None,
                 );
 
                 (props, children)
@@ -1421,6 +1432,9 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1584,6 +1598,7 @@ impl ContextMenuContentRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1699,6 +1714,7 @@ impl ContextMenuContentRenderEnv {
                         pad_y,
                         radius_sm,
                         text_disabled,
+                        None,
                     )
                 },
             )
@@ -1819,6 +1835,7 @@ impl ContextMenuContentRenderEnv {
                         pad_y,
                         radius_sm,
                         text_disabled,
+                        None,
                     )
                 },
             )
@@ -1845,8 +1862,9 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
+    chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    vec![cx.container(
+    let child = cx.container(
         ContainerProps {
             layout: {
                 let mut layout = LayoutStyle::default();
@@ -1963,8 +1981,14 @@ fn menu_row_children<H: UiHost>(
                 move |_cx| row.clone(),
             )]
         },
-    )]
-    .into()
+    );
+
+    let mut chrome = child;
+    if let Some(test_id) = chrome_test_id {
+        chrome = chrome.test_id(test_id);
+    }
+
+    vec![chrome].into()
 }
 
 fn submenu_chevron_right_icon<H: UiHost>(
@@ -2138,6 +2162,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         slant: Default::default(),
         line_height: Some(font_line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     };
     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
     let label_fg = theme.color_token("muted-foreground");
@@ -2460,7 +2485,7 @@ impl ContextMenu {
             let submenu_max_height_metric = theme.metric_by_key("component.context_menu.max_height");
             let is_open = cx
                 .watch_model(&self.open)
-                .layout()
+                .paint()
                 .copied()
                 .unwrap_or(false);
             let motion = radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
@@ -2567,7 +2592,8 @@ impl ContextMenu {
                         let _ = host.models_mut().update(&anchor_store_model, |map| {
                             map.insert(open_model_id, down.position);
                         });
-                        // Base UI: contextmenu 打开后 500ms 再允许 mouseup 触发 cancel-open。
+                        // Base UI: once opened, wait 500ms before allowing `mouseup` to cancel-open.
+                        // (`LONG_PRESS_DELAY = 500` in `ContextMenuTrigger.tsx`.)
                         if down.button == fret_core::MouseButton::Right {
                             context_menu_cancel_open_start(
                                 &cancel_open,
@@ -2576,7 +2602,7 @@ impl ContextMenu {
                                 down.pointer_id,
                                 down.position,
                             );
-                            // 在此期间持续收到 pointer move/up。
+                            // Capture pointer so we keep receiving move/up during the guard window.
                             host.capture_pointer();
                         }
                     }
@@ -2853,6 +2879,7 @@ impl ContextMenu {
                         slant: Default::default(),
                         line_height: Some(font_line_height),
                         letter_spacing_em: None,
+                        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                     };
                     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
                     let label_fg = theme.color_token("muted-foreground");
@@ -3083,6 +3110,9 @@ impl ContextMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
+                                                        let chrome_test_id = test_id
+                                                            .clone()
+                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let disabled = item.disabled
@@ -3256,16 +3286,17 @@ impl ContextMenu {
                                                                         has_submenu,
                                                                         None,
                                                                         disabled,
-                                                                    row_bg,
-                                                                    row_fg,
-                                                                    text_style.clone(),
-                                                                    font_size,
-                                                                    font_line_height,
-                                                                    pad_left,
-                                                                    pad_x,
-                                                                    pad_y,
-                                                                    radius_sm,
-                                                                    text_disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_left,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                        chrome_test_id.clone(),
                                                                     );
 
                                                                     (props, children)
@@ -3362,6 +3393,7 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
+                                                                        None,
                                                                     );
 
                                                                     let props = PressableProps {
@@ -3486,6 +3518,7 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
+                                                                        None,
                                                                     );
 
                                                                     let props = PressableProps {
@@ -5669,7 +5702,7 @@ mod tests {
             open.clone(),
         );
 
-        // 在原始锚点处右键抬起：应被忽略，不关闭菜单。
+        // Right mouseup at the original anchor should be ignored (do not close a freshly opened menu).
         ui.dispatch_event(
             &mut app,
             &mut services,

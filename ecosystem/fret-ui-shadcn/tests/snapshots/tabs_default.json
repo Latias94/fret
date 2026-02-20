@@ -353,11 +353,11 @@
       "bounds": {
         "origin": {
           "x": 12.0,
-          "y": 10.0
+          "y": 9.0
         },
         "size": {
           "w": 10.0,
-          "h": 16.0
+          "h": 18.0
         }
       },
       "flags": {
@@ -376,11 +376,11 @@
       "bounds": {
         "origin": {
           "x": 40.0,
-          "y": 10.0
+          "y": 9.0
         },
         "size": {
           "w": 10.0,
-          "h": 16.0
+          "h": 18.0
         }
       },
       "flags": {
@@ -399,11 +399,11 @@
       "bounds": {
         "origin": {
           "x": 68.0,
-          "y": 10.0
+          "y": 9.0
         },
         "size": {
           "w": 10.0,
-          "h": 16.0
+          "h": 18.0
         }
       },
       "flags": {
@@ -649,10 +649,29 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 3.0,
+          "y": 4.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 28.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 12.0,
-        "y": 19.5
+        "y": 21.0
       },
       "color": {
         "r": 0.68,
@@ -660,6 +679,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -699,10 +721,29 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 31.0,
+          "y": 4.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 28.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 40.0,
-        "y": 19.5
+        "y": 21.0
       },
       "color": {
         "r": 0.68,
@@ -710,6 +751,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -749,10 +793,29 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 59.0,
+          "y": 4.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 28.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 68.0,
-        "y": 19.5
+        "y": 21.0
       },
       "color": {
         "r": 0.68,
@@ -760,6 +823,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "Text",

@@ -45,4 +45,11 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn node_measured_size(&self, node: NodeId) -> Option<Size> {
         self.nodes.get(node).map(|n| n.measured_size)
     }
+
+    pub(crate) fn node_text_wrap_none_measure_cache(&self, node: NodeId) -> Option<(u64, Size)> {
+        self.nodes.get(node).and_then(|n| {
+            n.text_wrap_none_measure_cache
+                .map(|cache| (cache.fingerprint, cache.size))
+        })
+    }
 }

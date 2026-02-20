@@ -154,6 +154,24 @@ def main() -> int:
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
     ap.add_argument("--timeout-ms", type=int, default=300_000)
     ap.add_argument(
+        "--suite-prewarm",
+        action="append",
+        default=[],
+        help="Forwarded to `fretboard diag perf --suite-prewarm <script.json>` (repeatable).",
+    )
+    ap.add_argument(
+        "--suite-prelude",
+        action="append",
+        default=[],
+        help="Forwarded to `fretboard diag perf --suite-prelude <script.json>` (repeatable).",
+    )
+    ap.add_argument(
+        "--suite-prelude-each-run",
+        action="store_true",
+        default=False,
+        help="Forwarded to `fretboard diag perf --suite-prelude-each-run`.",
+    )
+    ap.add_argument(
         "--env",
         action="append",
         default=[],
@@ -178,6 +196,8 @@ def main() -> int:
     baseline_out.parent.mkdir(parents=True, exist_ok=True)
 
     env_specs = _split_env_specs(list(args.env))
+    suite_prewarm_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.suite_prewarm]
+    suite_prelude_scripts = [str(_resolve_workspace_path(workspace_root, p)) for p in args.suite_prelude]
 
     candidate_results: list[dict[str, Any]] = []
     best: tuple[int, int, int, str] | None = None
@@ -197,6 +217,14 @@ def main() -> int:
             str(out_dir),
             "--timeout-ms",
             str(int(args.timeout_ms)),
+        ]
+        for script in suite_prewarm_scripts:
+            cmd += ["--suite-prewarm", script]
+        for script in suite_prelude_scripts:
+            cmd += ["--suite-prelude", script]
+        if bool(args.suite_prelude_each_run):
+            cmd += ["--suite-prelude-each-run"]
+        cmd += [
             "--reuse-launch",
             "--sort",
             "time",

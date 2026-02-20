@@ -303,6 +303,26 @@ impl ElementRuntime {
     }
 
     #[cfg(feature = "diagnostics")]
+    pub fn selectable_text_interactive_span_bounds_for_node(
+        &self,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> Option<Vec<crate::element::SelectableTextInteractiveSpanBounds>> {
+        let state = self.windows.get(&window)?;
+        let element = state.element_for_node(node)?;
+        let key = (element, TypeId::of::<crate::element::SelectableTextState>());
+
+        let boxed = state
+            .next_state
+            .get(&key)
+            .or_else(|| state.rendered_state.get(&key))
+            .or_else(|| state.lag_state.iter().rev().find_map(|m| m.get(&key)))?;
+
+        let state = boxed.downcast_ref::<crate::element::SelectableTextState>()?;
+        Some(state.interactive_span_bounds.clone())
+    }
+
+    #[cfg(feature = "diagnostics")]
     pub fn debug_path_for_element(
         &self,
         window: AppWindowId,
@@ -1722,6 +1742,12 @@ impl WindowElementState {
                     .get(&id)
                     .copied()
                     .or_else(|| self.cur_visual_bounds.get(&id).copied())
+                    .or_else(|| {
+                        self.prev_bounds
+                            .get(&id)
+                            .copied()
+                            .or_else(|| self.cur_bounds.get(&id).copied())
+                    })
             })
         };
         let node_for = |element: Option<GlobalElementId>| {

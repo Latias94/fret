@@ -23,6 +23,19 @@ After introducing a children-only scroll translation path and fine-grained scrol
 scroll offset changes no longer force layout-engine solves. The remaining worst frames in the scripted harness are
 still dominated by initial-mount layout/measure work (not by translation-only scrolling).
 
+### Update (2026-02-18): reduce fixed overhead in batched root solves
+
+Some perf suites (notably resize stress and overlay-heavy scenes) solve **multiple independent roots per frame**.
+To keep tail latency under control, the layout engine now reuses a persistent synthetic “batch root” node and a
+scratch children buffer, and avoids redundant style writes when the batch root size is unchanged.
+
+Evidence (macOS, Apple M4):
+
+- `diag perf ui-resize-probes --repeat 3` worst `top_total_time_us`: ~8.7ms
+- Worst `top_layout_engine_solve_time_us`: ~1.2ms
+
+Implementation anchor: `crates/fret-ui/src/layout/engine.rs`.
+
 ## Repro (repeatable)
 
 Use the scripted harness to find and pin the worst frames:

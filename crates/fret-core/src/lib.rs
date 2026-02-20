@@ -89,8 +89,8 @@ pub use scene::{
     SceneValidationErrorKind, SweepGradient, TileMode, UvRect,
 };
 pub use semantics::{
-    SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,
-    SemanticsSnapshot,
+    SemanticsActions, SemanticsFlags, SemanticsInlineSpan, SemanticsNode, SemanticsRole,
+    SemanticsRoot, SemanticsSnapshot,
 };
 pub use services::UiServices;
 pub use share::{ShareItem, ShareSheetOutcome};
@@ -100,8 +100,8 @@ pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
     StrikethroughStyle, TextAlign, TextCommonFallbackInjection, TextConstraints,
     TextFontAxisSetting, TextFontFamilyConfig, TextFontFeatureSetting, TextInput, TextInputRef,
-    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
-    TextStyle, TextWrap, UnderlineStyle,
+    TextLineMetrics, TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle,
+    TextSlant, TextSpan, TextStyle, TextVerticalPlacement, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

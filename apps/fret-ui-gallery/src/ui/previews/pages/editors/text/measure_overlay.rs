@@ -23,11 +23,25 @@ pub(in crate::ui) fn preview_text_measure_overlay(
             height: Px(56.0),
         },
         Case {
+            label: "Wrap=Word, Overflow=Clip (expect long tokens to NOT wrap)",
+            text: "WordWrap • A_very_long_token_without_spaces_that_must_not_break_mid_token",
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            height: Px(56.0),
+        },
+        Case {
             label: "Wrap=Word, Overflow=Clip (expect multi-line height growth)",
             text: "Word wrap should break on spaces and increase measured height when max_width is tight.",
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             height: Px(88.0),
+        },
+        Case {
+            label: "Wrap=WordBreak, Overflow=Clip (expect long tokens to wrap only when needed)",
+            text: "WordBreak • URL_like_token_without_spaces_should_wrap_if_max_width_is_tight: https://example.com/some/really/long/path?with=query&params=too",
+            wrap: TextWrap::WordBreak,
+            overflow: TextOverflow::Clip,
+            height: Px(104.0),
         },
         Case {
             label: "Wrap=Grapheme, Overflow=Clip (expect long tokens to wrap)",

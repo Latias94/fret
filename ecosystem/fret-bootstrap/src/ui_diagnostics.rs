@@ -1924,6 +1924,7 @@ impl UiDiagnosticsService {
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::ClickSelectableTextSpanStable { .. }
                 | UiActionStepV2::WaitBoundsStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
@@ -3723,6 +3724,272 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::ClickSelectableTextSpanStable {
+                target,
+                tag,
+                button,
+                click_count,
+                modifiers,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let note = format!(
+                    "click_selectable_text_span_stable(tag={})",
+                    truncate_debug_value(tag.as_str(), 64)
+                );
+
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickSelectableTextSpanStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickSelectableTextSpanStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_pos: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds),
+                                    Some(node),
+                                    Some("click_selectable_text_span_stable.timeout"),
+                                    self.cfg.max_debug_string_bytes,
+                                );
+                            }
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-click_selectable_span-timeout"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("click_selectable_text_span_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let bounds_local: Option<Rect> = match element_runtime.and_then(|rt| {
+                                rt.selectable_text_interactive_span_bounds_for_node(window, node.id)
+                            }) {
+                                None => {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) if spans.is_empty() => {
+                                    // Best-effort: span bounds are computed during `paint_all()`. If
+                                    // we don't see them yet, wait a few frames before failing.
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(
+                                            state.clone(),
+                                        ));
+                                    output.request_redraw = true;
+                                    None
+                                }
+                                Some(spans) => spans
+                                    .iter()
+                                    .find(|span| span.tag.as_ref() == tag.as_str())
+                                    .map(|span| span.bounds_local)
+                                    .or_else(|| {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-click_selectable_span-tag-not-found"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason = Some(
+                                            "click_selectable_text_span_stable_tag_not_found"
+                                                .to_string(),
+                                        );
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        None
+                                    }),
+                            };
+
+                            if let Some(bounds_local) = bounds_local {
+                                let span_bounds = Rect::new(
+                                    Point::new(
+                                        Px(node.bounds.origin.x.0 + bounds_local.origin.x.0),
+                                        Px(node.bounds.origin.y.0 + bounds_local.origin.y.0),
+                                    ),
+                                    bounds_local.size,
+                                );
+
+                                let skinny = Rect::new(
+                                    span_bounds.origin,
+                                    fret_core::Size::new(
+                                        Px(span_bounds.size.width.0.max(1.0).min(2.0)),
+                                        span_bounds.size.height,
+                                    ),
+                                );
+                                let pos = center_of_rect_clamped_to_rect(skinny, window_bounds);
+
+                                let moved = match state.last_pos {
+                                    Some(last) => {
+                                        let dx = (pos.x.0 - last.x.0).abs();
+                                        let dy = (pos.y.0 - last.y.0).abs();
+                                        dx.max(dy)
+                                    }
+                                    None => 0.0,
+                                };
+
+                                if moved <= max_move_px {
+                                    state.stable_count = state.stable_count.saturating_add(1);
+                                } else {
+                                    state.stable_count = 1;
+                                }
+                                state.last_pos = Some(pos);
+
+                                if state.stable_count >= stable_required {
+                                    if let Some(ui) = ui {
+                                        let mut hit = build_hit_test_trace_entry_for_selector(
+                                            ui,
+                                            element_runtime,
+                                            window,
+                                            Some(snapshot),
+                                            &target,
+                                            step_index as u32,
+                                            pos,
+                                            Some(node),
+                                            Some(&note),
+                                            self.cfg.max_debug_string_bytes,
+                                        );
+                                        let ok = hit.includes_intended == Some(true)
+                                            || hit.hit_path_contains_intended == Some(true);
+                                        if !ok {
+                                            hit.note =
+                                                Some("click_selectable_span.mismatch".to_string());
+                                            push_hit_test_trace(
+                                                &mut active.hit_test_trace,
+                                                hit.clone(),
+                                            );
+                                            push_click_stable_trace(
+                                                &mut active.click_stable_trace,
+                                                UiClickStableTraceEntryV1 {
+                                                    step_index: step_index as u32,
+                                                    stable_required,
+                                                    stable_count: state.stable_count,
+                                                    moved_px: moved,
+                                                    max_move_px,
+                                                    remaining_frames: state.remaining_frames,
+                                                    hit_test: hit,
+                                                },
+                                            );
+                                            state.stable_count = 0;
+                                            state.last_pos = None;
+                                            state.remaining_frames =
+                                                state.remaining_frames.saturating_sub(1);
+                                            active.v2_step_state = Some(
+                                                V2StepState::ClickSelectableTextSpanStable(state),
+                                            );
+                                            output.request_redraw = true;
+                                        } else {
+                                            hit.note =
+                                                Some("click_selectable_span.click".to_string());
+                                            push_hit_test_trace(&mut active.hit_test_trace, hit);
+                                            record_overlay_placement_trace(
+                                                &mut active.overlay_placement_trace,
+                                                element_runtime,
+                                                Some(snapshot),
+                                                window,
+                                                step_index as u32,
+                                                "click_selectable_span.click",
+                                            );
+                                            output.events.extend(click_events_with_modifiers(
+                                                pos,
+                                                button,
+                                                click_count,
+                                                click_modifiers,
+                                            ));
+                                            active.next_step = active.next_step.saturating_add(1);
+                                            active.v2_step_state = None;
+                                            output.request_redraw = true;
+                                            if self.cfg.script_auto_dump {
+                                                force_dump_label = Some(format!(
+                                                    "script-step-{step_index:04}-click_selectable_span-click"
+                                                ));
+                                            }
+                                        }
+                                    } else {
+                                        output.events.extend(click_events_with_modifiers(
+                                            pos,
+                                            button,
+                                            click_count,
+                                            click_modifiers,
+                                        ));
+                                        active.next_step = active.next_step.saturating_add(1);
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        if self.cfg.script_auto_dump {
+                                            force_dump_label = Some(format!(
+                                                "script-step-{step_index:04}-click_selectable_span-click"
+                                            ));
+                                        }
+                                    }
+                                } else {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state =
+                                        Some(V2StepState::ClickSelectableTextSpanStable(state));
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_selectable_span-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some(
+                            "click_selectable_text_span_stable_no_semantics_match".to_string(),
+                        );
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_selectable_span-no-semantics"
                     ));
                     stop_script = true;
                     failure_reason = Some("no_semantics_snapshot".to_string());
@@ -5567,6 +5834,7 @@ impl UiDiagnosticsService {
             UiActionStepV2::TypeTextInto {
                 target,
                 text,
+                clear_before_type,
                 timeout_frames,
             } => {
                 active.wait_until = None;
@@ -5710,9 +5978,20 @@ impl UiDiagnosticsService {
                                 .and_then(|rt| rt.diagnostics_snapshot(window))
                                 .and_then(|s| s.focused_element_node)
                                 .map(key_to_u64);
-                            let focus_matches = match (state.expected_node_id, focused_node_id) {
-                                (Some(expected), Some(focused)) => expected == focused,
-                                // If we cannot observe focus, prefer making progress rather than timing out.
+                            let focus_matches = match (
+                                state.expected_node_id,
+                                focused_node_id,
+                                element_runtime
+                                    .and_then(|rt| rt.diagnostics_snapshot(window))
+                                    .is_some(),
+                            ) {
+                                (Some(expected), Some(focused), _) => expected == focused,
+                                // When we have an expected node id and diagnostics are available,
+                                // treat missing focus as a mismatch to avoid injecting into the
+                                // wrong widget.
+                                (Some(_), None, true) => false,
+                                // If we cannot observe focus (diagnostics unavailable), prefer
+                                // making progress rather than timing out.
                                 _ => true,
                             };
 
@@ -5738,6 +6017,15 @@ impl UiDiagnosticsService {
 
                                 active.last_injected_step =
                                     Some(step_index.min(u32::MAX as usize) as u32);
+                                if clear_before_type {
+                                    // Prefer a platform-independent selection API over shortcuts:
+                                    // suites commonly reuse a single launch, and input fields may
+                                    // retain previous values across runs.
+                                    output.events.push(Event::SetTextSelection {
+                                        anchor: 0,
+                                        focus: u32::MAX,
+                                    });
+                                }
                                 output.events.push(Event::TextInput(text));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
@@ -7220,7 +7508,12 @@ impl UiDiagnosticsService {
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
-                ElementDiagnosticsSnapshotV1::from_runtime(window, runtime, snapshot)
+                ElementDiagnosticsSnapshotV1::from_runtime(
+                    window,
+                    runtime,
+                    snapshot,
+                    self.cfg.max_debug_string_bytes,
+                )
             })
         });
 
@@ -7869,12 +8162,24 @@ impl UiDiagnosticsService {
             if std::fs::create_dir_all(&dir).is_err() {
                 return None;
             }
-            if write_json_compact(dir.join("bundle.json"), &bundle).is_err() {
+            let bundle_json_path = dir.join("bundle.json");
+            let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
+                .ok()
+                .map(|v| v.trim().to_ascii_lowercase());
+            let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
+
+            let write_result = if want_pretty {
+                write_json(bundle_json_path.clone(), &bundle)
+            } else {
+                // Default: compact/minified JSON. This keeps bundles smaller and avoids accidental
+                // output explosions when someone greps a bundle.
+                write_json_compact(bundle_json_path.clone(), &bundle)
+            };
+
+            if write_result.is_err() {
                 return None;
             }
-            bundle_json_bytes = std::fs::metadata(dir.join("bundle.json"))
-                .ok()
-                .map(|m| m.len());
+            bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
             if self.cfg.screenshot_on_dump {
                 let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
@@ -8140,6 +8445,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return matches!(
             state,
             V2StepState::ClickStable(_)
+                | V2StepState::ClickSelectableTextSpanStable(_)
                 | V2StepState::WaitBoundsStable(_)
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
@@ -8159,6 +8465,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     match step {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::ClickStable { .. }
+        | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
@@ -8852,6 +9159,7 @@ impl UiRendererTextFontTraceSnapshotV1 {
             match wrap {
                 fret_core::TextWrap::None => "none",
                 fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::WordBreak => "word_break",
                 fret_core::TextWrap::Grapheme => "grapheme",
             }
         }
@@ -9374,6 +9682,8 @@ mod legacy_forked_script_protocol {
         TypeTextInto {
             target: UiSelectorV1,
             text: String,
+            #[serde(default)]
+            clear_before_type: bool,
             #[serde(default = "default_action_timeout_frames")]
             timeout_frames: u32,
         },
@@ -9881,6 +10191,7 @@ impl PendingScript {
 #[derive(Debug, Clone)]
 enum V2StepState {
     ClickStable(V2ClickStableState),
+    ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
     WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
@@ -9918,6 +10229,14 @@ struct V2ClickStableState {
     remaining_frames: u32,
     stable_count: u32,
     last_center: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickSelectableTextSpanStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_pos: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -10460,12 +10779,70 @@ impl UiTreeDebugSnapshotV1 {
                 last_activation_frame_id: snapshot.last_activation_frame_id.map(|id| id.0),
             }
         });
+
+        let cache_roots: Vec<UiCacheRootStatsV1> = ui
+            .debug_cache_root_stats()
+            .iter()
+            .map(|stats| {
+                UiCacheRootStatsV1::from_stats(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    semantics.as_ref(),
+                    &contained_relayout_roots,
+                    stats,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let removed_subtrees: Vec<UiRemovedSubtreeV1> = ui
+            .debug_removed_subtrees()
+            .iter()
+            .map(|r| {
+                UiRemovedSubtreeV1::from_record(
+                    window,
+                    ui,
+                    element_runtime_state,
+                    r,
+                    max_debug_string_bytes,
+                )
+            })
+            .collect();
+
+        let mut layout_engine_solves: Vec<UiLayoutEngineSolveV1> = ui
+            .debug_layout_engine_solves()
+            .iter()
+            .map(UiLayoutEngineSolveV1::from_solve)
+            .collect();
+        for s in &mut layout_engine_solves {
+            truncate_opt_string_bytes(&mut s.root_element_path, max_debug_string_bytes);
+        }
+
+        let mut layout_hotspots: Vec<UiLayoutHotspotV1> = ui
+            .debug_layout_hotspots()
+            .iter()
+            .map(UiLayoutHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut layout_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
+        let mut widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1> = ui
+            .debug_widget_measure_hotspots()
+            .iter()
+            .map(UiWidgetMeasureHotspotV1::from_hotspot)
+            .collect();
+        for h in &mut widget_measure_hotspots {
+            truncate_opt_string_bytes(&mut h.element_path, max_debug_string_bytes);
+        }
+
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
-                .map(UiInvalidationWalkV1::from_walk)
+                .map(|w| UiInvalidationWalkV1::from_walk(w, window, element_runtime_state))
                 .collect(),
             hover_declarative_invalidation_hotspots: ui
                 .debug_hover_declarative_invalidation_hotspots(20)
@@ -10538,20 +10915,7 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(|u| UiGlobalChangeUnobservedV1::from_unobserved(app, u))
                 .collect(),
-            cache_roots: ui
-                .debug_cache_root_stats()
-                .iter()
-                .map(|stats| {
-                    UiCacheRootStatsV1::from_stats(
-                        window,
-                        ui,
-                        element_runtime_state,
-                        semantics.as_ref(),
-                        &contained_relayout_roots,
-                        stats,
-                    )
-                })
-                .collect(),
+            cache_roots,
             overlay_synthesis: app
                 .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
                 .and_then(|diag| diag.events_for_window(window, app.frame_id()))
@@ -10578,26 +10942,10 @@ impl UiTreeDebugSnapshotV1 {
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
                 .map(UiDockingInteractionSnapshotV1::from_snapshot),
-            removed_subtrees: ui
-                .debug_removed_subtrees()
-                .iter()
-                .map(|r| UiRemovedSubtreeV1::from_record(window, ui, element_runtime_state, r))
-                .collect(),
-            layout_engine_solves: ui
-                .debug_layout_engine_solves()
-                .iter()
-                .map(UiLayoutEngineSolveV1::from_solve)
-                .collect(),
-            layout_hotspots: ui
-                .debug_layout_hotspots()
-                .iter()
-                .map(UiLayoutHotspotV1::from_hotspot)
-                .collect(),
-            widget_measure_hotspots: ui
-                .debug_widget_measure_hotspots()
-                .iter()
-                .map(UiWidgetMeasureHotspotV1::from_hotspot)
-                .collect(),
+            removed_subtrees,
+            layout_engine_solves,
+            layout_hotspots,
+            widget_measure_hotspots,
             paint_widget_hotspots: ui
                 .debug_paint_widget_hotspots()
                 .iter()
@@ -12140,6 +12488,7 @@ impl UiRemovedSubtreeV1 {
         ui: &UiTree<App>,
         element_runtime_state: Option<&ElementRuntime>,
         r: &fret_ui::tree::UiDebugRemoveSubtreeRecord,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let outcome = match r.outcome {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::SkippedLayerRoot => "skipped_layer_root",
@@ -12147,25 +12496,29 @@ impl UiRemovedSubtreeV1 {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::Removed => "removed",
         };
 
-        let root_element_path = r.root_element.and_then(|element| {
+        let mut root_element_path = r.root_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_element_path, max_debug_string_bytes);
 
-        let root_parent_element_path = r.root_parent_element.and_then(|element| {
+        let mut root_parent_element_path = r.root_parent_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut root_parent_element_path, max_debug_string_bytes);
 
-        let trigger_element_path = r.trigger_element.and_then(|element| {
+        let mut trigger_element_path = r.trigger_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_path, max_debug_string_bytes);
 
-        let trigger_element_root_path = r.trigger_element_root.and_then(|element| {
+        let mut trigger_element_root_path = r.trigger_element_root.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
+        truncate_opt_string_bytes(&mut trigger_element_root_path, max_debug_string_bytes);
 
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
         let root_path_edge_len = (r.root_path_edge_len as usize)
@@ -12185,8 +12538,10 @@ impl UiRemovedSubtreeV1 {
             .root_parent
             .and_then(|parent| ui.debug_set_children_write_for(parent))
             .map(|w| {
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
                 (
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.old_len),
                     Some(w.new_len),
                     Some(w.frame_id.0),
@@ -12211,10 +12566,11 @@ impl UiRemovedSubtreeV1 {
             .map(|w| {
                 let parent_element = element_runtime_state
                     .and_then(|runtime| runtime.element_for_node(window, w.parent));
-                let parent_path = parent_element.and_then(|element| {
+                let mut parent_path = parent_element.and_then(|element| {
                     element_runtime_state
                         .and_then(|runtime| runtime.debug_path_for_element(window, element))
                 });
+                truncate_opt_string_bytes(&mut parent_path, max_debug_string_bytes);
                 let parent_is_view_cache_reuse_root = parent_element.and_then(|element| {
                     element_runtime_state.and_then(|runtime| {
                         runtime
@@ -12247,12 +12603,18 @@ impl UiRemovedSubtreeV1 {
                     }
                 }
 
+                truncate_vec_string_bytes(&mut old_elements_head_paths, max_debug_string_bytes);
+                truncate_vec_string_bytes(&mut new_elements_head_paths, max_debug_string_bytes);
+
+                let mut location = Some(format!("{}:{}:{}", w.file, w.line, w.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+
                 (
                     Some(key_to_u64(w.parent)),
                     parent_element.map(|e| e.0),
                     parent_path,
                     parent_is_view_cache_reuse_root,
-                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    location,
                     Some(w.frame_id.0),
                     old_elements_head,
                     old_elements_head_paths,
@@ -12329,7 +12691,11 @@ impl UiRemovedSubtreeV1 {
                 .to_vec(),
             outcome: Some(outcome.to_string()),
             frame_id: Some(r.frame_id.0),
-            location: Some(format!("{}:{}:{}", r.file, r.line, r.column)),
+            location: {
+                let mut location = Some(format!("{}:{}:{}", r.file, r.line, r.column));
+                truncate_opt_string_bytes(&mut location, max_debug_string_bytes);
+                location
+            },
         }
     }
 }
@@ -12435,6 +12801,7 @@ impl UiCacheRootStatsV1 {
         semantics: Option<&UiSemanticsSnapshotV1>,
         contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
             element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id))
@@ -12519,7 +12886,8 @@ impl UiCacheRootStatsV1 {
                 Vec::new(),
                 None,
             ));
-        Self {
+
+        let mut out = Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
             element_path,
@@ -12540,7 +12908,21 @@ impl UiCacheRootStatsV1 {
             children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
-        }
+        };
+
+        truncate_opt_string_bytes(&mut out.element_path, max_debug_string_bytes);
+        truncate_opt_string_bytes(&mut out.children_last_set_location, max_debug_string_bytes);
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_old_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_vec_string_bytes(
+            &mut out.children_last_set_new_elements_head_paths,
+            max_debug_string_bytes,
+        );
+        truncate_opt_string_bytes(&mut out.reuse_reason, max_debug_string_bytes);
+
+        out
     }
 }
 
@@ -12718,6 +13100,7 @@ impl UiPaintTextPrepareHotspotV1 {
             match wrap {
                 fret_core::TextWrap::None => "none",
                 fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::WordBreak => "word_break",
                 fret_core::TextWrap::Grapheme => "grapheme",
             }
         }
@@ -12922,6 +13305,8 @@ pub struct UiInvalidationWalkV1 {
     pub root_node: u64,
     #[serde(default)]
     pub root_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_element_path: Option<String>,
     pub kind: UiInvalidationKindV1,
     pub source: UiInvalidationSourceV1,
     #[serde(default)]
@@ -12932,7 +13317,11 @@ pub struct UiInvalidationWalkV1 {
 }
 
 impl UiInvalidationWalkV1 {
-    fn from_walk(walk: &fret_ui::tree::UiDebugInvalidationWalk) -> Self {
+    fn from_walk(
+        walk: &fret_ui::tree::UiDebugInvalidationWalk,
+        window: AppWindowId,
+        element_runtime_state: Option<&ElementRuntime>,
+    ) -> Self {
         let kind = match walk.inv {
             Invalidation::Paint => UiInvalidationKindV1::Paint,
             Invalidation::Layout => UiInvalidationKindV1::Layout,
@@ -12951,9 +13340,13 @@ impl UiInvalidationWalkV1 {
             fret_ui::tree::UiDebugInvalidationSource::Focus => UiInvalidationSourceV1::Focus,
             fret_ui::tree::UiDebugInvalidationSource::Other => UiInvalidationSourceV1::Other,
         };
+        let root_element_path = walk.root_element.and_then(|element| {
+            element_runtime_state.and_then(|rt| rt.debug_path_for_element(window, element))
+        });
         Self {
             root_node: key_to_u64(walk.root),
             root_element: walk.root_element.map(|e| e.0),
+            root_element_path,
             kind,
             source,
             detail: walk.detail.as_str().map(|s| s.to_string()),
@@ -14616,26 +15009,39 @@ impl ElementDiagnosticsSnapshotV1 {
         window: AppWindowId,
         runtime: &ElementRuntime,
         snapshot: fret_ui::elements::WindowElementDiagnosticsSnapshot,
+        max_debug_string_bytes: usize,
     ) -> Self {
-        let focused_element_path = snapshot
+        let mut focused_element_path = snapshot
             .focused_element
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
+        truncate_opt_string_bytes(&mut focused_element_path, max_debug_string_bytes);
+
+        let mut active_text_selection_path = snapshot.active_text_selection.and_then(|(a, b)| {
             let a = runtime.debug_path_for_element(window, a)?;
             let b = runtime.debug_path_for_element(window, b)?;
             Some((a, b))
         });
-        let hovered_pressable_path = snapshot
+        if let Some((a, b)) = active_text_selection_path.as_mut() {
+            truncate_string_bytes(a, max_debug_string_bytes);
+            truncate_string_bytes(b, max_debug_string_bytes);
+        }
+
+        let mut hovered_pressable_path = snapshot
             .hovered_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let pressed_pressable_path = snapshot
+        truncate_opt_string_bytes(&mut hovered_pressable_path, max_debug_string_bytes);
+
+        let mut pressed_pressable_path = snapshot
             .pressed_pressable
             .and_then(|id| runtime.debug_path_for_element(window, id));
-        let hovered_hover_region_path = snapshot
+        truncate_opt_string_bytes(&mut pressed_pressable_path, max_debug_string_bytes);
+
+        let mut hovered_hover_region_path = snapshot
             .hovered_hover_region
             .and_then(|id| runtime.debug_path_for_element(window, id));
+        truncate_opt_string_bytes(&mut hovered_hover_region_path, max_debug_string_bytes);
 
-        Self {
+        let mut out = Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
             focused_element_node: snapshot.focused_element_node.map(key_to_u64),
@@ -14770,24 +15176,64 @@ impl ElementDiagnosticsSnapshotV1 {
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
                 .into_iter()
-                .map(|r| ElementNodeEntryRootOverwriteV1 {
-                    frame_id: r.frame_id.0,
-                    element: r.element.0,
-                    element_path: runtime.debug_path_for_element(window, r.element),
-                    old_root: r.old_root.0,
-                    old_root_path: runtime.debug_path_for_element(window, r.old_root),
-                    new_root: r.new_root.0,
-                    new_root_path: runtime.debug_path_for_element(window, r.new_root),
-                    old_node: r.old_node.data().as_ffi(),
-                    new_node: r.new_node.data().as_ffi(),
-                    location: Some(UiSourceLocationV1 {
-                        file: r.file.to_string(),
-                        line: r.line,
-                        column: r.column,
-                    }),
+                .map(|r| {
+                    let mut element_path = runtime.debug_path_for_element(window, r.element);
+                    let mut old_root_path = runtime.debug_path_for_element(window, r.old_root);
+                    let mut new_root_path = runtime.debug_path_for_element(window, r.new_root);
+                    truncate_opt_string_bytes(&mut element_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut old_root_path, max_debug_string_bytes);
+                    truncate_opt_string_bytes(&mut new_root_path, max_debug_string_bytes);
+
+                    let mut file = r.file.to_string();
+                    truncate_string_bytes(&mut file, max_debug_string_bytes);
+
+                    ElementNodeEntryRootOverwriteV1 {
+                        frame_id: r.frame_id.0,
+                        element: r.element.0,
+                        element_path,
+                        old_root: r.old_root.0,
+                        old_root_path,
+                        new_root: r.new_root.0,
+                        new_root_path,
+                        old_node: r.old_node.data().as_ffi(),
+                        new_node: r.new_node.data().as_ffi(),
+                        location: Some(UiSourceLocationV1 {
+                            file,
+                            line: r.line,
+                            column: r.column,
+                        }),
+                    }
                 })
                 .collect(),
+        };
+
+        for entry in &mut out.observed_layout_queries {
+            for region in &mut entry.regions {
+                truncate_opt_string_bytes(&mut region.region_name, max_debug_string_bytes);
+                truncate_string_bytes(&mut region.invalidation, max_debug_string_bytes);
+            }
         }
+        for region in &mut out.layout_query_regions {
+            truncate_opt_string_bytes(&mut region.name, max_debug_string_bytes);
+        }
+        for entry in &mut out.observed_environment {
+            for key in &mut entry.keys {
+                truncate_string_bytes(&mut key.key, max_debug_string_bytes);
+                truncate_string_bytes(&mut key.invalidation, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_models {
+            for (_, inv) in &mut entry.models {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+        for entry in &mut out.observed_globals {
+            for (_, inv) in &mut entry.globals {
+                truncate_string_bytes(inv, max_debug_string_bytes);
+            }
+        }
+
+        out
     }
 }
 
@@ -15462,6 +15908,7 @@ fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
     match step {
         UiActionStepV2::Click { .. } => "click",
         UiActionStepV2::ClickStable { .. } => "click_stable",
+        UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
         UiActionStepV2::DragTo { .. } => "drag_to",
@@ -18828,6 +19275,19 @@ fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
     s.push_str(suffix);
 }
 
+fn truncate_opt_string_bytes(s: &mut Option<String>, max_bytes: usize) {
+    let Some(v) = s.as_mut() else {
+        return;
+    };
+    truncate_string_bytes(v, max_bytes);
+}
+
+fn truncate_vec_string_bytes(items: &mut Vec<String>, max_bytes: usize) {
+    for s in items {
+        truncate_string_bytes(s, max_bytes);
+    }
+}
+
 fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {
     let path = out_dir.join("latest.txt");
     let Some(parent) = path.parent() else {
@@ -19019,6 +19479,39 @@ mod tests {
     };
     use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
+
+    fn eval_predicate(
+        snapshot: &fret_core::SemanticsSnapshot,
+        window_bounds: Rect,
+        window: AppWindowId,
+        element_runtime: Option<&ElementRuntime>,
+        text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
+        render_text: Option<fret_core::RendererTextPerfSnapshot>,
+        render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
+        known_windows: &[AppWindowId],
+        docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+        text_font_stack_key_stable_frames: u32,
+        font_catalog_populated: bool,
+        system_font_rescan_idle: bool,
+        pred: &UiPredicateV1,
+    ) -> bool {
+        super::eval_predicate(
+            snapshot,
+            window_bounds,
+            window,
+            element_runtime,
+            None,
+            text_input_snapshot,
+            render_text,
+            render_text_font_trace,
+            known_windows,
+            docking,
+            text_font_stack_key_stable_frames,
+            font_catalog_populated,
+            system_font_rescan_idle,
+            pred,
+        )
+    }
 
     #[test]
     fn parse_key_code_supports_function_keys() {

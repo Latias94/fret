@@ -124,6 +124,7 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
         slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
+        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
     }
 }
 
@@ -1196,7 +1197,8 @@ impl Tabs {
             &theme,
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
-                .bg(ColorRef::Color(tabs_list_bg(&theme))),
+                .bg(ColorRef::Color(tabs_list_bg(&theme)))
+                .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
             LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
@@ -1362,9 +1364,9 @@ impl Tabs {
                                 // content box (after list padding).
                                 //
                                 // In Fret, centering a `-1px` height delta produces a half-pixel
-                                // offset which can snap inconsistently and read as a 1px vertical
-                                // misalignment in the active highlight. Prefer an even delta so
-                                // the centered position lands on whole pixels.
+                                // offset which can snap inconsistently (esp. at non-integer scale
+                                // factors) and read as a 1px vertical misalignment. Prefer an even
+                                // delta so the centered position lands on whole pixels.
                                 let trigger_h = Px(
                                     (list_height.0 - list_padding.0 * 2.0 - 2.0).max(0.0),
                                 );
@@ -1561,13 +1563,16 @@ impl Tabs {
                                                     .text_color(fg_ref.clone())
                                                     .nowrap();
                                                 if let Some(line_height) = style.line_height {
-                                                    // Match web baseline behavior by giving the label a fixed line box
-                                                    // height when a line-height is configured. This allows the text
-                                                    // host widget to apply CSS-like "half-leading" centering rather
-                                                    // than centering by the prepared glyph bounds, which can read as
-                                                    // slightly bottom-heavy in GPU-first layout.
-                                                    text =
-                                                        text.line_height_px(line_height).h_px(line_height);
+                                                    // Match web/GPUI baseline behavior in fixed-height controls by
+                                                    // treating the allocated bounds height as the effective line box.
+                                                    //
+                                                    // This opts into a "half-leading" baseline placement model for
+                                                    // the first line, but does not force the element height to equal
+                                                    // the configured line height.
+                                                    text = text
+                                                        .line_height_px(line_height)
+                                                        .h_full()
+                                                        .line_box_in_bounds();
                                                 }
                                                 if let Some(letter_spacing_em) =
                                                     style.letter_spacing_em

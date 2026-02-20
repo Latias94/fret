@@ -78,6 +78,9 @@
     { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-view-cache-toggle-perf-steady" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-enabled" } },
     { "type": "wait_frames", "n": 2 }
   ]
 }
