@@ -642,6 +642,10 @@ pub trait TextService {
     /// Computes selection rectangles for a single-line selection range.
     ///
     /// Coordinate space: rects are relative to the text origin (x=0, y=0 at top of text box).
+    ///
+    /// Geometry contract:
+    /// - For a non-empty range (`start != end`), conforming implementations should emit rectangles
+    ///   with positive height (and should avoid emitting zero-width rectangles).
     fn selection_rects(&mut self, _blob: TextBlobId, _range: (usize, usize), _out: &mut Vec<Rect>) {
     }
 
@@ -684,6 +688,7 @@ pub trait TextService {
     /// Notes:
     /// - Single-line implementations may ignore affinity.
     /// - Multi-line implementations should use affinity to disambiguate positions at line breaks.
+    /// - Conforming implementations should return a rectangle with positive height.
     fn caret_rect(&mut self, _blob: TextBlobId, _index: usize, _affinity: CaretAffinity) -> Rect {
         Rect::default()
     }
