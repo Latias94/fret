@@ -41,6 +41,10 @@ Status: Done.
   - Evidence:
     - `crates/fret-ui/src/declarative/host_widget/paint.rs` (shared background-quad helper + vertical-offset mapping)
     - `crates/fret-ui/src/declarative/tests/selection_indices.rs` (fixed-height placement gates)
+- M2: Done.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/text/mod.rs` (cluster-driven multi-segment `selection_rects(_clipped)`)
+    - `crates/fret-render-wgpu/src/text/mod.rs` (unit test gate: `mixed_direction_selection_rects_split_across_visual_runs`)
 
 ## M2 — Mixed-direction selection rectangles are segment-accurate
 
@@ -56,6 +60,7 @@ Exit criteria:
   multiple rects.
 
 Status: Not started.
+Status: Done.
 
 ## M3 — IME/platform query robustness (bounded)
 

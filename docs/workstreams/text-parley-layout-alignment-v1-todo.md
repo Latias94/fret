@@ -24,11 +24,11 @@ This is a living task list. Keep items small enough to land with a tight regress
 
 ## P2 — Mixed-direction (bidi) geometry fidelity
 
-- [ ] Allow `selection_rects(_clipped)` to return multiple rectangles per line for bidi ranges
+- [x] Allow `selection_rects(_clipped)` to return multiple rectangles per line for bidi ranges
       when needed (avoid “single rect per line” overpainting).
-- [ ] Add fixtures/tests covering:
+- [x] Add fixtures/tests covering:
       - RTL-only selection (already present)
-      - mixed LTR/RTL selection with non-contiguous visual segments
+      - mixed LTR/RTL selection with non-contiguous visual segments (unit test gate)
 
 ## P3 — Platform text input (IME) robustness
 

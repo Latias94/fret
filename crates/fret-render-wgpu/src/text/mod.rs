@@ -648,6 +648,15 @@ pub struct TextLine {
     pub ascent: Px,
     pub descent: Px,
     pub caret_stops: Vec<(usize, Px)>,
+    clusters: Arc<[TextLineCluster]>,
+}
+
+#[derive(Debug, Clone)]
+struct TextLineCluster {
+    text_range: std::ops::Range<usize>,
+    x0: Px,
+    x1: Px,
+    is_rtl: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2910,6 +2919,33 @@ impl TextSystem {
                             align_offset_px_for_line(line_min_x_px, line_visual_width_px);
                         let line_align_offset = Px(line_align_offset_px / scale);
 
+                        let clusters: Arc<[TextLineCluster]> = if line.clusters.is_empty() {
+                            Arc::from([])
+                        } else {
+                            let mut out: Vec<TextLineCluster> =
+                                Vec::with_capacity(line.clusters.len());
+                            for c in &line.clusters {
+                                let start = (range.start + c.text_range.start).min(kept_end);
+                                let end = (range.start + c.text_range.end).min(kept_end);
+                                if start >= end {
+                                    continue;
+                                }
+
+                                let x0 = ((c.x0 + line_align_offset_px) / scale).max(0.0);
+                                let x1 = ((c.x1 + line_align_offset_px) / scale).max(0.0);
+                                let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
+                                let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
+
+                                out.push(TextLineCluster {
+                                    text_range: start..end,
+                                    x0,
+                                    x1,
+                                    is_rtl: c.is_rtl,
+                                });
+                            }
+                            Arc::from(out)
+                        };
+
                         let mut caret_stops = caret_stops_for_slice(
                             slice,
                             range.start,
@@ -2937,6 +2973,7 @@ impl TextSystem {
                             ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
                             descent: Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
+                            clusters,
                         });
 
                         for g in line.glyphs {
@@ -4742,18 +4779,77 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
             continue;
         }
 
-        let x0 = caret_x_from_stops(&line.caret_stops, start);
-        let x1 = caret_x_from_stops(&line.caret_stops, end);
-        let left = Px(x0.0.min(x1.0));
-        let right = Px(x0.0.max(x1.0));
+        if !line.clusters.is_empty() {
+            for c in line.clusters.iter() {
+                let seg_start = start.max(c.text_range.start);
+                let seg_end = end.min(c.text_range.end);
+                if seg_start >= seg_end {
+                    continue;
+                }
 
-        out.push(Rect::new(
-            Point::new(left, line.y_top),
-            Size::new(Px((right.0 - left.0).max(0.0)), line.height),
-        ));
+                let x0 = cluster_x_from_range(c, seg_start);
+                let x1 = cluster_x_from_range(c, seg_end);
+                let left = x0.0.min(x1.0);
+                let right = x0.0.max(x1.0);
+                if right <= left {
+                    continue;
+                }
+
+                out.push(Rect::new(
+                    Point::new(Px(left), line.y_top),
+                    Size::new(Px((right - left).max(0.0)), line.height),
+                ));
+            }
+        } else {
+            // Fallback for synthetic lines that do not carry cluster geometry.
+            let x0 = caret_x_from_stops(&line.caret_stops, start);
+            let x1 = caret_x_from_stops(&line.caret_stops, end);
+            let left = Px(x0.0.min(x1.0));
+            let right = Px(x0.0.max(x1.0));
+
+            out.push(Rect::new(
+                Point::new(left, line.y_top),
+                Size::new(Px((right.0 - left.0).max(0.0)), line.height),
+            ));
+        }
     }
 
     coalesce_selection_rects_in_place(out);
+}
+
+fn cluster_x_from_range(cluster: &TextLineCluster, boundary: usize) -> Px {
+    let start = cluster.text_range.start;
+    let end = cluster.text_range.end;
+    if start == end {
+        return cluster.x0;
+    }
+
+    if boundary <= start {
+        return if cluster.is_rtl {
+            cluster.x1
+        } else {
+            cluster.x0
+        };
+    }
+    if boundary >= end {
+        return if cluster.is_rtl {
+            cluster.x0
+        } else {
+            cluster.x1
+        };
+    }
+
+    let denom = (end - start) as f32;
+    if denom <= 0.0 {
+        return cluster.x0;
+    }
+
+    let mut t = ((boundary - start) as f32 / denom).clamp(0.0, 1.0);
+    if cluster.is_rtl {
+        t = 1.0 - t;
+    }
+    let w = (cluster.x1.0 - cluster.x0.0).max(0.0);
+    Px((cluster.x0.0 + w * t).max(0.0))
 }
 
 fn selection_rects_from_lines_clipped(
@@ -4798,27 +4894,56 @@ fn selection_rects_from_lines_clipped(
             continue;
         }
 
-        let x0 = caret_x_from_stops(&line.caret_stops, start).0;
-        let x1 = caret_x_from_stops(&line.caret_stops, end).0;
-        let left = x0.min(x1);
-        let right = x0.max(x1);
-
         let y0 = line.y_top.0;
         let y1 = (line.y_top.0 + line.height.0).max(y0);
 
-        let ix0 = left.max(clip_x0);
         let iy0 = y0.max(clip_y0);
-        let ix1 = right.min(clip_x1);
         let iy1 = y1.min(clip_y1);
-
-        if ix1 <= ix0 || iy1 <= iy0 {
+        if iy1 <= iy0 {
             continue;
         }
 
-        out.push(Rect::new(
-            Point::new(Px(ix0), Px(iy0)),
-            Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
-        ));
+        if !line.clusters.is_empty() {
+            for c in line.clusters.iter() {
+                let seg_start = start.max(c.text_range.start);
+                let seg_end = end.min(c.text_range.end);
+                if seg_start >= seg_end {
+                    continue;
+                }
+
+                let x0 = cluster_x_from_range(c, seg_start).0;
+                let x1 = cluster_x_from_range(c, seg_end).0;
+                let left = x0.min(x1);
+                let right = x0.max(x1);
+
+                let ix0 = left.max(clip_x0);
+                let ix1 = right.min(clip_x1);
+                if ix1 <= ix0 {
+                    continue;
+                }
+
+                out.push(Rect::new(
+                    Point::new(Px(ix0), Px(iy0)),
+                    Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
+                ));
+            }
+        } else {
+            let x0 = caret_x_from_stops(&line.caret_stops, start).0;
+            let x1 = caret_x_from_stops(&line.caret_stops, end).0;
+            let left = x0.min(x1);
+            let right = x0.max(x1);
+
+            let ix0 = left.max(clip_x0);
+            let ix1 = right.min(clip_x1);
+            if ix1 <= ix0 {
+                continue;
+            }
+
+            out.push(Rect::new(
+                Point::new(Px(ix0), Px(iy0)),
+                Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
+            ));
+        }
     }
 
     coalesce_selection_rects_in_place(out);
@@ -4828,6 +4953,15 @@ fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
     if rects.len() <= 1 {
         return;
     }
+
+    rects.sort_by(|a, b| {
+        a.origin
+            .y
+            .0
+            .total_cmp(&b.origin.y.0)
+            .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
+            .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
+    });
 
     let mut out: Vec<Rect> = Vec::with_capacity(rects.len());
     for r in rects.drain(..) {
@@ -5125,6 +5259,26 @@ mod tests {
         out
     }
 
+    fn empty_line_clusters() -> Arc<[super::TextLineCluster]> {
+        Arc::from(Vec::<super::TextLineCluster>::new())
+    }
+
+    fn line_clusters_from_shaped(
+        base_offset: usize,
+        clusters: &[crate::text::parley_shaper::ShapedCluster],
+    ) -> Arc<[super::TextLineCluster]> {
+        let mut out: Vec<super::TextLineCluster> = Vec::with_capacity(clusters.len());
+        for c in clusters {
+            out.push(super::TextLineCluster {
+                text_range: (base_offset + c.text_range.start)..(base_offset + c.text_range.end),
+                x0: Px(c.x0.max(0.0)),
+                x1: Px(c.x1.max(0.0)),
+                is_rtl: c.is_rtl,
+            });
+        }
+        Arc::from(out)
+    }
+
     #[test]
     fn selection_rects_for_rtl_line_has_positive_width() {
         let clusters = vec![crate::text::parley_shaper::ShapedCluster {
@@ -5144,6 +5298,7 @@ mod tests {
             ascent: Px(0.0),
             descent: Px(0.0),
             caret_stops: stops,
+            clusters: line_clusters_from_shaped(0, &clusters),
         };
 
         let mut rects = Vec::new();
@@ -5172,6 +5327,7 @@ mod tests {
             ascent: Px(0.0),
             descent: Px(0.0),
             caret_stops: stops,
+            clusters: line_clusters_from_shaped(0, &clusters),
         };
 
         let left = super::hit_test_point_from_lines(
@@ -5212,6 +5368,7 @@ mod tests {
             ascent: Px(0.0),
             descent: Px(0.0),
             caret_stops: stops,
+            clusters: line_clusters_from_shaped(0, &clusters),
         };
 
         let rtl_start = text.find('א').expect("hebrew start");
@@ -5224,6 +5381,63 @@ mod tests {
             rects[0].size.width.0 > 0.1,
             "expected a non-empty selection rect"
         );
+    }
+
+    #[test]
+    fn mixed_direction_selection_rects_split_across_visual_runs() {
+        // Simulate bidi reordering by assigning cluster x positions that do not correspond to the
+        // logical order of the text ranges.
+        let text = "aaa אבג def";
+        let clusters = vec![
+            crate::text::parley_shaper::ShapedCluster {
+                text_range: 0..4, // "aaa "
+                x0: 0.0,
+                x1: 40.0,
+                is_rtl: false,
+            },
+            crate::text::parley_shaper::ShapedCluster {
+                text_range: 4..11, // "אבג "
+                x0: 70.0,
+                x1: 110.0,
+                is_rtl: true,
+            },
+            crate::text::parley_shaper::ShapedCluster {
+                text_range: 11..14, // "def"
+                x0: 40.0,
+                x1: 70.0,
+                is_rtl: false,
+            },
+        ];
+
+        let stops = super::caret_stops_for_slice(text, 0, &clusters, 110.0, 1.0, text.len());
+        let line = super::TextLine {
+            start: 0,
+            end: text.len(),
+            width: Px(110.0),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            ascent: Px(0.0),
+            descent: Px(0.0),
+            caret_stops: stops,
+            clusters: line_clusters_from_shaped(0, &clusters),
+        };
+
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines(&[line], (0, 11), &mut rects);
+
+        assert_eq!(
+            rects.len(),
+            2,
+            "expected two disjoint visual spans, got {rects:?}"
+        );
+        rects.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
+
+        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
+        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
+
+        assert!((rects[1].origin.x.0 - 70.0).abs() < 0.001);
+        assert!((rects[1].size.width.0 - 40.0).abs() < 0.001);
     }
 
     #[test]
@@ -5242,6 +5456,7 @@ mod tests {
                 ascent: Px(0.0),
                 descent: Px(0.0),
                 caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
+                clusters: empty_line_clusters(),
             });
         }
 
@@ -5271,6 +5486,7 @@ mod tests {
             ascent: Px(0.0),
             descent: Px(0.0),
             caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
+            clusters: empty_line_clusters(),
         };
         let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
         let mut rects = Vec::new();
@@ -6616,6 +6832,7 @@ mod tests {
             ascent: Px(0.0),
             descent: Px(0.0),
             caret_stops,
+            clusters: line_clusters_from_shaped(0, &line_layout.clusters),
         };
 
         let x = Px((line_layout.width - 1.0).max(0.0));
