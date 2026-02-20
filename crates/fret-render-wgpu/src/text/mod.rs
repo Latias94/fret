@@ -93,53 +93,7 @@ pub(crate) struct TextFontFaceUsage {
     pub(crate) missing_glyphs: u32,
 }
 
-#[derive(Debug, Clone)]
-pub struct TextLine {
-    pub start: usize,
-    pub end: usize,
-    #[allow(dead_code)]
-    pub width: Px,
-    pub y_top: Px,
-    /// Baseline Y for this line (y=0 at top of text box).
-    pub y_baseline: Px,
-    pub height: Px,
-    pub ascent: Px,
-    pub descent: Px,
-    pub caret_stops: Vec<(usize, Px)>,
-    clusters: Arc<[fret_render_text::geometry::TextLineCluster]>,
-}
-
-impl fret_render_text::geometry::TextLineGeometry for TextLine {
-    fn start(&self) -> usize {
-        self.start
-    }
-
-    fn end(&self) -> usize {
-        self.end
-    }
-
-    fn y_top(&self) -> Px {
-        self.y_top
-    }
-
-    fn height(&self) -> Px {
-        self.height
-    }
-
-    fn caret_stops(&self) -> &[(usize, Px)] {
-        self.caret_stops.as_ref()
-    }
-
-    fn clusters(&self) -> &[fret_render_text::geometry::TextLineCluster] {
-        self.clusters.as_ref()
-    }
-}
-
-impl fret_render_text::geometry::TextLineDecorationGeometry for TextLine {
-    fn y_baseline(&self) -> Px {
-        self.y_baseline
-    }
-}
+pub use fret_render_text::line_layout::TextLineLayout as TextLine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct FontFaceKey {
@@ -1871,18 +1825,18 @@ impl TextSystem {
                             first_line_caret_stops = caret_stops.clone();
                         }
 
-                        lines.push(TextLine {
-                            start: range.start,
-                            end: range.end.min(kept_end),
-                            width: Px((line_visual_width_px / scale).max(0.0)),
-                            y_top: Px((line_top_px / scale).max(0.0)),
-                            y_baseline: Px((baseline_pos_px / scale).max(0.0)),
-                            height: Px(((line_height_px / scale).max(0.0)).max(1.0)),
-                            ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
-                            descent: Px((line.descent.max(0.0) / scale).max(0.0)),
+                        lines.push(TextLine::new(
+                            range.start,
+                            range.end.min(kept_end),
+                            Px((line_visual_width_px / scale).max(0.0)),
+                            Px((line_top_px / scale).max(0.0)),
+                            Px((baseline_pos_px / scale).max(0.0)),
+                            Px(((line_height_px / scale).max(0.0)).max(1.0)),
+                            Px((line.ascent.max(0.0) / scale).max(0.0)),
+                            Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
                             clusters,
-                        });
+                        ));
 
                         for g in line.glyphs {
                             let Ok(glyph_id) = u16::try_from(g.id) else {
@@ -3405,18 +3359,18 @@ mod tests {
             is_rtl: true,
         }];
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(40.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
+        let line = super::TextLine::new(
+            0,
+            4,
+            Px(40.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
 
         let mut rects = Vec::new();
         fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 4), &mut rects);
@@ -3434,18 +3388,18 @@ mod tests {
             is_rtl: true,
         }];
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(40.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
+        let line = super::TextLine::new(
+            0,
+            4,
+            Px(40.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
 
         let left = fret_render_text::geometry::hit_test_point_from_lines(
             std::slice::from_ref(&line),
@@ -3475,18 +3429,18 @@ mod tests {
             1.0,
             text.len(),
         );
-        let line = super::TextLine {
-            start: 0,
-            end: text.len(),
-            width: Px(10.0 * clusters.len() as f32),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
+        let line = super::TextLine::new(
+            0,
+            text.len(),
+            Px(10.0 * clusters.len() as f32),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
 
         let rtl_start = text.find('א').expect("hebrew start");
         let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
@@ -3531,18 +3485,18 @@ mod tests {
         ];
 
         let stops = super::caret_stops_for_slice(text, 0, &clusters, 110.0, 1.0, text.len());
-        let line = super::TextLine {
-            start: 0,
-            end: text.len(),
-            width: Px(110.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
+        let line = super::TextLine::new(
+            0,
+            text.len(),
+            Px(110.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
 
         let mut rects = Vec::new();
         fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 11), &mut rects);
@@ -3567,18 +3521,18 @@ mod tests {
         for i in 0..1000usize {
             let start = i * 4;
             let end = start + 4;
-            lines.push(super::TextLine {
+            lines.push(super::TextLine::new(
                 start,
                 end,
-                width: Px(100.0),
-                y_top: Px((i as f32) * 10.0),
-                y_baseline: Px(0.0),
-                height: Px(10.0),
-                ascent: Px(0.0),
-                descent: Px(0.0),
-                caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
-                clusters: empty_line_clusters(),
-            });
+                Px(100.0),
+                Px((i as f32) * 10.0),
+                Px(0.0),
+                Px(10.0),
+                Px(0.0),
+                Px(0.0),
+                vec![(start, Px(0.0)), (end, Px(100.0))],
+                empty_line_clusters(),
+            ));
         }
 
         let clip = Rect::new(
@@ -3602,18 +3556,18 @@ mod tests {
 
     #[test]
     fn selection_rects_clipped_trims_partially_visible_line() {
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(100.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
-            clusters: empty_line_clusters(),
-        };
+        let line = super::TextLine::new(
+            0,
+            4,
+            Px(100.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            vec![(0, Px(0.0)), (4, Px(100.0))],
+            empty_line_clusters(),
+        );
         let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
         let mut rects = Vec::new();
         fret_render_text::geometry::selection_rects_from_lines_clipped(
@@ -5933,18 +5887,18 @@ mod tests {
             1.0,
             kept_end,
         );
-        let line = super::TextLine {
-            start: 0,
-            end: kept_end,
-            width: Px(line_layout.width),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
+        let line = super::TextLine::new(
+            0,
+            kept_end,
+            Px(line_layout.width),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
             caret_stops,
-            clusters: line_clusters_from_shaped(0, &line_layout.clusters),
-        };
+            line_clusters_from_shaped(0, &line_layout.clusters),
+        );
 
         let x = Px((line_layout.width - 1.0).max(0.0));
         let hit =
