@@ -2,7 +2,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
+    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -1854,7 +1855,8 @@ impl SidebarGroupLabel {
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
             .into_element(cx);
 
         cx.opacity_props(
@@ -3658,7 +3660,8 @@ impl SidebarMenuButton {
                 .text_size_px(label_style.size)
                 .font_weight(label_style.weight)
                 .text_color(ColorRef::Color(fg))
-                .nowrap();
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip);
             if let Some(line_height) = label_style.line_height {
                 text = text.line_height_px(line_height);
             }
@@ -3668,7 +3671,11 @@ impl SidebarMenuButton {
             vec![text.into_element(cx)]
         })
         .refine_style(chrome)
-        .refine_layout(LayoutRefinement::default().overflow_hidden())
+        .refine_layout(
+            LayoutRefinement::default()
+                .max_w(Px(240.0))
+                .overflow_hidden(),
+        )
         .into_element(cx);
 
         Tooltip::new(button, content)
