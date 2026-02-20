@@ -11,16 +11,12 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use parley::fontique::FamilyId as ParleyFamilyId;
-use parley::fontique::GenericFamily as ParleyGenericFamily;
 use read_fonts::tables::name::NameId;
 use read_fonts::{FontRef, TableProvider as _};
 
 pub(crate) use fret_render_text::effective_text_scale_factor;
-use fret_render_text::fallback_policy::{
-    TextFallbackPolicyV1, common_fallback_stack_suffix_max_families, default_monospace_candidates,
-    default_sans_candidates, default_serif_candidates, first_available_family_id,
-};
+use fret_render_text::fallback_policy::TextFallbackPolicyV1;
+use fret_render_text::font_stack::GenericFamilyInjectionState;
 use fret_render_text::geometry::{
     metrics_for_uniform_lines, metrics_from_wrapped_lines, shaped_line_visual_x_bounds_px,
 };
@@ -1363,7 +1359,7 @@ pub struct TextSystem {
     font_db_revision: u64,
     fallback_policy: TextFallbackPolicyV1,
     quality: TextQualityState,
-    generic_injected_by_family: HashMap<ParleyGenericFamily, Vec<ParleyFamilyId>>,
+    generic_injections: GenericFamilyInjectionState,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1610,7 +1606,7 @@ impl TextSystem {
         //
         // This keeps selection/fallback behavior stable across rescan boundaries and prevents
         // stale injected FamilyIds from hanging around.
-        self.generic_injected_by_family.clear();
+        self.generic_injections.clear();
         let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
 
         self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1688,10 +1684,7 @@ impl TextSystem {
             TEXT_ATLAS_MAX_PAGES,
         );
 
-        let mut parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
-        let sans = first_available_family_id(&mut parley_shaper, default_sans_candidates());
-        let serif = first_available_family_id(&mut parley_shaper, default_serif_candidates());
-        let mono = first_available_family_id(&mut parley_shaper, default_monospace_candidates());
+        let parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
 
         let measure_shaping_entries = measure_shaping_cache_entries();
         let fallback_policy = TextFallbackPolicyV1::new(&parley_shaper);
@@ -1704,7 +1697,7 @@ impl TextSystem {
             font_db_revision: 1,
             fallback_policy,
             quality: TextQualityState::new(TextQualitySettings::default()),
-            generic_injected_by_family: HashMap::new(),
+            generic_injections: GenericFamilyInjectionState::default(),
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1746,79 +1739,10 @@ impl TextSystem {
             font_trace_entries: VecDeque::new(),
         };
 
-        let _ = out.parley_shaper.set_common_fallback_stack_suffix(
-            out.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-        out.bootstrap_default_generic_families(sans, serif, mono);
+        let _ = out.apply_font_families_inner(&out.fallback_policy.font_family_config.clone());
         out.fallback_policy.recompute_key(&out.parley_shaper);
         out.recompute_font_stack_key();
         out
-    }
-
-    fn bootstrap_default_generic_families(
-        &mut self,
-        sans: Option<ParleyFamilyId>,
-        serif: Option<ParleyFamilyId>,
-        mono: Option<ParleyFamilyId>,
-    ) {
-        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            for family in &self.fallback_policy.common_fallback_candidates {
-                if let Some(id) = self.parley_shaper.resolve_family_id(family)
-                    && !fallback_ids.contains(&id)
-                {
-                    fallback_ids.push(id);
-                }
-            }
-        }
-
-        let _ = self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
-    }
-
-    fn apply_generic_stack(
-        &mut self,
-        generic: ParleyGenericFamily,
-        primary: Option<ParleyFamilyId>,
-        fallbacks: &[ParleyFamilyId],
-    ) -> bool {
-        let mut injected: Vec<ParleyFamilyId> = Vec::new();
-        if let Some(id) = primary {
-            injected.push(id);
-        }
-        for &id in fallbacks {
-            if !injected.contains(&id) {
-                injected.push(id);
-            }
-        }
-
-        let prev_injected = self
-            .generic_injected_by_family
-            .get(&generic)
-            .cloned()
-            .unwrap_or_default();
-
-        let mut base = self.parley_shaper.generic_family_ids(generic);
-        if !prev_injected.is_empty() {
-            base.retain(|id| !prev_injected.contains(id));
-        }
-
-        let mut next: Vec<ParleyFamilyId> = Vec::new();
-        next.extend_from_slice(&injected);
-        for id in base {
-            if !next.contains(&id) {
-                next.push(id);
-            }
-        }
-
-        self.generic_injected_by_family.insert(generic, injected);
-        self.parley_shaper.set_generic_family_ids(generic, &next)
     }
 
     fn reset_caches_for_font_change(&mut self) {
@@ -1856,75 +1780,12 @@ impl TextSystem {
     }
 
     fn apply_font_families_inner(&mut self, config: &TextFontFamilyConfig) -> (bool, bool, bool) {
-        let prev_mode = self.fallback_policy.common_fallback_mode;
-
-        self.fallback_policy.font_family_config = config.clone();
-        self.fallback_policy.refresh_derived(&self.parley_shaper);
-        let mode_changed = self.fallback_policy.common_fallback_mode != prev_mode;
-
-        let pick_overrides = |shaper: &mut crate::text::parley_shaper::ParleyShaper,
-                              overrides: &[String],
-                              defaults: &'static [&'static str]| {
-            for candidate in overrides {
-                if let Some(id) = shaper.resolve_family_id(candidate) {
-                    return Some(id);
-                }
-            }
-            first_available_family_id(shaper, defaults)
-        };
-
-        let sans = pick_overrides(
+        fret_render_text::font_stack::apply_font_families_inner(
             &mut self.parley_shaper,
-            &config.ui_sans,
-            default_sans_candidates(),
-        );
-        let serif = pick_overrides(
-            &mut self.parley_shaper,
-            &config.ui_serif,
-            default_serif_candidates(),
-        );
-        let mono = pick_overrides(
-            &mut self.parley_shaper,
-            &config.ui_mono,
-            default_monospace_candidates(),
-        );
-
-        let mut resolved_common_fallback_suffix: Vec<String> = Vec::new();
-        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            let max = common_fallback_stack_suffix_max_families();
-            for family in &self.fallback_policy.common_fallback_candidates {
-                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                    let pushed = if !fallback_ids.contains(&id) {
-                        fallback_ids.push(id);
-                        true
-                    } else {
-                        false
-                    };
-                    if pushed && resolved_common_fallback_suffix.len() < max {
-                        resolved_common_fallback_suffix.push(family.clone());
-                    }
-                }
-            }
-        }
-
-        self.fallback_policy.common_fallback_stack_suffix =
-            resolved_common_fallback_suffix.join(", ");
-        let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(
-            self.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-
-        let mut changed = false;
-        changed |= self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
-
-        (changed, suffix_changed, mode_changed)
+            &mut self.fallback_policy,
+            &mut self.generic_injections,
+            config,
+        )
     }
 
     fn recompute_font_stack_key(&mut self) {
@@ -4718,7 +4579,7 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
-        let generic = super::ParleyGenericFamily::UiSansSerif;
+        let generic = parley::fontique::GenericFamily::UiSansSerif;
         let baseline = text.parley_shaper.generic_family_ids(generic);
 
         let names = text.all_font_names();
@@ -5115,7 +4976,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -5658,7 +5519,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7101,7 +6962,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7215,7 +7076,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7276,7 +7137,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7371,7 +7232,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7809,7 +7670,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7917,7 +7778,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8019,7 +7880,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8142,7 +8003,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8513,7 +8374,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8730,7 +8591,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8876,7 +8737,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
