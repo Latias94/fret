@@ -66,10 +66,14 @@ Tracking format:
 - [ ] TPU-render-020 Audit for any non-Parley shaping paths still used by default builds and decide migration steps.
   - Goal: one shaping engine per backend, with Parley as the default direction.
 
-- [ ] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
+- [~] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
   - mixed scripts (LTR/RTL)
   - emoji sequences (ZWJ/VS16/keycaps)
   - identifiers + CJK punctuation
+  - Evidence start:
+    - `crates/fret-render-wgpu/src/text/mod.rs`
+      (`caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji`,
+      `grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji`)
 
 ## M3 — IME + editor-grade polish
 
