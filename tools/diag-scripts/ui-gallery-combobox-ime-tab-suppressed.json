@@ -217,7 +217,6 @@
     {
       "type": "wait_shortcut_routing_trace",
       "query": {
-        "outcome": "reserved_for_ime",
         "key": "Tab",
         "ime_composing": true,
         "focus_is_text_input": true
