@@ -50,7 +50,7 @@ Use `carousel-embla-parity-v1-milestones.md` for timeline/phase planning.
 ### In-tree anchors + gates
 
 - Mechanism contracts: `docs/runtime-contract-matrix.md` (capture-phase moves, cancel-on-capture-switch)
-- Carousel implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CAROUSEL_DRAG_START_PX`)
+- Carousel implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (uses `fret_ui_headless::carousel::DEFAULT_DRAG_THRESHOLD_PX`)
 - UI gallery demo surface: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (`ui-gallery-carousel-demo-inner-button`)
 - Rust test gate: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
 - Diag script gate: `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`

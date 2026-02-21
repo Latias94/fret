@@ -1,6 +1,8 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use fret_core::Transform2D;
+use fret_ui::element::VisualTransformProps;
 
 pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
@@ -279,6 +281,36 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         "Shipped",
     );
 
+    let rotated_lucide = |cx: &mut ElementContext<'_, App>, id: &'static str, rotation_deg: f32| {
+        let size = Px(16.0);
+        let center = Point::new(Px(8.0), Px(8.0));
+        let transform = Transform2D::rotation_about_degrees(rotation_deg, center);
+
+        cx.visual_transform_props(
+            VisualTransformProps {
+                layout: {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::layout_style(
+                        theme,
+                        LayoutRefinement::default()
+                            .w_px(size)
+                            .h_px(size)
+                            .flex_shrink_0(),
+                    )
+                },
+                transform,
+            },
+            move |cx| {
+                vec![shadcn::icon::icon_with(
+                    cx,
+                    fret_icons::IconId::new_static(id),
+                    Some(size),
+                    None,
+                )]
+            },
+        )
+    };
+
     let controlled_now = cx
         .get_model_copied(&controlled_open, Invalidation::Layout)
         .unwrap_or(false);
@@ -325,116 +357,110 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     )
     .test_id("ui-gallery-collapsible-controlled");
 
-    let basic = shadcn::Collapsible::uncontrolled(false)
+    let basic_collapsible = shadcn::Collapsible::uncontrolled(false)
+        .refine_layout(LayoutRefinement::default().w_full())
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
-                shadcn::Button::new(if is_open {
-                    "Product details"
-                } else {
-                    "Show product details"
-                })
-                .variant(shadcn::ButtonVariant::Ghost)
-                .toggle_model(open)
-                .test_id("ui-gallery-collapsible-basic-trigger")
-                .into_element(cx)
+                let chevron = rotated_lucide(
+                    cx,
+                    "lucide.chevron-down",
+                    if is_open { 180.0 } else { 0.0 },
+                );
+                let row = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .justify_between()
+                        .items_center(),
+                    |cx| vec![cx.text("Product details"), chevron],
+                );
+
+                shadcn::Button::new("Product details")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .children([row])
+                    .toggle_model(open)
+                    .test_id("ui-gallery-collapsible-basic-trigger")
+                    .into_element(cx)
             },
             |cx| {
-                shadcn::CollapsibleContent::new(vec![
-                    cx.text(
-                        "This panel can be expanded or collapsed to reveal additional content.",
-                    ),
-                    shadcn::Button::new("Learn more")
-                        .size(shadcn::ButtonSize::Sm)
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
-                .into_element(cx)
-                .test_id("ui-gallery-collapsible-basic-content")
+                let body = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0()),
+                    |cx| {
+                        vec![
+                            shadcn::typography::p(
+                                cx,
+                                "This panel can be expanded or collapsed to reveal additional content.",
+                            ),
+                            shadcn::Button::new("Learn more")
+                                .size(shadcn::ButtonSize::Sm)
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    },
+                );
+
+                shadcn::CollapsibleContent::new([body])
+                    .refine_style(ChromeRefinement::default().p(Space::N2p5).pt(Space::N0))
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-collapsible-basic-content")
             },
         )
         .test_id("ui-gallery-collapsible-basic");
 
-    let input_field = |cx: &mut ElementContext<'_, App>,
-                       test_id: &'static str,
-                       label: &'static str,
-                       value: Model<String>| {
-        shadcn::Field::new([
-            shadcn::FieldLabel::new(label).into_element(cx),
-            shadcn::Input::new(value)
-                .a11y_label(label)
-                .into_element(cx)
-                .test_id(test_id),
-        ])
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx)
-    };
+    let basic = shadcn::Card::new([shadcn::CardContent::new([basic_collapsible]).into_element(cx)])
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+        .into_element(cx);
 
-    let settings_content = shadcn::Collapsible::new(settings_open.clone())
+    let radius_input =
+        |cx: &mut ElementContext<'_, App>, test_id: &'static str, a11y: &'static str, value| {
+            shadcn::Input::new(value)
+                .a11y_label(a11y)
+                .placeholder("0")
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+                .test_id(test_id)
+        };
+
+    let settings_collapsible = shadcn::Collapsible::new(settings_open.clone())
+        .refine_layout(LayoutRefinement::default().w_full())
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
-                shadcn::Button::new(if is_open { "Advanced" } else { "More settings" })
+                let icon = fret_icons::IconId::new_static(if is_open {
+                    "lucide.minimize"
+                } else {
+                    "lucide.maximize"
+                });
+                let toggle = shadcn::Button::new("Toggle details")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
+                    .size(shadcn::ButtonSize::IconSm)
+                    .children([shadcn::icon::icon(cx, icon)])
                     .toggle_model(open)
                     .test_id("ui-gallery-collapsible-settings-trigger")
-                    .into_element(cx)
-            },
-            |cx| {
-                shadcn::CollapsibleContent::new(vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
-                        vec![
-                            input_field(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-bl",
-                                "Bottom-left",
-                                radius_bl.clone(),
-                            ),
-                            input_field(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-br",
-                                "Bottom-right",
-                                radius_br.clone(),
-                            ),
-                        ]
-                    },
-                )])
-                .into_element(cx)
-                .test_id("ui-gallery-collapsible-settings-content")
-            },
-        )
-        .test_id("ui-gallery-collapsible-settings");
+                    .into_element(cx);
 
-    let settings_panel = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(420.0))),
-        |cx| {
-            vec![
-                stack::hstack(
+                let fields = stack::hstack(
                     cx,
                     stack::HStackProps::default()
                         .gap(Space::N2)
                         .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
+                        .layout(LayoutRefinement::default().w_full().min_w_0()),
                     |cx| {
                         vec![
-                            input_field(
+                            radius_input(
                                 cx,
                                 "ui-gallery-collapsible-settings-radius-x",
                                 "Radius X",
                                 radius_x.clone(),
                             ),
-                            input_field(
+                            radius_input(
                                 cx,
                                 "ui-gallery-collapsible-settings-radius-y",
                                 "Radius Y",
@@ -442,19 +468,91 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                             ),
                         ]
                     },
-                ),
-                settings_content,
-            ]
-        },
-    );
-    let settings = settings_panel.test_id("ui-gallery-collapsible-settings-panel");
+                );
 
-    let file_leaf = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0()),
+                    |_cx| vec![fields, toggle],
+                )
+            },
+            |cx| {
+                let fields = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0()),
+                    |cx| {
+                        vec![
+                            radius_input(
+                                cx,
+                                "ui-gallery-collapsible-settings-radius-bl",
+                                "Bottom-left",
+                                radius_bl.clone(),
+                            ),
+                            radius_input(
+                                cx,
+                                "ui-gallery-collapsible-settings-radius-br",
+                                "Bottom-right",
+                                radius_br.clone(),
+                            ),
+                        ]
+                    },
+                );
+
+                shadcn::CollapsibleContent::new([fields])
+                    .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
+                    .into_element(cx)
+                    .test_id("ui-gallery-collapsible-settings-content")
+            },
+        )
+        .test_id("ui-gallery-collapsible-settings");
+
+    let settings = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Radius").into_element(cx),
+            shadcn::CardDescription::new("Set the corner radius of the element.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([settings_collapsible]).into_element(cx),
+    ])
+    .size(shadcn::CardSize::Sm)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+    .into_element(cx)
+    .test_id("ui-gallery-collapsible-settings-panel");
+
+    let file_leaf = |cx: &mut ElementContext<'_, App>, key: &'static str, label: &'static str| {
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .justify_start()
+                .items_center(),
+            |cx| {
+                vec![
+                    shadcn::icon::icon_with(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.file"),
+                        Some(Px(16.0)),
+                        None,
+                    ),
+                    cx.text(label),
+                ]
+            },
+        );
+
         shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Ghost)
+            .variant(shadcn::ButtonVariant::Link)
             .size(shadcn::ButtonSize::Sm)
             .refine_layout(LayoutRefinement::default().w_full())
+            .children([row])
             .into_element(cx)
+            .test_id(format!("ui-gallery-collapsible-tree-leaf-{key}"))
     };
 
     let folder = |cx: &mut ElementContext<'_, App>,
@@ -462,35 +560,66 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                   label: &'static str,
                   open_model: Model<bool>,
                   children: Vec<AnyElement>| {
-        shadcn::Collapsible::new(open_model).into_element_with_open_model(
-            cx,
-            |cx, open, is_open| {
-                shadcn::Button::new(format!("{} {}", if is_open { "?" } else { "?" }, label))
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
+        shadcn::Collapsible::new(open_model)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element_with_open_model(
+                cx,
+                |cx, open, is_open| {
+                    let chevron = rotated_lucide(
+                        cx,
+                        "lucide.chevron-right",
+                        if is_open { 90.0 } else { 0.0 },
+                    );
+                    let icon = fret_icons::IconId::new_static(if is_open {
+                        "lucide.folder-open"
+                    } else {
+                        "lucide.folder"
+                    });
+
+                    let row = stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N2)
+                            .justify_start()
+                            .items_center(),
+                        |cx| {
+                            vec![
+                                chevron,
+                                shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
+                                cx.text(label),
+                            ]
+                        },
+                    );
+
+                    shadcn::Button::new(label)
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .children([row])
+                        .toggle_model(open)
+                        .test_id(format!("ui-gallery-collapsible-tree-trigger-{key}"))
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::CollapsibleContent::new(vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N1)
+                            .items_stretch()
+                            .layout(LayoutRefinement::default().w_full().ml(Space::N4)),
+                        |_cx| children,
+                    )])
                     .refine_layout(LayoutRefinement::default().w_full())
-                    .toggle_model(open)
-                    .test_id(format!("ui-gallery-collapsible-tree-trigger-{key}"))
                     .into_element(cx)
-            },
-            |cx| {
-                shadcn::CollapsibleContent::new(vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N1)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().ml(Space::N4)),
-                    |_cx| children,
-                )])
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx)
-            },
-        )
+                    .test_id(format!("ui-gallery-collapsible-tree-content-{key}"))
+                },
+            )
     };
 
     let file_tree = {
-        let ui_button = file_leaf(cx, "button.rs");
-        let ui_dialog = file_leaf(cx, "dialog.rs");
+        let ui_button = file_leaf(cx, "src-ui-button", "button.rs");
+        let ui_dialog = file_leaf(cx, "src-ui-dialog", "dialog.rs");
         let ui_folder = folder(
             cx,
             "src-ui",
@@ -499,7 +628,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             vec![ui_button, ui_dialog],
         );
 
-        let src_main = file_leaf(cx, "main.rs");
+        let src_main = file_leaf(cx, "src-main", "main.rs");
         let src_folder = folder(
             cx,
             "src",
@@ -508,8 +637,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             vec![ui_folder, src_main],
         );
 
-        let comp_card = file_leaf(cx, "card.rs");
-        let comp_table = file_leaf(cx, "table.rs");
+        let comp_card = file_leaf(cx, "components-card", "card.rs");
+        let comp_table = file_leaf(cx, "components-table", "table.rs");
         let components_folder = folder(
             cx,
             "components",
@@ -518,12 +647,12 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             vec![comp_card, comp_table],
         );
 
-        let cargo_toml = file_leaf(cx, "Cargo.toml");
+        let cargo_toml = file_leaf(cx, "cargo-toml", "Cargo.toml");
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N1)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
             |_cx| vec![components_folder, src_folder, cargo_toml],
         )

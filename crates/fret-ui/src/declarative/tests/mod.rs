@@ -153,6 +153,43 @@ fn build_keyed_rows(
     out
 }
 
+#[track_caller]
+fn render_root_for_frame(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    name: &str,
+    build_root: impl FnOnce(&mut ElementContext<'_, TestHost>) -> Vec<AnyElement>,
+) -> NodeId {
+    // View-cache subtree reuse relies on invalidation flags being applied before mount.
+    let _ = ui.propagate_pending_model_changes(app);
+    let root = render_root(ui, app, services, window, bounds, name, build_root);
+    ui.set_root(root);
+    root
+}
+
+fn layout_frame(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    bounds: Rect,
+) {
+    ui.layout_all(app, services, bounds, 1.0);
+}
+
+fn paint_frame(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    bounds: Rect,
+    scene: &mut Scene,
+) {
+    scene.clear();
+    ui.paint_all(app, services, bounds, scene, 1.0);
+}
+
 mod anchored;
 mod canvas;
 mod command_hooks;

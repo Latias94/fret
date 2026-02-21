@@ -623,6 +623,17 @@ impl Carousel {
                             if let Some(basis) = item_basis {
                                 item_layout =
                                     item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
+
+                                // When an explicit item basis is provided, treat it as the
+                                // authoritative snap extent and clamp the item's main-axis size
+                                // to match. This keeps `item_basis_main_px` deterministic even
+                                // when children would otherwise expand the flex item.
+                                if track_direction == fret_core::Axis::Vertical {
+                                    item_layout = item_layout
+                                        .h_px(MetricRef::Px(basis))
+                                        .min_h(MetricRef::Px(basis))
+                                        .max_h(MetricRef::Px(basis));
+                                }
                             } else {
                                 // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
                                 //
@@ -660,21 +671,33 @@ impl Carousel {
                                 },
                             };
 
-                            let inner = cx.container(
-                                fret_ui::element::ContainerProps {
-                                    padding,
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![content.clone()],
-                            );
+                            let item = match track_direction {
+                                fret_core::Axis::Horizontal => {
+                                    let inner = cx.container(
+                                        fret_ui::element::ContainerProps {
+                                            padding,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![content.clone()],
+                                    );
 
-                            let item = cx.container(
-                                fret_ui::element::ContainerProps {
-                                    layout: item_layout,
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![inner],
-                            );
+                                    cx.container(
+                                        fret_ui::element::ContainerProps {
+                                            layout: item_layout,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![inner],
+                                    )
+                                }
+                                fret_core::Axis::Vertical => cx.container(
+                                    fret_ui::element::ContainerProps {
+                                        layout: item_layout,
+                                        padding,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![content.clone()],
+                                ),
+                            };
 
                             item.attach_semantics(
                                 SemanticsDecoration::default()
@@ -742,8 +765,12 @@ impl Carousel {
                 .models_mut()
                 .update(&extent_model, |v| *v = extent_now);
 
-            let prev_disabled = index_now == 0 || items_len <= 1;
-            let next_disabled = index_now + 1 >= items_len;
+            // Match upstream behavior: controls are disabled until the carousel has a measurable
+            // viewport/item extent (Embla initializes canScrollPrev/Next to false until it
+            // measures and emits `select`/`reInit`).
+            let extent_ready = extent_now.0 > 0.0;
+            let prev_disabled = !extent_ready || index_now == 0 || items_len <= 1;
+            let next_disabled = !extent_ready || index_now + 1 >= items_len || items_len <= 1;
 
             let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
             let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));

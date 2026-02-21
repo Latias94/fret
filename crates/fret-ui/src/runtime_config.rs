@@ -66,6 +66,7 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) debug_hit_test_gate_sync: bool,
     pub(crate) debug_focus_traversal_gate_sync: bool,
     pub(crate) debug_pointer_down_outside: bool,
+    pub(crate) debug_forbid_propagate_after_render_root: bool,
 
     pub(crate) semantics_profile: bool,
 
@@ -245,6 +246,8 @@ impl UiRuntimeEnvConfig {
         let debug_hit_test_gate_sync = env_present("FRET_DEBUG_HIT_TEST_GATE_SYNC");
         let debug_focus_traversal_gate_sync = env_present("FRET_DEBUG_FOCUS_TRAVERSAL_GATE_SYNC");
         let debug_pointer_down_outside = env_present("FRET_DEBUG_POINTER_DOWN_OUTSIDE");
+        let debug_forbid_propagate_after_render_root =
+            env_present("FRET_UI_DEBUG_FORBID_PROPAGATE_AFTER_RENDER_ROOT");
 
         let semantics_profile = env_enabled("FRET_SEMANTICS_PROFILE");
 
@@ -310,6 +313,7 @@ impl UiRuntimeEnvConfig {
             debug_hit_test_gate_sync,
             debug_focus_traversal_gate_sync,
             debug_pointer_down_outside,
+            debug_forbid_propagate_after_render_root,
             semantics_profile,
             interactive_resize_stable_frames_required,
             text_wrap_width_bucket_px,

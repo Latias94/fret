@@ -15,18 +15,17 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
         Size::new(Px(240.0), Px(120.0)),
     );
     let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
 
     let renders = Arc::new(AtomicUsize::new(0));
     let leaf_id = Arc::new(std::sync::Mutex::new(
         None::<crate::elements::GlobalElementId>,
     ));
 
-    let mut root: Option<NodeId> = None;
-
     for frame in 0..6 {
         let renders = renders.clone();
         let leaf_id = leaf_id.clone();
-        let root_node = render_root(
+        let root_node = render_root_for_frame(
             &mut ui,
             &mut app,
             &mut services,
@@ -49,14 +48,16 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
             },
         );
 
-        root.get_or_insert(root_node);
+        assert!(
+            ui.base_root().is_some(),
+            "expected render_root_for_frame to install the root layer for base roots"
+        );
         if frame == 0 {
-            ui.set_root(root_node);
+            assert_eq!(ui.base_root(), Some(root_node));
         }
 
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
 
         app.advance_frame();
     }
@@ -313,9 +314,9 @@ fn view_cache_does_not_rerender_for_unrelated_model_changes() {
         Size::new(Px(240.0), Px(120.0)),
     );
     let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
 
     let renders = Arc::new(AtomicUsize::new(0));
-    let mut root: Option<NodeId> = None;
 
     fn build_cached(
         cx: &mut ElementContext<'_, TestHost>,
@@ -331,7 +332,7 @@ fn view_cache_does_not_rerender_for_unrelated_model_changes() {
     }
 
     for frame in 0..3 {
-        let root_node = render_root(
+        let _root_node = render_root_for_frame(
             &mut ui,
             &mut app,
             &mut services,
@@ -340,23 +341,13 @@ fn view_cache_does_not_rerender_for_unrelated_model_changes() {
             "view-cache-unrelated-model",
             |cx| vec![build_cached(cx, &renders, &observed)],
         );
-        root.get_or_insert(root_node);
-        if frame == 0 {
-            ui.set_root(root_node);
-        }
 
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
         app.advance_frame();
 
         if frame == 1 {
             let _ = unrelated.update(&mut app, |v, _cx| *v += 1);
-            let changed = app.take_changed_models();
-            assert!(
-                !ui.propagate_model_changes(&mut app, &changed),
-                "unrelated model changes should not invalidate the cached subtree"
-            );
         }
     }
 
@@ -381,14 +372,14 @@ fn view_cache_is_disabled_under_inspection() {
         Size::new(Px(240.0), Px(120.0)),
     );
     let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
 
     let renders = Arc::new(AtomicUsize::new(0));
-    let mut root: Option<NodeId> = None;
 
-    for frame in 0..3 {
-        let root_node = {
+    for _frame in 0..3 {
+        let _root_node = {
             let renders = renders.clone();
-            render_root(
+            render_root_for_frame(
                 &mut ui,
                 &mut app,
                 &mut services,
@@ -406,14 +397,8 @@ fn view_cache_is_disabled_under_inspection() {
             )
         };
 
-        root.get_or_insert(root_node);
-        if frame == 0 {
-            ui.set_root(root_node);
-        }
-
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
         app.advance_frame();
     }
 

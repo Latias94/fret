@@ -15,7 +15,7 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 
 ## Sources of truth (local snapshots)
 
-- shadcn/ui v4 docs: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`
+- shadcn/ui v4 docs: `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx`
 - shadcn/ui v4 component: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/carousel.tsx`
 - shadcn/ui v4 examples:
   - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/carousel-demo.tsx`

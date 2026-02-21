@@ -562,4 +562,25 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
         }
     }
+
+    /// Hit-test using the same cached fast paths used by pointer routing.
+    ///
+    /// This is intended for diagnostics tooling that needs “what the runtime would route right
+    /// now”, including bounds-tree acceleration and view-cache/prepaint interaction data.
+    ///
+    /// Note: this method mutates internal hit-test caches.
+    pub fn debug_hit_test_routing(&mut self, position: Point) -> UiDebugHitTest {
+        let (active_roots, barrier_root) = self.active_input_layers();
+
+        // Avoid leaking a stale cached path into diagnostics queries. Pointer routing already
+        // manages when the cache is eligible for reuse (e.g. move vs click).
+        self.hit_test_path_cache = None;
+
+        let hit = self.hit_test_layers_cached(&active_roots, position);
+        UiDebugHitTest {
+            hit,
+            active_layer_roots: active_roots,
+            barrier_root,
+        }
+    }
 }

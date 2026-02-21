@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot, ShadowPreset,
     Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
@@ -477,9 +477,7 @@ impl Button {
             let theme = Theme::global(&*cx.app).clone();
 
             let variant_style = variant_style(self.variant);
-            let shadow_radius = self.size.component_size().control_radius(&theme);
-            let shadow = (self.variant == ButtonVariant::Outline)
-                .then(|| decl_style::shadow_xs(&theme, shadow_radius));
+            let has_outline_shadow = self.variant == ButtonVariant::Outline;
 
             let size = self.size.component_size();
             // shadcn/ui v4 buttons use `rounded-md` across sizes (including `sm` and `icon`), so
@@ -625,6 +623,9 @@ impl Button {
                         .radius(radius)
                         .border_width(border_w),
                 );
+                if has_outline_shadow {
+                    chrome.shadow = Some(ShadowPreset::Xs);
+                }
 
                 if !user_bg_override {
                     chrome.background = Some(bg);
@@ -636,7 +637,6 @@ impl Button {
 
                 let mut chrome_props =
                     decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-                chrome_props.shadow = shadow;
                 chrome_props.layout.size = pressable_layout.size;
                 if let Some(border) = border_override {
                     chrome_props.border = border;
@@ -657,11 +657,20 @@ impl Button {
                     chrome_props.corner_radii = corners;
                 }
 
+                let focus_radius = {
+                    let corners = chrome_props.corner_radii;
+                    let mut max = corners.top_left.0;
+                    max = max.max(corners.top_right.0);
+                    max = max.max(corners.bottom_right.0);
+                    max = max.max(corners.bottom_left.0);
+                    Px(max)
+                };
+
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
-                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
                         test_id: test_id.clone(),
@@ -735,7 +744,9 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
+    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::rc::Rc;
 
     struct FakeServices;
 
@@ -791,6 +802,73 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn outline_icon_button_shadow_and_ring_follow_rounded_full() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let captured: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
+        let captured_for_view = captured.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "outline-icon-button-shadow-and-ring-follow-rounded-full",
+            move |cx| {
+                let el = Button::new("Next")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::IconSm)
+                    .test_id("test-outline-icon-button")
+                    .refine_style(ChromeRefinement::default().rounded(fret_ui_kit::Radius::Full))
+                    .into_element(cx);
+                *captured_for_view.borrow_mut() = Some(el.clone());
+                vec![el]
+            },
+        );
+        ui.set_root(root);
+
+        let el = captured.borrow().clone().expect("captured element");
+        let pressable = match el.kind {
+            ElementKind::Pressable(props) => props,
+            other => panic!("expected pressable root, got {other:?}"),
+        };
+        let ring = pressable.focus_ring.expect("focus ring");
+        assert!(
+            ring.corner_radii.top_left.0 >= 900.0,
+            "expected rounded-full focus ring, got {:?}",
+            ring.corner_radii
+        );
+
+        let chrome = el.children.first().expect("chrome child");
+        let chrome_props = match &chrome.kind {
+            ElementKind::Container(props) => props,
+            other => panic!("expected chrome container, got {other:?}"),
+        };
+        let shadow = chrome_props.shadow.as_ref().expect("outline shadow");
+        assert!(
+            shadow.corner_radii.top_left.0 >= 900.0,
+            "expected rounded-full shadow, got {:?}",
+            shadow.corner_radii
+        );
     }
 
     #[test]

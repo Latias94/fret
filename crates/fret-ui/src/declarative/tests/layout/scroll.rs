@@ -621,6 +621,525 @@ fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
 }
 
 #[test]
+fn scroll_content_extent_updates_immediately_when_growing_at_scroll_end() {
+    let mut app = TestHost::new();
+    let show_more = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        show_more: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                ..Default::default()
+            },
+            move |cx| {
+                cx.observe_model(&show_more, Invalidation::Layout);
+                let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
+                let rows = if expanded { 24 } else { 6 };
+
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        (0..rows)
+                            .map(|i| cx.text(format!("row {i}")))
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: establish content extent and scroll to the end.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    let _ = app.models_mut().update(&show_more, |v| *v = true);
+    assert!(
+        app.models().get_copied(&show_more).unwrap_or(false),
+        "expected show_more model update to commit before the next frame"
+    );
+    app.advance_frame();
+
+    // Frame 1: content grows while we're at the previous max offset.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    ui.set_root(root1);
+
+    let scroll_node = ui.children(root1)[0];
+    let column_node = ui.children(scroll_node)[0];
+    assert!(
+        ui.node_needs_layout(column_node),
+        "expected the scroll content subtree to be marked dirty when its children change"
+    );
+    assert!(
+        scroll_handle.offset().y.0 + 0.5 >= scroll_handle.max_offset().y.0,
+        "expected the scroll handle to remain at the previous max offset before relayout: offset={:?} max={:?}",
+        scroll_handle.offset().y,
+        scroll_handle.max_offset().y
+    );
+
+    {
+        use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+        let max_constraints = LayoutConstraints::new(
+            LayoutSize::new(None, None),
+            LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+        );
+        let measured = ui.measure_in(&mut app, &mut text, column_node, max_constraints, 1.0);
+        assert!(
+            measured.height.0 > 60.0,
+            "expected measuring the expanded column to observe increased height, got {measured:?}"
+        );
+    }
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root1)[0];
+    let column_node = ui.children(scroll_node)[0];
+    assert_eq!(
+        ui.children(column_node).len(),
+        24,
+        "expected render to mount the expanded column children before layout"
+    );
+
+    let max1 = scroll_handle.max_offset().y;
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected scroll extent to grow immediately when content expands at the end: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
+fn scroll_at_end_reuses_cached_extent_when_clean() {
+    let mut app = TestHost::new();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        (0..12)
+                            .map(|i| cx.text(format!("row {i}")))
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: populate intrinsic measurement caches and scroll to the end.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-at-end-reuses-caches",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    app.advance_frame();
+
+    // Frame 1: no content changes while at the scroll end; layout should avoid measuring children.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-at-end-reuses-caches",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root1)[0];
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected scroll layout to reuse intrinsic caches when at the extent edge and clean"
+    );
+    assert!(
+        (scroll_handle.max_offset().y.0 - max0.0).abs() <= 0.5,
+        "expected max offset to remain stable: before={max0:?} after={:?}",
+        scroll_handle.max_offset().y
+    );
+}
+
+#[test]
+fn scroll_offset_clamps_when_content_shrinks_below_end() {
+    let mut app = TestHost::new();
+    let expanded = app.models_mut().insert(true);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn row(cx: &mut ElementContext<'_, TestHost>, i: usize) -> AnyElement {
+        let mut props = crate::element::ContainerProps::default();
+        props.layout.size.height = crate::element::Length::Px(Px(10.0));
+        props.layout.size.width = crate::element::Length::Fill;
+        cx.container(props, move |cx| vec![cx.text(format!("row {i}"))])
+    }
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        expanded: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                cx.observe_model(&expanded, Invalidation::Layout);
+                let expanded = cx.app.models().get_copied(&expanded).unwrap_or(false);
+                let rows = if expanded { 30 } else { 6 };
+
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    move |cx| (0..rows).map(|i| row(cx, i)).collect::<Vec<_>>(),
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: scroll to the end with the expanded content.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-shrink-clamps-offset",
+        |cx| build_root(cx, scroll_handle.clone(), expanded.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    let _ = app.models_mut().update(&expanded, |v| *v = false);
+    app.advance_frame();
+
+    // Frame 1: content shrinks while we're beyond the new max; offset must clamp.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-shrink-clamps-offset",
+        |cx| build_root(cx, scroll_handle.clone(), expanded.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max1 = scroll_handle.max_offset().y;
+    let off1 = scroll_handle.offset().y;
+    assert!(
+        max1.0 + 0.5 < max0.0,
+        "expected shrink to reduce max offset: before={max0:?} after={max1:?}"
+    );
+    assert!(
+        off1.0 <= max1.0 + 0.5,
+        "expected offset to clamp to the new max: offset={off1:?} max={max1:?}"
+    );
+}
+
+#[test]
+fn scroll_axis_both_updates_extent_for_axis_growing_at_end() {
+    let mut app = TestHost::new();
+    let wide = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        wide: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                axis: crate::element::ScrollAxis::Both,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                cx.observe_model(&wide, Invalidation::Layout);
+                let wide = cx.app.models().get_copied(&wide).unwrap_or(false);
+
+                let mut content = crate::element::ContainerProps::default();
+                content.layout.size.width =
+                    crate::element::Length::Px(if wide { Px(260.0) } else { Px(140.0) });
+                content.layout.size.height = crate::element::Length::Px(Px(40.0));
+
+                vec![cx.container(content, |_cx| Vec::new())]
+            },
+        )]
+    }
+
+    // Frame 0: establish max offset and scroll to x end.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-grow-at-x-end",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().x;
+    scroll_handle.set_offset(fret_core::Point::new(max0, Px(0.0)));
+    let _ = app.models_mut().update(&wide, |v| *v = true);
+    app.advance_frame();
+
+    // Frame 1: content grows in x while we're at the previous x max.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-axis-both-grow-at-x-end",
+        |cx| build_root(cx, scroll_handle.clone(), wide.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max1 = scroll_handle.max_offset().x;
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected x extent to grow immediately when content expands at x end: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
+fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
+    let mut app = TestHost::new();
+    let show_more = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let mut scene = Scene::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        show_more: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Auto;
+        cache.cache_key = 1;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.view_cache(cache, move |cx| {
+                    cx.observe_model(&show_more, Invalidation::Layout);
+                    let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
+                    let rows = if expanded { 24 } else { 6 };
+
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            (0..rows)
+                                .map(|i| cx.text(format!("row {i}")))
+                                .collect::<Vec<_>>()
+                        },
+                    )]
+                })]
+            },
+        )]
+    }
+
+    // Frame 0: establish content extent and scroll to the end.
+    let _root0 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end-view-cache",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    let _ = show_more.update(&mut app, |v, _cx| *v = true);
+    app.advance_frame();
+
+    // Frame 1: content grows while we're at the previous max offset.
+    let root1 = render_root_for_frame(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end-view-cache",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+
+    let scroll_node = ui.children(root1)[0];
+    let cache_node = ui.children(scroll_node)[0];
+    assert!(
+        ui.node_needs_layout(cache_node),
+        "expected view-cache scroll content node to be dirty when its children change"
+    );
+    assert!(
+        scroll_handle.offset().y.0 + 0.5 >= scroll_handle.max_offset().y.0,
+        "expected scroll handle to remain at the previous max offset before relayout: offset={:?} max={:?}",
+        scroll_handle.offset().y,
+        scroll_handle.max_offset().y
+    );
+
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
+
+    let max1 = scroll_handle.max_offset().y;
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected scroll extent to grow immediately under view-cache reconciliation: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
 fn scroll_thumb_drag_updates_offset_horizontal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

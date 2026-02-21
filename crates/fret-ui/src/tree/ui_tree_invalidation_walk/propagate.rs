@@ -1,6 +1,16 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
+    /// Convenience helper for single-window/single-tree setups.
+    ///
+    /// This drains pending model changes from the host and immediately propagates them into the
+    /// tree. Multi-window runtimes should drain `take_changed_models()` once per frame and fan the
+    /// resulting list out to each window's [`UiTree`] instead.
+    pub fn propagate_pending_model_changes(&mut self, app: &mut H) -> bool {
+        let changed = app.take_changed_models();
+        self.propagate_model_changes(app, &changed)
+    }
+
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,
@@ -161,7 +171,10 @@ impl<H: UiHost> UiTree<H> {
         if changed.is_empty() {
             return false;
         }
-        self.begin_debug_frame_if_needed(app.frame_id());
+        let frame_id = app.frame_id();
+        #[cfg(debug_assertions)]
+        self.debug_forbid_propagate_after_declarative_render_root(frame_id);
+        self.begin_debug_frame_if_needed(frame_id);
         if self.debug_enabled {
             self.debug_model_change_hotspots.clear();
             self.debug_model_change_unobserved.clear();
@@ -287,7 +300,10 @@ impl<H: UiHost> UiTree<H> {
         if changed.is_empty() {
             return false;
         }
-        self.begin_debug_frame_if_needed(app.frame_id());
+        let frame_id = app.frame_id();
+        #[cfg(debug_assertions)]
+        self.debug_forbid_propagate_after_declarative_render_root(frame_id);
+        self.begin_debug_frame_if_needed(frame_id);
         if self.debug_enabled {
             self.debug_global_change_hotspots.clear();
             self.debug_global_change_unobserved.clear();
