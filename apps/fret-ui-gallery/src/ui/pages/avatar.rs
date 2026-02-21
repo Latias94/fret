@@ -171,7 +171,13 @@ pub(super) fn preview_avatar(
     .size(shadcn::AvatarSize::Sm)
     .into_element(cx);"#,
                 ),
-            DocSection::new(with_badge_title, with_badge).max_w(Px(760.0)),
+            DocSection::new(with_badge_title, with_badge)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: upstream Avatar demo composes an `AvatarBadge` overlay.
+// Track as a dedicated shadcn API surface (badge positioning + sizing + theming) before adding it."#,
+                ),
             DocSection::new("Avatar Group", avatar_group)
                 .description(
                     "Fret composes groups via negative margins (no `AvatarGroup` builder yet).",
@@ -188,7 +194,13 @@ pub(super) fn preview_avatar(
 
 cx.flex(FlexProps::default(), |_cx| avatars.collect::<Vec<_>>());"#,
                 ),
-            DocSection::new(group_count_title, group_count).max_w(Px(760.0)),
+            DocSection::new(group_count_title, group_count)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: upstream shadcn exposes `AvatarGroupCount` (e.g. `+3`).
+// Current Fret demo uses manual composition; add a proper shadcn builder once sizing tokens are settled."#,
+                ),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );
