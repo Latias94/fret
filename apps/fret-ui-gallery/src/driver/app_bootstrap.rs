@@ -199,13 +199,6 @@ pub(super) fn register_commands_and_menus(app: &mut App) {
     }
 
     app.commands_mut().register(
-        CommandId::new(CMD_CLIPBOARD_COPY_LINK),
-        CommandMeta::new("Copy page link")
-            .with_category("Gallery")
-            .with_keywords(["copy", "clipboard", "link", "page"]),
-    );
-
-    app.commands_mut().register(
         CommandId::new(CMD_SHELL_SHARE_SHEET_SMOKE),
         CommandMeta::new("Share sheet (smoke)")
             .with_category("Shell")

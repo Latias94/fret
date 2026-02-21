@@ -115,20 +115,6 @@ pub(crate) fn content_view(
             )
             .into_element(cx);
 
-            let copy_actions = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        shadcn::Button::new("Copy link")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CLIPBOARD_COPY_LINK)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
             let presets = stack::hstack(
                 cx,
                 stack::HStackProps::default()
@@ -143,7 +129,7 @@ pub(crate) fn content_view(
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
                     .items_start(),
-                |_cx| [presets, copy_actions],
+                |_cx| [presets],
             );
 
             vec![left, right]

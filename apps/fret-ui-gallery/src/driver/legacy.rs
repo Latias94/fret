@@ -734,12 +734,6 @@ impl UiGalleryDriver {
                         },
                     ],
                 },
-                MenuItem::Separator,
-                MenuItem::Command {
-                    command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
-                    when: None,
-                    toggle: None,
-                },
             ],
         });
 
@@ -2757,28 +2751,6 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match command.as_str() {
-            CMD_CLIPBOARD_COPY_LINK => {
-                let selected = app
-                    .models()
-                    .get_cloned(&state.selected_page)
-                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                let text = format!("?page={}", selected.as_ref());
-
-                app.push_effect(Effect::ClipboardSetText { text });
-
-                let sonner = shadcn::Sonner::global(app);
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_success_message(
-                    &mut host,
-                    window,
-                    "Copied",
-                    shadcn::ToastMessageOptions::new().description("Copied to clipboard."),
-                );
-
-                let _ = host.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("clipboard.copy");
-                });
-            }
             crate::spec::CMD_SHELL_SHARE_SHEET_SMOKE => {
                 let token = app.next_share_sheet_token();
                 app.push_effect(Effect::ShareSheetShow {
