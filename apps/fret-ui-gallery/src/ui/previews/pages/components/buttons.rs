@@ -1,7 +1,14 @@
 use super::super::super::super::*;
+
+#[cfg(any())]
 use std::sync::Arc;
 
 pub(in crate::ui) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pages::preview_button(cx)
+}
+
+#[cfg(any())]
+pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let outline_fg = ColorRef::Color(theme.color_token("foreground"));

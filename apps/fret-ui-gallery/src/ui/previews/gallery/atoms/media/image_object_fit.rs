@@ -1,8 +1,30 @@
 use super::super::super::super::super::*;
-use fret_core::scene::ImageSamplingHint;
-use ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub(in crate::ui) fn preview_image_object_fit(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    square_image: Model<Option<ImageId>>,
+    wide_image: Model<Option<ImageId>>,
+    tall_image: Model<Option<ImageId>>,
+    streaming_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    pages::preview_image_object_fit(
+        cx,
+        theme,
+        square_image,
+        wide_image,
+        tall_image,
+        streaming_image,
+    )
+}
+
+#[cfg(any())]
+use fret_core::scene::ImageSamplingHint;
+#[cfg(any())]
+use ui_assets::ui::ImageSourceElementContextExt as _;
+
+#[cfg(any())]
+pub(in crate::ui) fn preview_image_object_fit_legacy(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     square_image: Model<Option<ImageId>>,

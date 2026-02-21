@@ -6,6 +6,7 @@ mod aspect_ratio;
 mod avatar;
 mod badge;
 mod breadcrumb;
+mod button;
 mod card;
 mod carousel;
 mod chart;
@@ -24,6 +25,7 @@ mod field;
 mod form;
 mod hover_card;
 mod icons;
+mod image_object_fit;
 mod input;
 mod input_group;
 mod input_otp;
@@ -54,6 +56,10 @@ pub(super) fn preview_avatar(
     avatar::preview_avatar(cx, avatar_image)
 }
 
+pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    button::preview_button(cx)
+}
+
 pub(super) fn preview_alert_dialog(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -74,6 +80,24 @@ pub(super) fn preview_card(
 
 pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     icons::preview_icons(cx)
+}
+
+pub(super) fn preview_image_object_fit(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    square_image: Model<Option<ImageId>>,
+    wide_image: Model<Option<ImageId>>,
+    tall_image: Model<Option<ImageId>>,
+    streaming_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    image_object_fit::preview_image_object_fit(
+        cx,
+        theme,
+        square_image,
+        wide_image,
+        tall_image,
+        streaming_image,
+    )
 }
 
 pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
