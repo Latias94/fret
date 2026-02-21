@@ -82,11 +82,14 @@ What ships now (Phase 1 subset):
   - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
 - For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
+- When no explicit selector is provided, `diag slice` uses `bundle.index.json` (when present) to pick a reasonable default
+  snapshot for the bounded-parse attempt (last non-warmup snapshot with resolved semantics in the first window, or the best fallback).
 
 Known gaps (still planned):
 
-- `diag slice` and `diag query` do not yet prefer `bundle.index.json` for fast-path selection (they still parse `bundle.json` when computing new outputs).
-- `diag slice` currently only uses `bundle.index.json` as an optional validation layer when `--frame-id`/`--snapshot-seq` is provided.
+- `diag query` does not yet prefer `bundle.index.json` for fast-path selection (it still parses `bundle.json` when computing new outputs).
+- `diag slice` uses `bundle.index.json` for validation and as a default snapshot hint, but it still falls back to parsing `bundle.json`
+  when it needs to find a better snapshot that contains the requested test-id (since per-snapshot test-id presence is not indexed yet).
 - “Test-id presence per snapshot” is not yet indexed; finding “first snapshot that contains X” still requires semantics reads.
 
 ### Phase 2: on-disk layout (manifest + chunked payloads)

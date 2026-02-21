@@ -137,6 +137,14 @@ struct BundleIndexSnapshotMatch {
     semantics_source: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct BundleIndexSnapshotSelection {
+    window: u64,
+    frame_id: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    semantics_source: Option<String>,
+}
+
 fn try_read_bundle_index(bundle_path: &Path) -> Option<serde_json::Value> {
     let index_path = crate::bundle_index::default_bundle_index_path(bundle_path);
     let bytes = std::fs::read(index_path).ok()?;
@@ -190,6 +198,66 @@ fn find_snapshot_in_bundle_index(
                 has_semantics,
                 semantics_source,
             });
+        }
+    }
+    None
+}
+
+fn pick_default_snapshot_in_bundle_index(
+    idx: &serde_json::Value,
+    window_id: Option<u64>,
+) -> Option<BundleIndexSnapshotSelection> {
+    let windows = idx.get("windows")?.as_array()?;
+    for w in windows {
+        let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(req) = window_id
+            && req != w_id
+        {
+            continue;
+        }
+
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let mut best_any: Option<BundleIndexSnapshotSelection> = None;
+        for s in snaps.iter().rev() {
+            let has_semantics = s
+                .get("has_semantics")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !has_semantics {
+                continue;
+            }
+
+            let is_warmup = s
+                .get("is_warmup")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let semantics_source = s
+                .get("semantics_source")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+            let window_snapshot_seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+
+            let sel = BundleIndexSnapshotSelection {
+                window: w_id,
+                frame_id,
+                window_snapshot_seq,
+                semantics_source,
+            };
+
+            if !is_warmup {
+                return Some(sel);
+            }
+            best_any.get_or_insert(sel);
+        }
+
+        if best_any.is_some() {
+            return best_any;
         }
     }
     None
@@ -383,9 +451,38 @@ pub(crate) fn cmd_slice(
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
-    let mut allow_streaming = frame_id.is_some() || window_snapshot_seq.is_some();
-    if allow_streaming {
-        if let Some(idx) = try_read_bundle_index(&bundle_path) {
+    let bundle_index = try_read_bundle_index(&bundle_path);
+
+    let index_default = if frame_id.is_none() && window_snapshot_seq.is_none() {
+        bundle_index
+            .as_ref()
+            .and_then(|idx| pick_default_snapshot_in_bundle_index(idx, window_id))
+    } else {
+        None
+    };
+
+    let explicit_selector = frame_id.is_some() || window_snapshot_seq.is_some();
+    let (stream_frame_id, stream_window_snapshot_seq, stream_window_id, stream_semantics_source) =
+        if let Some(sel) = &index_default {
+            let (frame_id, window_snapshot_seq) = if sel.window_snapshot_seq.is_some() {
+                (None, sel.window_snapshot_seq)
+            } else {
+                (sel.frame_id, None)
+            };
+
+            (
+                frame_id,
+                window_snapshot_seq,
+                Some(sel.window),
+                sel.semantics_source.clone(),
+            )
+        } else {
+            (frame_id, window_snapshot_seq, window_id, None)
+        };
+
+    let mut allow_streaming = explicit_selector || index_default.is_some();
+    if allow_streaming && explicit_selector {
+        if let Some(idx) = bundle_index.as_ref() {
             let m = find_snapshot_in_bundle_index(&idx, window_id, frame_id, window_snapshot_seq)
                 .ok_or_else(|| {
                     let mut hint = String::new();
@@ -406,9 +503,17 @@ pub(crate) fn cmd_slice(
                     "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
                 ));
             }
-            if let Some(source) = m.semantics_source.as_deref()
-                && source != "inline"
-            {
+            if let Some(source) = m.semantics_source.as_deref() {
+                if source != "inline" {
+                    allow_streaming = false;
+                }
+            }
+        }
+    }
+
+    if allow_streaming && !explicit_selector {
+        if let Some(source) = stream_semantics_source.as_deref() {
+            if source != "inline" {
                 allow_streaming = false;
             }
         }
@@ -438,13 +543,24 @@ pub(crate) fn cmd_slice(
             &bundle_path,
             warmup_frames,
             test_id.as_str(),
-            frame_id,
-            window_snapshot_seq,
-            window_id,
+            stream_frame_id,
+            stream_window_snapshot_seq,
+            stream_window_id,
             max_matches,
             max_ancestors,
         )? {
-            payload
+            let should_fallback_to_find_match = !explicit_selector
+                && index_default.is_some()
+                && payload
+                    .get("matches")
+                    .and_then(|v| v.as_array())
+                    .is_some_and(|v| v.is_empty());
+
+            if should_fallback_to_find_match {
+                build_from_bundle()?
+            } else {
+                payload
+            }
         } else {
             build_from_bundle()?
         }
@@ -474,4 +590,59 @@ pub(crate) fn cmd_slice(
         println!("{}", out.display());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pick_default_snapshot_prefers_last_non_warmup_with_semantics() {
+        let idx = serde_json::json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 1, "window_snapshot_seq": 1, "is_warmup": true, "has_semantics": true, "semantics_source": "inline" },
+                        { "frame_id": 2, "window_snapshot_seq": 2, "is_warmup": false, "has_semantics": false, "semantics_source": "none" },
+                        { "frame_id": 3, "window_snapshot_seq": 3, "is_warmup": false, "has_semantics": true, "semantics_source": "inline" }
+                    ]
+                }
+            ]
+        });
+
+        let sel = pick_default_snapshot_in_bundle_index(&idx, None).expect("selection");
+        assert_eq!(sel.window, 1);
+        assert_eq!(sel.frame_id, Some(3));
+        assert_eq!(sel.window_snapshot_seq, Some(3));
+        assert_eq!(sel.semantics_source.as_deref(), Some("inline"));
+    }
+
+    #[test]
+    fn pick_default_snapshot_respects_window_filter() {
+        let idx = serde_json::json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 9, "is_warmup": false, "has_semantics": true, "semantics_source": "inline" }
+                    ]
+                },
+                {
+                    "window": 2,
+                    "snapshots": [
+                        { "frame_id": 10, "is_warmup": false, "has_semantics": true, "semantics_source": "inline" }
+                    ]
+                }
+            ]
+        });
+
+        let sel = pick_default_snapshot_in_bundle_index(&idx, Some(2)).expect("selection");
+        assert_eq!(sel.window, 2);
+        assert_eq!(sel.frame_id, Some(10));
+    }
 }
