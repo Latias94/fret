@@ -20,7 +20,8 @@ Last updated: 2026-02-21
 - [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
   - [x] `diag slice`: use index to pick a default snapshot for bounded parse (when no selector is provided).
   - [x] `bundle.index.json`: add optional per-snapshot test-id bloom hints (tail snapshots; inline semantics only).
-  - [ ] `diag query`: use index for snapshot selection / filtering when possible.
+  - [x] `diag query snapshots`: use `bundle.index.json` to suggest snapshot selectors (optionally filtered by test-id bloom).
+  - [x] `diag query test-id`: read `_root/test_ids.index.json` when given extracted packs.
   - [ ] Add per-snapshot test-id presence indexes (bloom/hashed sets) to avoid full semantics scans.
 - [x] Add `fretboard diag ai-packet ...` that exports:
   - `bundle.meta.json`

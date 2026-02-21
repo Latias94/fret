@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::test_id_bloom::TestIdBloomV1;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum QueryMode {
     Contains,
@@ -47,6 +49,15 @@ fn try_read_test_ids_index_json(path: &Path) -> Option<serde_json::Value> {
     Some(v)
 }
 
+fn try_read_bundle_index_json(path: &Path) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
+        return None;
+    }
+    Some(v)
+}
+
 fn resolve_test_ids_index_from_src(
     src: &Path,
     warmup_frames: u64,
@@ -61,6 +72,18 @@ fn resolve_test_ids_index_from_src(
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| direct.display().to_string());
                 return Ok((bundle, direct, v));
+            }
+        }
+
+        let root = src.join("_root").join("test_ids.index.json");
+        if root.is_file() {
+            if let Some(v) = try_read_test_ids_index_json(&root) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| root.display().to_string());
+                return Ok((bundle, root, v));
             }
         }
 
@@ -95,6 +118,66 @@ fn resolve_test_ids_index_from_src(
     Ok((bundle_path.display().to_string(), index_path, v))
 }
 
+fn resolve_bundle_index_from_src(
+    src: &Path,
+    warmup_frames: u64,
+) -> Result<(String, PathBuf, serde_json::Value), String> {
+    if src.is_dir() {
+        let direct = src.join("bundle.index.json");
+        if direct.is_file() {
+            if let Some(v) = try_read_bundle_index_json(&direct) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| direct.display().to_string());
+                return Ok((bundle, direct, v));
+            }
+        }
+
+        let root = src.join("_root").join("bundle.index.json");
+        if root.is_file() {
+            if let Some(v) = try_read_bundle_index_json(&root) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| root.display().to_string());
+                return Ok((bundle, root, v));
+            }
+        }
+
+        let bundle_path = crate::resolve_bundle_json_path(src);
+        let index_path =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+        let v = try_read_bundle_index_json(&index_path)
+            .ok_or_else(|| "invalid bundle.index.json".to_string())?;
+        return Ok((bundle_path.display().to_string(), index_path, v));
+    }
+
+    if src.is_file()
+        && src
+            .file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s == "bundle.index.json")
+    {
+        let v = try_read_bundle_index_json(src)
+            .ok_or_else(|| format!("invalid bundle.index.json: {}", src.display()))?;
+        let bundle = v
+            .get("bundle")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| src.display().to_string());
+        return Ok((bundle, src.to_path_buf(), v));
+    }
+
+    let bundle_path = crate::resolve_bundle_json_path(src);
+    let index_path = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+    let v = try_read_bundle_index_json(&index_path)
+        .ok_or_else(|| "invalid bundle.index.json".to_string())?;
+    Ok((bundle_path.display().to_string(), index_path, v))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_query(
     rest: &[String],
@@ -122,8 +205,298 @@ pub(crate) fn cmd_query(
             warmup_frames,
             stats_json,
         ),
+        "snapshots" | "snapshot" => cmd_query_snapshots(
+            &rest[1..],
+            workspace_root,
+            out_dir,
+            query_out,
+            warmup_frames,
+            stats_json,
+        ),
         other => Err(format!("unknown query kind: {other}")),
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_query_snapshots(
+    rest: &[String],
+    workspace_root: &Path,
+    out_dir: &Path,
+    query_out: Option<PathBuf>,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    let mut top: usize = 20;
+    let mut window_id: Option<u64> = None;
+    let mut non_warmup_only: bool = true;
+    let mut has_semantics_only: bool = true;
+    let mut semantics_source: Option<String> = None; // inline|table|any (None => any)
+    let mut test_id: Option<String> = None;
+
+    let mut positionals: Vec<String> = Vec::new();
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--top" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --top".to_string());
+                };
+                top = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --top (expected usize)".to_string())?;
+                i += 1;
+            }
+            "--window" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --window".to_string());
+                };
+                window_id = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --window (expected u64)".to_string())?,
+                );
+                i += 1;
+            }
+            "--include-warmup" => {
+                non_warmup_only = false;
+                i += 1;
+            }
+            "--include-missing-semantics" => {
+                has_semantics_only = false;
+                i += 1;
+            }
+            "--semantics-source" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --semantics-source".to_string());
+                };
+                match v.as_str() {
+                    "any" => semantics_source = None,
+                    "inline" | "table" | "none" => semantics_source = Some(v),
+                    _ => {
+                        return Err(
+                            "invalid value for --semantics-source (expected any|inline|table|none)"
+                                .to_string(),
+                        );
+                    }
+                }
+                i += 1;
+            }
+            "--test-id" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --test-id".to_string());
+                };
+                test_id = Some(v);
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag for query snapshots: {other}"));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    if positionals.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    let (bundle_label, index_path, index) = if let Some(bundle_src) = positionals.first() {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
+        resolve_bundle_index_from_src(&src, warmup_frames)?
+    } else {
+        let bundle_path = resolve_latest_bundle_json_path(out_dir)?;
+        let index_path =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+        let index = try_read_bundle_index_json(&index_path)
+            .ok_or_else(|| "invalid bundle.index.json".to_string())?;
+        (bundle_path.display().to_string(), index_path, index)
+    };
+
+    #[derive(Debug, Clone)]
+    struct SnapRow {
+        window: u64,
+        frame_id: Option<u64>,
+        window_snapshot_seq: Option<u64>,
+        timestamp_unix_ms: Option<u64>,
+        is_warmup: bool,
+        semantics_source: Option<String>,
+        has_semantics: bool,
+        bloom_might_contain: Option<bool>,
+    }
+
+    let empty = Vec::new();
+    let windows = index
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
+
+    let mut rows: Vec<SnapRow> = Vec::new();
+    let target = test_id.as_deref().unwrap_or_default().trim();
+    for w in windows {
+        let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(req) = window_id
+            && req != w_id
+        {
+            continue;
+        }
+        let snaps_empty = Vec::new();
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&snaps_empty);
+        for s in snaps {
+            let is_warmup = s
+                .get("is_warmup")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if non_warmup_only && is_warmup {
+                continue;
+            }
+
+            let has_semantics = s
+                .get("has_semantics")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if has_semantics_only && !has_semantics {
+                continue;
+            }
+
+            let src = s
+                .get("semantics_source")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            if let Some(req) = semantics_source.as_deref() {
+                if src.as_deref() != Some(req) {
+                    continue;
+                }
+            }
+
+            let bloom_might_contain = if !target.is_empty() {
+                s.get("test_id_bloom_hex")
+                    .and_then(|v| v.as_str())
+                    .and_then(TestIdBloomV1::from_hex)
+                    .map(|b| b.might_contain(target))
+            } else {
+                None
+            };
+
+            if !target.is_empty() && bloom_might_contain == Some(false) {
+                continue;
+            }
+
+            rows.push(SnapRow {
+                window: w_id,
+                frame_id: s.get("frame_id").and_then(|v| v.as_u64()),
+                window_snapshot_seq: s.get("window_snapshot_seq").and_then(|v| v.as_u64()),
+                timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+                is_warmup,
+                semantics_source: src,
+                has_semantics,
+                bloom_might_contain,
+            });
+        }
+    }
+
+    fn source_rank(s: Option<&str>) -> i32 {
+        match s {
+            Some("inline") => 2,
+            Some("table") => 1,
+            _ => 0,
+        }
+    }
+
+    rows.sort_by(|a, b| {
+        let a_hit = a.bloom_might_contain.unwrap_or(false);
+        let b_hit = b.bloom_might_contain.unwrap_or(false);
+        b_hit
+            .cmp(&a_hit)
+            .then_with(|| {
+                source_rank(b.semantics_source.as_deref())
+                    .cmp(&source_rank(a.semantics_source.as_deref()))
+            })
+            .then_with(|| b.window_snapshot_seq.cmp(&a.window_snapshot_seq))
+            .then_with(|| b.frame_id.cmp(&a.frame_id))
+            .then_with(|| b.timestamp_unix_ms.cmp(&a.timestamp_unix_ms))
+            .then_with(|| a.window.cmp(&b.window))
+    });
+
+    if top > 0 && rows.len() > top {
+        rows.truncate(top);
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": "query.snapshots",
+        "bundle": bundle_label,
+        "index": index_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "top": top,
+        "window": window_id,
+        "non_warmup_only": non_warmup_only,
+        "has_semantics_only": has_semantics_only,
+        "semantics_source": semantics_source.as_deref().unwrap_or("any"),
+        "test_id": test_id.as_deref(),
+        "results": rows.iter().map(|r| serde_json::json!({
+            "window": r.window,
+            "frame_id": r.frame_id,
+            "window_snapshot_seq": r.window_snapshot_seq,
+            "timestamp_unix_ms": r.timestamp_unix_ms,
+            "is_warmup": r.is_warmup,
+            "semantics_source": r.semantics_source,
+            "has_semantics": r.has_semantics,
+            "bloom_might_contain_test_id": r.bloom_might_contain,
+        })).collect::<Vec<_>>(),
+    });
+
+    if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+        std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+        if !stats_json {
+            println!("{}", out.display());
+            return Ok(());
+        }
+    }
+
+    if stats_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
+
+    for r in rows {
+        let mut selector = format!("--window {} ", r.window);
+        if let Some(seq) = r.window_snapshot_seq {
+            selector.push_str(&format!("--snapshot-seq {seq} "));
+        } else if let Some(fid) = r.frame_id {
+            selector.push_str(&format!("--frame-id {fid} "));
+        }
+        let src = r.semantics_source.unwrap_or_else(|| "unknown".to_string());
+        if let Some(hit) = r.bloom_might_contain {
+            println!(
+                "{selector}(frame_id={:?} snapshot_seq={:?} warmup={} semantics_source={} bloom_hit={})",
+                r.frame_id, r.window_snapshot_seq, r.is_warmup, src, hit
+            );
+        } else {
+            println!(
+                "{selector}(frame_id={:?} snapshot_seq={:?} warmup={} semantics_source={})",
+                r.frame_id, r.window_snapshot_seq, r.is_warmup, src
+            );
+        }
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
