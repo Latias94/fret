@@ -32,6 +32,10 @@ pub(crate) fn write_tooling_failure_script_result(
             step_index: None,
             note,
             bundle_dir: None,
+            window: None,
+            tick_id: None,
+            frame_id: None,
+            window_snapshot_seq: None,
         }],
         ..UiScriptEvidenceV1::default()
     };
@@ -84,6 +88,10 @@ pub(crate) fn push_tooling_event_log_entry(
         step_index: result.step_index,
         note,
         bundle_dir: result.last_bundle_dir.clone(),
+        window: result.window,
+        tick_id: None,
+        frame_id: None,
+        window_snapshot_seq: None,
     });
 }
 

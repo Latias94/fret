@@ -13618,6 +13618,10 @@ fn write_script_result_capability_missing(
             step_index: None,
             note: Some(missing),
             bundle_dir: None,
+            window: None,
+            tick_id: None,
+            frame_id: None,
+            window_snapshot_seq: None,
         }],
         capabilities_check: Some(check.clone()),
         ..UiScriptEvidenceV1::default()

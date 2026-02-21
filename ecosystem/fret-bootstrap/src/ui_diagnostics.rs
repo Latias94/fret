@@ -1541,6 +1541,10 @@ impl UiDiagnosticsService {
                     step_index: Some(0),
                     note: None,
                     bundle_dir: None,
+                    window: Some(anchor_window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
                 },
             );
             self.active_scripts.insert(anchor_window, active_script);
@@ -1747,6 +1751,10 @@ impl UiDiagnosticsService {
                                 pointer_id.0, drag.kind, drag.cross_window_hover
                             )),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     app.cancel_drag(pointer_id);
@@ -1786,6 +1794,10 @@ impl UiDiagnosticsService {
                             canceled.iter().map(|id| id.0).collect::<Vec<_>>(),
                         )),
                         bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
                     },
                 );
 
@@ -1818,6 +1830,10 @@ impl UiDiagnosticsService {
                     step_index: Some(passed_step_index),
                     note: Some("script_already_complete".to_string()),
                     bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -1899,6 +1915,10 @@ impl UiDiagnosticsService {
                     step_index: Some(step_index_u32),
                     note: Some(step_kind.clone()),
                     bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
                 },
             );
             active.event_log_active_step = Some(step_index_u32);
@@ -3054,6 +3074,10 @@ impl UiDiagnosticsService {
                                 step_index: Some(step_index as u32),
                                 note: Some("no_semantics_snapshot".to_string()),
                                 bundle_dir: None,
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
                             },
                         );
                         self.write_script_result(UiScriptResultV1 {
@@ -3097,6 +3121,10 @@ impl UiDiagnosticsService {
                                 step_index: Some(step_index as u32),
                                 note: Some("click_no_semantics_match".to_string()),
                                 bundle_dir: None,
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
                             },
                         );
                         self.write_script_result(UiScriptResultV1 {
@@ -4026,6 +4054,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some("no_semantics_snapshot".to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     self.write_script_result(UiScriptResultV1 {
@@ -4070,6 +4102,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some("move_pointer_no_semantics_match".to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     self.write_script_result(UiScriptResultV1 {
@@ -4311,6 +4347,10 @@ impl UiDiagnosticsService {
                                             session.window.data().as_ffi(),
                                         )),
                                         bundle_dir: None,
+                                        window: Some(window.data().as_ffi()),
+                                        tick_id: Some(app.tick_id().0),
+                                        frame_id: Some(app.frame_id().0),
+                                        window_snapshot_seq: None,
                                     },
                                 );
                                 if session.window != window {
@@ -4573,6 +4613,10 @@ impl UiDiagnosticsService {
                                     step_index: Some(step_index.min(u32::MAX as usize) as u32),
                                     note: Some(format!("pointer_id={}", pointer_id.0)),
                                     bundle_dir: None,
+                                    window: Some(window.data().as_ffi()),
+                                    tick_id: Some(app.tick_id().0),
+                                    frame_id: Some(app.frame_id().0),
+                                    window_snapshot_seq: None,
                                 },
                             );
 
@@ -4665,6 +4709,10 @@ impl UiDiagnosticsService {
                                         step_index: Some(step_index as u32),
                                         note: Some("no_semantics_snapshot".to_string()),
                                         bundle_dir: None,
+                                        window: Some(window.data().as_ffi()),
+                                        tick_id: Some(app.tick_id().0),
+                                        frame_id: Some(app.frame_id().0),
+                                        window_snapshot_seq: None,
                                     },
                                 );
                                 self.write_script_result(UiScriptResultV1 {
@@ -4710,6 +4758,10 @@ impl UiDiagnosticsService {
                                         step_index: Some(step_index as u32),
                                         note: Some("drag_pointer_no_semantics_match".to_string()),
                                         bundle_dir: None,
+                                        window: Some(window.data().as_ffi()),
+                                        tick_id: Some(app.tick_id().0),
+                                        frame_id: Some(app.frame_id().0),
+                                        window_snapshot_seq: None,
                                     },
                                 );
                                 self.write_script_result(UiScriptResultV1 {
@@ -5159,6 +5211,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some("no_semantics_snapshot".to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     self.write_script_result(UiScriptResultV1 {
@@ -5212,6 +5268,10 @@ impl UiDiagnosticsService {
                                     step_index: Some(step_index as u32),
                                     note: Some("move_pointer_sweep_no_semantics_match".to_string()),
                                     bundle_dir: None,
+                                    window: Some(window.data().as_ffi()),
+                                    tick_id: Some(app.tick_id().0),
+                                    frame_id: Some(app.frame_id().0),
+                                    window_snapshot_seq: None,
                                 },
                             );
                             self.write_script_result(UiScriptResultV1 {
@@ -5325,6 +5385,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some("no_semantics_snapshot".to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     self.write_script_result(UiScriptResultV1 {
@@ -5368,6 +5432,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some("wheel_no_semantics_match".to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     self.write_script_result(UiScriptResultV1 {
@@ -6541,6 +6609,10 @@ impl UiDiagnosticsService {
                                     step_index: Some(step_index as u32),
                                     note: Some("drag_to_timeout".to_string()),
                                     bundle_dir: None,
+                                    window: Some(window.data().as_ffi()),
+                                    tick_id: Some(app.tick_id().0),
+                                    frame_id: Some(app.frame_id().0),
+                                    window_snapshot_seq: None,
                                 },
                             );
                             self.write_script_result(UiScriptResultV1 {
@@ -6824,6 +6896,10 @@ impl UiDiagnosticsService {
                     step_index: Some(step_index_u32),
                     note: Some(step_kind.clone()),
                     bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
                 },
             );
             active.event_log_active_step = None;
@@ -6858,6 +6934,10 @@ impl UiDiagnosticsService {
                     step_index: Some(step_index as u32),
                     note: failure_reason.clone(),
                     bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
                 },
             );
             if self.cfg.script_auto_dump {
@@ -6871,6 +6951,10 @@ impl UiDiagnosticsService {
                             step_index: Some(step_index as u32),
                             note: Some(label.to_string()),
                             bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
                         },
                     );
                     let dumped_dir = self.dump_bundle(Some(label));
@@ -6884,6 +6968,10 @@ impl UiDiagnosticsService {
                                 step_index: Some(step_index as u32),
                                 note: Some(label.to_string()),
                                 bundle_dir: Some(display_path(&self.cfg.out_dir, dir)),
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
                             },
                         );
                     }
@@ -6898,6 +6986,10 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         note: Some(label.clone()),
                         bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
                     },
                 );
                 self.request_force_dump(
@@ -6941,6 +7033,10 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         note: Some(label.clone()),
                         bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
                     },
                 );
                 self.request_force_dump(
@@ -6963,6 +7059,10 @@ impl UiDiagnosticsService {
                         step_index: Some(passed_step_index),
                         note: None,
                         bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
                     },
                 );
                 self.write_script_result(UiScriptResultV1 {
@@ -7888,6 +7988,10 @@ impl UiDiagnosticsService {
                             step_index: pending.script_step_index,
                             note: Some(pending.label.clone()),
                             bundle_dir: Some(bundle_dir.clone()),
+                            window: None,
+                            tick_id: None,
+                            frame_id: None,
+                            window_snapshot_seq: None,
                         },
                     );
                 }

@@ -1569,6 +1569,18 @@ pub struct UiScriptEventLogEntryV1 {
     pub note: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bundle_dir: Option<String>,
+    /// When available, identifies the window that observed/emitted this event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<u64>,
+    /// When available, the app tick id at the time of the event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tick_id: Option<u64>,
+    /// When available, the app frame id at the time of the event.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_id: Option<u64>,
+    /// Optional per-window snapshot sequence hint (may be resolved by tooling from `bundle.index.json`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_snapshot_seq: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
