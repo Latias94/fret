@@ -3,7 +3,6 @@ use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
-use crate::text::coords::compute_text_vertical_offset_and_baseline;
 use fret_core::time::Instant;
 
 fn push_attributed_span_background_quads(
@@ -538,6 +537,8 @@ impl ElementHostWidget {
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
                 let align_changed = self.text_cache.last_align != Some(props.align);
+                let ink_overflow_changed =
+                    self.text_cache.last_ink_overflow != Some(props.ink_overflow);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -547,6 +548,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -558,6 +560,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -589,11 +592,15 @@ impl ElementHostWidget {
                                 width: prev_width,
                                 blob: prev_blob,
                                 metrics: prev_metrics,
+                                ink_pad_top: self.text_cache.ink_pad_top,
+                                ink_pad_bottom: self.text_cache.ink_pad_bottom,
                             },
                         );
                     }
                     self.text_cache.blob = Some(cached.blob);
                     self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.ink_pad_top = cached.ink_pad_top;
+                    self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
                 }
@@ -628,6 +635,8 @@ impl ElementHostWidget {
                                     width: prev_width,
                                     blob,
                                     metrics: prev_metrics,
+                                    ink_pad_top: self.text_cache.ink_pad_top,
+                                    ink_pad_bottom: self.text_cache.ink_pad_bottom,
                                 },
                             );
                         } else {
@@ -659,6 +668,19 @@ impl ElementHostWidget {
                     self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
+
+                    let (pad_top, pad_bottom) =
+                        if props.ink_overflow == crate::element::TextInkOverflow::AutoPad {
+                            crate::text::coords::compute_text_ink_overflow_padding(
+                                cx.services.text(),
+                                blob,
+                            )
+                        } else {
+                            (Px(0.0), Px(0.0))
+                        };
+                    self.text_cache.ink_pad_top = pad_top;
+                    self.text_cache.ink_pad_bottom = pad_bottom;
                 }
 
                 let Some(blob) = self.text_cache.blob else {
@@ -668,19 +690,29 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let origin = {
-                    let (vertical_offset, baseline) = compute_text_vertical_offset_and_baseline(
+                let (pad_top, pad_bottom) =
+                    crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
+                        metrics.size.height,
+                        cx.bounds.size.height,
+                        self.text_cache.ink_pad_top,
+                        self.text_cache.ink_pad_bottom,
+                    );
+                let bounds = fret_core::Rect::new(
+                    fret_core::Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 + pad_top.0)),
+                    fret_core::Size::new(
+                        cx.bounds.size.width,
+                        Px((cx.bounds.size.height.0 - pad_top.0 - pad_bottom.0).max(0.0)),
+                    ),
+                );
+                let (mapping, _, baseline) =
+                    crate::text::coords::compute_text_box_mapping_for_vertical_placement(
                         cx.services.text(),
                         blob,
-                        cx.bounds.size.height,
+                        bounds,
                         metrics,
                         style.vertical_placement,
                     );
-                    fret_core::Point::new(
-                        cx.bounds.origin.x,
-                        cx.bounds.origin.y + vertical_offset + baseline,
-                    )
-                };
+                let origin = mapping.baseline_origin(baseline);
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -736,6 +768,8 @@ impl ElementHostWidget {
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
                 let align_changed = self.text_cache.last_align != Some(props.align);
+                let ink_overflow_changed =
+                    self.text_cache.last_ink_overflow != Some(props.ink_overflow);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -745,6 +779,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -756,6 +791,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -787,11 +823,15 @@ impl ElementHostWidget {
                                 width: prev_width,
                                 blob: prev_blob,
                                 metrics: prev_metrics,
+                                ink_pad_top: self.text_cache.ink_pad_top,
+                                ink_pad_bottom: self.text_cache.ink_pad_bottom,
                             },
                         );
                     }
                     self.text_cache.blob = Some(cached.blob);
                     self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.ink_pad_top = cached.ink_pad_top;
+                    self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
                 }
@@ -826,6 +866,8 @@ impl ElementHostWidget {
                                     width: prev_width,
                                     blob,
                                     metrics: prev_metrics,
+                                    ink_pad_top: self.text_cache.ink_pad_top,
+                                    ink_pad_bottom: self.text_cache.ink_pad_bottom,
                                 },
                             );
                         } else {
@@ -858,6 +900,19 @@ impl ElementHostWidget {
                     self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
+
+                    let (pad_top, pad_bottom) =
+                        if props.ink_overflow == crate::element::TextInkOverflow::AutoPad {
+                            crate::text::coords::compute_text_ink_overflow_padding(
+                                cx.services.text(),
+                                blob,
+                            )
+                        } else {
+                            (Px(0.0), Px(0.0))
+                        };
+                    self.text_cache.ink_pad_top = pad_top;
+                    self.text_cache.ink_pad_bottom = pad_bottom;
                 }
 
                 let Some(blob) = self.text_cache.blob else {
@@ -867,17 +922,31 @@ impl ElementHostWidget {
                     return;
                 };
 
+                let (pad_top, pad_bottom) =
+                    crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
+                        metrics.size.height,
+                        cx.bounds.size.height,
+                        self.text_cache.ink_pad_top,
+                        self.text_cache.ink_pad_bottom,
+                    );
+                let bounds = fret_core::Rect::new(
+                    fret_core::Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 + pad_top.0)),
+                    fret_core::Size::new(
+                        cx.bounds.size.width,
+                        Px((cx.bounds.size.height.0 - pad_top.0 - pad_bottom.0).max(0.0)),
+                    ),
+                );
                 let (mapping, vertical_offset, baseline) =
                     crate::text::coords::compute_text_box_mapping_for_vertical_placement(
                         cx.services.text(),
                         blob,
-                        cx.bounds,
+                        bounds,
                         metrics,
                         style.vertical_placement,
                     );
                 let clip = fret_core::Rect::new(
                     fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                    cx.bounds.size,
+                    bounds.size,
                 );
                 push_attributed_span_background_quads(
                     cx.scene,
@@ -885,7 +954,7 @@ impl ElementHostWidget {
                     blob,
                     props.rich.spans.as_ref(),
                     clip,
-                    cx.bounds.origin,
+                    bounds.origin,
                     vertical_offset,
                 );
                 let origin = mapping.baseline_origin(baseline);
@@ -944,6 +1013,8 @@ impl ElementHostWidget {
                 let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
                 let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
                 let align_changed = self.text_cache.last_align != Some(props.align);
+                let ink_overflow_changed =
+                    self.text_cache.last_ink_overflow != Some(props.ink_overflow);
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
@@ -953,6 +1024,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || font_stack_changed;
                 if signature_changed {
                     self.text_cache.release_prepared_by_width(cx.services);
@@ -964,6 +1036,7 @@ impl ElementHostWidget {
                     || wrap_changed
                     || overflow_changed
                     || align_changed
+                    || ink_overflow_changed
                     || width_changed
                     || font_stack_changed;
                 let reasons_mask = (blob_missing as u16)
@@ -995,11 +1068,15 @@ impl ElementHostWidget {
                                 width: prev_width,
                                 blob: prev_blob,
                                 metrics: prev_metrics,
+                                ink_pad_top: self.text_cache.ink_pad_top,
+                                ink_pad_bottom: self.text_cache.ink_pad_bottom,
                             },
                         );
                     }
                     self.text_cache.blob = Some(cached.blob);
                     self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.ink_pad_top = cached.ink_pad_top;
+                    self.text_cache.ink_pad_bottom = cached.ink_pad_bottom;
                     self.text_cache.last_width = Some(max_width);
                     needs_prepare = false;
                 }
@@ -1034,6 +1111,8 @@ impl ElementHostWidget {
                                     width: prev_width,
                                     blob,
                                     metrics: prev_metrics,
+                                    ink_pad_top: self.text_cache.ink_pad_top,
+                                    ink_pad_bottom: self.text_cache.ink_pad_bottom,
                                 },
                             );
                         } else {
@@ -1066,6 +1145,19 @@ impl ElementHostWidget {
                     self.text_cache.last_align = Some(props.align);
                     self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
+
+                    let (pad_top, pad_bottom) =
+                        if props.ink_overflow == crate::element::TextInkOverflow::AutoPad {
+                            crate::text::coords::compute_text_ink_overflow_padding(
+                                cx.services.text(),
+                                blob,
+                            )
+                        } else {
+                            (Px(0.0), Px(0.0))
+                        };
+                    self.text_cache.ink_pad_top = pad_top;
+                    self.text_cache.ink_pad_bottom = pad_bottom;
                 }
 
                 let Some(blob) = self.text_cache.blob else {
@@ -1090,11 +1182,26 @@ impl ElementHostWidget {
                     },
                 );
 
+                let (pad_top, pad_bottom) =
+                    crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
+                        metrics.size.height,
+                        cx.bounds.size.height,
+                        self.text_cache.ink_pad_top,
+                        self.text_cache.ink_pad_bottom,
+                    );
+                let bounds = fret_core::Rect::new(
+                    fret_core::Point::new(cx.bounds.origin.x, Px(cx.bounds.origin.y.0 + pad_top.0)),
+                    fret_core::Size::new(
+                        cx.bounds.size.width,
+                        Px((cx.bounds.size.height.0 - pad_top.0 - pad_bottom.0).max(0.0)),
+                    ),
+                );
+
                 let (mapping, vertical_offset, baseline) =
                     crate::text::coords::compute_text_box_mapping_for_vertical_placement(
                         cx.services.text(),
                         blob,
-                        cx.bounds,
+                        bounds,
                         metrics,
                         style.vertical_placement,
                     );
@@ -1129,7 +1236,7 @@ impl ElementHostWidget {
                 }
                 let clip = fret_core::Rect::new(
                     fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                    cx.bounds.size,
+                    bounds.size,
                 );
 
                 let mut interactive_span_bounds: Vec<
@@ -1162,9 +1269,11 @@ impl ElementHostWidget {
                         let mut y1 = f32::NEG_INFINITY;
                         for r in rects.iter() {
                             x0 = x0.min(r.origin.x.0);
-                            y0 = y0.min(r.origin.y.0 + vertical_offset.0);
+                            y0 = y0.min(r.origin.y.0 + vertical_offset.0 + pad_top.0);
                             x1 = x1.max(r.origin.x.0 + r.size.width.0);
-                            y1 = y1.max(r.origin.y.0 + r.size.height.0 + vertical_offset.0);
+                            y1 = y1.max(
+                                r.origin.y.0 + r.size.height.0 + vertical_offset.0 + pad_top.0,
+                            );
                         }
                         if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite()
                         {
@@ -1205,7 +1314,7 @@ impl ElementHostWidget {
                     blob,
                     props.rich.spans.as_ref(),
                     clip,
-                    cx.bounds.origin,
+                    bounds.origin,
                     vertical_offset,
                 );
 
@@ -1921,7 +2030,7 @@ impl ElementHostWidget {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::text::coords::compute_text_vertical_offset_and_baseline;
 
     use fret_core::{
         FontId, FontWeight, Px, Size, TextBlobId, TextLineMetrics, TextMetrics, TextStyle,
@@ -1936,6 +2045,8 @@ mod tests {
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(Px(16.0)),
+            line_height_em: None,
+            line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
@@ -1953,6 +2064,8 @@ mod tests {
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(Px(12.0)),
+            line_height_em: None,
+            line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };

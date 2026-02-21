@@ -5,6 +5,50 @@ pub(crate) fn compute_text_vertical_offset(bounds_height: Px, metrics_height: Px
     Px(((bounds_height.0 - metrics_height.0) * 0.5).max(0.0))
 }
 
+pub(crate) fn compute_text_ink_overflow_padding(
+    services: &mut dyn fret_core::TextService,
+    blob: fret_core::TextBlobId,
+) -> (Px, Px) {
+    let Some(first_line) = services.first_line_metrics(blob) else {
+        return (Px(0.0), Px(0.0));
+    };
+    let Some(first_ink) = services.first_line_ink_metrics(blob) else {
+        return (Px(0.0), Px(0.0));
+    };
+
+    let pad_top = Px((first_ink.ascent.0 - first_line.ascent.0).max(0.0));
+
+    let last_line = services.last_line_metrics(blob).unwrap_or(first_line);
+    let last_ink = services
+        .last_line_ink_metrics(blob)
+        .or_else(|| services.first_line_ink_metrics(blob));
+    let pad_bottom = last_ink
+        .map(|ink| Px((ink.descent.0 - last_line.descent.0).max(0.0)))
+        .unwrap_or(Px(0.0));
+
+    (pad_top, pad_bottom)
+}
+
+pub(crate) fn clamp_text_ink_overflow_padding_to_bounds(
+    metrics_height: Px,
+    bounds_height: Px,
+    requested_top: Px,
+    requested_bottom: Px,
+) -> (Px, Px) {
+    let requested_total = requested_top.0 + requested_bottom.0;
+    if !requested_total.is_finite() || requested_total <= 0.0 {
+        return (Px(0.0), Px(0.0));
+    }
+
+    let extra = (bounds_height.0 - metrics_height.0).max(0.0);
+    if !extra.is_finite() || extra <= 0.0 {
+        return (Px(0.0), Px(0.0));
+    }
+
+    let scale = (extra / requested_total).min(1.0).max(0.0);
+    (Px(requested_top.0 * scale), Px(requested_bottom.0 * scale))
+}
+
 pub(crate) fn compute_text_vertical_offset_and_baseline(
     services: &mut dyn fret_core::TextService,
     blob: fret_core::TextBlobId,

@@ -880,6 +880,7 @@ impl ElementHostWidget {
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_align == Some(props.align)
+                    && self.text_cache.last_ink_overflow == Some(props.ink_overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
@@ -912,6 +913,7 @@ impl ElementHostWidget {
                         self.text_cache.last_width = Some(measure_width);
                         self.text_cache.last_measure_width = Some(measure_width);
                         self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                         metrics
                     })
                 } else {
@@ -933,10 +935,26 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                     metrics
                 };
 
-                clamp_to_constraints(metrics.size, props.layout, cx.available)
+                let (pad_top, pad_bottom) = if props.ink_overflow
+                    == crate::element::TextInkOverflow::AutoPad
+                    && let Some(blob) = self.text_cache.blob
+                {
+                    crate::text::coords::compute_text_ink_overflow_padding(cx.services.text(), blob)
+                } else {
+                    (Px(0.0), Px(0.0))
+                };
+                self.text_cache.ink_pad_top = pad_top;
+                self.text_cache.ink_pad_bottom = pad_bottom;
+
+                let desired = Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                );
+                clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::StyledText(props) => {
                 if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
@@ -1002,6 +1020,7 @@ impl ElementHostWidget {
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_align == Some(props.align)
+                    && self.text_cache.last_ink_overflow == Some(props.ink_overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
@@ -1038,6 +1057,7 @@ impl ElementHostWidget {
                         self.text_cache.last_width = Some(measure_width);
                         self.text_cache.last_measure_width = Some(measure_width);
                         self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                         metrics
                     })
                 } else {
@@ -1063,10 +1083,26 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                     metrics
                 };
 
-                clamp_to_constraints(metrics.size, props.layout, cx.available)
+                let (pad_top, pad_bottom) = if props.ink_overflow
+                    == crate::element::TextInkOverflow::AutoPad
+                    && let Some(blob) = self.text_cache.blob
+                {
+                    crate::text::coords::compute_text_ink_overflow_padding(cx.services.text(), blob)
+                } else {
+                    (Px(0.0), Px(0.0))
+                };
+                self.text_cache.ink_pad_top = pad_top;
+                self.text_cache.ink_pad_bottom = pad_bottom;
+
+                let desired = Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                );
+                clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::SelectableText(props) => {
                 if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
@@ -1132,6 +1168,7 @@ impl ElementHostWidget {
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
                     && self.text_cache.last_align == Some(props.align)
+                    && self.text_cache.last_ink_overflow == Some(props.ink_overflow)
                     && self.text_cache.last_measure_width == Some(measure_width)
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
@@ -1168,6 +1205,7 @@ impl ElementHostWidget {
                         self.text_cache.last_width = Some(measure_width);
                         self.text_cache.last_measure_width = Some(measure_width);
                         self.text_cache.last_font_stack_key = Some(font_stack_key);
+                        self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                         metrics
                     })
                 } else {
@@ -1193,10 +1231,26 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    self.text_cache.last_ink_overflow = Some(props.ink_overflow);
                     metrics
                 };
 
-                clamp_to_constraints(metrics.size, props.layout, cx.available)
+                let (pad_top, pad_bottom) = if props.ink_overflow
+                    == crate::element::TextInkOverflow::AutoPad
+                    && let Some(blob) = self.text_cache.blob
+                {
+                    crate::text::coords::compute_text_ink_overflow_padding(cx.services.text(), blob)
+                } else {
+                    (Px(0.0), Px(0.0))
+                };
+                self.text_cache.ink_pad_top = pad_top;
+                self.text_cache.ink_pad_bottom = pad_bottom;
+
+                let desired = Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                );
+                clamp_to_constraints(desired, props.layout, cx.available)
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();

@@ -225,6 +225,7 @@ impl<H: UiHost> UiTree<H> {
                 let focusable = match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
                 };
