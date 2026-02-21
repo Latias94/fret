@@ -108,6 +108,7 @@ Evidence pointers:
 - [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
 - [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
 - [x] Extract stale bundle checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/stale.rs`.
+- [x] Extract wheel scroll checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/wheel_scroll.rs`.
 - [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).
 - [x] Extract inspect subcommand handler into `crates/fret-diag/src/commands/inspect.rs` (reduce `lib.rs` churn surface).
 - [x] Extract pack/triage/lint subcommand handlers into `crates/fret-diag/src/commands/artifacts.rs` (reduce `lib.rs` churn surface).
