@@ -8,8 +8,9 @@ Last updated: 2026-02-21
   - [x] v1 baseline measured (local samples; see `docs/workstreams/diag-ai-agent-debugging-v1.md`).
   - [x] v2 baseline measured (tooling-side conversion via `fretboard diag bundle-v2`), and compared to v1.
 - [x] Add `fretboard diag hotspots` tooling to report approximate per-path JSON sizes.
-- [ ] Define size budgets for “AI packet” outputs (default + max).
-  - Draft budgets are documented (not enforced yet): `docs/workstreams/diag-ai-agent-debugging-v1.md`.
+- [x] Define size budgets for “AI packet” outputs (default + max) and enforce them in tooling.
+  - Budget + clipping behavior: `docs/workstreams/diag-ai-agent-debugging-v1.md`.
+  - Tooling writes `ai.packet.json` with budget + clip/drop summary.
 - [ ] Enumerate the minimum fields needed for common triage loops (focus, input, selection, viewport, overlays).
 
 ## M1: Index + minimal packet (Phase 1)

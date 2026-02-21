@@ -183,9 +183,11 @@ Implication for schema v2:
 - v2 helps reduce repeated per-snapshot semantics, but the semantics payload still exists (now as a table).
 - AI packets should continue to avoid shipping raw semantics tables by default; ship `bundle.index.json` + targeted `slice.*.json` instead.
 
-### AI packet budgets (draft; not enforced yet)
+### AI packet budgets (enforced by tooling)
 
 The intent is to keep the common case “small by default”, while allowing opt-in escalation.
+Tooling enforces these budgets during `fretboard diag ai-packet` by clipping or dropping optional files when necessary, and writes
+an `ai.packet.json` report into the output directory (for auditability).
 
 - Default AI packet total: <= 2 MiB
 - Max AI packet total (before clipping/escalation): <= 20 MiB
@@ -200,4 +202,12 @@ Measured sizes (local samples; 2026-02-21):
 - `script-step-0027-click` packet (test-id `ui-gallery-command-palette`): ~46 KiB total
 - `ui-gallery-avatar` packet (test-id `ui-gallery-nav-search`): ~83 KiB total
 
-Next: enforce these budgets in `diag ai-packet` (clip with explicit “clipped” markers + a stable `reason_code` when hard limits are hit).
+Next: align all budget overruns to a stable `reason_code` taxonomy and make the clipping behavior more explicit for agents (e.g. a
+single “packet manifest” that lists which files were clipped/dropped and why).
+
+Current behavior (as of 2026-02-21):
+
+- `diag ai-packet` enforces:
+  - per-file caps for `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and each `slice.*.json`
+  - total hard cap (dropping `triage.json`/`manifest.json` first if present)
+- When clipping occurs, the clipped file includes an additive `clipped` object (schema v1) describing the applied bounds.

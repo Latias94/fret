@@ -2,6 +2,43 @@ use std::path::{Path, PathBuf};
 
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 
+#[derive(Debug, Clone)]
+struct AiPacketBudgetConfig {
+    soft_total_bytes: u64,
+    hard_total_bytes: u64,
+
+    max_bundle_meta_bytes: u64,
+    max_bundle_index_bytes: u64,
+    max_test_ids_index_bytes: u64,
+    max_slice_bytes: u64,
+}
+
+impl Default for AiPacketBudgetConfig {
+    fn default() -> Self {
+        Self {
+            soft_total_bytes: 2 * 1024 * 1024,
+            hard_total_bytes: 20 * 1024 * 1024,
+            max_bundle_meta_bytes: 128 * 1024,
+            max_bundle_index_bytes: 4 * 1024 * 1024,
+            max_test_ids_index_bytes: 2 * 1024 * 1024,
+            max_slice_bytes: 2 * 1024 * 1024,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct AiPacketBudgetReport {
+    kind: &'static str,
+    schema_version: u32,
+    budget: AiPacketBudgetConfig,
+    bytes_total: u64,
+    soft_budget_exceeded: bool,
+    hard_budget_exceeded: bool,
+    reason_code: Option<String>,
+    dropped_files: Vec<String>,
+    clipped_files: Vec<String>,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_ai_packet(
     rest: &[String],
@@ -116,15 +153,12 @@ pub(crate) fn cmd_ai_packet(
     }
 
     if let Some(test_id) = &test_id {
-        let payload = super::slice::build_test_id_slice_payload_from_bundle_path(
+        let budget = AiPacketBudgetConfig::default();
+        let payload = build_slice_payload_with_budget(
             &bundle_path,
             warmup_frames,
             test_id.as_str(),
-            None,
-            None,
-            None,
-            20,
-            64,
+            budget.max_slice_bytes,
         )?;
         let stem = crate::util::sanitize_for_filename(test_id, 80, "test_id");
         crate::util::write_json_value(
@@ -134,8 +168,405 @@ pub(crate) fn cmd_ai_packet(
         crate::util::write_json_value(&packet_dir.join(format!("slice.{stem}.json")), &payload)?;
     }
 
+    let mut report = AiPacketBudgetReport {
+        kind: "ai_packet",
+        schema_version: 1,
+        budget: AiPacketBudgetConfig::default(),
+        ..Default::default()
+    };
+    let enforce_res = enforce_ai_packet_budgets(&packet_dir, &mut report);
+    write_packet_budget_report(&packet_dir, &report)?;
+    enforce_res?;
+
     println!("{}", packet_dir.display());
     Ok(())
+}
+
+fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "kind": report.kind,
+        "schema_version": report.schema_version,
+        "reason_code": report.reason_code,
+        "budget": {
+            "soft_total_bytes": report.budget.soft_total_bytes,
+            "hard_total_bytes": report.budget.hard_total_bytes,
+            "max_bundle_meta_bytes": report.budget.max_bundle_meta_bytes,
+            "max_bundle_index_bytes": report.budget.max_bundle_index_bytes,
+            "max_test_ids_index_bytes": report.budget.max_test_ids_index_bytes,
+            "max_slice_bytes": report.budget.max_slice_bytes,
+        },
+        "bytes_total": report.bytes_total,
+        "soft_budget_exceeded": report.soft_budget_exceeded,
+        "hard_budget_exceeded": report.hard_budget_exceeded,
+        "dropped_files": report.dropped_files,
+        "clipped_files": report.clipped_files,
+    });
+    let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());
+    std::fs::write(dir.join("ai.packet.json"), bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn file_bytes(path: &Path) -> Result<u64, String> {
+    std::fs::metadata(path)
+        .map(|m| m.len())
+        .map_err(|e| e.to_string())
+}
+
+fn packet_total_bytes(dir: &Path) -> Result<u64, String> {
+    let mut total: u64 = 0;
+    for entry in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let p = entry.path();
+        if p.is_file() {
+            total = total.saturating_add(file_bytes(&p)?);
+        }
+    }
+    Ok(total)
+}
+
+fn drop_if_present(
+    dir: &Path,
+    name: &str,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join(name);
+    if path.is_file() {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+        report.dropped_files.push(name.to_string());
+    }
+    Ok(())
+}
+
+fn read_json(path: &Path) -> Result<serde_json::Value, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+}
+
+fn write_json_compact(path: &Path, v: &serde_json::Value) -> Result<(), String> {
+    let bytes = serde_json::to_vec(v).map_err(|e| e.to_string())?;
+    std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn enforce_ai_packet_budgets(dir: &Path, report: &mut AiPacketBudgetReport) -> Result<(), String> {
+    let cfg = report.budget.clone();
+
+    // Always enforce per-file caps first.
+    clip_bundle_meta_if_needed(dir, &cfg, report)?;
+    clip_bundle_index_if_needed(dir, &cfg, report)?;
+    clip_test_ids_index_if_needed(dir, &cfg, report)?;
+
+    // Optional files: if we are above the hard total budget, drop these first.
+    let mut total = packet_total_bytes(dir)?;
+    if total > cfg.hard_total_bytes {
+        drop_if_present(dir, "triage.json", report)?;
+        drop_if_present(dir, "manifest.json", report)?;
+        total = packet_total_bytes(dir)?;
+    }
+
+    report.bytes_total = total;
+    report.soft_budget_exceeded = total > cfg.soft_total_bytes;
+    report.hard_budget_exceeded = total > cfg.hard_total_bytes;
+
+    if report.hard_budget_exceeded {
+        report.reason_code = Some("tooling.ai_packet.budget.hard_exceeded".to_string());
+        return Err(format!(
+            "ai packet exceeds hard budget (total_bytes={} > {})",
+            total, cfg.hard_total_bytes
+        ));
+    }
+
+    Ok(())
+}
+
+fn clip_bundle_meta_if_needed(
+    dir: &Path,
+    cfg: &AiPacketBudgetConfig,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join("bundle.meta.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let bytes = file_bytes(&path)?;
+    if bytes <= cfg.max_bundle_meta_bytes {
+        return Ok(());
+    }
+    let v = read_json(&path)?;
+    write_json_compact(&path, &v)?;
+    let new_bytes = file_bytes(&path)?;
+    if new_bytes > cfg.max_bundle_meta_bytes {
+        report.reason_code = Some("tooling.ai_packet.budget.bundle_meta_exceeded".to_string());
+        return Err(format!(
+            "bundle.meta.json exceeds budget (bytes={} > max={})",
+            new_bytes, cfg.max_bundle_meta_bytes
+        ));
+    }
+    report.clipped_files.push("bundle.meta.json".to_string());
+    Ok(())
+}
+
+fn clip_bundle_index_if_needed(
+    dir: &Path,
+    cfg: &AiPacketBudgetConfig,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join("bundle.index.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let bytes = file_bytes(&path)?;
+    if bytes <= cfg.max_bundle_index_bytes {
+        return Ok(());
+    }
+
+    let mut v = read_json(&path)?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
+        return Ok(());
+    }
+
+    let mut max_keep: usize = v
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map(|windows| {
+            windows
+                .iter()
+                .filter_map(|w| {
+                    w.get("snapshots")
+                        .and_then(|v| v.as_array())
+                        .map(|a| a.len())
+                })
+                .max()
+                .unwrap_or(0)
+        })
+        .unwrap_or(0);
+    max_keep = max_keep.min(4096).max(8);
+
+    loop {
+        let snapshots_total: u64 = {
+            let windows = v
+                .get_mut("windows")
+                .and_then(|v| v.as_array_mut())
+                .ok_or_else(|| "invalid bundle.index.json: missing windows".to_string())?;
+
+            for w in windows.iter_mut() {
+                if let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut()) {
+                    if snaps.len() > max_keep {
+                        let start = snaps.len().saturating_sub(max_keep);
+                        let kept: Vec<serde_json::Value> = snaps.drain(start..).collect();
+                        *snaps = kept;
+                    }
+                }
+
+                let (first_frame_id, first_ts, last_frame_id, last_ts) = w
+                    .get("snapshots")
+                    .and_then(|v| v.as_array())
+                    .map(|snaps| {
+                        let first = snaps.first();
+                        let last = snaps.last();
+                        (
+                            first.and_then(|v| v.get("frame_id")).cloned(),
+                            first.and_then(|v| v.get("timestamp_unix_ms")).cloned(),
+                            last.and_then(|v| v.get("frame_id")).cloned(),
+                            last.and_then(|v| v.get("timestamp_unix_ms")).cloned(),
+                        )
+                    })
+                    .unwrap_or((None, None, None, None));
+
+                if let Some(obj) = w.as_object_mut() {
+                    if let Some(v) = first_frame_id {
+                        obj.insert("first_frame_id".to_string(), v);
+                    }
+                    if let Some(v) = first_ts {
+                        obj.insert("first_timestamp_unix_ms".to_string(), v);
+                    }
+                    if let Some(v) = last_frame_id {
+                        obj.insert("last_frame_id".to_string(), v);
+                    }
+                    if let Some(v) = last_ts {
+                        obj.insert("last_timestamp_unix_ms".to_string(), v);
+                    }
+                }
+            }
+
+            windows
+                .iter()
+                .filter_map(|w| {
+                    w.get("snapshots")
+                        .and_then(|v| v.as_array())
+                        .map(|a| a.len() as u64)
+                })
+                .sum()
+        };
+        if let Some(obj) = v.as_object_mut() {
+            obj.insert(
+                "snapshots_total".to_string(),
+                serde_json::Value::from(snapshots_total),
+            );
+            obj.insert(
+                "clipped".to_string(),
+                serde_json::json!({
+                    "schema_version": 1,
+                    "max_snapshots_per_window": max_keep,
+                    "reason": "bundle_index_exceeds_budget",
+                }),
+            );
+        }
+
+        write_json_compact(&path, &v)?;
+
+        let new_bytes = file_bytes(&path)?;
+        if new_bytes <= cfg.max_bundle_index_bytes {
+            report.clipped_files.push("bundle.index.json".to_string());
+            return Ok(());
+        }
+
+        if max_keep <= 8 {
+            report.reason_code = Some("tooling.ai_packet.budget.bundle_index_exceeded".to_string());
+            return Err(format!(
+                "bundle.index.json exceeds budget even after clipping (bytes={} > max={})",
+                new_bytes, cfg.max_bundle_index_bytes
+            ));
+        }
+
+        max_keep = (max_keep * 2 / 3).max(8);
+    }
+}
+
+fn clip_test_ids_index_if_needed(
+    dir: &Path,
+    cfg: &AiPacketBudgetConfig,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join("test_ids.index.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let bytes = file_bytes(&path)?;
+    if bytes <= cfg.max_test_ids_index_bytes {
+        return Ok(());
+    }
+
+    let mut v = read_json(&path)?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("test_ids_index") {
+        return Ok(());
+    }
+
+    let mut max_keep: usize = v
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map(|windows| {
+            windows
+                .iter()
+                .filter_map(|w| w.get("items").and_then(|v| v.as_array()).map(|a| a.len()))
+                .max()
+                .unwrap_or(0)
+        })
+        .unwrap_or(0);
+    max_keep = max_keep.min(20000).max(64);
+
+    loop {
+        let unique_total: u64 = {
+            let windows = v
+                .get_mut("windows")
+                .and_then(|v| v.as_array_mut())
+                .ok_or_else(|| "invalid test_ids.index.json: missing windows".to_string())?;
+
+            for w in windows.iter_mut() {
+                let Some(items) = w.get_mut("items").and_then(|v| v.as_array_mut()) else {
+                    continue;
+                };
+                if items.len() > max_keep {
+                    items.truncate(max_keep);
+                }
+
+                let unique = items.len() as u64;
+                let count_sum: u64 = items
+                    .iter()
+                    .filter_map(|it| it.get("count").and_then(|v| v.as_u64()))
+                    .sum();
+                if let Some(obj) = w.as_object_mut() {
+                    obj.insert(
+                        "unique_test_ids_total".to_string(),
+                        serde_json::Value::from(unique),
+                    );
+                    obj.insert(
+                        "test_id_nodes_total".to_string(),
+                        serde_json::Value::from(count_sum),
+                    );
+                }
+            }
+
+            windows
+                .iter()
+                .filter_map(|w| w.get("unique_test_ids_total").and_then(|v| v.as_u64()))
+                .sum()
+        };
+        if let Some(obj) = v.as_object_mut() {
+            obj.insert(
+                "total_unique_test_ids".to_string(),
+                serde_json::Value::from(unique_total),
+            );
+            obj.insert("truncated".to_string(), serde_json::Value::from(true));
+            obj.insert(
+                "clipped".to_string(),
+                serde_json::json!({
+                    "schema_version": 1,
+                    "max_items_per_window": max_keep,
+                    "reason": "test_ids_index_exceeds_budget",
+                }),
+            );
+        }
+
+        write_json_compact(&path, &v)?;
+
+        let new_bytes = file_bytes(&path)?;
+        if new_bytes <= cfg.max_test_ids_index_bytes {
+            report.clipped_files.push("test_ids.index.json".to_string());
+            return Ok(());
+        }
+
+        if max_keep <= 64 {
+            report.reason_code =
+                Some("tooling.ai_packet.budget.test_ids_index_exceeded".to_string());
+            return Err(format!(
+                "test_ids.index.json exceeds budget even after clipping (bytes={} > max={})",
+                new_bytes, cfg.max_test_ids_index_bytes
+            ));
+        }
+
+        max_keep = (max_keep * 2 / 3).max(64);
+    }
+}
+
+fn build_slice_payload_with_budget(
+    bundle_path: &Path,
+    warmup_frames: u64,
+    test_id: &str,
+    max_bytes: u64,
+) -> Result<serde_json::Value, String> {
+    let configs = [(20usize, 64usize), (10, 32), (5, 16), (3, 8)];
+    for (max_matches, max_ancestors) in configs {
+        let payload = super::slice::build_test_id_slice_payload_from_bundle_path(
+            bundle_path,
+            warmup_frames,
+            test_id,
+            None,
+            None,
+            None,
+            max_matches,
+            max_ancestors,
+        )?;
+        let bytes = serde_json::to_vec_pretty(&payload)
+            .map(|b| b.len() as u64)
+            .unwrap_or(u64::MAX);
+        if bytes <= max_bytes {
+            return Ok(payload);
+        }
+    }
+    Err(format!(
+        "slice payload exceeds max bytes budget (max_bytes={max_bytes})"
+    ))
 }
 
 fn looks_like_path(s: &str) -> bool {

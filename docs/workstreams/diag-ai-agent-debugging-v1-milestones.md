@@ -14,7 +14,8 @@ Current status (2026-02-21):
 
 - Hot spots measured for local `schema_version=1` bundles (see `docs/workstreams/diag-ai-agent-debugging-v1.md`).
 - Hot spots measured for a schema-v2 baseline via tooling-side conversion (`fretboard diag bundle-v2`; see `docs/workstreams/diag-ai-agent-debugging-v1.md`).
-- Still pending: explicit AI packet budgets (enforcement + clipping behavior).
+- AI packet budgets are documented and enforced by tooling (clipping + optional drops), with an `ai.packet.json` report.
+- Still pending: refine the `reason_code` taxonomy for budget overruns/clipping outcomes.
 
 ## M1: Index shipping
 
