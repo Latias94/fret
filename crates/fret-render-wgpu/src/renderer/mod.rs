@@ -79,6 +79,8 @@ pub struct Renderer {
     mask_capacity: usize,
 
     material_catalog_texture: wgpu::Texture,
+    material_catalog_view: wgpu::TextureView,
+    material_catalog_sampler: wgpu::Sampler,
     material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,

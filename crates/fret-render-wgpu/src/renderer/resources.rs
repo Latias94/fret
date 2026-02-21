@@ -148,12 +148,11 @@ impl Renderer {
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        let material_catalog_view =
-            material_catalog_texture.create_view(&wgpu::TextureViewDescriptor {
-                label: Some("fret material catalog texture array view"),
-                dimension: Some(wgpu::TextureViewDimension::D2Array),
-                ..Default::default()
-            });
+        let material_catalog_view = material_catalog_texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("fret material catalog texture array view"),
+            dimension: Some(wgpu::TextureViewDimension::D2Array),
+            ..Default::default()
+        });
         let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("fret material catalog sampler"),
             address_mode_u: wgpu::AddressMode::Repeat,
@@ -504,6 +503,8 @@ impl Renderer {
             mask_buffer,
             mask_capacity,
             material_catalog_texture,
+            material_catalog_view,
+            material_catalog_sampler,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
             quad_pipelines: HashMap::new(),
