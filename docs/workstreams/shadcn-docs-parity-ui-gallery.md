@@ -45,6 +45,7 @@ Status legend:
 | Accordion | Aligned (with extras) | Demo matches upstream `accordion-demo.tsx`; retains Fret-specific variants (multiple/disabled/borders/card/RTL) under **Extras**. | `apps/fret-ui-gallery/src/ui/previews/gallery/nav/accordion.rs` |
 | Button | Aligned (with gaps) | Added RTL; “Link (render)” is a TODO because `Button::render/asChild` is not implemented in `fret-ui-shadcn` yet. | `apps/fret-ui-gallery/src/ui/pages/button.rs` |
 | Button Group | Aligned | All sections use `DocSection::code` so Preview and Code stay coupled. | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` |
+| Form | Aligned (with gaps) | Upstream `FormDemo` mirrored via `FormState` + `FormRegistry`; `Textarea` placeholder is tracked as a gap. | `apps/fret-ui-gallery/src/ui/pages/form.rs` |
 | Menubar | Aligned | Checkbox/Radio/Submenu/Icons/RTL examples mirror upstream intent. | `apps/fret-ui-gallery/src/ui/pages/menubar.rs` |
 | Navigation Menu | Aligned (with gaps) | Demo + RTL match docs; doc-site `render` link composition is not modeled; use `NavigationMenuLink` + commands instead. | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` |
 | Resizable | Aligned (with extras) | Matches upstream `resizable-demo.tsx` order; includes RTL section for direction-sensitive hit-testing. | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/resizable.rs` |
