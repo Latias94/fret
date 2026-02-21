@@ -633,6 +633,7 @@ impl Renderer {
             .filter(|p| matches!(p, RenderPlanPass::ScaleNearest(_)))
             .count();
         self.ensure_scale_param_capacity(device, scale_pass_count);
+        self.ensure_render_space_capacity(device, plan.passes.len());
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;

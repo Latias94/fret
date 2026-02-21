@@ -114,24 +114,8 @@ impl Renderer {
     ) {
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
-
-        let material_catalog_view =
-            self.material_catalog_texture
-                .create_view(&wgpu::TextureViewDescriptor {
-                    label: Some("fret material catalog texture array view (uniform mask image)"),
-                    dimension: Some(wgpu::TextureViewDimension::D2Array),
-                    ..Default::default()
-                });
-        let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("fret material catalog sampler (uniform mask image)"),
-            address_mode_u: wgpu::AddressMode::Repeat,
-            address_mode_v: wgpu::AddressMode::Repeat,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-            ..Default::default()
-        });
+        let mut material_catalog_view: Option<wgpu::TextureView> = None;
+        let mut material_catalog_sampler: Option<wgpu::Sampler> = None;
 
         for &sel in uniform_mask_images.iter().flatten() {
             let image = sel.image;
@@ -147,6 +131,29 @@ impl Renderer {
             if !needs_rebuild {
                 continue;
             }
+
+            let material_catalog_view = material_catalog_view.get_or_insert_with(|| {
+                self.material_catalog_texture
+                    .create_view(&wgpu::TextureViewDescriptor {
+                        label: Some(
+                            "fret material catalog texture array view (uniform mask image)",
+                        ),
+                        dimension: Some(wgpu::TextureViewDimension::D2Array),
+                        ..Default::default()
+                    })
+            });
+            let material_catalog_sampler = material_catalog_sampler.get_or_insert_with(|| {
+                device.create_sampler(&wgpu::SamplerDescriptor {
+                    label: Some("fret material catalog sampler (uniform mask image)"),
+                    address_mode_u: wgpu::AddressMode::Repeat,
+                    address_mode_v: wgpu::AddressMode::Repeat,
+                    address_mode_w: wgpu::AddressMode::ClampToEdge,
+                    mag_filter: wgpu::FilterMode::Nearest,
+                    min_filter: wgpu::FilterMode::Nearest,
+                    mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+                    ..Default::default()
+                })
+            });
 
             let bind_group_linear = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("fret uniforms bind group (mask image override, linear)"),
@@ -178,11 +185,11 @@ impl Renderer {
                     },
                     wgpu::BindGroupEntry {
                         binding: 3,
-                        resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                        resource: wgpu::BindingResource::TextureView(material_catalog_view),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,
-                        resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                        resource: wgpu::BindingResource::Sampler(material_catalog_sampler),
                     },
                     wgpu::BindGroupEntry {
                         binding: 5,
@@ -232,11 +239,11 @@ impl Renderer {
                     },
                     wgpu::BindGroupEntry {
                         binding: 3,
-                        resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                        resource: wgpu::BindingResource::TextureView(material_catalog_view),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,
-                        resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                        resource: wgpu::BindingResource::Sampler(material_catalog_sampler),
                     },
                     wgpu::BindGroupEntry {
                         binding: 5,
