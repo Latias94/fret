@@ -658,6 +658,8 @@ fn menu_row_children<H: UiHost>(
                 .nowrap();
             if let Some(line_height) = text_style.line_height {
                 label_text = label_text.line_height_px(line_height);
+                label_text =
+                    label_text.line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
             }
             if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                 label_text = label_text.letter_spacing_em(letter_spacing_em);
@@ -1711,15 +1713,18 @@ impl MenubarMenuEntries {
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx| {
-                                                                    vec![ui::text(cx, text)
-                                                                        .text_size_px(font_size)
-                                                                        .line_height_px(font_line_height)
-                                                                        .font_medium()
-                                                                        .text_color(ColorRef::Color(fg))
-                                                                        .nowrap()
-                                                                        .into_element(cx)]
-                                                                },
-                                                            ));
+                                                                        vec![ui::text(cx, text)
+                                                                            .text_size_px(font_size)
+                                                                            .line_height_px(font_line_height)
+                                                                            .line_height_policy(
+                                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                            )
+                                                                            .font_medium()
+                                                                            .text_color(ColorRef::Color(fg))
+                                                                            .nowrap()
+                                                                            .into_element(cx)]
+                                                                    },
+                                                                ));
                                                         }
                                                         MenubarEntry::CheckboxItem(item) => {
                                                             let collection_index = item_ix;
@@ -2448,7 +2453,11 @@ impl MenubarMenuEntries {
                                                                                 .text_color(ColorRef::Color(fg))
                                                                                 .nowrap();
                                                                             if let Some(line_height) = text_style.line_height {
-                                                                                label_text = label_text.line_height_px(line_height);
+                                                                                label_text = label_text
+                                                                                    .line_height_px(line_height)
+                                                                                    .line_height_policy(
+                                                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                    );
                                                                             }
                                                                             if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                                                                 label_text = label_text.letter_spacing_em(letter_spacing_em);
@@ -2825,6 +2834,9 @@ impl MenubarMenuEntries {
                                                                                 vec![ui::text(cx, text)
                                                                                     .text_size_px(font_size)
                                                                                     .line_height_px(font_line_height)
+                                                                                    .line_height_policy(
+                                                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                    )
                                                                                     .font_medium()
                                                                                     .text_color(ColorRef::Color(fg))
                                                                                     .nowrap()
@@ -3417,7 +3429,11 @@ impl MenubarMenuEntries {
                             .text_color(ColorRef::Color(if enabled { fg } else { fg_muted }))
                             .nowrap();
                         if let Some(line_height) = text_style.line_height {
-                            label_text = label_text.line_height_px(line_height);
+                            label_text = label_text
+                                .line_height_px(line_height)
+                                .line_height_policy(
+                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                );
                         }
                         if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                             label_text = label_text.letter_spacing_em(letter_spacing_em);

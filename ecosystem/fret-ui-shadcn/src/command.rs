@@ -362,7 +362,9 @@ fn cmdk_highlighted_label<H: UiHost>(
         text = text.text_size_px(text_px).font_weight(text_weight).nowrap();
 
         if let Some(line_height) = text_line_height {
-            text = text.line_height_px(line_height);
+            text = text
+                .line_height_px(line_height)
+                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
         }
 
         if let Some(letter_spacing_em) = text_letter_spacing_em {
@@ -548,7 +550,9 @@ impl CommandShortcut {
             .text_color(ColorRef::Color(fg));
 
         if let Some(line_height) = style.line_height {
-            text = text.line_height_px(line_height);
+            text = text
+                .line_height_px(line_height)
+                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
         }
 
         if let Some(letter_spacing_em) = style.letter_spacing_em {
@@ -1031,7 +1035,9 @@ impl CommandEmpty {
                             .text_color(ColorRef::Color(fg));
 
                         if let Some(line_height) = text_style.line_height {
-                            text = text.line_height_px(line_height);
+                            text = text.line_height_px(line_height).line_height_policy(
+                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                            );
                         }
 
                         if let Some(letter_spacing_em) = text_style.letter_spacing_em {
@@ -1962,7 +1968,9 @@ impl CommandPalette {
                                     .text_color(ColorRef::Color(fg));
 
                                 if let Some(line_height) = style.line_height {
-                                    text = text.line_height_px(line_height);
+                                    text = text.line_height_px(line_height).line_height_policy(
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                    );
                                 }
 
                                 if let Some(letter_spacing_em) = style.letter_spacing_em {

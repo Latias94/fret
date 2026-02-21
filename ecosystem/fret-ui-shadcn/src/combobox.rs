@@ -766,7 +766,11 @@ fn combobox_with_patch<H: UiHost>(
                                                         .text_color(fg_ref.clone())
                                                         .truncate();
                                                 if let Some(line_height) = label_style.line_height {
-                                                    label = label.line_height_px(line_height);
+                                                    label = label
+                                                        .line_height_px(line_height)
+                                                        .line_height_policy(
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                        );
                                                 }
                                                 if let Some(letter_spacing_em) =
                                                     label_style.letter_spacing_em
@@ -933,7 +937,11 @@ fn combobox_with_patch<H: UiHost>(
                                         }))
                                         .truncate();
                                     if let Some(line_height) = label_style.line_height {
-                                        label = label.line_height_px(line_height);
+                                        label = label
+                                            .line_height_px(line_height)
+                                            .line_height_policy(
+                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                            );
                                     }
                                     if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                                         label = label.letter_spacing_em(letter_spacing_em);
@@ -1087,9 +1095,13 @@ fn combobox_with_patch<H: UiHost>(
                                             .font_weight(label_style.weight)
                                             .text_color(fg_ref.clone())
                                             .truncate();
-                                        if let Some(line_height) = label_style.line_height {
-                                            label = label.line_height_px(line_height);
-                                        }
+                                            if let Some(line_height) = label_style.line_height {
+                                                label = label
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
+                                            }
                                         if let Some(letter_spacing_em) =
                                             label_style.letter_spacing_em
                                         {
@@ -1250,7 +1262,11 @@ fn combobox_with_patch<H: UiHost>(
                                 }))
                                 .truncate();
                             if let Some(line_height) = label_style.line_height {
-                                label = label.line_height_px(line_height);
+                                label = label
+                                    .line_height_px(line_height)
+                                    .line_height_policy(
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                    );
                             }
                             if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                                 label = label.letter_spacing_em(letter_spacing_em);
