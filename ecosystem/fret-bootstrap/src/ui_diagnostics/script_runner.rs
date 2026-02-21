@@ -397,4 +397,91 @@ impl UiDiagnosticsService {
             }
         }
     }
+
+    pub(super) fn note_step_start_and_scope_evidence(
+        &self,
+        app: &App,
+        window: AppWindowId,
+        step_index: usize,
+        step: &UiActionStepV2,
+        active: &mut ActiveScript,
+    ) -> (u32, String) {
+        // Keep evidence scoped to the active step so failures remain focused.
+        let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
+        let step_kind = script_step_kind_name(step).to_string();
+        if active.event_log_active_step != Some(step_index_u32) {
+            push_script_event_log(
+                active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "step_start".to_string(),
+                    step_index: Some(step_index_u32),
+                    note: Some(step_kind.clone()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            active.event_log_active_step = Some(step_index_u32);
+        }
+
+        active
+            .selector_resolution_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .hit_test_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .click_stable_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .bounds_stable_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .focus_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .web_ime_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .ime_event_trace
+            .retain(|e| e.step_index == step_index_u32);
+
+        (step_index_u32, step_kind)
+    }
+
+    pub(super) fn reset_active_script_state_for_step(
+        active: &mut ActiveScript,
+        step: &UiActionStepV2,
+    ) {
+        let is_v2_intent_step = matches!(
+            step,
+            UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::ClickSelectableTextSpanStable { .. }
+                | UiActionStepV2::WaitBoundsStable { .. }
+                | UiActionStepV2::EnsureVisible { .. }
+                | UiActionStepV2::ScrollIntoView { .. }
+                | UiActionStepV2::TypeTextInto { .. }
+                | UiActionStepV2::MenuSelect { .. }
+                | UiActionStepV2::MenuSelectPath { .. }
+                | UiActionStepV2::DragPointer { .. }
+                | UiActionStepV2::DragPointerUntil { .. }
+                | UiActionStepV2::DragTo { .. }
+                | UiActionStepV2::SetSliderValue { .. }
+                | UiActionStepV2::PointerMove { .. }
+                | UiActionStepV2::MovePointerSweep { .. }
+        );
+        if !is_v2_intent_step {
+            active.v2_step_state = None;
+        }
+        if !matches!(step, UiActionStepV2::WaitShortcutRoutingTrace { .. }) {
+            active.wait_shortcut_routing_trace = None;
+        }
+        if !matches!(step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
+            active.wait_overlay_placement_trace = None;
+        }
+    }
 }
