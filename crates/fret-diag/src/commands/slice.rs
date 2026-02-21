@@ -151,6 +151,21 @@ struct BundleIndexSnapshotSelection {
     semantics_fingerprint: Option<u64>,
 }
 
+#[derive(Debug, Clone)]
+struct BundleIndexSliceCandidate {
+    window: u64,
+    window_order: usize,
+    selector_frame_id: Option<u64>,
+    selector_window_snapshot_seq: Option<u64>,
+    semantics_source: Option<String>,
+    semantics_fingerprint: Option<u64>,
+    is_warmup: bool,
+    bloom_might_contain: Option<bool>,
+    sort_window_snapshot_seq: Option<u64>,
+    sort_frame_id: Option<u64>,
+    sort_timestamp_unix_ms: Option<u64>,
+}
+
 fn try_read_bundle_index(bundle_path: &Path) -> Option<serde_json::Value> {
     let index_path = crate::bundle_index::default_bundle_index_path(bundle_path);
     let bytes = std::fs::read(index_path).ok()?;
@@ -303,6 +318,190 @@ fn pick_default_snapshot_in_bundle_index(
         }
     }
     None
+}
+
+fn slice_candidates_from_bundle_index(
+    idx: &serde_json::Value,
+    window_id: Option<u64>,
+    test_id: &str,
+    max_candidates: usize,
+) -> Vec<BundleIndexSliceCandidate> {
+    let target = test_id.trim();
+
+    let empty = Vec::new();
+    let windows = idx
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
+
+    let mut out: Vec<BundleIndexSliceCandidate> = Vec::new();
+
+    for (w_idx, w) in windows.iter().enumerate() {
+        let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(req) = window_id
+            && req != w_id
+        {
+            continue;
+        }
+
+        let snaps_empty = Vec::new();
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&snaps_empty);
+
+        for s in snaps {
+            let has_semantics = s
+                .get("has_semantics")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !has_semantics {
+                continue;
+            }
+
+            let semantics_source = s
+                .get("semantics_source")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let source = semantics_source.as_deref().unwrap_or("none");
+            if source != "inline" && source != "table" {
+                continue;
+            }
+
+            let is_warmup = s
+                .get("is_warmup")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let selector_window_snapshot_seq =
+                s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+            let selector_frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+
+            let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
+
+            let bloom_might_contain = if !target.is_empty() && source == "inline" {
+                s.get("test_id_bloom_hex")
+                    .and_then(|v| v.as_str())
+                    .and_then(TestIdBloomV1::from_hex)
+                    .map(|b| b.might_contain(target))
+            } else {
+                None
+            };
+
+            out.push(BundleIndexSliceCandidate {
+                window: w_id,
+                window_order: w_idx,
+                selector_frame_id,
+                selector_window_snapshot_seq,
+                semantics_source,
+                semantics_fingerprint,
+                is_warmup,
+                bloom_might_contain,
+                sort_window_snapshot_seq: selector_window_snapshot_seq,
+                sort_frame_id: selector_frame_id,
+                sort_timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+            });
+        }
+    }
+
+    fn source_rank(s: Option<&str>) -> i32 {
+        match s {
+            Some("inline") => 2,
+            Some("table") => 1,
+            _ => 0,
+        }
+    }
+
+    out.sort_by(|a, b| {
+        let a_hit = a.bloom_might_contain.unwrap_or(false);
+        let b_hit = b.bloom_might_contain.unwrap_or(false);
+        b_hit
+            .cmp(&a_hit)
+            .then_with(|| a.is_warmup.cmp(&b.is_warmup))
+            .then_with(|| {
+                source_rank(b.semantics_source.as_deref())
+                    .cmp(&source_rank(a.semantics_source.as_deref()))
+            })
+            .then_with(|| b.sort_window_snapshot_seq.cmp(&a.sort_window_snapshot_seq))
+            .then_with(|| b.sort_frame_id.cmp(&a.sort_frame_id))
+            .then_with(|| b.sort_timestamp_unix_ms.cmp(&a.sort_timestamp_unix_ms))
+            .then_with(|| a.window_order.cmp(&b.window_order))
+    });
+
+    if max_candidates > 0 && out.len() > max_candidates {
+        out.truncate(max_candidates);
+    }
+
+    out
+}
+
+fn try_find_hit_payload_by_streaming_candidates(
+    bundle_path: &Path,
+    idx: &serde_json::Value,
+    warmup_frames: u64,
+    test_id: &str,
+    window_id: Option<u64>,
+    max_candidates: usize,
+    max_matches: usize,
+    max_ancestors: usize,
+    skip: Option<(u64, Option<u64>, Option<u64>)>,
+) -> Result<Option<serde_json::Value>, String> {
+    let candidates = slice_candidates_from_bundle_index(idx, window_id, test_id, max_candidates);
+
+    for c in candidates {
+        if let Some((w, fid, seq)) = skip {
+            if c.window == w && c.selector_frame_id == fid && c.selector_window_snapshot_seq == seq
+            {
+                continue;
+            }
+        }
+
+        let selector_frame_id = if c.selector_window_snapshot_seq.is_some() {
+            None
+        } else {
+            c.selector_frame_id
+        };
+        let selector_window_snapshot_seq = c.selector_window_snapshot_seq;
+
+        let payload = if c.semantics_source.as_deref() == Some("table") {
+            try_build_test_id_slice_payload_streaming_table(
+                bundle_path,
+                warmup_frames,
+                test_id,
+                selector_frame_id,
+                selector_window_snapshot_seq,
+                Some(c.window),
+                c.semantics_fingerprint,
+                max_matches,
+                max_ancestors,
+            )?
+        } else {
+            try_build_test_id_slice_payload_streaming_inline(
+                bundle_path,
+                warmup_frames,
+                test_id,
+                selector_frame_id,
+                selector_window_snapshot_seq,
+                Some(c.window),
+                max_matches,
+                max_ancestors,
+            )?
+        };
+
+        let Some(payload) = payload else {
+            continue;
+        };
+
+        let hit = payload
+            .get("matches")
+            .and_then(|v| v.as_array())
+            .is_some_and(|v| !v.is_empty());
+        if hit {
+            return Ok(Some(payload));
+        }
+    }
+
+    Ok(None)
 }
 
 fn try_read_slice_payload(path: &Path) -> Option<serde_json::Value> {
@@ -626,7 +825,28 @@ pub(crate) fn cmd_slice(
                     .is_some_and(|v| v.is_empty());
 
             if should_fallback_to_find_match {
-                build_from_bundle()?
+                if let Some(idx) = bundle_index.as_ref() {
+                    const MAX_CANDIDATES: usize = 6;
+                    let skip =
+                        stream_window_id.map(|w| (w, stream_frame_id, stream_window_snapshot_seq));
+                    if let Some(hit) = try_find_hit_payload_by_streaming_candidates(
+                        &bundle_path,
+                        idx,
+                        warmup_frames,
+                        test_id.as_str(),
+                        window_id,
+                        MAX_CANDIDATES,
+                        max_matches,
+                        max_ancestors,
+                        skip,
+                    )? {
+                        hit
+                    } else {
+                        build_from_bundle()?
+                    }
+                } else {
+                    build_from_bundle()?
+                }
             } else {
                 payload
             }
@@ -738,5 +958,157 @@ mod tests {
 
         let sel = pick_default_snapshot_in_bundle_index(&idx, None, Some("target")).expect("sel");
         assert_eq!(sel.frame_id, Some(1));
+    }
+
+    #[test]
+    fn streaming_candidates_can_find_older_snapshot_with_match_inline() {
+        let bundle = r#"{
+  "schema_version": 1,
+  "windows": [
+    {
+      "window": 1,
+      "snapshots": [
+        {
+          "frame_id": 1,
+          "window_snapshot_seq": 1,
+          "timestamp_unix_ms": 100,
+          "debug": {
+            "semantics": {
+              "nodes": [
+                { "id": 10, "test_id": "target", "role": "button" }
+              ]
+            }
+          }
+        },
+        {
+          "frame_id": 2,
+          "window_snapshot_seq": 2,
+          "timestamp_unix_ms": 200,
+          "debug": {
+            "semantics": {
+              "nodes": [
+                { "id": 11, "test_id": "other", "role": "button" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}"#;
+
+        let idx = serde_json::json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 1, "window_snapshot_seq": 1, "timestamp_unix_ms": 100, "is_warmup": false, "has_semantics": true, "semantics_source": "inline" },
+                        { "frame_id": 2, "window_snapshot_seq": 2, "timestamp_unix_ms": 200, "is_warmup": false, "has_semantics": true, "semantics_source": "inline" }
+                    ]
+                }
+            ]
+        });
+
+        let tmp = std::env::temp_dir().join(format!(
+            "fret-diag-slice-streaming-candidates-inline-{}.bundle.json",
+            crate::util::now_unix_ms()
+        ));
+        std::fs::write(&tmp, bundle.as_bytes()).unwrap();
+
+        let out = try_find_hit_payload_by_streaming_candidates(
+            &tmp, &idx, 0, "target", None, 4, 20, 64, None,
+        )
+        .unwrap()
+        .expect("payload");
+
+        assert_eq!(out.get("frame_id").and_then(|v| v.as_u64()), Some(1));
+        assert!(
+            out.get("matches")
+                .and_then(|v| v.as_array())
+                .is_some_and(|v| !v.is_empty())
+        );
+
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn streaming_candidates_can_find_older_snapshot_with_match_table() {
+        let bundle = r#"{
+  "schema_version": 2,
+  "windows": [
+    {
+      "window": 1,
+      "snapshots": [
+        {
+          "frame_id": 1,
+          "window_snapshot_seq": 1,
+          "timestamp_unix_ms": 100,
+          "semantics_fingerprint": 41,
+          "debug": { "stats": { "total_time_us": 1 } }
+        },
+        {
+          "frame_id": 2,
+          "window_snapshot_seq": 2,
+          "timestamp_unix_ms": 200,
+          "semantics_fingerprint": 42,
+          "debug": { "stats": { "total_time_us": 1 } }
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "semantics": {
+      "entries": [
+        {
+          "window": 1,
+          "semantics_fingerprint": 41,
+          "semantics": { "nodes": [ { "id": 10, "test_id": "target" } ] }
+        },
+        {
+          "window": 1,
+          "semantics_fingerprint": 42,
+          "semantics": { "nodes": [ { "id": 11, "test_id": "other" } ] }
+        }
+      ]
+    }
+  }
+}"#;
+
+        let idx = serde_json::json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 1, "window_snapshot_seq": 1, "timestamp_unix_ms": 100, "is_warmup": false, "has_semantics": true, "semantics_source": "table", "semantics_fingerprint": 41 },
+                        { "frame_id": 2, "window_snapshot_seq": 2, "timestamp_unix_ms": 200, "is_warmup": false, "has_semantics": true, "semantics_source": "table", "semantics_fingerprint": 42 }
+                    ]
+                }
+            ]
+        });
+
+        let tmp = std::env::temp_dir().join(format!(
+            "fret-diag-slice-streaming-candidates-table-{}.bundle.json",
+            crate::util::now_unix_ms()
+        ));
+        std::fs::write(&tmp, bundle.as_bytes()).unwrap();
+
+        let out = try_find_hit_payload_by_streaming_candidates(
+            &tmp, &idx, 0, "target", None, 4, 20, 64, None,
+        )
+        .unwrap()
+        .expect("payload");
+
+        assert_eq!(out.get("frame_id").and_then(|v| v.as_u64()), Some(1));
+        assert!(
+            out.get("matches")
+                .and_then(|v| v.as_array())
+                .is_some_and(|v| !v.is_empty())
+        );
+
+        let _ = std::fs::remove_file(&tmp);
     }
 }
