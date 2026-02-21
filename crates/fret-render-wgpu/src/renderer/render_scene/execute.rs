@@ -32,6 +32,44 @@ fn set_scissor_rect_absolute(
     true
 }
 
+fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
+    match pass {
+        RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
+        RenderPlanPass::PathMsaaBatch(_) => "path_msaa_batch",
+        RenderPlanPass::PathClipMask(_) => "path_clip_mask",
+        RenderPlanPass::CompositePremul(_) => "composite_premul",
+        RenderPlanPass::ScaleNearest(_) => "scale_nearest",
+        RenderPlanPass::Blur(_) => "blur",
+        RenderPlanPass::BackdropWarp(_) => "backdrop_warp",
+        RenderPlanPass::ColorAdjust(_) => "color_adjust",
+        RenderPlanPass::ColorMatrix(_) => "color_matrix",
+        RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+        RenderPlanPass::DropShadow(_) => "drop_shadow",
+        RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
+        RenderPlanPass::ClipMask(_) => "clip_mask",
+        RenderPlanPass::ReleaseTarget(_) => "release_target",
+    }
+}
+
+fn render_plan_pass_render_space(pass: &RenderPlanPass) -> Option<((u32, u32), (u32, u32))> {
+    match pass {
+        RenderPlanPass::SceneDrawRange(pass) => Some((pass.target_origin, pass.target_size)),
+        RenderPlanPass::PathMsaaBatch(pass) => Some((pass.target_origin, pass.target_size)),
+        RenderPlanPass::PathClipMask(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::CompositePremul(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::ScaleNearest(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::Blur(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::BackdropWarp(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ReleaseTarget(_) => None,
+    }
+}
+
 impl Renderer {
     fn pick_image_bind_group(
         &self,
@@ -938,22 +976,7 @@ impl Renderer {
                         "render_space_capacity too small for RenderPlan passes"
                     );
                     let pass_span = if trace_enabled {
-                        let kind: &'static str = match planned_pass {
-                            RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
-                            RenderPlanPass::PathMsaaBatch(_) => "path_msaa_batch",
-                            RenderPlanPass::PathClipMask(_) => "path_clip_mask",
-                            RenderPlanPass::CompositePremul(_) => "composite_premul",
-                            RenderPlanPass::ScaleNearest(_) => "scale_nearest",
-                            RenderPlanPass::Blur(_) => "blur",
-                            RenderPlanPass::BackdropWarp(_) => "backdrop_warp",
-                            RenderPlanPass::ColorAdjust(_) => "color_adjust",
-                            RenderPlanPass::ColorMatrix(_) => "color_matrix",
-                            RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
-                            RenderPlanPass::DropShadow(_) => "drop_shadow",
-                            RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
-                            RenderPlanPass::ClipMask(_) => "clip_mask",
-                            RenderPlanPass::ReleaseTarget(_) => "release_target",
-                        };
+                        let kind = render_plan_pass_trace_kind(planned_pass);
                         tracing::trace_span!(
                             "fret.renderer.pass",
                             frame_index,
@@ -968,32 +991,7 @@ impl Renderer {
                         (pass_index as u64).saturating_mul(self.render_space_stride);
                     let render_space_offset_u32 = render_space_offset as u32;
 
-                    let render_space = match planned_pass {
-                        RenderPlanPass::SceneDrawRange(pass) => {
-                            Some((pass.target_origin, pass.target_size))
-                        }
-                        RenderPlanPass::PathMsaaBatch(pass) => {
-                            Some((pass.target_origin, pass.target_size))
-                        }
-                        RenderPlanPass::PathClipMask(pass) => {
-                            Some((pass.dst_origin, pass.dst_size))
-                        }
-                        RenderPlanPass::CompositePremul(pass) => {
-                            Some((pass.dst_origin, pass.dst_size))
-                        }
-                        RenderPlanPass::ScaleNearest(pass) => {
-                            Some((pass.dst_origin, pass.dst_size))
-                        }
-                        RenderPlanPass::Blur(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::BackdropWarp(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
-                        RenderPlanPass::ReleaseTarget(_) => None,
-                    };
+                    let render_space = render_plan_pass_render_space(planned_pass);
 
                     if let Some((origin, size)) = render_space {
                         queue.write_buffer(
