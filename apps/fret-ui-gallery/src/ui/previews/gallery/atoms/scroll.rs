@@ -1,6 +1,13 @@
 use super::super::super::super::*;
 
 pub(in crate::ui) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pages::preview_scroll_area(cx)
+}
+
+#[cfg(any())]
+pub(in crate::ui) fn preview_scroll_area_legacy(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,

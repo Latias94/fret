@@ -3,7 +3,10 @@ use super::*;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;
+mod avatar;
+mod badge;
 mod breadcrumb;
+mod card;
 mod carousel;
 mod chart;
 mod checkbox;
@@ -20,6 +23,7 @@ mod empty;
 mod field;
 mod form;
 mod hover_card;
+mod icons;
 mod input;
 mod input_group;
 mod input_otp;
@@ -30,7 +34,10 @@ mod menubar;
 mod motion_presets;
 mod native_select;
 mod navigation_menu;
+mod scroll_area;
 mod shadcn_extras;
+mod skeleton;
+mod slider;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -38,6 +45,13 @@ mod typography;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
+}
+
+pub(super) fn preview_avatar(
+    cx: &mut ElementContext<'_, App>,
+    avatar_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    avatar::preview_avatar(cx, avatar_image)
 }
 
 pub(super) fn preview_alert_dialog(
@@ -49,6 +63,21 @@ pub(super) fn preview_alert_dialog(
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     aspect_ratio::preview_aspect_ratio(cx)
+}
+
+pub(super) fn preview_card(
+    cx: &mut ElementContext<'_, App>,
+    event_cover_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    card::preview_card(cx, event_cover_image)
+}
+
+pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    icons::preview_icons(cx)
+}
+
+pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    badge::preview_badge(cx)
 }
 
 pub(super) fn preview_breadcrumb(
@@ -182,6 +211,10 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     navigation_menu::preview_navigation_menu(cx)
 }
 
+pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    scroll_area::preview_scroll_area(cx)
+}
+
 pub(super) fn preview_motion_presets(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -200,6 +233,14 @@ pub(super) fn preview_motion_presets(
 
 pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     shadcn_extras::preview_shadcn_extras(cx)
+}
+
+pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    skeleton::preview_skeleton(cx)
+}
+
+pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    slider::preview_slider(cx)
 }
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

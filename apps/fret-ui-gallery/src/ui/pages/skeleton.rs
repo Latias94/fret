@@ -1,46 +1,8 @@
-use super::super::super::super::super::*;
+use super::super::*;
 
-pub(in crate::ui) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    pages::preview_skeleton(cx)
-}
+use crate::ui::doc_layout::{self, DocSection};
 
-#[cfg(any())]
-pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full(),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
+pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let round = |cx: &mut ElementContext<'_, App>, size: f32| {
         shadcn::Skeleton::new()
             .refine_style(ChromeRefinement::default().rounded(Radius::Full))
@@ -71,7 +33,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             },
         );
 
-        let row = stack::hstack(
+        stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N4).items_center(),
             |cx| vec![round(cx, 48.0), text_lines],
@@ -80,11 +42,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-demo"),
-        );
-
-        let framed = shell(cx, row);
-        let body = centered(cx, framed);
-        section(cx, "Demo", body)
+        )
     };
 
     let avatar = {
@@ -105,7 +63,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             },
         );
 
-        let row = stack::hstack(
+        stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N4).items_center(),
             |cx| vec![round(cx, 40.0), text_lines],
@@ -114,15 +72,11 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-avatar"),
-        );
-
-        let framed = shell(cx, row);
-        let body = centered(cx, framed);
-        section(cx, "Avatar", body)
+        )
     };
 
     let card = {
-        let demo_card = shadcn::Card::new(vec![
+        shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
                 shadcn::Skeleton::new()
                     .refine_layout(LayoutRefinement::default().w_px(Px(170.0)))
@@ -145,14 +99,11 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-card"),
-        );
-
-        let body = centered(cx, demo_card);
-        section(cx, "Card", body)
+        )
     };
 
     let text_section = {
-        let text = stack::vstack(
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
@@ -175,11 +126,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-text"),
-        );
-
-        let framed = shell(cx, text);
-        let body = centered(cx, framed);
-        section(cx, "Text", body)
+        )
     };
 
     let form = {
@@ -202,7 +149,7 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             )
         };
 
-        let content = stack::vstack(
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N6)
@@ -221,15 +168,11 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-form"),
-        );
-
-        let framed = shell(cx, content);
-        let body = centered(cx, framed);
-        section(cx, "Form", body)
+        )
     };
 
     let table = {
-        let content = stack::vstack(
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
@@ -267,57 +210,122 @@ pub(in crate::ui) fn preview_skeleton_legacy(cx: &mut ElementContext<'_, App>) -
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-skeleton-table"),
-        );
-
-        let framed = shell(cx, content);
-        let body = centered(cx, framed);
-        section(cx, "Table", body)
-    };
-
-    let rtl = {
-        let content = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let text_lines = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_px(Px(250.0))),
-                    |cx| {
-                        vec![
-                            shadcn::Skeleton::new()
-                                .refine_layout(LayoutRefinement::default().w_full())
-                                .into_element(cx),
-                            shadcn::Skeleton::new()
-                                .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N4).items_center(),
-                    |cx| vec![round(cx, 48.0), text_lines],
-                )
-            },
         )
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-skeleton-rtl"),
-        );
-
-        let framed = shell(cx, content);
-        let body = centered(cx, framed);
-        section(cx, "RTL", body)
     };
 
+    let rtl = doc_layout::rtl(cx, |cx| {
+        let text_lines = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_px(Px(250.0))),
+            |cx| {
+                vec![
+                    shadcn::Skeleton::new()
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                    shadcn::Skeleton::new()
+                        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            |cx| vec![round(cx, 48.0), text_lines],
+        )
+    })
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-skeleton-rtl"),
+    );
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Use Skeleton for loading placeholders, not empty states.",
+            "Prefer consistent sizes and spacing so content doesn't jump when loaded.",
+            "Keep semantics grouped so screen readers can skip placeholder-only regions.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Use to show a placeholder while content is loading."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Avatar + text lines.")
+                .code(
+                    "rust",
+                    r#"shadcn::Skeleton::new()
+    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Avatar", avatar)
+                .description("Smaller avatar placeholder.")
+                .code(
+                    "rust",
+                    r#"shadcn::Skeleton::new()
+    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+    .refine_layout(LayoutRefinement::default().w_px(Px(40.0)).h_px(Px(40.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Card", card)
+                .description("Skeletons inside a card layout.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardHeader::new(vec![shadcn::Skeleton::new().into_element(cx)]).into_element(cx),
+    shadcn::CardContent::new(vec![shadcn::Skeleton::new().into_element(cx)]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Text", text_section)
+                .description("Multiple lines with varying widths.")
+                .code(
+                    "rust",
+                    r#"stack::vstack(cx, props, |cx| {
     vec![
-        cx.text("Use to show a placeholder while content is loading."),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
-            vec![demo, avatar, card, text_section, form, table, rtl]
-        }),
+        shadcn::Skeleton::new().refine_layout(LayoutRefinement::default().w_full()).into_element(cx),
+        shadcn::Skeleton::new().refine_layout(LayoutRefinement::default().w_px(Px(240.0))).into_element(cx),
     ]
+});"#,
+                ),
+            DocSection::new("Form", form)
+                .description("Form-like blocks.")
+                .code(
+                    "rust",
+                    r#"shadcn::Skeleton::new()
+    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(32.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Table", table)
+                .description("Row skeletons.")
+                .code(
+                    "rust",
+                    r#"stack::hstack(cx, props, |cx| {
+    vec![
+        shadcn::Skeleton::new().refine_layout(LayoutRefinement::default().flex_1()).into_element(cx),
+        shadcn::Skeleton::new().refine_layout(LayoutRefinement::default().w_px(Px(96.0))).into_element(cx),
+    ]
+});"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("Direction provider should not break layout.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| shadcn::Skeleton::new().into_element(cx),
+);"#,
+                ),
+            DocSection::new("Notes", notes).description("Usage notes."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-skeleton")]
 }

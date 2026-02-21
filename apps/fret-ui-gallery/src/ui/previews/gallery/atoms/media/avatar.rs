@@ -4,6 +4,14 @@ pub(in crate::ui) fn preview_avatar(
     cx: &mut ElementContext<'_, App>,
     avatar_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
+    pages::preview_avatar(cx, avatar_image)
+}
+
+#[cfg(any())]
+pub(in crate::ui) fn preview_avatar_legacy(
+    cx: &mut ElementContext<'_, App>,
+    avatar_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
     let a = {
         let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
         let fallback = shadcn::AvatarFallback::new("FR")

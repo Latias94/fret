@@ -162,6 +162,44 @@ pub(in crate::ui) fn wrap_controls_row(
     )
 }
 
+pub(in crate::ui) fn wrap_row_snapshot(
+    cx: &mut ElementContext<'_, App>,
+    theme: &fret_ui::ThemeSnapshot,
+    gap: Space,
+    align: fret_ui::element::CrossAlign,
+    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let gap = fret_ui_kit::MetricRef::space(gap).resolve(theme);
+    let layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
+    cx.flex(
+        fret_ui::element::FlexProps {
+            layout,
+            direction: fret_core::Axis::Horizontal,
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: fret_ui::element::MainAlign::Start,
+            align,
+            wrap: true,
+        },
+        children,
+    )
+}
+
+pub(in crate::ui) fn wrap_controls_row_snapshot(
+    cx: &mut ElementContext<'_, App>,
+    theme: &fret_ui::ThemeSnapshot,
+    gap: Space,
+    children: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+) -> AnyElement {
+    wrap_row_snapshot(
+        cx,
+        theme,
+        gap,
+        fret_ui::element::CrossAlign::Center,
+        children,
+    )
+}
+
 pub(in crate::ui) fn muted_full_width<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,

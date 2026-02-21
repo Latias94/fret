@@ -1,11 +1,9 @@
-use super::super::super::super::*;
+use super::super::*;
 
-pub(in crate::ui) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    pages::preview_icons(cx)
-}
+use crate::ui::doc_layout::{self, DocSection};
+use fret_ui_kit::declarative::style as decl_style;
 
-#[cfg(any())]
-pub(in crate::ui) fn preview_icons_legacy(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_icons::ids;
 
     let icon_cell =
@@ -56,7 +54,8 @@ pub(in crate::ui) fn preview_icons_legacy(cx: &mut ElementContext<'_, App>) -> V
                 ),
             ]
         },
-    );
+    )
+    .test_id("ui-gallery-icons-grid");
 
     let spinner_row = stack::hstack(
         cx,
@@ -68,7 +67,43 @@ pub(in crate::ui) fn preview_icons_legacy(cx: &mut ElementContext<'_, App>) -> V
                 cx.text("Spinner (animated / static)"),
             ]
         },
+    )
+    .test_id("ui-gallery-icons-spinner-row");
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Prefer stable icon IDs (e.g. `lucide.search`) so demos remain predictable across updates.",
+            "Icon size should be explicit in docs to avoid token drift.",
+        ],
     );
 
-    vec![grid, spinner_row]
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Sample icons and spinners used across the gallery."),
+        vec![
+            DocSection::new("Icons", grid)
+                .max_w(Px(980.0))
+                .description("Icons rendered via `fret_icons` IDs.")
+                .code(
+                    "rust",
+                    r#"shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.loader-circle"),
+    Some(Px(16.0)),
+    None,
+);"#,
+                ),
+            DocSection::new("Spinner", spinner_row)
+                .description("Spinner can be animated or static.")
+                .code(
+                    "rust",
+                    r#"shadcn::Spinner::new().into_element(cx);
+shadcn::Spinner::new().speed(0.0).into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes).description("Usage notes."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-icons")]
 }
