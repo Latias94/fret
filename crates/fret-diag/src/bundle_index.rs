@@ -78,6 +78,14 @@ pub(crate) fn ensure_test_ids_index_json(
 fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_bundle_meta_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn build_bundle_meta_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
     let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
@@ -177,7 +185,7 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
     Ok(json!({
         "schema_version": 1,
         "kind": "bundle_meta",
-        "bundle": bundle_path.display().to_string(),
+        "bundle": bundle_label,
         "warmup_frames": warmup_frames,
         "windows_total": windows.len(),
         "snapshots_total": total_snapshots,
@@ -292,6 +300,18 @@ fn build_test_ids_payload(
 fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_test_ids_index_payload_from_json(
+        &bundle,
+        &bundle_path.display().to_string(),
+        warmup_frames,
+    )
+}
+
+fn build_test_ids_index_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
     let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
@@ -383,11 +403,89 @@ fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Resul
     Ok(json!({
         "schema_version": 1,
         "kind": "test_ids_index",
-        "bundle": bundle_path.display().to_string(),
+        "bundle": bundle_label,
         "warmup_frames": warmup_frames,
         "max_unique_test_ids_budget": MAX_UNIQUE_TEST_IDS_BUDGET,
         "truncated": truncated,
         "total_unique_test_ids": total_unique.len(),
         "windows": windows_out,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn sample_v2_bundle() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "window": 1, "semantics_fingerprint": 10, "debug": {} },
+                    { "frame_id": 1, "window": 1, "semantics_fingerprint": 10, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 10,
+                        "semantics": {
+                            "nodes": [
+                                { "id": 1, "test_id": "a" },
+                                { "id": 2, "test_id": "b" }
+                            ]
+                        }
+                    }]
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn bundle_meta_counts_semantics_via_table() {
+        let bundle = sample_v2_bundle();
+        let meta = build_bundle_meta_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(meta["kind"].as_str(), Some("bundle_meta"));
+        assert_eq!(meta["snapshots_total"].as_u64(), Some(2));
+        assert_eq!(meta["snapshots_with_semantics_total"].as_u64(), Some(2));
+        assert_eq!(
+            meta["unique_semantics_fingerprints_total"].as_u64(),
+            Some(1)
+        );
+
+        let windows = meta["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        assert_eq!(windows[0]["window"].as_u64(), Some(1));
+        assert_eq!(windows[0]["considered_frame_id"].as_u64(), Some(1));
+        assert_eq!(windows[0]["semantics_nodes_total"].as_u64(), Some(2));
+        assert_eq!(windows[0]["unique_test_ids_total"].as_u64(), Some(2));
+    }
+
+    #[test]
+    fn test_ids_index_uses_table_semantics() {
+        let bundle = sample_v2_bundle();
+        let idx = build_test_ids_index_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(idx["kind"].as_str(), Some("test_ids_index"));
+        assert_eq!(idx["total_unique_test_ids"].as_u64(), Some(2));
+
+        let windows = idx["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        let items = windows[0]["items"].as_array().unwrap();
+        let mut got: Vec<(String, u64)> = items
+            .iter()
+            .filter_map(|v| {
+                Some((
+                    v.get("test_id")?.as_str()?.to_string(),
+                    v.get("count")?.as_u64()?,
+                ))
+            })
+            .collect();
+        got.sort();
+        assert_eq!(got, vec![("a".to_string(), 1), ("b".to_string(), 1)]);
+    }
 }

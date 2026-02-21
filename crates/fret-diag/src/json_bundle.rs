@@ -152,3 +152,104 @@ impl<'a> SemanticsResolver<'a> {
             .map(|v| v.as_slice())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn semantics_resolver_reads_from_table_when_inline_missing() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": {}
+                }]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 42,
+                        "semantics": { "nodes": [{ "id": 7, "test_id": "foo" }] }
+                    }]
+                }
+            }
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+        let snap = &bundle["windows"][0]["snapshots"][0];
+        let nodes = semantics.nodes(snap).expect("expected nodes");
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0]["id"].as_u64(), Some(7));
+        assert_eq!(nodes[0]["test_id"].as_str(), Some("foo"));
+    }
+
+    #[test]
+    fn semantics_resolver_prefers_inline_semantics_over_table() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": {
+                        "semantics": { "nodes": [{ "id": 1, "test_id": "inline" }] }
+                    }
+                }]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 42,
+                        "semantics": { "nodes": [{ "id": 2, "test_id": "table" }] }
+                    }]
+                }
+            }
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+        let snap = &bundle["windows"][0]["snapshots"][0];
+        let nodes = semantics.nodes(snap).expect("expected nodes");
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0]["id"].as_u64(), Some(1));
+        assert_eq!(nodes[0]["test_id"].as_str(), Some("inline"));
+    }
+
+    #[test]
+    fn pick_last_snapshot_with_resolved_semantics_respects_warmup() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "window": 1, "semantics_fingerprint": 1, "debug": {} },
+                    { "frame_id": 5, "window": 1, "semantics_fingerprint": 1, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 1,
+                        "semantics": { "nodes": [{ "id": 9, "test_id": "x" }] }
+                    }]
+                }
+            }
+        });
+        let snaps = bundle["windows"][0]["snapshots"].as_array().unwrap();
+        let semantics = SemanticsResolver::new(&bundle);
+
+        let picked = pick_last_snapshot_with_resolved_semantics_after_warmup(snaps, 1, &semantics)
+            .expect("expected a snapshot");
+        assert_eq!(snapshot_frame_id(picked), 5);
+    }
+}
