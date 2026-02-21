@@ -71,7 +71,7 @@ What ships now (Phase 1 subset):
   - `semantics_fingerprint`
   - `semantics_source` = `inline|table|none` (inline semantics vs v2 table-resolved vs missing)
   - `has_semantics` (resolved)
-  - optional `test_id_bloom_hex` (tail snapshots only; inline semantics only): a small Bloom filter hint for test-id membership
+  - optional `test_id_bloom_hex` (tail snapshots only; resolved semantics only): a small Bloom filter hint for test-id membership
 - `diag pack --include-root-artifacts` and `diag pack --include-triage` include sidecars under `_root/`:
   - `bundle.meta.json`
   - `bundle.index.json`

@@ -281,6 +281,8 @@ fn build_bundle_index_payload_from_json(
     let mut windows_out: Vec<Value> = Vec::new();
     let mut total_snapshots: u64 = 0;
 
+    let mut bloom_cache: HashMap<(u64, u64, u8), String> = HashMap::new();
+
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let snaps = w
@@ -326,9 +328,32 @@ fn build_bundle_index_payload_from_json(
                 "none"
             };
 
-            let test_id_bloom_hex =
-                if idx >= bloom_start_idx && semantics_source == "inline" && has_resolved_semantics
-                {
+            let test_id_bloom_hex = if idx >= bloom_start_idx
+                && (semantics_source == "inline" || semantics_source == "table")
+                && has_resolved_semantics
+            {
+                if let Some(fp) = semantics_fingerprint {
+                    let source_tag = if semantics_source == "inline" {
+                        0u8
+                    } else {
+                        1u8
+                    };
+                    let key = (window_id, fp, source_tag);
+                    if let Some(hex) = bloom_cache.get(&key) {
+                        Some(hex.clone())
+                    } else {
+                        let nodes = semantics.nodes(s).unwrap_or(&[]);
+                        let mut bloom = TestIdBloomV1::new();
+                        for n in nodes {
+                            if let Some(tid) = n.get("test_id").and_then(|v| v.as_str()) {
+                                bloom.add(tid);
+                            }
+                        }
+                        let hex = bloom.to_hex();
+                        bloom_cache.insert(key, hex.clone());
+                        Some(hex)
+                    }
+                } else {
                     let nodes = semantics.nodes(s).unwrap_or(&[]);
                     let mut bloom = TestIdBloomV1::new();
                     for n in nodes {
@@ -337,9 +362,10 @@ fn build_bundle_index_payload_from_json(
                         }
                     }
                     Some(bloom.to_hex())
-                } else {
-                    None
-                };
+                }
+            } else {
+                None
+            };
 
             snapshots_out.push(json!({
                 "window_snapshot_seq": window_snapshot_seq,
@@ -376,7 +402,9 @@ fn build_bundle_index_payload_from_json(
             "m_bits": TEST_ID_BLOOM_V1_M_BITS,
             "k": TEST_ID_BLOOM_V1_K,
             "tail_snapshots_per_window": TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW,
-            "semantics_source": "inline",
+            "computed_from": "resolved_semantics_nodes",
+            "semantics_source": "resolved",
+            "covers_semantics_sources": ["inline", "table"],
         },
         "windows": windows_out,
     }))
@@ -731,7 +759,7 @@ mod tests {
         );
         assert_eq!(
             idx["test_id_bloom"]["semantics_source"].as_str(),
-            Some("inline")
+            Some("resolved")
         );
 
         let windows = idx["windows"].as_array().unwrap();
@@ -750,8 +778,10 @@ mod tests {
         assert_eq!(snaps[1]["window_snapshot_seq"].as_u64(), Some(101));
         assert_eq!(snaps[1]["is_warmup"].as_bool(), Some(false));
         assert_eq!(snaps[1]["semantics_source"].as_str(), Some("table"));
-        assert!(snaps[1].get("test_id_bloom_hex").is_some());
-        assert!(snaps[1]["test_id_bloom_hex"].is_null());
+        let hex = snaps[1]["test_id_bloom_hex"].as_str().expect("bloom hex");
+        let bloom = crate::test_id_bloom::TestIdBloomV1::from_hex(hex).expect("decode bloom");
+        assert!(bloom.might_contain("a"));
+        assert!(bloom.might_contain("b"));
     }
 
     #[test]

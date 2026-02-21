@@ -293,7 +293,7 @@ fn pick_default_snapshot_in_bundle_index(
             }
             best_any.get_or_insert(sel.clone());
 
-            if !target.is_empty() && !is_warmup && is_inline {
+            if !target.is_empty() && !is_warmup {
                 if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {
                     if let Some(b) = TestIdBloomV1::from_hex(hex) {
                         if b.might_contain(target.as_str()) {
@@ -379,7 +379,7 @@ fn slice_candidates_from_bundle_index(
 
             let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
 
-            let bloom_might_contain = if !target.is_empty() && source == "inline" {
+            let bloom_might_contain = if !target.is_empty() {
                 s.get("test_id_bloom_hex")
                     .and_then(|v| v.as_str())
                     .and_then(TestIdBloomV1::from_hex)
