@@ -511,14 +511,86 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 ),
             DocSection::new("Size", size)
                 .no_shell()
-                .test_id_prefix("ui-gallery-button-group-size"),
-            DocSection::new("Nested", nested).test_id_prefix("ui-gallery-button-group-nested"),
+                .test_id_prefix("ui-gallery-button-group-size")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::Button::new("Small")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .into(),
+    shadcn::Button::new("Add")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::IconSm)
+        .children([icon(cx, "lucide.plus", fg)])
+        .into(),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Nested", nested)
+                .test_id_prefix("ui-gallery-button-group-nested")
+                .code(
+                    "rust",
+                    r#"let digits = shadcn::ButtonGroup::new([
+    shadcn::Button::new("1").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("2").variant(shadcn::ButtonVariant::Outline).into(),
+]);
+
+let nav = shadcn::ButtonGroup::new([
+    shadcn::Button::new("Prev").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("Next").variant(shadcn::ButtonVariant::Outline).into(),
+]);
+
+shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
+                ),
             DocSection::new("Separator", separator)
-                .test_id_prefix("ui-gallery-button-group-separator"),
-            DocSection::new("Split", split).test_id_prefix("ui-gallery-button-group-split"),
+                .test_id_prefix("ui-gallery-button-group-separator")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::Button::new("Copy").variant(shadcn::ButtonVariant::Secondary).into(),
+    shadcn::Separator::new()
+        .orientation(shadcn::SeparatorOrientation::Vertical)
+        .into(),
+    shadcn::Button::new("Paste").variant(shadcn::ButtonVariant::Secondary).into(),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Split", split)
+                .test_id_prefix("ui-gallery-button-group-split")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::Button::new("Button").variant(shadcn::ButtonVariant::Secondary).into(),
+    shadcn::Separator::new()
+        .orientation(shadcn::SeparatorOrientation::Vertical)
+        .into(),
+    shadcn::Button::new("Add")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Icon)
+        .children([icon(cx, "lucide.plus", fg)])
+        .into(),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Flex-1 items", flex_1)
                 .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-button-group-flex1"),
+                .test_id_prefix("ui-gallery-button-group-flex1")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::Button::new("Overview")
+        .variant(shadcn::ButtonVariant::Outline)
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+        .into(),
+    shadcn::Button::new("Analytics")
+        .variant(shadcn::ButtonVariant::Outline)
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+        .into(),
+])
+.refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
+.into_element(cx);"#,
+                ),
             DocSection::new("Input", input)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-button-group-input")
@@ -531,17 +603,71 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 ),
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
-                .test_id_prefix("ui-gallery-button-group-input-group"),
+                .test_id_prefix("ui-gallery-button-group-input-group")
+                .code(
+                    "rust",
+                    r#"let group = shadcn::InputGroup::new(model)
+    .leading([shadcn::InputGroupText::new("To").into_element(cx)])
+    .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
+
+shadcn::ButtonGroup::new([
+    shadcn::Button::new("Add").variant(shadcn::ButtonVariant::Outline).into(),
+    group.into(),
+])
+.into_element(cx);"#,
+                ),
             DocSection::new("Dropdown Menu", dropdown)
                 .max_w(Px(820.0))
-                .test_id_prefix("ui-gallery-button-group-dropdown"),
+                .test_id_prefix("ui-gallery-button-group-dropdown")
+                .code(
+                    "rust",
+                    r#"let menu = shadcn::DropdownMenu::new(open_model).into_element(
+    cx,
+    |cx| shadcn::Button::new("More").toggle_model(open_model).into_element(cx),
+    |_cx| vec![shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile"))],
+);
+
+shadcn::ButtonGroup::new([shadcn::Button::new("Edit").into(), menu.into()])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Select", select)
                 .max_w(Px(820.0))
-                .test_id_prefix("ui-gallery-button-group-select"),
+                .test_id_prefix("ui-gallery-button-group-select")
+                .code(
+                    "rust",
+                    r#"let select = shadcn::Select::new(value_model, open_model)
+    .into_element(
+        cx,
+        |cx, trigger| trigger.into_element(cx),
+        |_cx| vec![shadcn::SelectEntry::Item(shadcn::SelectItem::new("Apple"))],
+    );
+
+shadcn::ButtonGroup::new([select.into(), shadcn::Button::new("Apply").into()])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Popover", popover)
                 .max_w(Px(820.0))
-                .test_id_prefix("ui-gallery-button-group-popover"),
-            DocSection::new("RTL", rtl).test_id_prefix("ui-gallery-button-group-rtl"),
+                .test_id_prefix("ui-gallery-button-group-popover")
+                .code(
+                    "rust",
+                    r#"let popover = shadcn::Popover::new(open_model)
+    .into_element(cx, |cx| trigger_button, |cx| popover_content);
+
+shadcn::ButtonGroup::new([shadcn::Button::new("Filter").into(), popover.into()])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .test_id_prefix("ui-gallery-button-group-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::ButtonGroup::new([
+        shadcn::Button::new("التالي").variant(shadcn::ButtonVariant::Outline).into(),
+        shadcn::Button::new("السابق").variant(shadcn::ButtonVariant::Outline).into(),
+    ])
+    .into_element(cx)
+});"#,
+                ),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-button-group-notes"),

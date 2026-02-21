@@ -308,10 +308,21 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-spinner-rtl"),
+                .test_id_prefix("ui-gallery-spinner-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Spinner::new().into_element(cx)
+});"#,
+                ),
             DocSection::new("Extras", extras)
                 .no_shell()
-                .test_id_prefix("ui-gallery-spinner-extras"),
+                .test_id_prefix("ui-gallery-spinner-extras")
+                .code(
+                    "rust",
+                    r#"// Extras are Fret-specific compositions that exercise token + layout behavior.
+stack::vstack(cx, props, |_cx| vec![/* ... */]);"#,
+                ),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-spinner-notes"),
