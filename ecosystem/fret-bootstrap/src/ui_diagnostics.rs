@@ -992,55 +992,18 @@ impl UiDiagnosticsService {
                     &mut failure_reason,
                 );
             }
-            UiActionStepV2::SetClipboardForceUnavailable { enabled } => {
-                output
-                    .effects
-                    .push(Effect::DiagClipboardForceUnavailable { window, enabled });
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-            }
-            UiActionStepV2::InjectIncomingOpen { items } => {
-                let items = items
-                    .into_iter()
-                    .map(|item| match item {
-                        UiIncomingOpenInjectItemV1::FileUtf8 {
-                            name,
-                            text,
-                            media_type,
-                        } => fret_runtime::DiagIncomingOpenItem::File {
-                            name,
-                            bytes: text.into_bytes(),
-                            media_type,
-                        },
-                        UiIncomingOpenInjectItemV1::Text { text, media_type } => {
-                            fret_runtime::DiagIncomingOpenItem::Text { text, media_type }
-                        }
-                    })
-                    .collect();
-                output
-                    .effects
-                    .push(Effect::DiagIncomingOpenInject { window, items });
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-            }
-            UiActionStepV2::WaitFrames { n } => {
-                active.wait_frames_remaining = n;
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-            }
-            UiActionStepV2::ResetDiagnostics => {
-                self.reset_diagnostics_ring_for_window(window);
-                ui_thread_cpu_time::reset();
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
+            step @ (UiActionStepV2::SetClipboardForceUnavailable { .. }
+            | UiActionStepV2::InjectIncomingOpen { .. }
+            | UiActionStepV2::WaitFrames { .. }
+            | UiActionStepV2::ResetDiagnostics) => {
+                let handled = script_steps::handle_effect_only_steps(
+                    self,
+                    window,
+                    step,
+                    &mut active,
+                    &mut output,
+                );
+                debug_assert!(handled);
             }
             UiActionStepV2::CaptureBundle {
                 label,

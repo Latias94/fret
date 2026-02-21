@@ -280,3 +280,69 @@ pub(super) fn handle_window_effect_steps(
         }
     }
 }
+
+pub(super) fn handle_effect_only_steps(
+    svc: &mut UiDiagnosticsService,
+    window: AppWindowId,
+    step: UiActionStepV2,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+) -> bool {
+    match step {
+        UiActionStepV2::SetClipboardForceUnavailable { enabled } => {
+            output
+                .effects
+                .push(Effect::DiagClipboardForceUnavailable { window, enabled });
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::InjectIncomingOpen { items } => {
+            let items = items
+                .into_iter()
+                .map(|item| match item {
+                    UiIncomingOpenInjectItemV1::FileUtf8 {
+                        name,
+                        text,
+                        media_type,
+                    } => fret_runtime::DiagIncomingOpenItem::File {
+                        name,
+                        bytes: text.into_bytes(),
+                        media_type,
+                    },
+                    UiIncomingOpenInjectItemV1::Text { text, media_type } => {
+                        fret_runtime::DiagIncomingOpenItem::Text { text, media_type }
+                    }
+                })
+                .collect();
+            output
+                .effects
+                .push(Effect::DiagIncomingOpenInject { window, items });
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::WaitFrames { n } => {
+            active.wait_frames_remaining = n;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::ResetDiagnostics => {
+            svc.reset_diagnostics_ring_for_window(window);
+            ui_thread_cpu_time::reset();
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        _ => false,
+    }
+}
