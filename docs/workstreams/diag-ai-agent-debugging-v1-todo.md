@@ -12,6 +12,8 @@ Last updated: 2026-02-21
 
 - [x] Define `bundle.index.json` v1 schema (typed, bounded).
 - [x] Add a tooling writer + `fretboard diag index` for `bundle.index.json`.
+- [x] Ensure `diag pack --include-root-artifacts|--include-triage` includes `bundle.index.json`.
+- [x] Make `diag slice` validate `--frame-id|--snapshot-seq` against `bundle.index.json` (when present).
 - [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
 - [x] Add `fretboard diag ai-packet ...` that exports:
   - `bundle.meta.json`

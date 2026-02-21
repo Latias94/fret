@@ -2,6 +2,15 @@
 
 Status: Draft / in progress
 
+Current state (as of 2026-02-21):
+
+- Tooling can generate `bundle.index.json` (schema v1) via `fretboard diag index <bundle_dir|bundle.json>`.
+- Tooling can export a bounded “AI packet” directory via `fretboard diag ai-packet ...`.
+- Index and packet writers live in:
+  - `crates/fret-diag/src/bundle_index.rs`
+  - `crates/fret-diag/src/commands/index.rs`
+  - `crates/fret-diag/src/commands/ai_packet.rs`
+
 ## Motivation
 
 `bundle.json` is a great “single file artifact”, but it can grow large enough that it becomes:
@@ -37,7 +46,7 @@ Add/standardize a small set of structured summaries that tools (and agents) can 
 - `bundle.meta.json`: bounded summary (counts, sizes, time range, windows, clipping flags).
 - `bundle.index.json`: fast jump tables:
   - windows list + stable window ids
-  - snapshots per window: `(snapshot_seq, frame_id, unix_ms, semantics_fingerprint, screenshot_refs, event_ranges, ...)`
+  - snapshots per window: `(window_snapshot_seq, frame_id, timestamp_unix_ms, semantics_fingerprint, semantics_source, has_semantics, ...)`
   - optional: test-id presence bloom/sets per snapshot (bounded / hashed)
 
 Deliver an “AI packet” command that writes a directory like:
@@ -45,10 +54,31 @@ Deliver an “AI packet” command that writes a directory like:
 - `script.result.json` (or equivalent failure summary)
 - `bundle.meta.json`
 - `bundle.index.json`
+- `test_ids.index.json`
 - one or more slices (e.g. `slice.test_id.*.json`, `slice.viewport.*.json`)
 - optional: referenced screenshots (bounded)
 
 This keeps the default agent workflow “small by default” and avoids full bundle reads.
+
+What ships now (Phase 1 subset):
+
+- `bundle.index.json` schema v1 currently records per-snapshot:
+  - `window_snapshot_seq` (when present)
+  - `frame_id`, `timestamp_unix_ms`, `is_warmup`
+  - `semantics_fingerprint`
+  - `semantics_source` = `inline|table|none` (inline semantics vs v2 table-resolved vs missing)
+  - `has_semantics` (resolved)
+- `diag pack --include-root-artifacts` and `diag pack --include-triage` include sidecars under `_root/`:
+  - `bundle.meta.json`
+  - `bundle.index.json`
+  - `test_ids.index.json`
+  - `test_ids.json` (human-facing; may be deprecated later)
+
+Known gaps (still planned):
+
+- `diag slice` and `diag query` do not yet prefer `bundle.index.json` for fast-path selection (they still parse `bundle.json`).
+- `diag slice` currently only uses `bundle.index.json` as an optional validation layer when `--frame-id`/`--snapshot-seq` is provided.
+- “Test-id presence per snapshot” is not yet indexed; finding “first snapshot that contains X” still requires semantics reads.
 
 ### Phase 2: on-disk layout (manifest + chunked payloads)
 
@@ -72,4 +102,3 @@ See:
 
 - `docs/workstreams/diag-ai-agent-debugging-v1-todo.md`
 - `docs/workstreams/diag-ai-agent-debugging-v1-milestones.md`
-

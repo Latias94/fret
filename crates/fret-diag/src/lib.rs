@@ -11014,6 +11014,8 @@ pub(crate) fn pack_bundle_dir_to_zip(
 
     if include_root_artifacts || include_triage {
         let meta_path = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)?;
+        let bundle_index_path =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames)?;
         let test_ids_index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames)?;
         let test_ids_path =
@@ -11021,6 +11023,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
 
         for (src, rel) in [
             (meta_path, "bundle.meta.json"),
+            (bundle_index_path, "bundle.index.json"),
             (test_ids_index_path, "test_ids.index.json"),
             (test_ids_path, "test_ids.json"),
         ] {

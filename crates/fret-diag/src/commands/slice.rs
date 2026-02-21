@@ -227,6 +227,69 @@ fn resolve_bundle_json_path_or_latest(
     Ok(crate::resolve_bundle_json_path(&latest))
 }
 
+struct BundleIndexSnapshotMatch {
+    has_semantics: bool,
+    semantics_source: Option<String>,
+}
+
+fn try_read_bundle_index(bundle_path: &Path) -> Option<serde_json::Value> {
+    let index_path = crate::bundle_index::default_bundle_index_path(bundle_path);
+    let bytes = std::fs::read(index_path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
+        return None;
+    }
+    Some(v)
+}
+
+fn find_snapshot_in_bundle_index(
+    idx: &serde_json::Value,
+    window_id: Option<u64>,
+    frame_id: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+) -> Option<BundleIndexSnapshotMatch> {
+    let windows = idx.get("windows")?.as_array()?;
+    for w in windows {
+        let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(req) = window_id
+            && req != w_id
+        {
+            continue;
+        }
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+        for s in snaps {
+            let matches = if let Some(req_frame) = frame_id {
+                s.get("frame_id").and_then(|v| v.as_u64()) == Some(req_frame)
+            } else if let Some(req_seq) = window_snapshot_seq {
+                s.get("window_snapshot_seq").and_then(|v| v.as_u64()) == Some(req_seq)
+            } else {
+                false
+            };
+            if !matches {
+                continue;
+            }
+
+            let has_semantics = s
+                .get("has_semantics")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let semantics_source = s
+                .get("semantics_source")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            return Some(BundleIndexSnapshotMatch {
+                has_semantics,
+                semantics_source,
+            });
+        }
+    }
+    None
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_slice(
     rest: &[String],
@@ -345,6 +408,32 @@ pub(crate) fn cmd_slice(
 
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+
+    if frame_id.is_some() || window_snapshot_seq.is_some() {
+        if let Some(idx) = try_read_bundle_index(&bundle_path) {
+            let m = find_snapshot_in_bundle_index(&idx, window_id, frame_id, window_snapshot_seq)
+                .ok_or_else(|| {
+                    let mut hint = String::new();
+                    if let Some(w) = window_id {
+                        hint.push_str(&format!(" --window {w}"));
+                    }
+                    if let Some(f) = frame_id {
+                        hint.push_str(&format!(" --frame-id {f}"));
+                    }
+                    if let Some(s) = window_snapshot_seq {
+                        hint.push_str(&format!(" --snapshot-seq {s}"));
+                    }
+                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle.json>`), args:{hint}")
+                })?;
+            if !m.has_semantics {
+                let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
+                return Err(format!(
+                    "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
+                ));
+            }
+        }
+    }
+
     let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     let semantics = SemanticsResolver::new(&bundle);
