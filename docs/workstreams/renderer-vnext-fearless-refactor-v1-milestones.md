@@ -218,6 +218,24 @@ Progress record (Clip/Mask cache stability closure):
   - `crates/fret-render-wgpu/src/renderer/clip_path_mask_cache.rs`
   - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`RenderPlanPass::PathClipMask`)
   - `apps/fret-clip-mask-stress/src/main.rs`
+
+## M8 — Renderer internals modularization (fearless, contract-preserving)
+
+Deliverables:
+
+- A staged refactor design exists and is linked:
+  - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
+- An ADR exists that codifies:
+  - internal ownership boundaries (encode/compile/execute, GPU globals/buffers/caches/registries),
+  - and an always-run gate set for refactors.
+  - `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
+- Renderer internals begin migrating toward explicit subsystem ownership without changing any public contracts.
+
+Exit criteria:
+
+- Conformance anchors still pass.
+- WebGPU validation gate still passes.
+- Each landed stage records evidence anchors + exact gate commands.
   - `tools/perf/headless_clip_mask_stress_gate.py`
   - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 

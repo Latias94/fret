@@ -6,6 +6,7 @@ Tracking files:
 
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 
 Related semantic workstreams (drafts; 3-doc format):
 
