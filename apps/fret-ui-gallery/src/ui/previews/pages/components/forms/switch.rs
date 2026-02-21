@@ -4,6 +4,8 @@ pub(in crate::ui) fn preview_switch(
     cx: &mut ElementContext<'_, App>,
     model: Model<bool>,
 ) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     #[derive(Default)]
     struct SwitchModels {
         description: Option<Model<bool>>,
@@ -85,6 +87,7 @@ pub(in crate::ui) fn preview_switch(
         };
 
     let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
+    let theme = Theme::global(&*cx.app).clone();
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -96,18 +99,43 @@ pub(in crate::ui) fn preview_switch(
         )
     };
 
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
+    let sizes = {
+        let small = stack::hstack(
             cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Switch::new(size_small)
+                        .a11y_label("Small switch")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(16.0)))
+                        .test_id("ui-gallery-switch-size-small")
+                        .into_element(cx),
+                    shadcn::Label::new("Small").into_element(cx),
+                ]
+            },
         )
+        .test_id("ui-gallery-switch-sizes-sm");
+
+        let default = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Switch::new(size_default)
+                        .a11y_label("Default switch")
+                        .test_id("ui-gallery-switch-size-default")
+                        .into_element(cx),
+                    shadcn::Label::new("Default").into_element(cx),
+                ]
+            },
+        )
+        .test_id("ui-gallery-switch-sizes-default");
+
+        doc_layout::wrap_controls_row(cx, &theme, Space::N4, |_cx| vec![small, default])
+            .test_id("ui-gallery-switch-sizes")
     };
 
-    let demo = {
+    let airplane_mode = {
         let row = stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -115,21 +143,63 @@ pub(in crate::ui) fn preview_switch(
                 vec![
                     shadcn::Switch::new(model.clone())
                         .a11y_label("Airplane mode")
-                        .test_id("ui-gallery-switch-demo-toggle")
+                        .test_id("ui-gallery-switch-airplane-toggle")
                         .into_element(cx),
                     shadcn::Label::new("Airplane Mode").into_element(cx),
                 ]
             },
         )
-        .test_id("ui-gallery-switch-demo");
-        let body = centered(cx, row);
-        section(cx, "Demo", body)
+        .test_id("ui-gallery-switch-airplane");
+
+        centered(cx, row)
     };
 
-    let description_section = {
+    let bluetooth = {
+        let blue = ColorRef::Color(CoreColor {
+            r: 0.23,
+            g: 0.51,
+            b: 0.96,
+            a: 1.0,
+        });
+        let style = shadcn::switch::SwitchStyle::default().track_background(
+            fret_ui_kit::WidgetStateProperty::new(None)
+                .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
+        );
+
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Switch::new_controllable(cx, None, true)
+                        .a11y_label("Bluetooth")
+                        .style(style)
+                        .test_id("ui-gallery-switch-bluetooth-toggle")
+                        .into_element(cx),
+                    shadcn::Label::new("Bluetooth").into_element(cx),
+                ]
+            },
+        )
+        .test_id("ui-gallery-switch-bluetooth");
+
+        centered(cx, row)
+    };
+
+    let label_card = {
+        let blue = ColorRef::Color(CoreColor {
+            r: 0.23,
+            g: 0.51,
+            b: 0.96,
+            a: 1.0,
+        });
+        let style = shadcn::switch::SwitchStyle::default().track_background(
+            fret_ui_kit::WidgetStateProperty::new(None)
+                .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
+        );
+
         let field = shadcn::Field::new([
             shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Share across devices").into_element(cx),
+                shadcn::FieldTitle::new("Share across devices").into_element(cx),
                 shadcn::FieldDescription::new(
                     "Focus is shared across devices, and turns off when you leave the app.",
                 )
@@ -138,19 +208,25 @@ pub(in crate::ui) fn preview_switch(
             .into_element(cx),
             shadcn::Switch::new(description)
                 .a11y_label("Share across devices")
-                .test_id("ui-gallery-switch-description-toggle")
+                .style(style)
+                .test_id("ui-gallery-switch-label-card-toggle")
                 .into_element(cx),
         ])
         .orientation(shadcn::FieldOrientation::Horizontal)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+        .refine_style(
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Lg)
+                .p(Space::N4),
+        )
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         .into_element(cx)
-        .test_id("ui-gallery-switch-description");
+        .test_id("ui-gallery-switch-label-card");
 
-        let body = centered(cx, field);
-        section(cx, "Description", body)
+        centered(cx, field)
     };
 
-    let choice_card = {
+    let extras_choice_cards = {
         let share = shadcn::Field::new([
             shadcn::FieldContent::new([
                 shadcn::FieldTitle::new("Share across devices").into_element(cx),
@@ -201,13 +277,12 @@ pub(in crate::ui) fn preview_switch(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N3)
-                .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
+                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
             |_cx| vec![share, notifications],
         )
         .test_id("ui-gallery-switch-choice-card");
 
-        let body = centered(cx, group);
-        section(cx, "Choice Card", body)
+        centered(cx, group)
     };
 
     let disabled_section = {
@@ -224,8 +299,7 @@ pub(in crate::ui) fn preview_switch(
         .into_element(cx)
         .test_id("ui-gallery-switch-disabled");
 
-        let body = centered(cx, row);
-        section(cx, "Disabled", body)
+        centered(cx, row)
     };
 
     let invalid_section = {
@@ -255,98 +329,135 @@ pub(in crate::ui) fn preview_switch(
         .into_element(cx)
         .test_id("ui-gallery-switch-invalid");
 
-        let body = centered(cx, field);
-        section(cx, "Invalid", body)
-    };
-
-    let size_section = {
-        let small = shadcn::Field::new([
-            shadcn::Switch::new(size_small)
-                .a11y_label("Small switch")
-                .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(16.0)))
-                .test_id("ui-gallery-switch-size-small")
-                .into_element(cx),
-            shadcn::FieldLabel::new("Small").into_element(cx),
-        ])
-        .orientation(shadcn::FieldOrientation::Horizontal)
-        .into_element(cx);
-
-        let default = shadcn::Field::new([
-            shadcn::Switch::new(size_default)
-                .a11y_label("Default switch")
-                .test_id("ui-gallery-switch-size-default")
-                .into_element(cx),
-            shadcn::FieldLabel::new("Default").into_element(cx),
-        ])
-        .orientation(shadcn::FieldOrientation::Horizontal)
-        .into_element(cx);
-
-        let group = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .layout(LayoutRefinement::default().w_full().max_w(Px(160.0))),
-            |_cx| vec![small, default],
-        )
-        .test_id("ui-gallery-switch-size");
-
-        let body = centered(cx, group);
-        section(cx, "Size", body)
+        centered(cx, field)
     };
 
     let rtl_section = {
-        let rtl_field = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::Field::new([
-                    shadcn::FieldContent::new([
-                        shadcn::FieldLabel::new("Share across devices").into_element(cx),
-                        shadcn::FieldDescription::new(
-                            "Focus is shared across devices, and turns off when you leave the app.",
-                        )
-                        .into_element(cx),
-                    ])
+        doc_layout::rtl(cx, |cx| {
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Share across devices").into_element(cx),
+                    shadcn::FieldDescription::new(
+                        "Focus is shared across devices, and turns off when you leave the app.",
+                    )
                     .into_element(cx),
-                    shadcn::Switch::new(rtl)
-                        .a11y_label("Share across devices")
-                        .test_id("ui-gallery-switch-rtl-toggle")
-                        .into_element(cx),
                 ])
-                .orientation(shadcn::FieldOrientation::Horizontal)
-                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
-                .into_element(cx)
-            },
-        )
-        .test_id("ui-gallery-switch-rtl");
-
-        let body = centered(cx, rtl_field);
-        section(cx, "RTL", body)
+                .into_element(cx),
+                shadcn::Switch::new(rtl)
+                    .a11y_label("Share across devices")
+                    .test_id("ui-gallery-switch-rtl-toggle")
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+            .into_element(cx)
+        })
+        .test_id("ui-gallery-switch-rtl")
     };
 
-    let examples = stack::vstack(
+    let extras = stack::vstack(
         cx,
         stack::VStackProps::default()
-            .gap(Space::N6)
+            .gap(Space::N4)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        |cx| {
             vec![
-                description_section,
-                choice_card,
+                shadcn::typography::muted(
+                    cx,
+                    "Extras are Fret-specific demos and regression gates (not part of upstream shadcn SwitchDemo).",
+                ),
+                extras_choice_cards,
                 disabled_section,
                 invalid_section,
-                size_section,
-                rtl_section,
             ]
         },
-    );
+    )
+    .test_id("ui-gallery-switch-extras");
 
-    let note = shadcn::typography::muted(
+    let notes = doc_layout::notes(
         cx,
-        "Note: size/invalid are approximated with layout/style overrides because this Switch API has no dedicated size/aria-invalid props."
-            .to_string(),
+        [
+            "Preview follows shadcn Switch demo (new-york-v4).",
+            "The Switch surface does not expose a size prop today; the small variant is approximated with layout overrides.",
+            "Use `SwitchStyle` (ADR 0220 override slots) for token-safe styling like checked track background changes.",
+        ],
     );
 
-    vec![demo, examples, note]
+    let rtl_centered = centered(cx, rtl_section);
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Preview follows shadcn Switch demo order: Sizes, Airplane Mode, Bluetooth, Label Card. Extras include invalid/disabled/RTL.",
+        ),
+        vec![
+            DocSection::new("Sizes", sizes)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-switch-sizes")
+                .code(
+                    "rust",
+                    r#"shadcn::Switch::new(model)
+    .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(16.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Airplane Mode", airplane_mode)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-switch-airplane")
+                .code(
+                    "rust",
+                    r#"stack::hstack(cx, props, |cx| vec![
+    shadcn::Switch::new(model).a11y_label("Airplane mode").into_element(cx),
+    shadcn::Label::new("Airplane Mode").into_element(cx),
+]);"#,
+                ),
+            DocSection::new("Bluetooth", bluetooth)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-switch-bluetooth")
+                .code(
+                    "rust",
+                    r#"let style = shadcn::switch::SwitchStyle::default().track_background(
+    fret_ui_kit::WidgetStateProperty::new(None)
+        .when(fret_ui_kit::WidgetStates::SELECTED, Some(ColorRef::Color(blue))),
+);
+
+shadcn::Switch::new_controllable(cx, None, true)
+    .style(style)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Label Card", label_card)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-switch-label-card")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([content, shadcn::Switch::new(model).into_element(cx)])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg).p(Space::N4))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl_centered)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-switch-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Switch::new(model).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Extras", extras)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-switch-extras")
+                .code(
+                    "rust",
+                    r#"// Disabled
+shadcn::Switch::new(model).disabled(true).into_element(cx);
+
+// Invalid (style override)
+shadcn::Switch::new(model).style(invalid_style).into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes).max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-switch")]
 }
