@@ -1448,7 +1448,7 @@ impl UiDiagnosticsService {
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
-        ui: Option<&UiTree<App>>,
+        mut ui: Option<&mut UiTree<App>>,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
     ) -> UiScriptFrameOutput {
         if !self.is_enabled() {
@@ -2446,7 +2446,7 @@ impl UiDiagnosticsService {
                         window,
                         element_runtime,
                         semantics_snapshot,
-                        ui,
+                        ui.as_deref(),
                         step_index as u32,
                         None,
                         None,
@@ -2498,7 +2498,7 @@ impl UiDiagnosticsService {
                         window,
                         element_runtime,
                         semantics_snapshot,
-                        ui,
+                        ui.as_deref(),
                         step_index as u32,
                         None,
                         None,
@@ -2559,7 +2559,7 @@ impl UiDiagnosticsService {
                     window,
                     element_runtime,
                     semantics_snapshot,
-                    ui,
+                    ui.as_deref(),
                     step_index as u32,
                     None,
                     None,
@@ -3106,7 +3106,7 @@ impl UiDiagnosticsService {
                     };
 
                     let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                    if let Some(ui) = ui {
+                    if let Some(ui) = ui.as_deref_mut() {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
@@ -3194,7 +3194,7 @@ impl UiDiagnosticsService {
 
                         let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         if state.remaining_frames == 0 {
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
@@ -3233,7 +3233,7 @@ impl UiDiagnosticsService {
                             state.last_center = Some(center);
 
                             if state.stable_count >= stable_required {
-                                if let Some(ui) = ui {
+                                if let Some(ui) = ui.as_deref_mut() {
                                     let mut hit = build_hit_test_trace_entry_for_selector(
                                         ui,
                                         element_runtime,
@@ -3779,7 +3779,7 @@ impl UiDiagnosticsService {
                         };
 
                         if state.remaining_frames == 0 {
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
@@ -3882,7 +3882,7 @@ impl UiDiagnosticsService {
                                 state.last_pos = Some(pos);
 
                                 if state.stable_count >= stable_required {
-                                    if let Some(ui) = ui {
+                                    if let Some(ui) = ui.as_deref_mut() {
                                         let mut hit = build_hit_test_trace_entry_for_selector(
                                             ui,
                                             element_runtime,
@@ -4079,7 +4079,7 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                if let Some(ui) = ui {
+                if let Some(ui) = ui.as_deref_mut() {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
@@ -4162,7 +4162,7 @@ impl UiDiagnosticsService {
                             &mut active.selector_resolution_trace,
                         ) {
                             let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
@@ -4719,7 +4719,7 @@ impl UiDiagnosticsService {
                             };
 
                             let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
@@ -4769,7 +4769,7 @@ impl UiDiagnosticsService {
                     if done {
                         active.pending_cancel_cross_window_drag =
                             Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
-                        if let Some(ui) = ui {
+                        if let Some(ui) = ui.as_deref_mut() {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
                                 ui,
@@ -5221,7 +5221,7 @@ impl UiDiagnosticsService {
                         };
 
                         let start = center_of_rect(node.bounds);
-                        if let Some(ui) = ui {
+                        if let Some(ui) = ui.as_deref_mut() {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
                                 ui,
@@ -5257,7 +5257,7 @@ impl UiDiagnosticsService {
                     active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
                     output.request_redraw = true;
                 } else if state.next_step > state.steps {
-                    if let Some(ui) = ui {
+                    if let Some(ui) = ui.as_deref_mut() {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
@@ -5377,7 +5377,7 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                if let Some(ui) = ui {
+                if let Some(ui) = ui.as_deref_mut() {
                     let note = format!("wheel dx={delta_x} dy={delta_y}");
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
@@ -5782,6 +5782,7 @@ impl UiDiagnosticsService {
                         );
                         if let Some(container_node) = container_node {
                             let pos = ui
+                                .as_deref()
                                 .map(|ui| {
                                     wheel_position_prefer_intended_hit(
                                         snapshot,
@@ -5797,7 +5798,7 @@ impl UiDiagnosticsService {
                                         window_bounds,
                                     )
                                 });
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 let note =
                                     format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
                                 record_hit_test_trace_for_selector(
@@ -5902,7 +5903,7 @@ impl UiDiagnosticsService {
 
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                                if let Some(ui) = ui {
+                                if let Some(ui) = ui.as_deref_mut() {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
@@ -5923,7 +5924,7 @@ impl UiDiagnosticsService {
                                     window,
                                     element_runtime,
                                     Some(snapshot),
-                                    ui,
+                                    ui.as_deref(),
                                     step_index as u32,
                                     state.expected_node_id,
                                     state.expected_test_id.as_deref(),
@@ -5961,7 +5962,7 @@ impl UiDiagnosticsService {
                                 window,
                                 element_runtime,
                                 Some(snapshot),
-                                ui,
+                                ui.as_deref(),
                                 step_index as u32,
                                 state.expected_node_id,
                                 state.expected_test_id.as_deref(),
@@ -6002,7 +6003,7 @@ impl UiDiagnosticsService {
                                     window,
                                     element_runtime,
                                     Some(snapshot),
-                                    ui,
+                                    ui.as_deref(),
                                     step_index as u32,
                                     state.expected_node_id,
                                     state.expected_test_id.as_deref(),
@@ -6123,7 +6124,7 @@ impl UiDiagnosticsService {
                             ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                                if let Some(ui) = ui {
+                                if let Some(ui) = ui.as_deref_mut() {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
@@ -6194,7 +6195,7 @@ impl UiDiagnosticsService {
                                 &mut active.selector_resolution_trace,
                             ) {
                                 let pos = center_of_rect(node.bounds);
-                                if let Some(ui) = ui {
+                                if let Some(ui) = ui.as_deref_mut() {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
@@ -6325,7 +6326,7 @@ impl UiDiagnosticsService {
                                 ) {
                                     let pos =
                                         center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                                    if let Some(ui) = ui {
+                                    if let Some(ui) = ui.as_deref_mut() {
                                         let note = format!(
                                             "menu_select_path.click index={}",
                                             state.next_index
@@ -6448,6 +6449,7 @@ impl UiDiagnosticsService {
                         );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
                             let start = ui
+                                .as_deref()
                                 .map(|ui| {
                                     wheel_position_prefer_intended_hit(
                                         snapshot,
@@ -6461,6 +6463,7 @@ impl UiDiagnosticsService {
                                     center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
                                 });
                             let end = ui
+                                .as_deref()
                                 .map(|ui| {
                                     wheel_position_prefer_intended_hit(
                                         snapshot,
@@ -6473,7 +6476,7 @@ impl UiDiagnosticsService {
                                 .unwrap_or_else(|| {
                                     center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
                                 });
-                            if let Some(ui) = ui {
+                            if let Some(ui) = ui.as_deref_mut() {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
@@ -6649,7 +6652,7 @@ impl UiDiagnosticsService {
                                 let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                 let start = Point::new(fret_core::Px(start_x), start.y);
                                 let end = Point::new(fret_core::Px(x), start.y);
-                                if let Some(ui) = ui {
+                                if let Some(ui) = ui.as_deref_mut() {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
@@ -6720,7 +6723,7 @@ impl UiDiagnosticsService {
                                         let end_x = clamp_x(start_x + dx);
                                         let start = Point::new(fret_core::Px(start_x), start.y);
                                         let end = Point::new(fret_core::Px(end_x), start.y);
-                                        if let Some(ui) = ui {
+                                        if let Some(ui) = ui.as_deref_mut() {
                                             record_hit_test_trace_for_selector(
                                                 &mut active.hit_test_trace,
                                                 ui,
@@ -7492,7 +7495,7 @@ impl UiDiagnosticsService {
         window: AppWindowId,
         bounds: Rect,
         scale_factor: f32,
-        ui: &UiTree<App>,
+        ui: &mut UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
         scene: &Scene,
     ) {
@@ -14717,8 +14720,8 @@ pub struct UiHitTestSnapshotV1 {
 }
 
 impl UiHitTestSnapshotV1 {
-    fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
-        let hit_test = ui.debug_hit_test(position);
+    fn from_tree(position: Point, ui: &mut UiTree<App>) -> Self {
+        let hit_test = ui.debug_hit_test_routing(position);
         let arbitration = ui.input_arbitration_snapshot();
         let layers = ui.debug_layers_in_paint_order();
         Self::from_hit_test_with_layers(position, hit_test, arbitration.focus_barrier_root, &layers)
@@ -16698,7 +16701,7 @@ fn record_ime_event_trace(
 
 fn hit_test_scope_roots_evidence(
     position: Point,
-    ui: &UiTree<App>,
+    ui: &mut UiTree<App>,
 ) -> (
     Option<NodeId>,
     Option<u64>,
@@ -16732,7 +16735,7 @@ fn hit_test_scope_roots_evidence(
 
 fn record_hit_test_trace_for_selector(
     trace: &mut Vec<UiHitTestTraceEntryV1>,
-    ui: &UiTree<App>,
+    ui: &mut UiTree<App>,
     element_runtime: Option<&ElementRuntime>,
     window: AppWindowId,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
@@ -16759,7 +16762,7 @@ fn record_hit_test_trace_for_selector(
 }
 
 fn build_hit_test_trace_entry_for_selector(
-    ui: &UiTree<App>,
+    ui: &mut UiTree<App>,
     element_runtime: Option<&ElementRuntime>,
     window: AppWindowId,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
@@ -18415,6 +18418,32 @@ fn pick_semantics_node_at<'a>(
     let index = SemanticsIndex::new(snapshot);
 
     let hit = ui.debug_hit_test(position).hit;
+    if let Some(hit) = hit {
+        let mut cur = Some(hit.data().as_ffi());
+        while let Some(id) = cur {
+            if index.is_selectable(id)
+                && let Some(node) = index.by_id.get(&id).copied()
+            {
+                return Some(node);
+            }
+            cur = index
+                .by_id
+                .get(&id)
+                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+        }
+    }
+
+    pick_semantics_node_by_bounds(snapshot, position)
+}
+
+fn pick_semantics_node_at_routing<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    ui: &mut UiTree<App>,
+    position: Point,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+
+    let hit = ui.debug_hit_test_routing(position).hit;
     if let Some(hit) = hit {
         let mut cur = Some(hit.data().as_ffi());
         while let Some(id) = cur {

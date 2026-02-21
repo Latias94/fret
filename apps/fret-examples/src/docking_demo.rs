@@ -540,15 +540,15 @@ impl WinitAppDriver for DockingDemoDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
 
-        let semantics_snapshot = state.ui.semantics_snapshot();
+        let semantics_snapshot = state.ui.semantics_snapshot_arc();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             svc.drive_script_for_window(
                 app,
                 window,
                 bounds,
                 scale_factor,
-                Some(&state.ui),
-                semantics_snapshot,
+                Some(&mut state.ui),
+                semantics_snapshot.as_deref(),
             )
         });
 
@@ -618,7 +618,7 @@ impl WinitAppDriver for DockingDemoDriver {
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
+                &mut state.ui,
                 element_runtime,
                 scene,
             );

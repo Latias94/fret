@@ -3534,7 +3534,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
         // VirtualList) have their realized item subtrees available for hit-testing.
-        let semantics_snapshot = state.ui.semantics_snapshot();
+        let semantics_snapshot = state.ui.semantics_snapshot_arc();
         let (drive, wants_quit) = app.with_global_mut_untracked(
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
@@ -3544,8 +3544,8 @@ impl WinitAppDriver for UiGalleryDriver {
                     window,
                     bounds,
                     scale_factor,
-                    Some(&state.ui),
-                    semantics_snapshot,
+                    Some(&mut state.ui),
+                    semantics_snapshot.as_deref(),
                 );
                 (drive, wants_quit)
             },
@@ -3622,15 +3622,15 @@ impl WinitAppDriver for UiGalleryDriver {
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.record_snapshot(
-                    app,
-                    window,
-                    bounds,
-                    scale_factor,
-                    &state.ui,
-                    element_runtime,
-                    scene,
-                );
+	                svc.record_snapshot(
+	                    app,
+	                    window,
+	                    bounds,
+	                    scale_factor,
+	                    &mut state.ui,
+	                    element_runtime,
+	                    scene,
+	                );
                 let _ = svc.maybe_dump_if_triggered();
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));

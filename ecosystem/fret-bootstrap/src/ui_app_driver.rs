@@ -2129,7 +2129,7 @@ fn ui_app_render<S>(
         //
         // The injected events will typically affect the *next* frame; the diagnostics recorder
         // below captures the current frame state.
-        let semantics_snapshot = state.ui.semantics_snapshot();
+        let semantics_snapshot = state.ui.semantics_snapshot_arc();
         #[cfg(feature = "tracing")]
         let diag_span = tracing::info_span!("fret.ui.diagnostics.drive_script");
         #[cfg(feature = "tracing")]
@@ -2140,8 +2140,8 @@ fn ui_app_render<S>(
                 window,
                 bounds,
                 scale_factor,
-                Some(&state.ui),
-                semantics_snapshot,
+                Some(&mut state.ui),
+                semantics_snapshot.as_deref(),
             )
         });
         for effect in drive.effects {
@@ -2175,7 +2175,7 @@ fn ui_app_render<S>(
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
+                &mut state.ui,
                 element_runtime,
                 scene,
             );
