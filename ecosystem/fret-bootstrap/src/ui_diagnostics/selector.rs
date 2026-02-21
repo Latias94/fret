@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use fret_core::{AppWindowId, NodeId, SemanticsRole};
 use fret_ui::elements::ElementRuntime;
+use slotmap::Key as _;
 
 use super::{UiDiagnosticsConfig, UiRoleAndNameV1, UiSelectorV1, UiSemanticsNodeV1};
 
@@ -211,7 +212,7 @@ impl<'a> SemanticsIndex<'a> {
         true
     }
 
-    fn is_descendant_of_or_self(&self, mut id: u64, ancestor: u64) -> bool {
+    pub(super) fn is_descendant_of_or_self(&self, mut id: u64, ancestor: u64) -> bool {
         if id == ancestor {
             return true;
         }
@@ -228,7 +229,7 @@ impl<'a> SemanticsIndex<'a> {
     }
 
     /// Match `ancestors` (outermost -> innermost) as an ordered subsequence along the parent chain.
-    fn ancestors_match_subsequence(
+    pub(super) fn ancestors_match_subsequence(
         &self,
         start_parent: Option<NodeId>,
         ancestors: &[(SemanticsRole, &str)],

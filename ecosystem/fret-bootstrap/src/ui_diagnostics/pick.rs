@@ -1,6 +1,7 @@
 use fret_app::App;
 use fret_core::Point;
 use fret_ui::UiTree;
+use slotmap::Key as _;
 
 pub(super) fn pick_best_match<'a>(
     nodes: impl Iterator<Item = &'a fret_core::SemanticsNode>,

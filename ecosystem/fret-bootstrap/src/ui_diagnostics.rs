@@ -53,7 +53,7 @@ pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at, pick_semantics_node_at_routing};
 
 mod selector;
-pub(super) use selector::SemanticsIndex;
+use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
