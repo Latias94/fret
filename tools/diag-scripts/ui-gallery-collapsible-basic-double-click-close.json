@@ -68,6 +68,17 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-content" },
+        "min_w_px": 120.0,
+        "min_h_px": 24.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "capture_bundle",
       "label": "ui-gallery-collapsible-basic-double-click-close"
     }
