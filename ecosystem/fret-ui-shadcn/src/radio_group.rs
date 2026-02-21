@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextLineHeightPolicy,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -63,6 +63,7 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
         size: px,
         weight: FontWeight::NORMAL,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }

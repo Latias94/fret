@@ -332,8 +332,8 @@ mod tests {
     use super::*;
     use fret_core::{
         PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Px, Size, SvgId,
-        SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextOverflow, TextService,
-        TextWrap,
+        SvgService, TextBlobId, TextConstraints, TextInput, TextLineHeightPolicy, TextMetrics,
+        TextOverflow, TextService, TextWrap,
     };
 
     #[test]
@@ -344,6 +344,7 @@ mod tests {
         };
         let style_b = TextStyle {
             line_height: Some(Px(22.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
             ..TextStyle::default()
         };
 
@@ -567,6 +568,8 @@ mod tests {
             origin: fret_core::Point::new(Px(0.0), Px(0.0)),
             text: prepared.blob,
             paint: fret_core::Color::TRANSPARENT.into(),
+            outline: None,
+            shadow: None,
         }];
 
         cache.begin_frame(); // frame 2

@@ -6,7 +6,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, Edges, Event, FontId, FontWeight, FrameId, KeyCode, Modifiers, MouseButton, Point,
     PointerEvent, PointerType, Px, Rect, SemanticsRole, SemanticsSnapshot, Size as CoreSize,
-    TextOverflow, TextStyle, TextWrap,
+    TextLineHeightPolicy, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{
@@ -172,6 +172,7 @@ fn shadcn_text_style(size: Px, line_height: Px, weight: FontWeight) -> TextStyle
         weight,
         slant: Default::default(),
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }

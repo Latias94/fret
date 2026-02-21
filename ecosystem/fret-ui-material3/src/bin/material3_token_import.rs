@@ -1410,6 +1410,11 @@ fn emit_inject_sys_typescale(out: &mut String, defs: Vec<&TokenDef>) {
     writeln!(out, "            weight: FontWeight(role.weight),").ok();
     writeln!(out, "            slant: TextSlant::Normal,").ok();
     writeln!(out, "            line_height: Some(line_height_px),").ok();
+    writeln!(
+        out,
+        "            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,"
+    )
+    .ok();
     writeln!(out, "            letter_spacing_em: Some(tracking_em),").ok();
     writeln!(out, "        }});").ok();
     writeln!(out, "    }}").ok();
