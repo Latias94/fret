@@ -127,8 +127,33 @@ impl ScrollHandle {
             Px(viewport.width.0.max(0.0)),
             Px(viewport.height.0.max(0.0)),
         );
+        let mut changed = false;
         if state.viewport != next {
             state.viewport = next;
+            changed = true;
+        }
+
+        let clamped = {
+            let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+            let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+            let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+            let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+            let x = state.offset.x.0.max(0.0);
+            let y = state.offset.y.0.max(0.0);
+            Point::new(
+                Px(if clamp_x { x.min(max_x) } else { x }),
+                Px(if clamp_y { y.min(max_y) } else { y }),
+            )
+        };
+        if (state.offset.x.0 - clamped.x.0).abs() > 0.01
+            || (state.offset.y.0 - clamped.y.0).abs() > 0.01
+        {
+            state.offset = clamped;
+            changed = true;
+        }
+
+        if changed {
             state.revision = state.revision.saturating_add(1);
         }
     }
@@ -143,6 +168,17 @@ impl ScrollHandle {
             Px(viewport.width.0.max(0.0)),
             Px(viewport.height.0.max(0.0)),
         );
+        let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+        let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+        let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+        let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+        let x = state.offset.x.0.max(0.0);
+        let y = state.offset.y.0.max(0.0);
+        state.offset = Point::new(
+            Px(if clamp_x { x.min(max_x) } else { x }),
+            Px(if clamp_y { y.min(max_y) } else { y }),
+        );
     }
 
     pub fn content_size(&self) -> Size {
@@ -152,8 +188,33 @@ impl ScrollHandle {
     pub fn set_content_size(&self, content: Size) {
         let mut state = self.state.borrow_mut();
         let next = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+        let mut changed = false;
         if state.content != next {
             state.content = next;
+            changed = true;
+        }
+
+        let clamped = {
+            let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+            let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+            let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+            let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+            let x = state.offset.x.0.max(0.0);
+            let y = state.offset.y.0.max(0.0);
+            Point::new(
+                Px(if clamp_x { x.min(max_x) } else { x }),
+                Px(if clamp_y { y.min(max_y) } else { y }),
+            )
+        };
+        if (state.offset.x.0 - clamped.x.0).abs() > 0.01
+            || (state.offset.y.0 - clamped.y.0).abs() > 0.01
+        {
+            state.offset = clamped;
+            changed = true;
+        }
+
+        if changed {
             state.revision = state.revision.saturating_add(1);
         }
     }
@@ -165,6 +226,17 @@ impl ScrollHandle {
     pub(crate) fn set_content_size_internal(&self, content: Size) {
         let mut state = self.state.borrow_mut();
         state.content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+        let max_x = (state.content.width.0 - state.viewport.width.0).max(0.0);
+        let max_y = (state.content.height.0 - state.viewport.height.0).max(0.0);
+        let clamp_x = state.viewport.width.0 > 0.0 && state.content.width.0 > 0.0;
+        let clamp_y = state.viewport.height.0 > 0.0 && state.content.height.0 > 0.0;
+
+        let x = state.offset.x.0.max(0.0);
+        let y = state.offset.y.0.max(0.0);
+        state.offset = Point::new(
+            Px(if clamp_x { x.min(max_x) } else { x }),
+            Px(if clamp_y { y.min(max_y) } else { y }),
+        );
     }
 
     pub fn scroll_to_range_y(&self, start_y: Px, end_y: Px, strategy: ScrollStrategy) {
@@ -304,6 +376,28 @@ mod tests {
 
         handle.set_offset(Point::new(Px(-5.0), Px(999.0)));
         assert_eq!(handle.offset(), Point::new(Px(0.0), Px(20.0)));
+    }
+
+    #[test]
+    fn scroll_handle_clamps_offset_when_content_shrinks_via_set_content_size() {
+        let handle = ScrollHandle::default();
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+        handle.set_offset(Point::new(Px(0.0), Px(90.0)));
+
+        handle.set_content_size(Size::new(Px(10.0), Px(50.0)));
+        assert_eq!(handle.offset(), Point::new(Px(0.0), Px(40.0)));
+    }
+
+    #[test]
+    fn scroll_handle_clamps_offset_when_viewport_grows_via_set_viewport_size() {
+        let handle = ScrollHandle::default();
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+        handle.set_offset(Point::new(Px(0.0), Px(90.0)));
+
+        handle.set_viewport_size(Size::new(Px(10.0), Px(50.0)));
+        assert_eq!(handle.offset(), Point::new(Px(0.0), Px(50.0)));
     }
 
     #[test]
