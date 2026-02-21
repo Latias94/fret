@@ -84,6 +84,7 @@ What ships now (Phase 1 subset):
   - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
 - For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
+  - Supports both v1 inline semantics (`debug.semantics.nodes`) and v2 table semantics (`tables.semantics.entries`).
 - When no explicit selector is provided, `diag slice` uses `bundle.index.json` (when present) to pick a reasonable default
   snapshot for the bounded-parse attempt (last non-warmup snapshot with resolved semantics in the first window, or the best fallback).
   - If `test_id_bloom_hex` exists, `diag slice --test-id X` prefers a snapshot whose bloom filter may contain `X`.

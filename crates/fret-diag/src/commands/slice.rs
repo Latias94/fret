@@ -7,7 +7,10 @@ use crate::json_bundle::{
 use crate::test_id_bloom::TestIdBloomV1;
 
 use super::slice_payload::build_test_id_slice_payload_from_snapshot_and_nodes;
-use super::slice_streaming::try_build_test_id_slice_payload_streaming_inline;
+use super::slice_streaming::{
+    try_build_test_id_slice_payload_streaming_inline,
+    try_build_test_id_slice_payload_streaming_table,
+};
 
 pub(crate) fn build_test_id_slice_payload_from_bundle(
     bundle_path: &Path,
@@ -136,6 +139,7 @@ fn resolve_bundle_json_path_or_latest(
 struct BundleIndexSnapshotMatch {
     has_semantics: bool,
     semantics_source: Option<String>,
+    semantics_fingerprint: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +148,7 @@ struct BundleIndexSnapshotSelection {
     frame_id: Option<u64>,
     window_snapshot_seq: Option<u64>,
     semantics_source: Option<String>,
+    semantics_fingerprint: Option<u64>,
 }
 
 fn try_read_bundle_index(bundle_path: &Path) -> Option<serde_json::Value> {
@@ -195,9 +200,11 @@ fn find_snapshot_in_bundle_index(
                 .get("semantics_source")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
+            let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
             return Some(BundleIndexSnapshotMatch {
                 has_semantics,
                 semantics_source,
+                semantics_fingerprint,
             });
         }
     }
@@ -250,12 +257,14 @@ fn pick_default_snapshot_in_bundle_index(
             let is_inline = semantics_source.as_deref() == Some("inline");
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
             let window_snapshot_seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+            let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
 
             let sel = BundleIndexSnapshotSelection {
                 window: w_id,
                 frame_id,
                 window_snapshot_seq,
                 semantics_source,
+                semantics_fingerprint,
             };
 
             if !is_warmup {
@@ -495,23 +504,29 @@ pub(crate) fn cmd_slice(
     };
 
     let explicit_selector = frame_id.is_some() || window_snapshot_seq.is_some();
-    let (stream_frame_id, stream_window_snapshot_seq, stream_window_id, stream_semantics_source) =
-        if let Some(sel) = &index_default {
-            let (frame_id, window_snapshot_seq) = if sel.window_snapshot_seq.is_some() {
-                (None, sel.window_snapshot_seq)
-            } else {
-                (sel.frame_id, None)
-            };
-
-            (
-                frame_id,
-                window_snapshot_seq,
-                Some(sel.window),
-                sel.semantics_source.clone(),
-            )
+    let (
+        stream_frame_id,
+        stream_window_snapshot_seq,
+        stream_window_id,
+        mut stream_semantics_source,
+        mut stream_semantics_fingerprint,
+    ) = if let Some(sel) = &index_default {
+        let (frame_id, window_snapshot_seq) = if sel.window_snapshot_seq.is_some() {
+            (None, sel.window_snapshot_seq)
         } else {
-            (frame_id, window_snapshot_seq, window_id, None)
+            (sel.frame_id, None)
         };
+
+        (
+            frame_id,
+            window_snapshot_seq,
+            Some(sel.window),
+            sel.semantics_source.clone(),
+            sel.semantics_fingerprint,
+        )
+    } else {
+        (frame_id, window_snapshot_seq, window_id, None, None)
+    };
 
     let mut allow_streaming = explicit_selector || index_default.is_some();
     if allow_streaming && explicit_selector {
@@ -536,17 +551,22 @@ pub(crate) fn cmd_slice(
                     "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
                 ));
             }
-            if let Some(source) = m.semantics_source.as_deref() {
-                if source != "inline" {
-                    allow_streaming = false;
-                }
+            let source = m.semantics_source.as_deref().unwrap_or("none");
+            if source != "inline" && source != "table" {
+                allow_streaming = false;
+            }
+            if stream_semantics_source.is_none() {
+                stream_semantics_source = m.semantics_source;
+            }
+            if stream_semantics_fingerprint.is_none() {
+                stream_semantics_fingerprint = m.semantics_fingerprint;
             }
         }
     }
 
     if allow_streaming && !explicit_selector {
         if let Some(source) = stream_semantics_source.as_deref() {
-            if source != "inline" {
+            if source != "inline" && source != "table" {
                 allow_streaming = false;
             }
         }
@@ -572,16 +592,32 @@ pub(crate) fn cmd_slice(
     };
 
     let payload = if allow_streaming {
-        if let Some(payload) = try_build_test_id_slice_payload_streaming_inline(
-            &bundle_path,
-            warmup_frames,
-            test_id.as_str(),
-            stream_frame_id,
-            stream_window_snapshot_seq,
-            stream_window_id,
-            max_matches,
-            max_ancestors,
-        )? {
+        let streaming_res = if stream_semantics_source.as_deref() == Some("table") {
+            try_build_test_id_slice_payload_streaming_table(
+                &bundle_path,
+                warmup_frames,
+                test_id.as_str(),
+                stream_frame_id,
+                stream_window_snapshot_seq,
+                stream_window_id,
+                stream_semantics_fingerprint,
+                max_matches,
+                max_ancestors,
+            )?
+        } else {
+            try_build_test_id_slice_payload_streaming_inline(
+                &bundle_path,
+                warmup_frames,
+                test_id.as_str(),
+                stream_frame_id,
+                stream_window_snapshot_seq,
+                stream_window_id,
+                max_matches,
+                max_ancestors,
+            )?
+        };
+
+        if let Some(payload) = streaming_res {
             let should_fallback_to_find_match = !explicit_selector
                 && index_default.is_some()
                 && payload
