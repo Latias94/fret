@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 
 use crate::json_bundle::{
     SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
+    snapshot_semantics_nodes,
 };
 
 fn read_json_value(path: &Path) -> Option<Value> {
@@ -96,6 +97,8 @@ fn build_bundle_meta_payload_from_json(
     let mut total_snapshots: u64 = 0;
     let mut total_unique_test_ids: HashSet<String> = HashSet::new();
     let mut total_snapshots_with_semantics: u64 = 0;
+    let mut total_snapshots_with_inline_semantics: u64 = 0;
+    let mut total_snapshots_with_table_semantics: u64 = 0;
     let mut total_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
 
     for w in windows {
@@ -107,17 +110,44 @@ fn build_bundle_meta_payload_from_json(
         total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
 
         let mut window_snapshots_with_semantics: u64 = 0;
+        let mut window_snapshots_with_inline_semantics: u64 = 0;
+        let mut window_snapshots_with_table_semantics: u64 = 0;
         let mut window_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
         for s in snaps {
-            if semantics.nodes(s).is_some() {
+            let inline_nodes = snapshot_semantics_nodes(s).is_some();
+            if inline_nodes {
+                window_snapshots_with_inline_semantics =
+                    window_snapshots_with_inline_semantics.saturating_add(1);
+                total_snapshots_with_inline_semantics =
+                    total_snapshots_with_inline_semantics.saturating_add(1);
+            }
+
+            let resolved_nodes = semantics.nodes(s).is_some();
+            if resolved_nodes {
                 window_snapshots_with_semantics = window_snapshots_with_semantics.saturating_add(1);
                 total_snapshots_with_semantics = total_snapshots_with_semantics.saturating_add(1);
+                if !inline_nodes {
+                    window_snapshots_with_table_semantics =
+                        window_snapshots_with_table_semantics.saturating_add(1);
+                    total_snapshots_with_table_semantics =
+                        total_snapshots_with_table_semantics.saturating_add(1);
+                }
             }
             if let Some(fp) = s.get("semantics_fingerprint").and_then(|v| v.as_u64()) {
                 window_unique_semantics_fingerprints.insert(fp);
                 total_unique_semantics_fingerprints.insert(fp);
             }
         }
+
+        let mut window_semantics_table_entries_total: u64 = 0;
+        for e in semantics.table_entries() {
+            if e.get("window").and_then(|v| v.as_u64()) == Some(window_id) {
+                window_semantics_table_entries_total =
+                    window_semantics_table_entries_total.saturating_add(1);
+            }
+        }
+        let window_semantics_table_unique_keys_total =
+            semantics.table_unique_keys_total_for_window(window_id) as u64;
 
         let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
             snaps,
@@ -128,7 +158,11 @@ fn build_bundle_meta_payload_from_json(
                 "window": window_id,
                 "snapshots_total": snaps.len(),
                 "snapshots_with_semantics_total": window_snapshots_with_semantics,
+                "snapshots_with_inline_semantics_total": window_snapshots_with_inline_semantics,
+                "snapshots_with_table_semantics_total": window_snapshots_with_table_semantics,
                 "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
+                "semantics_table_entries_total": window_semantics_table_entries_total,
+                "semantics_table_unique_keys_total": window_semantics_table_unique_keys_total,
                 "considered_frame_id": null,
                 "considered_timestamp_unix_ms": null,
                 "semantics_nodes_total": 0,
@@ -172,7 +206,11 @@ fn build_bundle_meta_payload_from_json(
             "window": window_id,
             "snapshots_total": snaps.len(),
             "snapshots_with_semantics_total": window_snapshots_with_semantics,
+            "snapshots_with_inline_semantics_total": window_snapshots_with_inline_semantics,
+            "snapshots_with_table_semantics_total": window_snapshots_with_table_semantics,
             "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
+            "semantics_table_entries_total": window_semantics_table_entries_total,
+            "semantics_table_unique_keys_total": window_semantics_table_unique_keys_total,
             "considered_frame_id": frame_id,
             "considered_timestamp_unix_ms": ts,
             "semantics_nodes_total": semantics_nodes_total,
@@ -191,6 +229,10 @@ fn build_bundle_meta_payload_from_json(
         "snapshots_total": total_snapshots,
         "total_unique_test_ids": total_unique_test_ids.len(),
         "snapshots_with_semantics_total": total_snapshots_with_semantics,
+        "snapshots_with_inline_semantics_total": total_snapshots_with_inline_semantics,
+        "snapshots_with_table_semantics_total": total_snapshots_with_table_semantics,
+        "semantics_table_entries_total": semantics.table_entries_total(),
+        "semantics_table_unique_keys_total": semantics.table_unique_keys_total(),
         "unique_semantics_fingerprints_total": total_unique_semantics_fingerprints.len(),
         "windows": out_windows,
     }))
@@ -453,6 +495,16 @@ mod tests {
         assert_eq!(meta["snapshots_total"].as_u64(), Some(2));
         assert_eq!(meta["snapshots_with_semantics_total"].as_u64(), Some(2));
         assert_eq!(
+            meta["snapshots_with_inline_semantics_total"].as_u64(),
+            Some(0)
+        );
+        assert_eq!(
+            meta["snapshots_with_table_semantics_total"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(meta["semantics_table_entries_total"].as_u64(), Some(1));
+        assert_eq!(meta["semantics_table_unique_keys_total"].as_u64(), Some(1));
+        assert_eq!(
             meta["unique_semantics_fingerprints_total"].as_u64(),
             Some(1)
         );
@@ -463,6 +515,22 @@ mod tests {
         assert_eq!(windows[0]["considered_frame_id"].as_u64(), Some(1));
         assert_eq!(windows[0]["semantics_nodes_total"].as_u64(), Some(2));
         assert_eq!(windows[0]["unique_test_ids_total"].as_u64(), Some(2));
+        assert_eq!(
+            windows[0]["snapshots_with_inline_semantics_total"].as_u64(),
+            Some(0)
+        );
+        assert_eq!(
+            windows[0]["snapshots_with_table_semantics_total"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(
+            windows[0]["semantics_table_entries_total"].as_u64(),
+            Some(1)
+        );
+        assert_eq!(
+            windows[0]["semantics_table_unique_keys_total"].as_u64(),
+            Some(1)
+        );
     }
 
     #[test]

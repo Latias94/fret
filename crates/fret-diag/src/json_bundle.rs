@@ -142,6 +142,25 @@ impl<'a> SemanticsResolver<'a> {
             .or_else(|| entries.get(idx).and_then(|e| e.get("semantic")))
     }
 
+    pub(crate) fn table_entries(&self) -> &'a [Value] {
+        self.entries.unwrap_or(&[])
+    }
+
+    pub(crate) fn table_entries_total(&self) -> usize {
+        self.table_entries().len()
+    }
+
+    pub(crate) fn table_unique_keys_total(&self) -> usize {
+        self.by_window_fp.len()
+    }
+
+    pub(crate) fn table_unique_keys_total_for_window(&self, window: u64) -> usize {
+        self.by_window_fp
+            .keys()
+            .filter(|(w, _fp)| *w == window)
+            .count()
+    }
+
     pub(crate) fn nodes(&self, snapshot: &'a Value) -> Option<&'a [Value]> {
         if let Some(nodes) = snapshot_semantics_nodes(snapshot) {
             return Some(nodes);
