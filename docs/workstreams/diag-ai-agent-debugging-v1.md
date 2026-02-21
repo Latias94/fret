@@ -55,6 +55,7 @@ Add/standardize a small set of structured summaries that tools (and agents) can 
 Deliver an “AI packet” command that writes a directory like:
 
 - `script.result.json` (or equivalent failure summary)
+- `anchors.json` (optional): resolved selectors for failure anchors (e.g. failed `step_index` → `window` + `frame_id`/`window_snapshot_seq`)
 - `bundle.meta.json`
 - `bundle.index.json`
 - `test_ids.index.json`

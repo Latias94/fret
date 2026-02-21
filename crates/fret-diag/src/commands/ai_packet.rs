@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 struct AiPacketBudgetConfig {
@@ -37,6 +38,14 @@ struct AiPacketBudgetReport {
     reason_code: Option<String>,
     dropped_files: Vec<String>,
     clipped_files: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct AiPacketAnchorsV1 {
+    failed_step_index: Option<u32>,
+    failed_window: Option<u64>,
+    failed_frame_id: Option<u64>,
+    failed_window_snapshot_seq: Option<u64>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -140,6 +149,8 @@ pub(crate) fn cmd_ai_packet(
         "manifest.json",
     )?;
 
+    write_packet_anchors_if_possible(&packet_dir)?;
+
     if include_triage {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
         let report = bundle_stats_from_path(
@@ -203,6 +214,91 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
     });
     let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());
     std::fs::write(dir.join("ai.packet.json"), bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn write_packet_anchors_if_possible(dir: &Path) -> Result<(), String> {
+    let script_path = dir.join("script.result.json");
+    let index_path = dir.join("bundle.index.json");
+    if !script_path.is_file() || !index_path.is_file() {
+        return Ok(());
+    }
+
+    let script = match read_json(&script_path) {
+        Ok(v) => v,
+        Err(_) => return Ok(()),
+    };
+    if script.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return Ok(());
+    }
+
+    let stage = script
+        .get("stage")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let failed_step_index = if stage == "failed" {
+        script
+            .get("step_index")
+            .and_then(|v| v.as_u64())
+            .map(|v| v.min(u32::MAX as u64) as u32)
+    } else {
+        None
+    };
+
+    let idx = match read_json(&index_path) {
+        Ok(v) => v,
+        Err(_) => return Ok(()),
+    };
+    if idx.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
+        return Ok(());
+    }
+
+    let mut anchors = AiPacketAnchorsV1 {
+        failed_step_index,
+        failed_window: None,
+        failed_frame_id: None,
+        failed_window_snapshot_seq: None,
+    };
+
+    if let Some(step_index) = failed_step_index {
+        if let Some(steps) = idx
+            .get("script")
+            .and_then(|v| v.get("steps"))
+            .and_then(|v| v.as_array())
+        {
+            if let Some(step) = steps.iter().find(|s| {
+                s.get("step_index")
+                    .and_then(|v| v.as_u64())
+                    .is_some_and(|v| v == step_index as u64)
+            }) {
+                anchors.failed_window = step.get("window").and_then(|v| v.as_u64());
+                anchors.failed_frame_id = step.get("frame_id").and_then(|v| v.as_u64());
+                anchors.failed_window_snapshot_seq =
+                    step.get("window_snapshot_seq").and_then(|v| v.as_u64());
+            }
+        }
+    }
+
+    let payload = serde_json::json!({
+        "kind": "ai_packet_anchors",
+        "schema_version": 1,
+        "failed_step_index": anchors.failed_step_index,
+        "failed_snapshot": if anchors.failed_window.is_some()
+            || anchors.failed_frame_id.is_some()
+            || anchors.failed_window_snapshot_seq.is_some()
+        {
+            serde_json::json!({
+                "window": anchors.failed_window,
+                "frame_id": anchors.failed_frame_id,
+                "window_snapshot_seq": anchors.failed_window_snapshot_seq,
+            })
+        } else {
+            serde_json::Value::Null
+        },
+    });
+
+    let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());
+    std::fs::write(dir.join("anchors.json"), bytes).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -325,6 +421,26 @@ fn clip_bundle_index_if_needed(
         return Ok(());
     }
 
+    let mut required_by_window: HashMap<u64, (HashSet<u64>, HashSet<u64>)> = HashMap::new();
+    if let Some(steps) = v
+        .get("script")
+        .and_then(|v| v.get("steps"))
+        .and_then(|v| v.as_array())
+    {
+        for step in steps {
+            let Some(window) = step.get("window").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+            let entry = required_by_window.entry(window).or_default();
+            if let Some(seq) = step.get("window_snapshot_seq").and_then(|v| v.as_u64()) {
+                entry.0.insert(seq);
+            }
+            if let Some(frame_id) = step.get("frame_id").and_then(|v| v.as_u64()) {
+                entry.1.insert(frame_id);
+            }
+        }
+    }
+
     let mut max_keep: usize = v
         .get("windows")
         .and_then(|v| v.as_array())
@@ -350,11 +466,46 @@ fn clip_bundle_index_if_needed(
                 .ok_or_else(|| "invalid bundle.index.json: missing windows".to_string())?;
 
             for w in windows.iter_mut() {
+                let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
                 if let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut()) {
                     if snaps.len() > max_keep {
-                        let start = snaps.len().saturating_sub(max_keep);
-                        let kept: Vec<serde_json::Value> = snaps.drain(start..).collect();
-                        *snaps = kept;
+                        let mut required_seq: Option<&HashSet<u64>> = None;
+                        let mut required_frame: Option<&HashSet<u64>> = None;
+                        if let Some((seq, frame)) = required_by_window.get(&window_id) {
+                            required_seq = Some(seq);
+                            required_frame = Some(frame);
+                        }
+
+                        let mut old: Vec<serde_json::Value> = Vec::new();
+                        std::mem::swap(snaps, &mut old);
+
+                        let len = old.len();
+                        let start = len.saturating_sub(max_keep);
+                        let mut keep: Vec<bool> = vec![false; len];
+                        for i in start..len {
+                            keep[i] = true;
+                        }
+
+                        if required_seq.is_some() || required_frame.is_some() {
+                            for (i, s) in old.iter().enumerate() {
+                                let seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+                                let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+                                let required = seq.is_some_and(|v| {
+                                    required_seq.is_some_and(|set| set.contains(&v))
+                                }) || frame_id.is_some_and(|v| {
+                                    required_frame.is_some_and(|set| set.contains(&v))
+                                });
+                                if required {
+                                    keep[i] = true;
+                                }
+                            }
+                        }
+
+                        *snaps = old
+                            .into_iter()
+                            .enumerate()
+                            .filter_map(|(i, v)| keep.get(i).copied().unwrap_or(false).then_some(v))
+                            .collect();
                     }
                 }
 
