@@ -887,66 +887,7 @@ impl UiDiagnosticsService {
         self.maybe_migrate_single_active_script_to_window(app, window);
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
-            let mut output = UiScriptFrameOutput::default();
-            output.request_redraw = self.cfg.script_keepalive
-                || devtools_request_redraw
-                || !self.active_scripts.is_empty();
-
-            let heartbeat = if self.active_scripts.len() == 1 {
-                self.active_scripts
-                    .iter()
-                    .next()
-                    .and_then(|(&active_window, active)| {
-                        let now_unix_ms = unix_ms_now();
-                        let should_write = active.last_reported_unix_ms == 0
-                            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000;
-                        should_write.then_some((
-                            active_window,
-                            active.run_id,
-                            active.next_step.min(u32::MAX as usize) as u32,
-                            now_unix_ms,
-                        ))
-                    })
-            } else {
-                None
-            };
-
-            if let Some((active_window, run_id, step_index, now_unix_ms)) = heartbeat {
-                self.write_script_result(UiScriptResultV1 {
-                    schema_version: 1,
-                    run_id,
-                    updated_unix_ms: now_unix_ms,
-                    window: Some(active_window.data().as_ffi()),
-                    stage: UiScriptStageV1::Running,
-                    step_index: Some(step_index),
-                    reason_code: None,
-                    reason: None,
-                    evidence: None,
-                    last_bundle_dir: self
-                        .last_dump_dir
-                        .as_ref()
-                        .map(|p| display_path(&self.cfg.out_dir, p)),
-                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                });
-                if let Some(active) = self.active_scripts.get_mut(&active_window) {
-                    active.last_reported_unix_ms = now_unix_ms;
-                }
-            }
-
-            if !self.active_scripts.is_empty() {
-                let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
-                for other in windows {
-                    // Prefer a direct redraw request here. Some platforms/backends can treat
-                    // "script keepalive" effects as best-effort, which risks starving the
-                    // window that owns the active script (and therefore preventing wait timeouts
-                    // from ever elapsing).
-                    app.request_redraw(other);
-                    output.effects.push(Effect::Redraw(other));
-                    output.effects.push(Effect::RequestAnimationFrame(other));
-                }
-            }
-
-            return output;
+            return self.script_output_for_non_active_window(app, devtools_request_redraw);
         };
 
         let now_unix_ms = unix_ms_now();
