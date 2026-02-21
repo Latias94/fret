@@ -1449,6 +1449,36 @@ mod tests {
     }
 
     #[test]
+    fn none_ellipsis_truncates_single_line_and_respects_max_width() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(text, &base), constraints);
+
+        assert_eq!(wrapped.lines.len(), 1);
+        assert!(wrapped.kept_end < text.len());
+        assert!(
+            wrapped.lines[0].width <= 80.0 + 0.5,
+            "expected truncated line width to fit within constraints, got {}",
+            wrapped.lines[0].width
+        );
+    }
+
+    #[test]
     fn none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster() {
         use std::collections::HashSet;
         use unicode_segmentation::UnicodeSegmentation as _;

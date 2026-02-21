@@ -1,28 +1,30 @@
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
-    AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextAlign, TextBlobId,
-    TextConstraints, TextInputRef, TextMetrics, TextOverflow, TextSlant, TextSpan, TextStyle,
-    TextWrap, geometry::Px,
+    AttributedText, CaretAffinity, HitTestResult, Point, Rect, TextBlobId, TextConstraints,
+    TextInputRef, TextMetrics, TextSpan, TextStyle, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
-    sync::{Arc, OnceLock},
+    sync::Arc,
 };
 
-use parley::fontique::FamilyId as ParleyFamilyId;
-use parley::fontique::GenericFamily as ParleyGenericFamily;
-use read_fonts::tables::name::NameId;
-use read_fonts::{FontRef, TableProvider as _};
+use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
+use fret_render_text::decorations::{TextDecorationMetricsPx, decorations_for_lines};
 
+#[cfg(test)]
+use fret_render_text::cache_keys::spans_paint_fingerprint;
+pub use fret_render_text::decorations::{TextDecoration, TextDecorationKind};
 pub(crate) use fret_render_text::effective_text_scale_factor;
-use fret_render_text::fallback_policy::{
-    TextFallbackPolicyV1, common_fallback_stack_suffix_max_families, default_monospace_candidates,
-    default_sans_candidates, default_serif_candidates, first_available_family_id,
-};
-use fret_render_text::geometry::{
-    metrics_for_uniform_lines, metrics_from_wrapped_lines, shaped_line_visual_x_bounds_px,
+use fret_render_text::fallback_policy::TextFallbackPolicyV1;
+use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
+use fret_render_text::font_stack::GenericFamilyInjectionState;
+use fret_render_text::font_trace::{FontTraceFamilyResolved, FontTraceState};
+use fret_render_text::measure::TextMeasureCaches;
+
+use fret_render_text::spans::{
+    paint_span_for_text_range, resolve_spans_for_text, sanitize_spans_for_text,
 };
 pub use fret_render_text::{
     FontCatalogEntryMetadata, SystemFontRescanResult, SystemFontRescanSeed,
@@ -34,134 +36,6 @@ pub(crate) mod parley_shaper {
 
 pub(crate) mod wrapper {
     pub use fret_render_text::wrapper::*;
-}
-
-fn released_blob_cache_entries() -> usize {
-    static ENTRIES: OnceLock<usize> = OnceLock::new();
-    *ENTRIES.get_or_init(|| {
-        // Default: bounded on native builds. Retain recently released text blobs to reduce
-        // `Text::prepare` thrash when wrap widths oscillate (e.g. interactive resize jitter).
-        std::env::var("FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            // Allow disabling via env var (`0`).
-            .unwrap_or(default_released_blob_cache_entries())
-            .min(2048)
-    })
-}
-
-fn default_released_blob_cache_entries() -> usize {
-    // Keep wasm builds conservative; native builds get a bounded default to improve interactive
-    // resize and other width-jitter workloads.
-    #[cfg(target_arch = "wasm32")]
-    {
-        0
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        256
-    }
-}
-
-fn measure_shaping_cache_entries() -> usize {
-    static ENTRIES: OnceLock<usize> = OnceLock::new();
-    *ENTRIES.get_or_init(|| {
-        // Default: 4096 entries. This cache is the main defense against `TextService::measure`
-        // reshaping thrash when a layout pass touches many unique strings (common in editor
-        // surfaces) and when wrap widths churn during interactive resize.
-        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(4096)
-            .clamp(64, 65_536)
-    })
-}
-
-fn measure_shaping_cache_min_text_len_bytes() -> usize {
-    static MIN_BYTES: OnceLock<usize> = OnceLock::new();
-    *MIN_BYTES.get_or_init(|| {
-        // Default: cache only "meaningfully expensive" paragraphs (e.g. long editor lines).
-        //
-        // Short UI labels (menus/tabs/buttons) are typically cheap to shape, and caching every
-        // distinct label can bloat the cache and degrade cache locality across long-lived
-        // reuse-launch perf suites.
-        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(128)
-            .min(1_048_576)
-    })
-}
-
-fn font_trace_record_all() -> bool {
-    static FLAG: OnceLock<bool> = OnceLock::new();
-    *FLAG.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_ALL")
-            .ok()
-            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
-    })
-}
-
-fn font_trace_entries_limit() -> usize {
-    static LIMIT: OnceLock<usize> = OnceLock::new();
-    *LIMIT.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_ENTRIES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(64)
-            .min(4096)
-    })
-}
-
-fn font_trace_max_text_bytes() -> usize {
-    static LIMIT: OnceLock<usize> = OnceLock::new();
-    *LIMIT.get_or_init(|| {
-        std::env::var("FRET_TEXT_FONT_TRACE_MAX_TEXT_BYTES")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(256)
-            .clamp(16, 16 * 1024)
-    })
-}
-
-fn truncate_text_preview(text: &str, max_bytes: usize) -> String {
-    if max_bytes == 0 || text.len() <= max_bytes {
-        return text.to_string();
-    }
-
-    let mut end = max_bytes.min(text.len());
-    while end > 0 && !text.is_char_boundary(end) {
-        end = end.saturating_sub(1);
-    }
-    let mut out = text[..end].to_string();
-    out.push('…');
-    out
-}
-
-fn classify_trace_family(
-    requested: &fret_core::FontId,
-    family: &str,
-    common_fallback_lower: &HashSet<String>,
-) -> fret_core::RendererTextFontTraceFamilyClass {
-    let is_common = common_fallback_lower.contains(&family.trim().to_ascii_lowercase());
-    match requested {
-        fret_core::FontId::Family(name) => {
-            if name.eq_ignore_ascii_case(family) {
-                fret_core::RendererTextFontTraceFamilyClass::Requested
-            } else if is_common {
-                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
-            } else {
-                fret_core::RendererTextFontTraceFamilyClass::SystemFallback
-            }
-        }
-        _ => {
-            if is_common {
-                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
-            } else {
-                fret_core::RendererTextFontTraceFamilyClass::Unknown
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -193,23 +67,6 @@ pub struct TextBlob {
     ref_count: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TextDecorationKind {
-    Underline,
-    Strikethrough,
-}
-
-#[derive(Debug, Clone)]
-pub struct TextDecoration {
-    pub kind: TextDecorationKind,
-    /// Rect in the same coordinate space as `TextService::selection_rects` (y=0 at top of text box).
-    pub rect: Rect,
-    /// When present, uses `TextBlob.paint_palette[paint_span]` as the base color if no explicit override exists.
-    pub paint_span: Option<u16>,
-    /// Optional explicit decoration color override.
-    pub color: Option<fret_core::Color>,
-}
-
 #[derive(Debug, Clone)]
 pub struct TextShape {
     pub glyphs: Arc<[GlyphInstance]>,
@@ -232,188 +89,7 @@ pub(crate) struct TextFontFaceUsage {
     pub(crate) missing_glyphs: u32,
 }
 
-#[derive(Debug, Clone)]
-pub struct TextLine {
-    pub start: usize,
-    pub end: usize,
-    #[allow(dead_code)]
-    pub width: Px,
-    pub y_top: Px,
-    /// Baseline Y for this line (y=0 at top of text box).
-    pub y_baseline: Px,
-    pub height: Px,
-    pub ascent: Px,
-    pub descent: Px,
-    pub caret_stops: Vec<(usize, Px)>,
-    clusters: Arc<[fret_render_text::geometry::TextLineCluster]>,
-}
-
-impl fret_render_text::geometry::TextLineGeometry for TextLine {
-    fn start(&self) -> usize {
-        self.start
-    }
-
-    fn end(&self) -> usize {
-        self.end
-    }
-
-    fn y_top(&self) -> Px {
-        self.y_top
-    }
-
-    fn height(&self) -> Px {
-        self.height
-    }
-
-    fn caret_stops(&self) -> &[(usize, Px)] {
-        self.caret_stops.as_ref()
-    }
-
-    fn clusters(&self) -> &[fret_render_text::geometry::TextLineCluster] {
-        self.clusters.as_ref()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextBlobKey {
-    text: Arc<str>,
-    spans_shaping_key: u64,
-    spans_paint_key: u64,
-    backend: u8,
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    max_width_bits: Option<u32>,
-    wrap: TextWrap,
-    overflow: TextOverflow,
-    align: u8,
-    scale_bits: u32,
-}
-
-impl TextBlobKey {
-    fn new(
-        text: &str,
-        style: &TextStyle,
-        constraints: TextConstraints,
-        font_stack_key: u64,
-    ) -> Self {
-        let max_width_bits = match constraints.wrap {
-            // `TextWrap::None` does not change shaping results based on width unless we need to
-            // materialize an overflow policy (ellipsis) or align within a wider box.
-            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => match constraints
-                .align
-            {
-                TextAlign::Start => None,
-                TextAlign::Center | TextAlign::End => constraints.max_width.map(|w| w.0.to_bits()),
-            },
-            _ => constraints.max_width.map(|w| w.0.to_bits()),
-        };
-        Self {
-            text: Arc::<str>::from(text),
-            spans_shaping_key: 0,
-            spans_paint_key: 0,
-            backend: 0,
-            font: style.font.clone(),
-            font_stack_key,
-            size_bits: style.size.0.to_bits(),
-            weight: style.weight.0,
-            slant: match style.slant {
-                TextSlant::Normal => 0,
-                TextSlant::Italic => 1,
-                TextSlant::Oblique => 2,
-            },
-            line_height_bits: style.line_height.map(|px| px.0.to_bits()),
-            letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
-            max_width_bits,
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            align: match constraints.align {
-                TextAlign::Start => 0,
-                TextAlign::Center => 1,
-                TextAlign::End => 2,
-            },
-            scale_bits: constraints.scale_factor.to_bits(),
-        }
-    }
-
-    fn new_attributed(
-        rich: &AttributedText,
-        base_style: &TextStyle,
-        constraints: TextConstraints,
-        font_stack_key: u64,
-    ) -> Self {
-        let mut out = Self::new(rich.text.as_ref(), base_style, constraints, font_stack_key);
-        out.spans_shaping_key = spans_shaping_fingerprint(&rich.spans);
-        out.spans_paint_key = spans_paint_fingerprint(&rich.spans);
-        out
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextShapeKey {
-    text: Arc<str>,
-    spans_shaping_key: u64,
-    backend: u8,
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    max_width_bits: Option<u32>,
-    wrap: TextWrap,
-    overflow: TextOverflow,
-    align: u8,
-    scale_bits: u32,
-}
-
-impl TextShapeKey {
-    fn from_blob_key(key: &TextBlobKey) -> Self {
-        Self {
-            text: key.text.clone(),
-            spans_shaping_key: key.spans_shaping_key,
-            backend: key.backend,
-            font: key.font.clone(),
-            font_stack_key: key.font_stack_key,
-            size_bits: key.size_bits,
-            weight: key.weight,
-            slant: key.slant,
-            line_height_bits: key.line_height_bits,
-            letter_spacing_bits: key.letter_spacing_bits,
-            max_width_bits: key.max_width_bits,
-            wrap: key.wrap,
-            overflow: key.overflow,
-            align: key.align,
-            scale_bits: key.scale_bits,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct FontFaceKey {
-    font_data_id: u64,
-    face_index: u32,
-    variation_key: u64,
-    synthesis_embolden: bool,
-    /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
-    synthesis_skew_degrees: i8,
-}
-
-fn variation_key_from_normalized_coords(coords: &[i16]) -> u64 {
-    if coords.is_empty() {
-        return 0;
-    }
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.font_instance.v0".hash(&mut hasher);
-    coords.hash(&mut hasher);
-    let key = hasher.finish();
-    if key == 0 { 1 } else { key }
-}
+pub use fret_render_text::line_layout::TextLineLayout as TextLine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct GlyphKey {
@@ -1132,230 +808,6 @@ fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     out
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextMeasureKey {
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    max_width_bits: Option<u32>,
-    wrap: TextWrap,
-    overflow: TextOverflow,
-    scale_bits: u32,
-}
-
-impl TextMeasureKey {
-    fn new(style: &TextStyle, constraints: TextConstraints, font_stack_key: u64) -> Self {
-        let max_width_bits = match constraints.wrap {
-            // `TextWrap::None` does not change shaping results based on width; callers clamp or
-            // apply overflow policy at higher levels. Normalize away width so repeated measurements
-            // (e.g. layout engine intrinsic probes) can reuse cached metrics.
-            TextWrap::None => None,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
-                constraints.max_width.map(|w| w.0.to_bits())
-            }
-        };
-        Self {
-            font: style.font.clone(),
-            font_stack_key,
-            size_bits: style.size.0.to_bits(),
-            weight: style.weight.0,
-            slant: match style.slant {
-                TextSlant::Normal => 0,
-                TextSlant::Italic => 1,
-                TextSlant::Oblique => 2,
-            },
-            line_height_bits: style.line_height.map(|px| px.0.to_bits()),
-            letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
-            max_width_bits,
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            scale_bits: constraints.scale_factor.to_bits(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct TextMeasureEntry {
-    text_hash: u64,
-    spans_hash: u64,
-    text: Arc<str>,
-    spans: Option<Arc<[TextSpan]>>,
-    metrics: TextMetrics,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct TextMeasureShapingKey {
-    text_hash: u64,
-    text_len: usize,
-    spans_shaping_key: u64,
-    font: fret_core::FontId,
-    font_stack_key: u64,
-    size_bits: u32,
-    weight: u16,
-    slant: u8,
-    line_height_bits: Option<u32>,
-    letter_spacing_bits: Option<u32>,
-    scale_bits: u32,
-}
-
-#[derive(Debug, Clone)]
-struct TextMeasureShapingEntry {
-    text: Arc<str>,
-    spans: Option<Arc<[TextSpan]>>,
-    width_px: f32,
-    baseline_px: f32,
-    line_height_px: f32,
-    clusters: Arc<[parley_shaper::ShapedCluster]>,
-}
-
-fn hash_text(text: &str) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    text.hash(&mut hasher);
-    hasher.finish()
-}
-
-fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.spans.shaping.v1".hash(&mut hasher);
-    for s in spans {
-        s.len.hash(&mut hasher);
-        s.shaping.font.hash(&mut hasher);
-        s.shaping.weight.hash(&mut hasher);
-        s.shaping.slant.hash(&mut hasher);
-        s.shaping
-            .letter_spacing_em
-            .map(|v| v.to_bits())
-            .hash(&mut hasher);
-        features_shaping_fingerprint(&mut hasher, &s.shaping.features);
-        axes_shaping_fingerprint(&mut hasher, &s.shaping.axes);
-    }
-    hasher.finish()
-}
-
-fn features_shaping_fingerprint(
-    hasher: &mut std::collections::hash_map::DefaultHasher,
-    features: &[fret_core::TextFontFeatureSetting],
-) {
-    use std::collections::BTreeMap;
-
-    if features.is_empty() {
-        0u8.hash(hasher);
-        return;
-    }
-    1u8.hash(hasher);
-
-    let mut by_tag: BTreeMap<u32, u16> = BTreeMap::new();
-    for feature in features {
-        let tag = feature.tag.trim();
-        if tag.is_empty() {
-            continue;
-        }
-        let bytes = tag.as_bytes();
-        if bytes.len() != 4 || !bytes.iter().all(u8::is_ascii) {
-            continue;
-        }
-
-        let tag_u32 = (bytes[0] as u32) << 24
-            | (bytes[1] as u32) << 16
-            | (bytes[2] as u32) << 8
-            | bytes[3] as u32;
-        let value = feature.value.min(u32::from(u16::MAX)) as u16;
-        by_tag.insert(tag_u32, value);
-    }
-
-    by_tag.len().hash(hasher);
-    for (tag, value) in by_tag {
-        tag.hash(hasher);
-        value.hash(hasher);
-    }
-}
-
-fn axes_shaping_fingerprint(
-    hasher: &mut std::collections::hash_map::DefaultHasher,
-    axes: &[fret_core::TextFontAxisSetting],
-) {
-    use std::collections::BTreeMap;
-
-    if axes.is_empty() {
-        0u8.hash(hasher);
-        return;
-    }
-    1u8.hash(hasher);
-
-    let mut by_tag: BTreeMap<u32, u32> = BTreeMap::new();
-    for axis in axes {
-        let tag = axis.tag.trim();
-        if tag.is_empty() || !axis.value.is_finite() {
-            continue;
-        }
-        let bytes = tag.as_bytes();
-        if bytes.len() != 4 {
-            continue;
-        }
-
-        let tag_u32 = (bytes[0] as u32) << 24
-            | (bytes[1] as u32) << 16
-            | (bytes[2] as u32) << 8
-            | bytes[3] as u32;
-        by_tag.insert(tag_u32, axis.value.to_bits());
-    }
-
-    by_tag.len().hash(hasher);
-    for (tag, bits) in by_tag {
-        tag.hash(hasher);
-        bits.hash(hasher);
-    }
-}
-
-fn spans_paint_fingerprint(spans: &[TextSpan]) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.spans.paint.v0".hash(&mut hasher);
-    for s in spans {
-        s.len.hash(&mut hasher);
-        paint_fingerprint_color(&mut hasher, s.paint.fg);
-        paint_fingerprint_color(&mut hasher, s.paint.bg);
-
-        match s.paint.underline.as_ref() {
-            None => 0u8.hash(&mut hasher),
-            Some(u) => {
-                1u8.hash(&mut hasher);
-                paint_fingerprint_color(&mut hasher, u.color);
-                std::mem::discriminant(&u.style).hash(&mut hasher);
-            }
-        }
-
-        match s.paint.strikethrough.as_ref() {
-            None => 0u8.hash(&mut hasher),
-            Some(st) => {
-                1u8.hash(&mut hasher);
-                paint_fingerprint_color(&mut hasher, st.color);
-                std::mem::discriminant(&st.style).hash(&mut hasher);
-            }
-        }
-    }
-    hasher.finish()
-}
-
-fn paint_fingerprint_color(
-    hasher: &mut std::collections::hash_map::DefaultHasher,
-    color: Option<fret_core::Color>,
-) {
-    match color {
-        None => 0u8.hash(hasher),
-        Some(c) => {
-            1u8.hash(hasher);
-            c.r.to_bits().hash(hasher);
-            c.g.to_bits().hash(hasher);
-            c.b.to_bits().hash(hasher);
-            c.a.to_bits().hash(hasher);
-        }
-    }
-}
-
 pub struct TextSystem {
     parley_shaper: crate::text::parley_shaper::ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
@@ -1363,7 +815,7 @@ pub struct TextSystem {
     font_db_revision: u64,
     fallback_policy: TextFallbackPolicyV1,
     quality: TextQualityState,
-    generic_injected_by_family: HashMap<ParleyGenericFamily, Vec<ParleyFamilyId>>,
+    generic_injections: GenericFamilyInjectionState,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1371,9 +823,7 @@ pub struct TextSystem {
     released_blob_lru: VecDeque<TextBlobId>,
     released_blob_set: HashSet<TextBlobId>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
-    measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
-    measure_shaping_cache: HashMap<TextMeasureShapingKey, TextMeasureShapingEntry>,
-    measure_shaping_fifo: VecDeque<TextMeasureShapingKey>,
+    measure: TextMeasureCaches,
 
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
@@ -1399,8 +849,7 @@ pub struct TextSystem {
 
     glyph_atlas_epoch: u64,
 
-    font_trace_active: bool,
-    font_trace_entries: VecDeque<fret_core::RendererTextFontTraceEntry>,
+    font_trace: FontTraceState,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1444,8 +893,7 @@ impl TextSystem {
     }
 
     pub fn begin_frame_diagnostics(&mut self) {
-        self.font_trace_active = true;
-        self.font_trace_entries.clear();
+        self.font_trace.begin_frame();
 
         self.perf_frame_cache_resets = 0;
         self.perf_frame_blob_cache_hits = 0;
@@ -1465,10 +913,7 @@ impl TextSystem {
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextFontTraceSnapshot {
-        fret_core::RendererTextFontTraceSnapshot {
-            frame_id,
-            entries: self.font_trace_entries.iter().cloned().collect(),
-        }
+        self.font_trace.snapshot(frame_id)
     }
 
     pub fn diagnostics_snapshot(
@@ -1485,7 +930,7 @@ impl TextSystem {
             blobs_live: self.blobs.len() as u64,
             blob_cache_entries: self.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
-            measure_cache_buckets: self.measure_cache.len() as u64,
+            measure_cache_buckets: self.measure.buckets_len() as u64,
             unwrapped_layout_cache_entries: 0,
             frame_unwrapped_layout_cache_hits: 0,
             frame_unwrapped_layout_cache_misses: 0,
@@ -1610,7 +1055,7 @@ impl TextSystem {
         //
         // This keeps selection/fallback behavior stable across rescan boundaries and prevents
         // stale injected FamilyIds from hanging around.
-        self.generic_injected_by_family.clear();
+        self.generic_injections.clear();
         let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
 
         self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1688,12 +1133,8 @@ impl TextSystem {
             TEXT_ATLAS_MAX_PAGES,
         );
 
-        let mut parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
-        let sans = first_available_family_id(&mut parley_shaper, default_sans_candidates());
-        let serif = first_available_family_id(&mut parley_shaper, default_serif_candidates());
-        let mono = first_available_family_id(&mut parley_shaper, default_monospace_candidates());
+        let parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
 
-        let measure_shaping_entries = measure_shaping_cache_entries();
         let fallback_policy = TextFallbackPolicyV1::new(&parley_shaper);
 
         let mut out = Self {
@@ -1704,7 +1145,7 @@ impl TextSystem {
             font_db_revision: 1,
             fallback_policy,
             quality: TextQualityState::new(TextQualitySettings::default()),
-            generic_injected_by_family: HashMap::new(),
+            generic_injections: GenericFamilyInjectionState::default(),
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1712,11 +1153,7 @@ impl TextSystem {
             released_blob_lru: VecDeque::new(),
             released_blob_set: HashSet::new(),
             shape_cache: HashMap::new(),
-            measure_cache: HashMap::new(),
-            // Pre-reserve to avoid HashMap rehash spikes on editor pages that touch thousands of
-            // unique text strings during a single resize/layout sequence.
-            measure_shaping_cache: HashMap::with_capacity(measure_shaping_entries.min(65_536)),
-            measure_shaping_fifo: VecDeque::with_capacity(measure_shaping_entries.min(65_536)),
+            measure: TextMeasureCaches::new(),
 
             mask_atlas,
             color_atlas,
@@ -1742,83 +1179,13 @@ impl TextSystem {
 
             glyph_atlas_epoch: 1,
 
-            font_trace_active: false,
-            font_trace_entries: VecDeque::new(),
+            font_trace: FontTraceState::default(),
         };
 
-        let _ = out.parley_shaper.set_common_fallback_stack_suffix(
-            out.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-        out.bootstrap_default_generic_families(sans, serif, mono);
+        let _ = out.apply_font_families_inner(&out.fallback_policy.font_family_config.clone());
         out.fallback_policy.recompute_key(&out.parley_shaper);
         out.recompute_font_stack_key();
         out
-    }
-
-    fn bootstrap_default_generic_families(
-        &mut self,
-        sans: Option<ParleyFamilyId>,
-        serif: Option<ParleyFamilyId>,
-        mono: Option<ParleyFamilyId>,
-    ) {
-        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            for family in &self.fallback_policy.common_fallback_candidates {
-                if let Some(id) = self.parley_shaper.resolve_family_id(family)
-                    && !fallback_ids.contains(&id)
-                {
-                    fallback_ids.push(id);
-                }
-            }
-        }
-
-        let _ = self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
-        let _ = self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
-    }
-
-    fn apply_generic_stack(
-        &mut self,
-        generic: ParleyGenericFamily,
-        primary: Option<ParleyFamilyId>,
-        fallbacks: &[ParleyFamilyId],
-    ) -> bool {
-        let mut injected: Vec<ParleyFamilyId> = Vec::new();
-        if let Some(id) = primary {
-            injected.push(id);
-        }
-        for &id in fallbacks {
-            if !injected.contains(&id) {
-                injected.push(id);
-            }
-        }
-
-        let prev_injected = self
-            .generic_injected_by_family
-            .get(&generic)
-            .cloned()
-            .unwrap_or_default();
-
-        let mut base = self.parley_shaper.generic_family_ids(generic);
-        if !prev_injected.is_empty() {
-            base.retain(|id| !prev_injected.contains(id));
-        }
-
-        let mut next: Vec<ParleyFamilyId> = Vec::new();
-        next.extend_from_slice(&injected);
-        for id in base {
-            if !next.contains(&id) {
-                next.push(id);
-            }
-        }
-
-        self.generic_injected_by_family.insert(generic, injected);
-        self.parley_shaper.set_generic_family_ids(generic, &next)
     }
 
     fn reset_caches_for_font_change(&mut self) {
@@ -1828,9 +1195,7 @@ impl TextSystem {
         self.blob_key_by_id.clear();
         self.clear_released_blob_cache();
         self.shape_cache.clear();
-        self.measure_cache.clear();
-        self.measure_shaping_cache.clear();
-        self.measure_shaping_fifo.clear();
+        self.measure.clear();
         self.mask_atlas.reset();
         self.color_atlas.reset();
         self.subpixel_atlas.reset();
@@ -1856,75 +1221,12 @@ impl TextSystem {
     }
 
     fn apply_font_families_inner(&mut self, config: &TextFontFamilyConfig) -> (bool, bool, bool) {
-        let prev_mode = self.fallback_policy.common_fallback_mode;
-
-        self.fallback_policy.font_family_config = config.clone();
-        self.fallback_policy.refresh_derived(&self.parley_shaper);
-        let mode_changed = self.fallback_policy.common_fallback_mode != prev_mode;
-
-        let pick_overrides = |shaper: &mut crate::text::parley_shaper::ParleyShaper,
-                              overrides: &[String],
-                              defaults: &'static [&'static str]| {
-            for candidate in overrides {
-                if let Some(id) = shaper.resolve_family_id(candidate) {
-                    return Some(id);
-                }
-            }
-            first_available_family_id(shaper, defaults)
-        };
-
-        let sans = pick_overrides(
+        fret_render_text::font_stack::apply_font_families_inner(
             &mut self.parley_shaper,
-            &config.ui_sans,
-            default_sans_candidates(),
-        );
-        let serif = pick_overrides(
-            &mut self.parley_shaper,
-            &config.ui_serif,
-            default_serif_candidates(),
-        );
-        let mono = pick_overrides(
-            &mut self.parley_shaper,
-            &config.ui_mono,
-            default_monospace_candidates(),
-        );
-
-        let mut resolved_common_fallback_suffix: Vec<String> = Vec::new();
-        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            let max = common_fallback_stack_suffix_max_families();
-            for family in &self.fallback_policy.common_fallback_candidates {
-                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                    let pushed = if !fallback_ids.contains(&id) {
-                        fallback_ids.push(id);
-                        true
-                    } else {
-                        false
-                    };
-                    if pushed && resolved_common_fallback_suffix.len() < max {
-                        resolved_common_fallback_suffix.push(family.clone());
-                    }
-                }
-            }
-        }
-
-        self.fallback_policy.common_fallback_stack_suffix =
-            resolved_common_fallback_suffix.join(", ");
-        let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(
-            self.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-
-        let mut changed = false;
-        changed |= self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
-        changed |= self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
-
-        (changed, suffix_changed, mode_changed)
+            &mut self.fallback_policy,
+            &mut self.generic_injections,
+            config,
+        )
     }
 
     fn recompute_font_stack_key(&mut self) {
@@ -2344,28 +1646,242 @@ impl TextSystem {
 
                 let mut glyphs: Vec<GlyphInstance> = Vec::new();
                 let mut face_usage: HashMap<FontFaceKey, (u32, u32)> = HashMap::new();
-                let mut missing_glyphs: u32 = 0;
                 let mut lines: Vec<TextLine> = Vec::new();
-                let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
-                let mut line_top_px = 0.0_f32;
 
-                let align_offset_px_for_line = |line_min_x_px: f32,
-                                                line_visual_width_px: f32|
-                 -> f32 {
-                    let container_width_px = constraints
-                        .max_width
-                        .map(|w| w.0 * scale)
-                        .unwrap_or_else(|| line_visual_width_px.max(0.0));
-                    let slack_px = (container_width_px - line_visual_width_px.max(0.0)).max(0.0);
-                    let target_left_px = match constraints.align {
-                        TextAlign::Start => 0.0,
-                        TextAlign::Center => slack_px * 0.5,
-                        TextAlign::End => slack_px,
-                    };
-                    target_left_px - line_min_x_px
+                let (metrics, missing_glyphs, first_line_caret_stops) = {
+                    let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(
+                        text.as_ref(),
+                        wrapped,
+                        constraints,
+                        scale,
+                        snap_vertical,
+                    );
+
+                    let metrics = prepared.metrics;
+                    let missing_glyphs = prepared.missing_glyphs;
+                    let first_line_caret_stops = prepared.first_line_caret_stops;
+
+                    lines.reserve(prepared.lines.len().max(1));
+                    for prepared_line in prepared.lines {
+                        lines.push(prepared_line.layout);
+
+                        for g in prepared_line.glyphs {
+                            let Ok(glyph_id) = u16::try_from(g.id) else {
+                                continue;
+                            };
+                            let font_data_id = g.font.data.id();
+                            let face_index = g.font.index;
+                            self.font_data_by_face
+                                .entry((font_data_id, face_index))
+                                .or_insert_with(|| g.font.clone());
+
+                            let variation_key =
+                                variation_key_from_normalized_coords(&g.normalized_coords);
+                            let synthesis_embolden = g.synthesis.embolden();
+                            let synthesis_skew_degrees = g
+                                .synthesis
+                                .skew()
+                                .unwrap_or(0.0)
+                                .clamp(i8::MIN as f32, i8::MAX as f32)
+                                as i8;
+
+                            let face_key = FontFaceKey {
+                                font_data_id,
+                                face_index,
+                                variation_key,
+                                synthesis_embolden,
+                                synthesis_skew_degrees,
+                            };
+                            if !g.normalized_coords.is_empty() {
+                                self.font_instance_coords_by_face
+                                    .entry(face_key)
+                                    .or_insert_with(|| g.normalized_coords.clone());
+                            }
+
+                            let usage = face_usage.entry(face_key).or_insert((0, 0));
+                            usage.0 = usage.0.saturating_add(1);
+                            if g.id == 0 {
+                                usage.1 = usage.1.saturating_add(1);
+                            }
+
+                            let (x, x_bin) = subpixel_bin_q4(g.x);
+                            let (y, y_bin) = subpixel_bin_y(g.y);
+
+                            let paint_span = resolved_spans.as_deref().and_then(|spans| {
+                                paint_span_for_text_range(spans, &g.text_range, g.is_rtl)
+                            });
+
+                            let size_bits = g.font_size.to_bits();
+                            let mut atlas_hit: Option<(GlyphKey, GlyphAtlasEntry)> = None;
+                            let color_key = GlyphKey {
+                                font: face_key,
+                                glyph_id: g.id,
+                                size_bits,
+                                x_bin,
+                                y_bin,
+                                kind: GlyphQuadKind::Color,
+                            };
+                            if let Some(entry) = self.color_atlas.get(color_key, epoch) {
+                                atlas_hit = Some((color_key, entry));
+                            } else {
+                                let subpixel_key = GlyphKey {
+                                    font: face_key,
+                                    glyph_id: g.id,
+                                    size_bits,
+                                    x_bin,
+                                    y_bin,
+                                    kind: GlyphQuadKind::Subpixel,
+                                };
+                                if let Some(entry) = self.subpixel_atlas.get(subpixel_key, epoch) {
+                                    atlas_hit = Some((subpixel_key, entry));
+                                } else {
+                                    let mask_key = GlyphKey {
+                                        font: face_key,
+                                        glyph_id: g.id,
+                                        size_bits,
+                                        x_bin,
+                                        y_bin,
+                                        kind: GlyphQuadKind::Mask,
+                                    };
+                                    if let Some(entry) = self.mask_atlas.get(mask_key, epoch) {
+                                        atlas_hit = Some((mask_key, entry));
+                                    }
+                                }
+                            }
+
+                            let (glyph_key, x0_px, y0_px, w_px, h_px) =
+                                if let Some((glyph_key, entry)) = atlas_hit {
+                                    (
+                                        glyph_key,
+                                        x as f32 + entry.placement_left as f32,
+                                        y as f32 - entry.placement_top as f32,
+                                        entry.w as f32,
+                                        entry.h as f32,
+                                    )
+                                } else {
+                                    let Some(font_ref) = parley::swash::FontRef::from_index(
+                                        g.font.data.data(),
+                                        g.font.index as usize,
+                                    ) else {
+                                        continue;
+                                    };
+
+                                    let mut scaler_builder = self
+                                        .parley_scale
+                                        .builder(font_ref)
+                                        .size(g.font_size.max(1.0))
+                                        .hint(false);
+                                    if !g.normalized_coords.is_empty() {
+                                        scaler_builder = scaler_builder
+                                            .normalized_coords(g.normalized_coords.iter());
+                                    }
+                                    let mut scaler = scaler_builder.build();
+
+                                    let offset_px = parley::swash::zeno::Vector::new(
+                                        subpixel_bin_as_float(x_bin),
+                                        subpixel_bin_as_float(y_bin),
+                                    );
+
+                                    let Some(image) = parley::swash::scale::Render::new(&[
+                                        parley::swash::scale::Source::ColorOutline(0),
+                                        parley::swash::scale::Source::ColorBitmap(
+                                            parley::swash::scale::StrikeWith::BestFit,
+                                        ),
+                                        parley::swash::scale::Source::Outline,
+                                    ])
+                                    .offset(offset_px)
+                                    .render(&mut scaler, glyph_id) else {
+                                        continue;
+                                    };
+
+                                    if image.placement.width == 0 || image.placement.height == 0 {
+                                        continue;
+                                    }
+
+                                    let placement = image.placement;
+                                    let (kind, bytes_per_pixel) = match image.content {
+                                        parley::swash::scale::image::Content::Mask => {
+                                            (GlyphQuadKind::Mask, 1)
+                                        }
+                                        parley::swash::scale::image::Content::Color => {
+                                            (GlyphQuadKind::Color, 4)
+                                        }
+                                        parley::swash::scale::image::Content::SubpixelMask => {
+                                            (GlyphQuadKind::Subpixel, 4)
+                                        }
+                                    };
+
+                                    let glyph_key = GlyphKey {
+                                        font: face_key,
+                                        glyph_id: g.id,
+                                        size_bits,
+                                        x_bin,
+                                        y_bin,
+                                        kind,
+                                    };
+
+                                    let data = image.data;
+                                    match kind {
+                                        GlyphQuadKind::Mask => {
+                                            let _ = self.mask_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                        GlyphQuadKind::Color => {
+                                            let _ = self.color_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                        GlyphQuadKind::Subpixel => {
+                                            let _ = self.subpixel_atlas.get_or_insert(
+                                                glyph_key,
+                                                placement.width,
+                                                placement.height,
+                                                placement.left,
+                                                placement.top,
+                                                bytes_per_pixel,
+                                                data,
+                                                epoch,
+                                            );
+                                        }
+                                    }
+
+                                    (
+                                        glyph_key,
+                                        x as f32 + placement.left as f32,
+                                        y as f32 - placement.top as f32,
+                                        placement.width as f32,
+                                        placement.height as f32,
+                                    )
+                                };
+
+                            glyphs.push(GlyphInstance {
+                                rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+                                paint_span,
+                                key: glyph_key,
+                            });
+                        }
+                    }
+
+                    (metrics, missing_glyphs, first_line_caret_stops)
                 };
 
-                let metrics = {
+                #[cfg(any())]
+                let _metrics_legacy = {
                     let kept_end = wrapped.kept_end;
 
                     let first_baseline_px = wrapped
@@ -2469,18 +1985,18 @@ impl TextSystem {
                             first_line_caret_stops = caret_stops.clone();
                         }
 
-                        lines.push(TextLine {
-                            start: range.start,
-                            end: range.end.min(kept_end),
-                            width: Px((line_visual_width_px / scale).max(0.0)),
-                            y_top: Px((line_top_px / scale).max(0.0)),
-                            y_baseline: Px((baseline_pos_px / scale).max(0.0)),
-                            height: Px(((line_height_px / scale).max(0.0)).max(1.0)),
-                            ascent: Px((line.ascent.max(0.0) / scale).max(0.0)),
-                            descent: Px((line.descent.max(0.0) / scale).max(0.0)),
+                        lines.push(TextLine::new(
+                            range.start,
+                            range.end.min(kept_end),
+                            Px((line_visual_width_px / scale).max(0.0)),
+                            Px((line_top_px / scale).max(0.0)),
+                            Px((baseline_pos_px / scale).max(0.0)),
+                            Px(((line_height_px / scale).max(0.0)).max(1.0)),
+                            Px((line.ascent.max(0.0) / scale).max(0.0)),
+                            Px((line.descent.max(0.0) / scale).max(0.0)),
                             caret_stops,
                             clusters,
-                        });
+                        ));
 
                         for g in line.glyphs {
                             let Ok(glyph_id) = u16::try_from(g.id) else {
@@ -3098,31 +2614,7 @@ impl TextSystem {
         constraints: TextConstraints,
         shape: &Arc<TextShape>,
     ) {
-        if !self.font_trace_active {
-            return;
-        }
-
-        let record_all = font_trace_record_all();
-        if !record_all && shape.missing_glyphs == 0 {
-            return;
-        }
-
-        let max_entries = font_trace_entries_limit();
-        if max_entries == 0 {
-            return;
-        }
-
-        let max_text_bytes = font_trace_max_text_bytes();
-        let text_preview = truncate_text_preview(text, max_text_bytes);
-
-        let mut common_fallback_lower: HashSet<String> = HashSet::new();
-        if self.fallback_policy.prefer_common_fallback() {
-            for f in &self.fallback_policy.common_fallback_candidates {
-                common_fallback_lower.insert(f.trim().to_ascii_lowercase());
-            }
-        }
-
-        let mut families: Vec<fret_core::RendererTextFontTraceFamilyUsage> =
+        let mut families: Vec<FontTraceFamilyResolved> =
             Vec::with_capacity(shape.font_faces.len().max(1));
         for usage in shape.font_faces.iter() {
             let family = self
@@ -3133,35 +2625,20 @@ impl TextSystem {
                         usage.font_data_id, usage.face_index
                     )
                 });
-
-            let class = classify_trace_family(&style.font, &family, &common_fallback_lower);
-
-            families.push(fret_core::RendererTextFontTraceFamilyUsage {
+            families.push(FontTraceFamilyResolved {
                 family,
                 glyphs: usage.glyphs,
                 missing_glyphs: usage.missing_glyphs,
-                class,
             });
         }
-
-        let entry = fret_core::RendererTextFontTraceEntry {
-            text_preview,
-            text_len_bytes: text.len().min(u32::MAX as usize) as u32,
-            font: style.font.clone(),
-            font_size: style.size,
-            scale_factor: constraints.scale_factor,
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            max_width: constraints.max_width,
-            locale_bcp47: self.fallback_policy.locale_bcp47.clone(),
-            missing_glyphs: shape.missing_glyphs,
+        self.font_trace.maybe_record(
+            text,
+            style,
+            constraints,
+            &self.fallback_policy,
+            shape.missing_glyphs,
             families,
-        };
-
-        self.font_trace_entries.push_back(entry);
-        while self.font_trace_entries.len() > max_entries {
-            self.font_trace_entries.pop_front();
-        }
+        );
     }
 
     fn decoration_metrics_for_shape(
@@ -3183,9 +2660,6 @@ impl TextSystem {
         let font_data = self
             .font_data_by_face
             .get(&(usage.font_data_id, usage.face_index))?;
-        let font_ref =
-            parley::swash::FontRef::from_index(font_data.data.data(), usage.face_index as usize)?;
-
         let coords: &[i16] = self
             .font_instance_coords_by_face
             .get(&face_key)
@@ -3193,23 +2667,12 @@ impl TextSystem {
             .unwrap_or(&[]);
 
         let ppem = style.size.0 * scale;
-        if !ppem.is_finite() || ppem <= 0.0 {
-            return None;
-        }
-
-        let m = font_ref.metrics(coords).scale(ppem);
-        if !m.underline_offset.is_finite()
-            || !m.strikeout_offset.is_finite()
-            || !m.stroke_size.is_finite()
-        {
-            return None;
-        }
-
-        Some(TextDecorationMetricsPx {
-            underline_offset_px: m.underline_offset,
-            strikeout_offset_px: m.strikeout_offset,
-            stroke_size_px: m.stroke_size,
-        })
+        fret_render_text::decorations::decoration_metrics_px_for_font_bytes(
+            font_data.data.data(),
+            usage.face_index,
+            coords,
+            ppem,
+        )
     }
 
     fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
@@ -3222,46 +2685,10 @@ impl TextSystem {
         }
 
         let font_data = self.font_data_by_face.get(&(font_data_id, face_index))?;
-        let face = FontRef::from_index(font_data.data.data(), face_index).ok()?;
-        let name_table = face.name().ok()?;
-        let string_data = name_table.string_data();
-
-        let mut best: Option<(i32, String)> = None;
-        for record in name_table.name_record() {
-            let name_id = record.name_id();
-            let is_typographic_family = name_id == NameId::new(16);
-            let is_family = name_id == NameId::new(1);
-            if !is_typographic_family && !is_family {
-                continue;
-            }
-
-            let Ok(value) = record.string(string_data).map(|s| s.to_string()) else {
-                continue;
-            };
-            let value = value.trim().to_string();
-            if value.is_empty() {
-                continue;
-            }
-
-            let mut score: i32 = 0;
-            score += if is_typographic_family { 200 } else { 180 };
-            if record.is_unicode() {
-                score += 10;
-            }
-            // Prefer Windows + en-US when available.
-            if record.platform_id() == 3 && record.language_id() == 0x0409 {
-                score += 5;
-            }
-            // Prefer shorter strings if otherwise tied.
-            score -= (value.len() as i32).min(128);
-
-            match &best {
-                Some((best_score, _)) if *best_score >= score => {}
-                _ => best = Some((score, value)),
-            }
-        }
-
-        let (_, name) = best?;
+        let name = fret_render_text::font_names::best_family_name_from_font_bytes(
+            font_data.data.data(),
+            face_index,
+        )?;
         self.font_face_family_name_cache
             .insert((font_data_id, face_index), name.clone());
         Some(name)
@@ -3273,195 +2700,209 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
-        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
+        return self.measure.measure_plain(
+            &mut self.parley_shaper,
+            text,
+            style,
+            constraints,
+            self.font_stack_key,
+        );
 
-        let mut normalized_constraints = constraints;
-        if normalized_constraints.wrap == TextWrap::None {
-            normalized_constraints.max_width = None;
-        }
-
-        let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
-        let text_hash = hash_text(text);
-        if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(idx) = bucket.iter().position(|e| {
-                e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text
-            })
-            && let Some(hit) = bucket.remove(idx)
+        #[cfg(any())]
         {
-            let mut metrics = hit.metrics;
-            bucket.push_back(hit);
+            const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+            const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
+
+            let mut normalized_constraints = constraints;
+            if normalized_constraints.wrap == TextWrap::None {
+                normalized_constraints.max_width = None;
+            }
+
+            let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
+            let text_hash = hash_text(text);
+            if let Some(bucket) = self.measure_cache.get_mut(&key)
+                && let Some(idx) = bucket.iter().position(|e| {
+                    e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text
+                })
+                && let Some(hit) = bucket.remove(idx)
+            {
+                let mut metrics = hit.metrics;
+                bucket.push_back(hit);
+                if constraints.wrap == TextWrap::None
+                    && constraints.overflow == TextOverflow::Ellipsis
+                    && let Some(max_width) = constraints.max_width
+                {
+                    metrics.size.width = max_width;
+                }
+                return metrics;
+            }
+
+            let scale = effective_text_scale_factor(constraints.scale_factor);
+            let allow_fast_wrap_measure = constraints.scale_factor.is_finite()
+                && constraints.scale_factor.fract().abs() <= 1e-4;
+            let max_width_for_fast = match constraints {
+                TextConstraints {
+                    max_width: Some(max_width),
+                    wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
+                    overflow: TextOverflow::Clip,
+                    ..
+                } if allow_fast_wrap_measure && !text.contains('\n') => Some(max_width),
+                _ => None,
+            };
+
+            let metrics = if let Some(max_width) = max_width_for_fast {
+                let allow_shaping_cache = text.len()
+                    >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
+
+                let shaping_key = TextMeasureShapingKey {
+                    text_hash,
+                    text_len: text.len(),
+                    spans_shaping_key: 0,
+                    font: style.font.clone(),
+                    font_stack_key: self.font_stack_key,
+                    size_bits: style.size.0.to_bits(),
+                    weight: style.weight.0,
+                    slant: match style.slant {
+                        TextSlant::Normal => 0,
+                        TextSlant::Italic => 1,
+                        TextSlant::Oblique => 2,
+                    },
+                    line_height_bits: style.line_height.map(|px| px.0.to_bits()),
+                    letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
+                    scale_bits: constraints.scale_factor.to_bits(),
+                };
+
+                let max_width_px = max_width.0 * scale;
+
+                if allow_shaping_cache {
+                    let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
+                        self.measure_shaping_cache.get(&shaping_key)
+                        && hit.text.as_ref() == text
+                        && hit.spans.is_none()
+                    {
+                        (
+                            hit.width_px,
+                            hit.baseline_px,
+                            hit.line_height_px,
+                            hit.clusters.clone(),
+                        )
+                    } else {
+                        let line = self
+                            .parley_shaper
+                            .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
+                        let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                            Arc::from(line.clusters);
+
+                        let existed = self
+                            .measure_shaping_cache
+                            .insert(
+                                shaping_key.clone(),
+                                TextMeasureShapingEntry {
+                                    text: Arc::<str>::from(text),
+                                    spans: None,
+                                    width_px: line.width,
+                                    baseline_px: line.baseline,
+                                    line_height_px: line.line_height,
+                                    clusters: clusters.clone(),
+                                },
+                            )
+                            .is_some();
+                        if !existed {
+                            self.measure_shaping_fifo.push_back(shaping_key.clone());
+                            let limit =
+                                fret_render_text::cache_tuning::measure_shaping_cache_entries();
+                            while self.measure_shaping_fifo.len() > limit {
+                                let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                                    break;
+                                };
+                                self.measure_shaping_cache.remove(&evict);
+                            }
+                        }
+
+                        (line.width, line.baseline, line.line_height, clusters)
+                    };
+
+                    if width_px <= max_width_px + 0.5 {
+                        metrics_for_uniform_lines(
+                            width_px.max(0.0),
+                            1,
+                            baseline_px,
+                            line_height_px,
+                            scale,
+                        )
+                    } else {
+                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                            &mut self.parley_shaper,
+                            TextInputRef::plain(text, style),
+                            normalized_constraints,
+                        );
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    }
+                } else {
+                    let line = self
+                        .parley_shaper
+                        .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
+                    let width_px = line.width;
+                    let baseline_px = line.baseline;
+                    let line_height_px = line.line_height;
+                    let _clusters = line.clusters;
+
+                    if width_px <= max_width_px + 0.5 {
+                        metrics_for_uniform_lines(
+                            width_px.max(0.0),
+                            1,
+                            baseline_px,
+                            line_height_px,
+                            scale,
+                        )
+                    } else {
+                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                            &mut self.parley_shaper,
+                            TextInputRef::plain(text, style),
+                            normalized_constraints,
+                        );
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    }
+                }
+            } else {
+                // Keep measurement aligned with prepare/paint under fractional scale factors while
+                // avoiding per-glyph work in layout. The metrics-only wrapper shares the same Parley
+                // shaping + line breaking, but does not materialize glyph runs.
+                let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                    &mut self.parley_shaper,
+                    TextInputRef::plain(text, style),
+                    normalized_constraints,
+                );
+                metrics_from_wrapped_lines(&wrapped.lines, scale)
+            };
+
+            let bucket = self.measure_cache.entry(key).or_default();
+            bucket.push_back(TextMeasureEntry {
+                text_hash,
+                spans_hash: 0,
+                text: Arc::<str>::from(text),
+                spans: None,
+                metrics,
+            });
+            let limit = match normalized_constraints.wrap {
+                TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+                TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                    MEASURE_CACHE_PER_BUCKET_LIMIT
+                }
+            };
+            while bucket.len() > limit {
+                bucket.pop_front();
+            }
+
+            let mut metrics = metrics;
             if constraints.wrap == TextWrap::None
                 && constraints.overflow == TextOverflow::Ellipsis
                 && let Some(max_width) = constraints.max_width
             {
                 metrics.size.width = max_width;
             }
-            return metrics;
+            metrics
         }
-
-        let scale = effective_text_scale_factor(constraints.scale_factor);
-        let allow_fast_wrap_measure =
-            constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
-        let max_width_for_fast = match constraints {
-            TextConstraints {
-                max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
-                overflow: TextOverflow::Clip,
-                ..
-            } if allow_fast_wrap_measure && !text.contains('\n') => Some(max_width),
-            _ => None,
-        };
-
-        let metrics = if let Some(max_width) = max_width_for_fast {
-            let allow_shaping_cache = text.len() >= measure_shaping_cache_min_text_len_bytes();
-
-            let shaping_key = TextMeasureShapingKey {
-                text_hash,
-                text_len: text.len(),
-                spans_shaping_key: 0,
-                font: style.font.clone(),
-                font_stack_key: self.font_stack_key,
-                size_bits: style.size.0.to_bits(),
-                weight: style.weight.0,
-                slant: match style.slant {
-                    TextSlant::Normal => 0,
-                    TextSlant::Italic => 1,
-                    TextSlant::Oblique => 2,
-                },
-                line_height_bits: style.line_height.map(|px| px.0.to_bits()),
-                letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
-                scale_bits: constraints.scale_factor.to_bits(),
-            };
-
-            let max_width_px = max_width.0 * scale;
-
-            if allow_shaping_cache {
-                let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
-                    self.measure_shaping_cache.get(&shaping_key)
-                    && hit.text.as_ref() == text
-                    && hit.spans.is_none()
-                {
-                    (
-                        hit.width_px,
-                        hit.baseline_px,
-                        hit.line_height_px,
-                        hit.clusters.clone(),
-                    )
-                } else {
-                    let line = self
-                        .parley_shaper
-                        .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
-
-                    let existed = self
-                        .measure_shaping_cache
-                        .insert(
-                            shaping_key.clone(),
-                            TextMeasureShapingEntry {
-                                text: Arc::<str>::from(text),
-                                spans: None,
-                                width_px: line.width,
-                                baseline_px: line.baseline,
-                                line_height_px: line.line_height,
-                                clusters: clusters.clone(),
-                            },
-                        )
-                        .is_some();
-                    if !existed {
-                        self.measure_shaping_fifo.push_back(shaping_key.clone());
-                        let limit = measure_shaping_cache_entries();
-                        while self.measure_shaping_fifo.len() > limit {
-                            let Some(evict) = self.measure_shaping_fifo.pop_front() else {
-                                break;
-                            };
-                            self.measure_shaping_cache.remove(&evict);
-                        }
-                    }
-
-                    (line.width, line.baseline, line.line_height, clusters)
-                };
-
-                if width_px <= max_width_px + 0.5 {
-                    metrics_for_uniform_lines(
-                        width_px.max(0.0),
-                        1,
-                        baseline_px,
-                        line_height_px,
-                        scale,
-                    )
-                } else {
-                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
-                }
-            } else {
-                let line = self
-                    .parley_shaper
-                    .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                let width_px = line.width;
-                let baseline_px = line.baseline;
-                let line_height_px = line.line_height;
-                let _clusters = line.clusters;
-
-                if width_px <= max_width_px + 0.5 {
-                    metrics_for_uniform_lines(
-                        width_px.max(0.0),
-                        1,
-                        baseline_px,
-                        line_height_px,
-                        scale,
-                    )
-                } else {
-                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::plain(text, style),
-                        normalized_constraints,
-                    );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
-                }
-            }
-        } else {
-            // Keep measurement aligned with prepare/paint under fractional scale factors while
-            // avoiding per-glyph work in layout. The metrics-only wrapper shares the same Parley
-            // shaping + line breaking, but does not materialize glyph runs.
-            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                &mut self.parley_shaper,
-                TextInputRef::plain(text, style),
-                normalized_constraints,
-            );
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
-        };
-
-        let bucket = self.measure_cache.entry(key).or_default();
-        bucket.push_back(TextMeasureEntry {
-            text_hash,
-            spans_hash: 0,
-            text: Arc::<str>::from(text),
-            spans: None,
-            metrics,
-        });
-        let limit = match normalized_constraints.wrap {
-            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
-                MEASURE_CACHE_PER_BUCKET_LIMIT
-            }
-        };
-        while bucket.len() > limit {
-            bucket.pop_front();
-        }
-
-        let mut metrics = metrics;
-        if constraints.wrap == TextWrap::None
-            && constraints.overflow == TextOverflow::Ellipsis
-            && let Some(max_width) = constraints.max_width
-        {
-            metrics.size.width = max_width;
-        }
-        metrics
     }
 
     pub fn measure_attributed(
@@ -3470,90 +2911,164 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
-        const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
-        const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
+        return self.measure.measure_attributed(
+            &mut self.parley_shaper,
+            rich,
+            base_style,
+            constraints,
+            self.font_stack_key,
+        );
 
-        let mut normalized_constraints = constraints;
-        if normalized_constraints.wrap == TextWrap::None {
-            normalized_constraints.max_width = None;
-        }
-
-        let key = TextMeasureKey::new(base_style, normalized_constraints, self.font_stack_key);
-        let text_hash = hash_text(rich.text.as_ref());
-        let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
-
-        if let Some(bucket) = self.measure_cache.get_mut(&key)
-            && let Some(idx) = bucket.iter().position(|e| {
-                e.text_hash == text_hash
-                    && e.spans_hash == spans_hash
-                    && e.text.as_ref() == rich.text.as_ref()
-                    && e.spans.as_ref().is_some_and(|s| {
-                        Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
-                    })
-            })
-            && let Some(hit) = bucket.remove(idx)
+        #[cfg(any())]
         {
-            let mut metrics = hit.metrics;
-            bucket.push_back(hit);
-            if constraints.wrap == TextWrap::None
-                && constraints.overflow == TextOverflow::Ellipsis
-                && let Some(max_width) = constraints.max_width
-            {
-                metrics.size.width = max_width;
+            const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+            const MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE: usize = 2048;
+
+            let mut normalized_constraints = constraints;
+            if normalized_constraints.wrap == TextWrap::None {
+                normalized_constraints.max_width = None;
             }
-            return metrics;
-        }
 
-        let scale = effective_text_scale_factor(constraints.scale_factor);
-        let allow_fast_wrap_measure =
-            constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
-        let max_width_for_fast = match constraints {
-            TextConstraints {
-                max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
-                overflow: TextOverflow::Clip,
-                ..
-            } if allow_fast_wrap_measure && !rich.text.as_ref().contains('\n') => Some(max_width),
-            _ => None,
-        };
+            let key = TextMeasureKey::new(base_style, normalized_constraints, self.font_stack_key);
+            let text_hash = hash_text(rich.text.as_ref());
+            let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
 
-        let metrics = if let Some(max_width) = max_width_for_fast {
-            let allow_shaping_cache = rich.text.len() >= measure_shaping_cache_min_text_len_bytes();
+            if let Some(bucket) = self.measure_cache.get_mut(&key)
+                && let Some(idx) = bucket.iter().position(|e| {
+                    e.text_hash == text_hash
+                        && e.spans_hash == spans_hash
+                        && e.text.as_ref() == rich.text.as_ref()
+                        && e.spans.as_ref().is_some_and(|s| {
+                            Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
+                        })
+                })
+                && let Some(hit) = bucket.remove(idx)
+            {
+                let mut metrics = hit.metrics;
+                bucket.push_back(hit);
+                if constraints.wrap == TextWrap::None
+                    && constraints.overflow == TextOverflow::Ellipsis
+                    && let Some(max_width) = constraints.max_width
+                {
+                    metrics.size.width = max_width;
+                }
+                return metrics;
+            }
 
-            let shaping_key = TextMeasureShapingKey {
-                text_hash,
-                text_len: rich.text.len(),
-                spans_shaping_key: spans_hash,
-                font: base_style.font.clone(),
-                font_stack_key: self.font_stack_key,
-                size_bits: base_style.size.0.to_bits(),
-                weight: base_style.weight.0,
-                slant: match base_style.slant {
-                    TextSlant::Normal => 0,
-                    TextSlant::Italic => 1,
-                    TextSlant::Oblique => 2,
-                },
-                line_height_bits: base_style.line_height.map(|px| px.0.to_bits()),
-                letter_spacing_bits: base_style.letter_spacing_em.map(|v| v.to_bits()),
-                scale_bits: constraints.scale_factor.to_bits(),
+            let scale = effective_text_scale_factor(constraints.scale_factor);
+            let allow_fast_wrap_measure = constraints.scale_factor.is_finite()
+                && constraints.scale_factor.fract().abs() <= 1e-4;
+            let max_width_for_fast = match constraints {
+                TextConstraints {
+                    max_width: Some(max_width),
+                    wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
+                    overflow: TextOverflow::Clip,
+                    ..
+                } if allow_fast_wrap_measure && !rich.text.as_ref().contains('\n') => {
+                    Some(max_width)
+                }
+                _ => None,
             };
 
-            let max_width_px = max_width.0 * scale;
-            let text = rich.text.as_ref();
+            let metrics = if let Some(max_width) = max_width_for_fast {
+                let allow_shaping_cache = rich.text.len()
+                    >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
 
-            if allow_shaping_cache {
-                let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
-                    self.measure_shaping_cache.get(&shaping_key)
-                    && hit.text.as_ref() == rich.text.as_ref()
-                    && hit.spans.as_ref().is_some_and(|s| {
-                        Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
-                    }) {
-                    (
-                        hit.width_px,
-                        hit.baseline_px,
-                        hit.line_height_px,
-                        hit.clusters.clone(),
-                    )
+                let shaping_key = TextMeasureShapingKey {
+                    text_hash,
+                    text_len: rich.text.len(),
+                    spans_shaping_key: spans_hash,
+                    font: base_style.font.clone(),
+                    font_stack_key: self.font_stack_key,
+                    size_bits: base_style.size.0.to_bits(),
+                    weight: base_style.weight.0,
+                    slant: match base_style.slant {
+                        TextSlant::Normal => 0,
+                        TextSlant::Italic => 1,
+                        TextSlant::Oblique => 2,
+                    },
+                    line_height_bits: base_style.line_height.map(|px| px.0.to_bits()),
+                    letter_spacing_bits: base_style.letter_spacing_em.map(|v| v.to_bits()),
+                    scale_bits: constraints.scale_factor.to_bits(),
+                };
+
+                let max_width_px = max_width.0 * scale;
+                let text = rich.text.as_ref();
+
+                if allow_shaping_cache {
+                    let (width_px, baseline_px, line_height_px, _clusters) = if let Some(hit) =
+                        self.measure_shaping_cache.get(&shaping_key)
+                        && hit.text.as_ref() == rich.text.as_ref()
+                        && hit.spans.as_ref().is_some_and(|s| {
+                            Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
+                        }) {
+                        (
+                            hit.width_px,
+                            hit.baseline_px,
+                            hit.line_height_px,
+                            hit.clusters.clone(),
+                        )
+                    } else {
+                        let line = self.parley_shaper.shape_single_line_metrics(
+                            TextInputRef::Attributed {
+                                text: rich.text.as_ref(),
+                                base: base_style,
+                                spans: rich.spans.as_ref(),
+                            },
+                            scale,
+                        );
+                        let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                            Arc::from(line.clusters);
+
+                        let existed = self
+                            .measure_shaping_cache
+                            .insert(
+                                shaping_key.clone(),
+                                TextMeasureShapingEntry {
+                                    text: rich.text.clone(),
+                                    spans: Some(rich.spans.clone()),
+                                    width_px: line.width,
+                                    baseline_px: line.baseline,
+                                    line_height_px: line.line_height,
+                                    clusters: clusters.clone(),
+                                },
+                            )
+                            .is_some();
+                        if !existed {
+                            self.measure_shaping_fifo.push_back(shaping_key.clone());
+                            let limit =
+                                fret_render_text::cache_tuning::measure_shaping_cache_entries();
+                            while self.measure_shaping_fifo.len() > limit {
+                                let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                                    break;
+                                };
+                                self.measure_shaping_cache.remove(&evict);
+                            }
+                        }
+
+                        (line.width, line.baseline, line.line_height, clusters)
+                    };
+
+                    if width_px <= max_width_px + 0.5 {
+                        metrics_for_uniform_lines(
+                            width_px.max(0.0),
+                            1,
+                            baseline_px,
+                            line_height_px,
+                            scale,
+                        )
+                    } else {
+                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                            &mut self.parley_shaper,
+                            TextInputRef::Attributed {
+                                text,
+                                base: base_style,
+                                spans: rich.spans.as_ref(),
+                            },
+                            normalized_constraints,
+                        );
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    }
                 } else {
                     let line = self.parley_shaper.shape_single_line_metrics(
                         TextInputRef::Attributed {
@@ -3563,131 +3078,73 @@ impl TextSystem {
                         },
                         scale,
                     );
-                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+                    let width_px = line.width;
+                    let baseline_px = line.baseline;
+                    let line_height_px = line.line_height;
+                    let _clusters = line.clusters;
 
-                    let existed = self
-                        .measure_shaping_cache
-                        .insert(
-                            shaping_key.clone(),
-                            TextMeasureShapingEntry {
-                                text: rich.text.clone(),
-                                spans: Some(rich.spans.clone()),
-                                width_px: line.width,
-                                baseline_px: line.baseline,
-                                line_height_px: line.line_height,
-                                clusters: clusters.clone(),
-                            },
+                    if width_px <= max_width_px + 0.5 {
+                        metrics_for_uniform_lines(
+                            width_px.max(0.0),
+                            1,
+                            baseline_px,
+                            line_height_px,
+                            scale,
                         )
-                        .is_some();
-                    if !existed {
-                        self.measure_shaping_fifo.push_back(shaping_key.clone());
-                        let limit = measure_shaping_cache_entries();
-                        while self.measure_shaping_fifo.len() > limit {
-                            let Some(evict) = self.measure_shaping_fifo.pop_front() else {
-                                break;
-                            };
-                            self.measure_shaping_cache.remove(&evict);
-                        }
+                    } else {
+                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                            &mut self.parley_shaper,
+                            TextInputRef::Attributed {
+                                text,
+                                base: base_style,
+                                spans: rich.spans.as_ref(),
+                            },
+                            normalized_constraints,
+                        );
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
                     }
-
-                    (line.width, line.baseline, line.line_height, clusters)
-                };
-
-                if width_px <= max_width_px + 0.5 {
-                    metrics_for_uniform_lines(
-                        width_px.max(0.0),
-                        1,
-                        baseline_px,
-                        line_height_px,
-                        scale,
-                    )
-                } else {
-                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
                 }
             } else {
-                let line = self.parley_shaper.shape_single_line_metrics(
+                let text = rich.text.as_ref();
+                let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                    &mut self.parley_shaper,
                     TextInputRef::Attributed {
-                        text: rich.text.as_ref(),
+                        text,
                         base: base_style,
                         spans: rich.spans.as_ref(),
                     },
-                    scale,
+                    normalized_constraints,
                 );
-                let width_px = line.width;
-                let baseline_px = line.baseline;
-                let line_height_px = line.line_height;
-                let _clusters = line.clusters;
+                metrics_from_wrapped_lines(&wrapped.lines, scale)
+            };
 
-                if width_px <= max_width_px + 0.5 {
-                    metrics_for_uniform_lines(
-                        width_px.max(0.0),
-                        1,
-                        baseline_px,
-                        line_height_px,
-                        scale,
-                    )
-                } else {
-                    let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                        &mut self.parley_shaper,
-                        TextInputRef::Attributed {
-                            text,
-                            base: base_style,
-                            spans: rich.spans.as_ref(),
-                        },
-                        normalized_constraints,
-                    );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+            let bucket = self.measure_cache.entry(key).or_default();
+            bucket.push_back(TextMeasureEntry {
+                text_hash,
+                spans_hash,
+                text: rich.text.clone(),
+                spans: Some(rich.spans.clone()),
+                metrics,
+            });
+            let limit = match normalized_constraints.wrap {
+                TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
+                TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+                    MEASURE_CACHE_PER_BUCKET_LIMIT
                 }
+            };
+            while bucket.len() > limit {
+                bucket.pop_front();
             }
-        } else {
-            let text = rich.text.as_ref();
-            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                &mut self.parley_shaper,
-                TextInputRef::Attributed {
-                    text,
-                    base: base_style,
-                    spans: rich.spans.as_ref(),
-                },
-                normalized_constraints,
-            );
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
-        };
 
-        let bucket = self.measure_cache.entry(key).or_default();
-        bucket.push_back(TextMeasureEntry {
-            text_hash,
-            spans_hash,
-            text: rich.text.clone(),
-            spans: Some(rich.spans.clone()),
-            metrics,
-        });
-        let limit = match normalized_constraints.wrap {
-            TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
-                MEASURE_CACHE_PER_BUCKET_LIMIT
+            let mut metrics = metrics;
+            if constraints.wrap == TextWrap::None
+                && constraints.overflow == TextOverflow::Ellipsis
+                && let Some(max_width) = constraints.max_width
+            {
+                metrics.size.width = max_width;
             }
-        };
-        while bucket.len() > limit {
-            bucket.pop_front();
+            metrics
         }
-
-        let mut metrics = metrics;
-        if constraints.wrap == TextWrap::None
-            && constraints.overflow == TextOverflow::Ellipsis
-            && let Some(max_width) = constraints.max_width
-        {
-            metrics.size.width = max_width;
-        }
-        metrics
     }
 
     pub fn caret_x(&self, blob: TextBlobId, index: usize) -> Option<Px> {
@@ -3780,7 +3237,7 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let entries = released_blob_cache_entries();
+        let entries = fret_render_text::cache_tuning::released_blob_cache_entries();
 
         let Some(b) = self.blobs.get_mut(blob) else {
             return;
@@ -3869,337 +3326,18 @@ impl TextSystem {
     }
 }
 
-#[derive(Clone, Debug)]
-struct ResolvedSpan {
-    start: usize,
-    end: usize,
-    slot: u16,
-    fg: Option<fret_core::Color>,
-    underline: Option<ResolvedDecoration>,
-    strikethrough: Option<ResolvedDecoration>,
-}
-
-#[derive(Clone, Debug)]
-struct ResolvedDecoration {
-    color: Option<fret_core::Color>,
-}
-
-fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<ResolvedSpan>> {
-    if spans.is_empty() {
-        return None;
-    }
-
-    let mut out: Vec<ResolvedSpan> = Vec::with_capacity(spans.len());
-    let mut offset: usize = 0;
-    for span in spans {
-        let end = offset.saturating_add(span.len);
-        if end > text.len() {
-            return None;
-        }
-        if !text.is_char_boundary(offset) || !text.is_char_boundary(end) {
-            return None;
-        }
-        if span.len != 0 {
-            let slot = u16::try_from(out.len()).ok()?;
-            out.push(ResolvedSpan {
-                start: offset,
-                end,
-                slot,
-                fg: span.paint.fg,
-                underline: span
-                    .paint
-                    .underline
-                    .as_ref()
-                    .map(|u| ResolvedDecoration { color: u.color }),
-                strikethrough: span
-                    .paint
-                    .strikethrough
-                    .as_ref()
-                    .map(|s| ResolvedDecoration { color: s.color }),
-            });
-        }
-        offset = end;
-    }
-    if offset != text.len() {
-        return None;
-    }
-
-    Some(out)
-}
-
-fn span_has_any_overrides(span: &TextSpan) -> bool {
-    span.shaping.font.is_some()
-        || span.shaping.weight.is_some()
-        || span.shaping.slant.is_some()
-        || span.shaping.letter_spacing_em.is_some()
-        || !span.shaping.features.is_empty()
-        || !span.shaping.axes.is_empty()
-        || span.paint.fg.is_some()
-        || span.paint.bg.is_some()
-        || span.paint.underline.is_some()
-        || span.paint.strikethrough.is_some()
-}
-
-fn clamp_down_to_char_boundary(text: &str, idx: usize) -> usize {
-    let mut i = idx.min(text.len());
-    while i > 0 && !text.is_char_boundary(i) {
-        i = i.saturating_sub(1);
-    }
-    i
-}
-
-fn next_char_boundary(text: &str, idx: usize) -> usize {
-    if idx >= text.len() {
-        return text.len();
-    }
-    let idx = clamp_down_to_char_boundary(text, idx);
-    if idx >= text.len() {
-        return text.len();
-    }
-    let ch = text[idx..].chars().next().unwrap();
-    idx + ch.len_utf8()
-}
-
-fn clamp_span_end_to_char_boundary(text: &str, start: usize, desired_end: usize) -> usize {
-    let raw_end = desired_end.min(text.len());
-    if text.is_char_boundary(raw_end) {
-        return raw_end;
-    }
-
-    let down = clamp_down_to_char_boundary(text, raw_end);
-    if down > start {
-        return down;
-    }
-
-    let up = next_char_boundary(text, raw_end);
-    up.max(start).min(text.len())
-}
-
-fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSpan]>> {
-    if spans.is_empty() || text.is_empty() {
-        return None;
-    }
-
-    let text_len = text.len();
-    let mut out: Vec<TextSpan> = Vec::with_capacity(spans.len().saturating_add(1));
-
-    let mut offset: usize = 0;
-    for span in spans {
-        if offset >= text_len {
-            break;
-        }
-
-        let desired_end = offset.saturating_add(span.len);
-        let mut end = clamp_span_end_to_char_boundary(text, offset, desired_end);
-
-        if end == offset && desired_end > offset {
-            end = next_char_boundary(text, offset);
-        }
-
-        let mut s = span.clone();
-        s.len = end.saturating_sub(offset);
-        out.push(s);
-        offset = end;
-    }
-
-    if offset < text_len {
-        out.push(TextSpan::new(text_len - offset));
-    }
-
-    // Avoid forcing "attributed" shaping when spans carry no effective overrides.
-    if out.len() == 1 && out[0].len == text_len && !span_has_any_overrides(&out[0]) {
-        return None;
-    }
-
-    Some(Arc::<[TextSpan]>::from(out))
-}
-
-fn paint_span_for_text_range(
-    spans: &[ResolvedSpan],
-    range: &std::ops::Range<usize>,
-    is_rtl: bool,
-) -> Option<u16> {
-    let idx = if range.start == range.end {
-        range.start.saturating_sub(1)
-    } else if is_rtl {
-        range.end.saturating_sub(1)
-    } else {
-        range.start
-    };
-    spans
-        .iter()
-        .find(|s| idx >= s.start && idx < s.end)
-        .map(|s| s.slot)
-}
-
-fn caret_stops_for_slice(
-    slice: &str,
-    base_offset: usize,
-    clusters: &[crate::text::parley_shaper::ShapedCluster],
-    line_width_px: f32,
-    scale: f32,
-    kept_end: usize,
-) -> Vec<(usize, Px)> {
-    fret_render_text::geometry::caret_stops_for_slice(
-        slice,
-        base_offset,
-        clusters,
-        line_width_px,
-        scale,
-        kept_end,
-    )
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TextDecorationMetricsPx {
-    underline_offset_px: f32,
-    strikeout_offset_px: f32,
-    stroke_size_px: f32,
-}
-
-fn decorations_for_lines(
-    lines: &[TextLine],
-    spans: &[ResolvedSpan],
-    metrics_px: Option<TextDecorationMetricsPx>,
-    scale: f32,
-    snap_vertical: bool,
-) -> Vec<TextDecoration> {
-    let mut out: Vec<TextDecoration> = Vec::new();
-    if lines.is_empty() || spans.is_empty() {
-        return out;
-    }
-
-    for line in lines {
-        let line_top_px = line.y_top.0 * scale;
-        let line_bottom_px = (line.y_top.0 + line.height.0).max(line.y_top.0) * scale;
-        let baseline_px = line.y_baseline.0 * scale;
-
-        let line_height_px = (line.height.0.max(0.0) * scale).max(0.0);
-        let max_thickness_px = line_height_px.max(1.0);
-
-        let (thickness_px, underline_y, strike_y) = if let Some(m) = metrics_px {
-            let raw = m.stroke_size_px.abs().max(1.0).min(max_thickness_px);
-            let thickness_px = if snap_vertical {
-                raw.round().max(1.0)
-            } else {
-                raw
-            };
-
-            // Swash metrics are expressed in the typical typographic coordinate system where
-            // positive Y points upward. Convert to our Y-down coordinate space by subtracting
-            // from the baseline.
-            let underline_top_px_raw = baseline_px - m.underline_offset_px;
-            let underline_bottom_px_raw = underline_top_px_raw + thickness_px;
-            let underline_bottom_px = if snap_vertical {
-                underline_bottom_px_raw.round()
-            } else {
-                underline_bottom_px_raw
-            }
-            .clamp(line_top_px, line_bottom_px);
-            let max_top_px = (line_bottom_px - thickness_px).max(line_top_px);
-            let underline_top_px =
-                (underline_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
-
-            let strike_top_px_raw = baseline_px - m.strikeout_offset_px;
-            let strike_bottom_px_raw = strike_top_px_raw + thickness_px;
-            let strike_bottom_px = if snap_vertical {
-                strike_bottom_px_raw.round()
-            } else {
-                strike_bottom_px_raw
-            }
-            .clamp(line_top_px, line_bottom_px);
-            let strike_top_px = (strike_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
-
-            (
-                thickness_px,
-                Px((underline_top_px / scale).max(0.0)),
-                Px((strike_top_px / scale).max(0.0)),
-            )
-        } else {
-            let thickness_px = 1.0_f32;
-
-            // Underline: anchor to the baseline and snap in device px under fractional scaling.
-            let underline_bottom_px_raw = baseline_px + 1.0;
-            let underline_bottom_px = if snap_vertical {
-                underline_bottom_px_raw.round()
-            } else {
-                underline_bottom_px_raw
-            }
-            .clamp(line_top_px, line_bottom_px);
-            let max_top_px = (line_bottom_px - thickness_px).max(line_top_px);
-            let underline_top_px =
-                (underline_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
-            let underline_y = Px((underline_top_px / scale).max(0.0));
-
-            // Strikethrough: approximate as a fraction of the line height above the baseline.
-            let strike_offset_px_raw = (line_height_px * 0.30).clamp(1.0, line_height_px);
-            let strike_bottom_px_raw = baseline_px - strike_offset_px_raw;
-            let strike_bottom_px = if snap_vertical {
-                strike_bottom_px_raw.round()
-            } else {
-                strike_bottom_px_raw
-            }
-            .clamp(line_top_px, line_bottom_px);
-            let strike_top_px = (strike_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
-            let strike_y = Px((strike_top_px / scale).max(0.0));
-
-            (thickness_px, underline_y, strike_y)
-        };
-
-        let thickness = Px((thickness_px / scale).max(0.0));
-
-        for span in spans {
-            if span.underline.is_none() && span.strikethrough.is_none() {
-                continue;
-            }
-
-            let start = span.start.max(line.start);
-            let end = span.end.min(line.end);
-            if start >= end {
-                continue;
-            }
-
-            let x0 = fret_render_text::geometry::caret_x_from_stops(&line.caret_stops, start);
-            let x1 = fret_render_text::geometry::caret_x_from_stops(&line.caret_stops, end);
-            let left = Px(x0.0.min(x1.0));
-            let right = Px(x0.0.max(x1.0));
-            let width = Px((right.0 - left.0).max(thickness.0));
-
-            if let Some(underline) = span.underline.as_ref() {
-                out.push(TextDecoration {
-                    kind: TextDecorationKind::Underline,
-                    rect: Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot),
-                    color: underline.color,
-                });
-            }
-
-            if let Some(strikethrough) = span.strikethrough.as_ref() {
-                out.push(TextDecoration {
-                    kind: TextDecorationKind::Strikethrough,
-                    rect: Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot),
-                    color: strikethrough.color,
-                });
-            }
-        }
-    }
-
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        ResolvedSpan, TextBlobKey, TextDecorationKind, TextMeasureKey, TextShapeKey,
-        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
+        TextBlobKey, TextShapeKey, paint_span_for_text_range, spans_paint_fingerprint,
         subpixel_mask_to_alpha,
     };
     use fret_core::{
-        AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
-        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextPaintStyle,
-        TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
+        AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
+        TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
     };
+    use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
+    use fret_render_text::spans::ResolvedSpan;
     use std::sync::Arc;
 
     fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
@@ -4256,362 +3394,6 @@ mod tests {
         // Synthetic 0-length ranges (e.g. ellipsis mapping) should inherit the preceding style.
         assert_eq!(paint_span_for_text_range(&spans, &(3..3), false), Some(0));
         assert_eq!(paint_span_for_text_range(&spans, &(3..3), true), Some(0));
-    }
-
-    #[test]
-    fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
-        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: false,
-        }];
-
-        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
-
-        assert_eq!(x_at(0), 0.0);
-        assert_eq!(x_at(1), 10.0);
-        assert_eq!(x_at(2), 20.0);
-        assert_eq!(x_at(3), 30.0);
-        assert_eq!(x_at(4), 40.0);
-    }
-
-    #[test]
-    fn caret_stops_for_slice_interpolates_within_cluster_rtl() {
-        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
-
-        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
-
-        assert_eq!(x_at(0), 40.0);
-        assert_eq!(x_at(1), 30.0);
-        assert_eq!(x_at(2), 20.0);
-        assert_eq!(x_at(3), 10.0);
-        assert_eq!(x_at(4), 0.0);
-    }
-
-    #[test]
-    fn caret_stops_for_slice_use_grapheme_boundaries_for_combining_marks_and_emoji_sequences() {
-        use unicode_segmentation::UnicodeSegmentation as _;
-
-        let cases = [
-            ("e\u{0301}x", "combining mark (e + acute)"),
-            ("1\u{FE0F}\u{20E3}", "keycap sequence"),
-            ("\u{1F1FA}\u{1F1F8}", "flag sequence"),
-            ("\u{1F469}\u{200D}\u{1F4BB}", "zwj emoji sequence"),
-        ];
-
-        for (text, label) in cases {
-            let clusters = vec![crate::text::parley_shaper::ShapedCluster {
-                text_range: 0..text.len(),
-                x0: 0.0,
-                x1: 40.0,
-                is_rtl: false,
-            }];
-
-            let stops = super::caret_stops_for_slice(text, 0, &clusters, 40.0, 1.0, text.len());
-            let indices: Vec<usize> = stops.iter().map(|(idx, _)| *idx).collect();
-
-            let mut expected: Vec<usize> = text.grapheme_indices(true).map(|(i, _)| i).collect();
-            expected.push(text.len());
-            expected.sort_unstable();
-            expected.dedup();
-
-            assert_eq!(
-                indices, expected,
-                "expected caret stops to land on grapheme boundaries ({label}): text={text:?} stops={indices:?} expected={expected:?}"
-            );
-        }
-    }
-
-    fn is_synthetic_rtl_char(ch: char) -> bool {
-        // A minimal heuristic for test inputs; the production shaper determines RTL runs via
-        // Unicode properties.
-        matches!(
-            ch,
-            '\u{0590}'..='\u{05FF}' // Hebrew
-                | '\u{0600}'..='\u{06FF}' // Arabic
-                | '\u{0750}'..='\u{077F}' // Arabic Supplement
-                | '\u{08A0}'..='\u{08FF}' // Arabic Extended-A
-        )
-    }
-
-    fn synthetic_clusters_for_text(
-        text: &str,
-        advance: f32,
-    ) -> Vec<crate::text::parley_shaper::ShapedCluster> {
-        let mut out = Vec::new();
-        let mut x = 0.0_f32;
-        for (start, ch) in text.char_indices() {
-            let end = start + ch.len_utf8();
-            out.push(crate::text::parley_shaper::ShapedCluster {
-                text_range: start..end,
-                x0: x,
-                x1: x + advance,
-                is_rtl: is_synthetic_rtl_char(ch),
-            });
-            x += advance;
-        }
-        out
-    }
-
-    fn empty_line_clusters() -> Arc<[fret_render_text::geometry::TextLineCluster]> {
-        Arc::from(Vec::<fret_render_text::geometry::TextLineCluster>::new())
-    }
-
-    fn line_clusters_from_shaped(
-        base_offset: usize,
-        clusters: &[crate::text::parley_shaper::ShapedCluster],
-    ) -> Arc<[fret_render_text::geometry::TextLineCluster]> {
-        let mut out: Vec<fret_render_text::geometry::TextLineCluster> =
-            Vec::with_capacity(clusters.len());
-        for c in clusters {
-            out.push(fret_render_text::geometry::TextLineCluster {
-                text_range: (base_offset + c.text_range.start)..(base_offset + c.text_range.end),
-                x0: Px(c.x0.max(0.0)),
-                x1: Px(c.x1.max(0.0)),
-                is_rtl: c.is_rtl,
-            });
-        }
-        Arc::from(out)
-    }
-
-    #[test]
-    fn selection_rects_for_rtl_line_has_positive_width() {
-        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
-        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(40.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
-
-        let mut rects = Vec::new();
-        fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 4), &mut rects);
-        assert_eq!(rects.len(), 1);
-        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
-        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
-        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
-        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(40.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
-
-        let left = fret_render_text::geometry::hit_test_point_from_lines(
-            std::slice::from_ref(&line),
-            fret_core::Point::new(Px(0.0), Px(5.0)),
-        )
-        .expect("hit test");
-        assert_eq!(left.index, 4);
-
-        let right = fret_render_text::geometry::hit_test_point_from_lines(
-            std::slice::from_ref(&line),
-            fret_core::Point::new(Px(40.0), Px(5.0)),
-        )
-        .expect("hit test");
-        assert_eq!(right.index, 0);
-    }
-
-    #[test]
-    fn mixed_direction_selection_rects_are_nonempty() {
-        // Mixed LTR + RTL + numbers + punctuation.
-        let text = "abc אבג (123)";
-        let clusters = synthetic_clusters_for_text(text, 10.0);
-        let stops = super::caret_stops_for_slice(
-            text,
-            0,
-            &clusters,
-            10.0 * clusters.len() as f32,
-            1.0,
-            text.len(),
-        );
-        let line = super::TextLine {
-            start: 0,
-            end: text.len(),
-            width: Px(10.0 * clusters.len() as f32),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
-
-        let rtl_start = text.find('א').expect("hebrew start");
-        let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
-
-        let mut rects = Vec::new();
-        fret_render_text::geometry::selection_rects_from_lines(
-            &[line],
-            (rtl_start, rtl_end),
-            &mut rects,
-        );
-        assert_eq!(rects.len(), 1);
-        assert!(
-            rects[0].size.width.0 > 0.1,
-            "expected a non-empty selection rect"
-        );
-    }
-
-    #[test]
-    fn mixed_direction_selection_rects_split_across_visual_runs() {
-        // Simulate bidi reordering by assigning cluster x positions that do not correspond to the
-        // logical order of the text ranges.
-        let text = "aaa אבג def";
-        let clusters = vec![
-            crate::text::parley_shaper::ShapedCluster {
-                text_range: 0..4, // "aaa "
-                x0: 0.0,
-                x1: 40.0,
-                is_rtl: false,
-            },
-            crate::text::parley_shaper::ShapedCluster {
-                text_range: 4..11, // "אבג "
-                x0: 70.0,
-                x1: 110.0,
-                is_rtl: true,
-            },
-            crate::text::parley_shaper::ShapedCluster {
-                text_range: 11..14, // "def"
-                x0: 40.0,
-                x1: 70.0,
-                is_rtl: false,
-            },
-        ];
-
-        let stops = super::caret_stops_for_slice(text, 0, &clusters, 110.0, 1.0, text.len());
-        let line = super::TextLine {
-            start: 0,
-            end: text.len(),
-            width: Px(110.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: stops,
-            clusters: line_clusters_from_shaped(0, &clusters),
-        };
-
-        let mut rects = Vec::new();
-        fret_render_text::geometry::selection_rects_from_lines(&[line], (0, 11), &mut rects);
-
-        assert_eq!(
-            rects.len(),
-            2,
-            "expected two disjoint visual spans, got {rects:?}"
-        );
-        rects.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-
-        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
-        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
-
-        assert!((rects[1].origin.x.0 - 70.0).abs() < 0.001);
-        assert!((rects[1].size.width.0 - 40.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn selection_rects_clipped_culls_offscreen_lines() {
-        let mut lines = Vec::new();
-        for i in 0..1000usize {
-            let start = i * 4;
-            let end = start + 4;
-            lines.push(super::TextLine {
-                start,
-                end,
-                width: Px(100.0),
-                y_top: Px((i as f32) * 10.0),
-                y_baseline: Px(0.0),
-                height: Px(10.0),
-                ascent: Px(0.0),
-                descent: Px(0.0),
-                caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
-                clusters: empty_line_clusters(),
-            });
-        }
-
-        let clip = Rect::new(
-            Point::new(Px(0.0), Px(1000.0)),
-            Size::new(Px(100.0), Px(100.0)),
-        );
-        let mut rects = Vec::new();
-        fret_render_text::geometry::selection_rects_from_lines_clipped(
-            &lines,
-            (0, 4000),
-            clip,
-            &mut rects,
-        );
-
-        assert_eq!(rects.len(), 10);
-        for r in &rects {
-            assert!(r.origin.y.0 >= 1000.0 && r.origin.y.0 < 1100.0);
-            assert!(r.size.height.0 > 0.0);
-        }
-    }
-
-    #[test]
-    fn selection_rects_clipped_trims_partially_visible_line() {
-        let line = super::TextLine {
-            start: 0,
-            end: 4,
-            width: Px(100.0),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
-            clusters: empty_line_clusters(),
-        };
-        let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
-        let mut rects = Vec::new();
-        fret_render_text::geometry::selection_rects_from_lines_clipped(
-            &[line],
-            (0, 4),
-            clip,
-            &mut rects,
-        );
-
-        assert_eq!(rects.len(), 1);
-        assert!((rects[0].origin.y.0 - 5.0).abs() < 0.001);
-        assert!((rects[0].size.height.0 - 5.0).abs() < 0.001);
     }
 
     #[test]
@@ -4718,7 +3500,7 @@ mod tests {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
-        let generic = super::ParleyGenericFamily::UiSansSerif;
+        let generic = parley::fontique::GenericFamily::UiSansSerif;
         let baseline = text.parley_shaper.generic_family_ids(generic);
 
         let names = text.all_font_names();
@@ -5115,7 +3897,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -5359,1587 +4141,6 @@ mod tests {
     }
 
     #[test]
-    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji() {
-        use unicode_segmentation::UnicodeSegmentation as _;
-
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        // Family emoji (ZWJ sequence) + trailing ASCII ensures we cover both complex clusters and
-        // simple codepoints in one line.
-        let content = "👩‍👩‍👧‍👦 hello";
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let mut boundaries: Vec<usize> = Vec::new();
-        boundaries.push(0);
-        let mut cursor = 0usize;
-        for g in content.graphemes(true) {
-            cursor = cursor.saturating_add(g.len());
-            boundaries.push(cursor.min(content.len()));
-        }
-        boundaries.sort_unstable();
-        boundaries.dedup();
-
-        let mut last_x = 0.0_f32;
-        for idx in boundaries {
-            assert!(
-                content.is_char_boundary(idx),
-                "expected grapheme boundary to be a char boundary: idx={idx}"
-            );
-            let x = text.caret_x(blob, idx).expect("caret_x");
-            assert!(
-                x.0.is_finite(),
-                "expected caret_x to be finite for idx={idx}, got {x:?}"
-            );
-            assert!(
-                x.0 + 0.01 >= last_x,
-                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
-            );
-            last_x = x.0;
-
-            let rect = text
-                .caret_rect(blob, idx, CaretAffinity::Downstream)
-                .expect("caret rect");
-            assert!(
-                rect.origin.x.0.is_finite()
-                    && rect.origin.y.0.is_finite()
-                    && rect.size.width.0.is_finite()
-                    && rect.size.height.0.is_finite(),
-                "expected caret rect to be finite; idx={idx} rect={rect:?}"
-            );
-            assert!(
-                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
-                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_keycap_emoji() {
-        use unicode_segmentation::UnicodeSegmentation as _;
-
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "1️⃣ hello";
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let mut boundaries: Vec<usize> = Vec::new();
-        boundaries.push(0);
-        let mut cursor = 0usize;
-        for g in content.graphemes(true) {
-            cursor = cursor.saturating_add(g.len());
-            boundaries.push(cursor.min(content.len()));
-        }
-        boundaries.sort_unstable();
-        boundaries.dedup();
-
-        let mut last_x = 0.0_f32;
-        for idx in boundaries {
-            assert!(
-                content.is_char_boundary(idx),
-                "expected grapheme boundary to be a char boundary: idx={idx}"
-            );
-            let x = text.caret_x(blob, idx).expect("caret_x");
-            assert!(
-                x.0.is_finite(),
-                "expected caret_x to be finite for idx={idx}, got {x:?}"
-            );
-            assert!(
-                x.0 + 0.01 >= last_x,
-                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
-            );
-            last_x = x.0;
-
-            let rect = text
-                .caret_rect(blob, idx, CaretAffinity::Downstream)
-                .expect("caret rect");
-            assert!(
-                rect.origin.x.0.is_finite()
-                    && rect.origin.y.0.is_finite()
-                    && rect.size.width.0.is_finite()
-                    && rect.size.height.0.is_finite(),
-                "expected caret rect to be finite; idx={idx} rect={rect:?}"
-            );
-            assert!(
-                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
-                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_regional_indicator_flag() {
-        use unicode_segmentation::UnicodeSegmentation as _;
-
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "🇺🇸 hello";
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let mut boundaries: Vec<usize> = Vec::new();
-        boundaries.push(0);
-        let mut cursor = 0usize;
-        for g in content.graphemes(true) {
-            cursor = cursor.saturating_add(g.len());
-            boundaries.push(cursor.min(content.len()));
-        }
-        boundaries.sort_unstable();
-        boundaries.dedup();
-
-        let mut last_x = 0.0_f32;
-        for idx in boundaries {
-            assert!(
-                content.is_char_boundary(idx),
-                "expected grapheme boundary to be a char boundary: idx={idx}"
-            );
-            let x = text.caret_x(blob, idx).expect("caret_x");
-            assert!(
-                x.0.is_finite(),
-                "expected caret_x to be finite for idx={idx}, got {x:?}"
-            );
-            assert!(
-                x.0 + 0.01 >= last_x,
-                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
-            );
-            last_x = x.0;
-
-            let rect = text
-                .caret_rect(blob, idx, CaretAffinity::Downstream)
-                .expect("caret rect");
-            assert!(
-                rect.origin.x.0.is_finite()
-                    && rect.origin.y.0.is_finite()
-                    && rect.size.width.0.is_finite()
-                    && rect.size.height.0.is_finite(),
-                "expected caret rect to be finite; idx={idx} rect={rect:?}"
-            );
-            assert!(
-                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
-                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji() {
-        use std::collections::HashSet;
-        use unicode_segmentation::UnicodeSegmentation as _;
-
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let emoji = "👩‍👩‍👧‍👦";
-        let content = format!("{emoji}{emoji}{emoji}{emoji}{emoji}{emoji}");
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: Some(Px(20.0)),
-            wrap: TextWrap::Grapheme,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content.as_str(), &style, constraints);
-        let blob_ref = text.blob(blob).expect("blob");
-        assert!(
-            blob_ref.shape.lines.len() >= 2,
-            "expected grapheme wrap to produce multiple lines"
-        );
-
-        let mut boundary_set: HashSet<usize> = HashSet::new();
-        boundary_set.insert(0);
-        let mut cursor = 0usize;
-        for g in content.graphemes(true) {
-            cursor = cursor.saturating_add(g.len());
-            boundary_set.insert(cursor.min(content.len()));
-        }
-
-        for (i, line) in blob_ref.shape.lines.iter().enumerate() {
-            assert!(
-                boundary_set.contains(&line.start),
-                "expected line.start to be a grapheme boundary; line[{i}]={line:?}"
-            );
-            assert!(
-                boundary_set.contains(&line.end),
-                "expected line.end to be a grapheme boundary; line[{i}]={line:?}"
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        // Keep this test deterministic: simulate a bundled-font-only environment (no system fonts).
-        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-            text.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-        text.generic_injected_by_family.clear();
-        text.font_db_revision = 0;
-        text.font_stack_key = 0;
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = {
-            let mut out = String::new();
-            for _ in 0..60 {
-                out.push_str("The quick brown fox jumps over the lazy dog. ");
-            }
-            out
-        };
-
-        let scale_factor = 1.25_f32;
-        let constraints = TextConstraints {
-            max_width: Some(Px(180.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor,
-        };
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(13.0),
-            ..Default::default()
-        };
-
-        let mut span = TextSpan::new(content.len());
-        span.paint.underline = Some(UnderlineStyle {
-            color: None,
-            style: DecorationLineStyle::Solid,
-        });
-        span.paint.strikethrough = Some(StrikethroughStyle {
-            color: None,
-            style: DecorationLineStyle::Solid,
-        });
-        let rich = AttributedText::new(Arc::<str>::from(content.as_str()), Arc::from([span]));
-
-        let (blob_id, metrics) = text.prepare_attributed(&rich, &style, constraints);
-        let blob = text.blob(blob_id).expect("prepared blob");
-
-        let underlines: Vec<_> = blob
-            .decorations
-            .iter()
-            .filter(|d| d.kind == TextDecorationKind::Underline)
-            .collect();
-        let strikes: Vec<_> = blob
-            .decorations
-            .iter()
-            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
-            .collect();
-        assert!(
-            !underlines.is_empty(),
-            "expected underline decorations to be generated"
-        );
-        assert!(
-            !strikes.is_empty(),
-            "expected strikethrough decorations to be generated"
-        );
-
-        let is_pixel_aligned = |logical: Px| {
-            let px = logical.0 * scale_factor;
-            (px - px.round()).abs() < 1e-3
-        };
-
-        for d in underlines.iter().chain(strikes.iter()) {
-            assert!(
-                is_pixel_aligned(d.rect.origin.y),
-                "expected decoration y to be pixel-aligned"
-            );
-            assert!(
-                is_pixel_aligned(d.rect.size.height),
-                "expected decoration height to be pixel-aligned"
-            );
-
-            let h_px = d.rect.size.height.0 * scale_factor;
-            assert!(
-                h_px >= 1.0 - 1e-3,
-                "expected a visible decoration thickness (>= 1px), got {h_px}"
-            );
-            assert!(
-                h_px <= 4.0 + 1e-3,
-                "expected decoration thickness to remain bounded, got {h_px}"
-            );
-
-            assert!(
-                d.rect.origin.y.0 >= -1e-3,
-                "expected decoration to stay within the text box (top)"
-            );
-            assert!(
-                d.rect.origin.y.0 + d.rect.size.height.0 <= metrics.size.height.0 + 1e-3,
-                "expected decoration to stay within the text box (bottom)"
-            );
-        }
-    }
-
-    #[test]
-    fn empty_string_produces_nonzero_line_metrics_and_caret_rect() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, metrics) = text.prepare("", &style, constraints);
-        assert!(
-            metrics.size.height.0 > 0.1,
-            "expected empty string to have non-zero metrics height, got {metrics:?}"
-        );
-        assert!(
-            metrics.baseline.0 >= 0.0 && metrics.baseline.0 <= metrics.size.height.0 + 0.01,
-            "expected empty string baseline to be within the metrics box, got {metrics:?}"
-        );
-
-        let line = text
-            .first_line_metrics(blob)
-            .expect("expected first-line metrics for empty string");
-        assert!(
-            line.line_height.0 > 0.1,
-            "expected a non-zero line height for empty string, got {line:?}"
-        );
-
-        let caret = text
-            .caret_rect(blob, 0, CaretAffinity::Downstream)
-            .expect("expected caret rect for empty string");
-        assert!(
-            caret.size.height.0 > 0.1,
-            "expected a non-zero caret rect height for empty string, got {caret:?}"
-        );
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            line_height: Some(Px(0.0)),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare("a", &style, constraints);
-
-        let caret = text
-            .caret_rect(blob, 0, CaretAffinity::Downstream)
-            .expect("caret rect");
-        assert!(
-            caret.size.height.0 > 0.1,
-            "expected a non-zero caret rect height even with a zero line-height override, got {caret:?}"
-        );
-
-        let mut rects: Vec<Rect> = Vec::new();
-        text.selection_rects(blob, (0, 1), &mut rects)
-            .expect("selection rects");
-        assert!(
-            rects.iter().any(|r| r.size.height.0 > 0.1),
-            "expected selection rects to have non-zero height even with a zero line-height override, got {rects:?}"
-        );
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn selection_rects_clipped_do_not_return_zero_height_rects() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "hello world hello world hello world";
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: Some(Px(60.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let mut rects: Vec<Rect> = Vec::new();
-        text.selection_rects_clipped(
-            blob,
-            (0, content.len()),
-            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(20.0))),
-            &mut rects,
-        )
-        .expect("selection rects clipped");
-
-        assert!(
-            !rects.is_empty(),
-            "expected selection_rects_clipped to produce at least one rect"
-        );
-        for r in &rects {
-            assert!(
-                r.size.height.0 > 0.1,
-                "expected clipped selection rect height to be non-zero, got {r:?}"
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn selection_rects_clipped_handles_mixed_bidi_word_wrap_and_clips_to_rect() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        // Ensure mixed directionality plus enough content to reliably wrap.
-        let content = "hello אבג def ghi jkl אבג mno pqr stu אבג vwx yz";
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let max_width = Px(80.0);
-        let constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(
-            blob_ref.shape.lines.len() >= 2,
-            "expected mixed bidi content to wrap"
-        );
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-
-        // Clip both X and Y so we exercise trimming of partially visible runs/lines.
-        let clip_y0 = line0.y_top.0 + (line0.height.0 * 0.5);
-        let clip_y1 = line1.y_top.0 + (line1.height.0 * 0.5);
-        let clip_width = Px((max_width.0 * 0.5).max(1.0));
-        let clip_height = Px((clip_y1 - clip_y0).max(1.0));
-        let clip = Rect::new(
-            Point::new(Px(0.0), Px(clip_y0)),
-            Size::new(clip_width, clip_height),
-        );
-
-        let clip_x0 = clip.origin.x.0;
-        let clip_y0 = clip.origin.y.0;
-        let clip_x1 = clip_x0 + clip.size.width.0;
-        let clip_y1 = clip_y0 + clip.size.height.0;
-
-        // Sanity: unclipped selection should extend beyond our clip width on at least one line.
-        let mut full_rects: Vec<Rect> = Vec::new();
-        text.selection_rects(blob, (0, content.len()), &mut full_rects)
-            .expect("selection rects");
-        assert!(
-            full_rects
-                .iter()
-                .any(|r| r.origin.x.0 + r.size.width.0 > clip_x1 + 0.5),
-            "expected unclipped selection to extend beyond clip_x1"
-        );
-
-        let mut rects: Vec<Rect> = Vec::new();
-        text.selection_rects_clipped(blob, (0, content.len()), clip, &mut rects)
-            .expect("selection rects clipped");
-
-        assert!(!rects.is_empty(), "expected clipped selection rects");
-        assert!(
-            rects.iter().any(|r| (r.origin.y.0 - clip_y0).abs() < 0.02),
-            "expected at least one rect to be trimmed at clip_y0"
-        );
-        assert!(
-            rects
-                .iter()
-                .any(|r| ((r.origin.y.0 + r.size.height.0) - clip_y1).abs() < 0.02),
-            "expected at least one rect to be trimmed at clip_y1"
-        );
-
-        let eps = 0.02;
-        for r in &rects {
-            assert!(
-                r.size.width.0 > 0.1 && r.size.height.0 > 0.1,
-                "expected non-degenerate clipped rect, got {r:?}"
-            );
-            assert!(
-                r.origin.x.0 + eps >= clip_x0
-                    && r.origin.y.0 + eps >= clip_y0
-                    && (r.origin.x.0 + r.size.width.0) <= clip_x1 + eps
-                    && (r.origin.y.0 + r.size.height.0) <= clip_y1 + eps,
-                "expected rect to be inside clip; rect={r:?} clip={clip:?}"
-            );
-        }
-
-        // Rects should already be coalesced; ensure no overlap within the same (clipped) line slice.
-        rects.sort_by(|a, b| {
-            a.origin
-                .y
-                .0
-                .total_cmp(&b.origin.y.0)
-                .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
-                .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
-        });
-        for w in rects.windows(2) {
-            let a = &w[0];
-            let b = &w[1];
-            if a.origin.y == b.origin.y && a.size.height == b.size.height {
-                assert!(
-                    b.origin.x.0 + 0.001 >= a.origin.x.0 + a.size.width.0,
-                    "expected rects on the same line slice to not overlap; a={a:?} b={b:?}"
-                );
-            }
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "hello world";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let single_line_constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
-        let x_space_end = text
-            .caret_x(single_blob, 6)
-            .expect("caret_x at end of space");
-        let x_w_start = text
-            .caret_x(single_blob, 6 + "w".len())
-            .expect("caret_x at start of 'w'");
-
-        // Force a soft wrap at the boundary between the space and the next word.
-        let max_width = Px((x_space_end.0 + x_w_start.0) * 0.5);
-        let wrapped_constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
-
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-
-        // At a wrap boundary, the same byte index can appear on both lines.
-        let wrap_index = line1.start;
-        assert_eq!(
-            line0.end, wrap_index,
-            "expected wrapped lines to share the boundary index"
-        );
-
-        let upstream = text
-            .caret_rect(blob, wrap_index, CaretAffinity::Upstream)
-            .expect("caret rect upstream");
-        let downstream = text
-            .caret_rect(blob, wrap_index, CaretAffinity::Downstream)
-            .expect("caret rect downstream");
-
-        assert!(
-            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
-            "expected upstream caret to be on the previous line, got upstream={upstream:?} line0={line0:?}"
-        );
-        assert!(
-            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
-            "expected downstream caret to be on the next line, got downstream={downstream:?} line1={line1:?}"
-        );
-
-        text.release(blob);
-        text.release(single_blob);
-    }
-
-    #[test]
-    fn hit_test_point_reports_upstream_affinity_at_visual_line_end() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "hello world";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: Some(Px(60.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected wrapped lines");
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-        assert_eq!(line0.end, line1.start, "expected a shared break index");
-
-        // Point on the first line near its visual end should map to the break index with upstream affinity.
-        let p0 = Point::new(Px(10_000.0), Px(line0.y_top.0 + (line0.height.0 * 0.5)));
-        let ht0 = text.hit_test_point(blob, p0).expect("hit test point");
-        assert_eq!(ht0.index, line0.end);
-        assert_eq!(ht0.affinity, CaretAffinity::Upstream);
-
-        // Point on the second line near its start should map to the same index with downstream affinity.
-        let p1 = Point::new(Px(0.0), Px(line1.y_top.0 + (line1.height.0 * 0.5)));
-        let ht1 = text.hit_test_point(blob, p1).expect("hit test point");
-        assert_eq!(ht1.index, line1.start);
-        assert_eq!(ht1.affinity, CaretAffinity::Downstream);
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn explicit_newline_boundary_is_not_ambiguous_for_caret_affinity() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "hello\nworld";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let blob_ref = text.blob(blob).expect("blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected multiple lines");
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-
-        let newline_index = content
-            .find('\n')
-            .expect("expected an explicit newline in the test content");
-        let after_newline = newline_index + "\n".len();
-
-        // Explicit newlines are represented as their own byte index in the text buffer, so the
-        // caret indices for "end of previous line" and "start of next line" are distinct.
-        assert_eq!(
-            line0.end, newline_index,
-            "expected the first line to end at the newline index"
-        );
-        assert_eq!(
-            line1.start, after_newline,
-            "expected the second line to start after the newline index"
-        );
-
-        let end_line0_upstream = text
-            .caret_rect(blob, newline_index, CaretAffinity::Upstream)
-            .expect("caret rect");
-        let end_line0_downstream = text
-            .caret_rect(blob, newline_index, CaretAffinity::Downstream)
-            .expect("caret rect");
-        assert!(
-            (end_line0_upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
-            "expected newline_index caret to be on line0 regardless of affinity"
-        );
-        assert!(
-            (end_line0_downstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
-            "expected newline_index caret to be on line0 regardless of affinity"
-        );
-
-        let start_line1_upstream = text
-            .caret_rect(blob, after_newline, CaretAffinity::Upstream)
-            .expect("caret rect");
-        let start_line1_downstream = text
-            .caret_rect(blob, after_newline, CaretAffinity::Downstream)
-            .expect("caret rect");
-        assert!(
-            (start_line1_upstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
-            "expected after_newline caret to be on line1 regardless of affinity"
-        );
-        assert!(
-            (start_line1_downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
-            "expected after_newline caret to be on line1 regardless of affinity"
-        );
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn trailing_space_at_soft_wrap_is_selectable() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "hello world";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let single_line_constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
-        let x_space_end = text
-            .caret_x(single_blob, 6)
-            .expect("caret_x at end of space");
-        let x_w_end = text.caret_x(single_blob, 7).expect("caret_x after 'w'");
-        assert!(
-            x_w_end.0 > x_space_end.0 + 0.1,
-            "expected the 'w' to advance beyond the trailing space"
-        );
-
-        // Force a soft wrap at the boundary between the space and the next word. This keeps the
-        // space as a trailing character at the visual end of the first line.
-        let max_width = Px((x_space_end.0 + x_w_end.0) * 0.5);
-        let wrapped_constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-
-        let first = &blob_ref.shape.lines[0];
-        assert!(
-            first.end >= 6,
-            "expected the first visual line to include the trailing space (end={})",
-            first.end
-        );
-
-        let caret_after_o = text
-            .caret_rect(blob, 5, CaretAffinity::Downstream)
-            .expect("caret rect after 'o'");
-        let caret_after_space = text
-            .caret_rect(blob, 6, CaretAffinity::Upstream)
-            .expect("caret rect after space (upstream)");
-        assert!(
-            caret_after_space.origin.x.0 > caret_after_o.origin.x.0 + 0.1,
-            "expected the trailing space to have positive width in caret geometry"
-        );
-
-        let mut rects = Vec::new();
-        text.selection_rects(blob, (5, 6), &mut rects)
-            .expect("selection rects");
-        assert_eq!(rects.len(), 1);
-        assert!(
-            rects[0].size.width.0 > 0.1,
-            "expected a non-empty selection rect for the trailing space"
-        );
-
-        text.release(single_blob);
-        text.release(blob);
-    }
-
-    #[test]
-    fn trailing_whitespace_run_at_soft_wrap_is_selectable() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "foo   bar";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let single_line_constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
-
-        let space_run_end = 6;
-        let b_end = 7;
-
-        let x_space_end = text
-            .caret_x(single_blob, space_run_end)
-            .expect("caret_x at end of whitespace run");
-        let x_b_end = text.caret_x(single_blob, b_end).expect("caret_x after 'b'");
-        assert!(
-            x_b_end.0 > x_space_end.0 + 0.1,
-            "expected 'b' to advance beyond the trailing whitespace"
-        );
-
-        // Force a soft wrap at the boundary between the whitespace run and the next word. This
-        // keeps the run as trailing characters at the visual end of the first line.
-        let max_width = Px((x_space_end.0 + x_b_end.0) * 0.5);
-        let wrapped_constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-
-        let first = &blob_ref.shape.lines[0];
-        assert!(
-            first.end >= space_run_end,
-            "expected the first visual line to include the trailing whitespace run (end={})",
-            first.end
-        );
-
-        let caret_after_second_space = text
-            .caret_rect(blob, 5, CaretAffinity::Downstream)
-            .expect("caret rect after second space");
-        let caret_after_space_run = text
-            .caret_rect(blob, space_run_end, CaretAffinity::Upstream)
-            .expect("caret rect after whitespace run (upstream)");
-        assert!(
-            caret_after_space_run.origin.x.0 > caret_after_second_space.origin.x.0 + 0.1,
-            "expected the trailing whitespace run to have positive width in caret geometry"
-        );
-
-        let mut rects = Vec::new();
-        text.selection_rects(blob, (5, 6), &mut rects)
-            .expect("selection rects");
-        assert_eq!(rects.len(), 1);
-        assert!(
-            rects[0].size.width.0 > 0.1,
-            "expected a non-empty selection rect for the trailing whitespace"
-        );
-
-        text.release(single_blob);
-        text.release(blob);
-    }
-
-    #[test]
-    fn trailing_whitespace_run_at_soft_wrap_is_selectable_for_attributed_text() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "foo   bar";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let spans = Arc::<[TextSpan]>::from(vec![
-            TextSpan {
-                len: 4,
-                shaping: TextShapingStyle::default(),
-                paint: fret_core::TextPaintStyle {
-                    fg: Some(fret_core::Color {
-                        r: 0.9,
-                        g: 0.1,
-                        b: 0.1,
-                        a: 1.0,
-                    }),
-                    ..Default::default()
-                },
-            },
-            TextSpan {
-                len: content.len() - 4,
-                shaping: TextShapingStyle::default(),
-                paint: fret_core::TextPaintStyle {
-                    fg: Some(fret_core::Color {
-                        r: 0.1,
-                        g: 0.3,
-                        b: 0.9,
-                        a: 1.0,
-                    }),
-                    ..Default::default()
-                },
-            },
-        ]);
-
-        let rich = fret_core::AttributedText {
-            text: Arc::<str>::from(content),
-            spans: spans.clone(),
-        };
-        assert!(rich.is_valid(), "expected attributed input to be valid");
-
-        let single_line_constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (single_blob, _metrics) =
-            text.prepare_attributed(&rich, &style, single_line_constraints);
-
-        let space_run_end = 6;
-        let b_end = 7;
-
-        let x_space_end = text
-            .caret_x(single_blob, space_run_end)
-            .expect("caret_x at end of whitespace run");
-        let x_b_end = text.caret_x(single_blob, b_end).expect("caret_x after 'b'");
-        assert!(
-            x_b_end.0 > x_space_end.0 + 0.1,
-            "expected 'b' to advance beyond the trailing whitespace"
-        );
-
-        // Force a soft wrap at the boundary between the whitespace run and the next word. This
-        // keeps the run as trailing characters at the visual end of the first line.
-        let max_width = Px((x_space_end.0 + x_b_end.0) * 0.5);
-        let wrapped_constraints = TextConstraints {
-            max_width: Some(max_width),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare_attributed(&rich, &style, wrapped_constraints);
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-
-        let first = &blob_ref.shape.lines[0];
-        assert!(
-            first.end >= space_run_end,
-            "expected the first visual line to include the trailing whitespace run (end={})",
-            first.end
-        );
-
-        let caret_after_second_space = text
-            .caret_rect(blob, 5, CaretAffinity::Downstream)
-            .expect("caret rect after second space");
-        let caret_after_space_run = text
-            .caret_rect(blob, space_run_end, CaretAffinity::Upstream)
-            .expect("caret rect after whitespace run (upstream)");
-        assert!(
-            caret_after_space_run.origin.x.0 > caret_after_second_space.origin.x.0 + 0.1,
-            "expected the trailing whitespace run to have positive width in caret geometry"
-        );
-
-        let mut rects = Vec::new();
-        text.selection_rects(blob, (5, 6), &mut rects)
-            .expect("selection rects");
-        assert_eq!(rects.len(), 1);
-        assert!(
-            rects[0].size.width.0 > 0.1,
-            "expected a non-empty selection rect for the trailing whitespace"
-        );
-
-        text.release(single_blob);
-        text.release(blob);
-    }
-
-    #[test]
-    fn rtl_word_wrap_hit_test_maps_line_edges_to_logical_ends() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        // A short RTL paragraph with spaces so `TextWrap::Word` has deterministic breakpoints.
-        let content = "אבג דהו זחט יכל מנ";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let constraints = TextConstraints {
-            max_width: Some(Px(60.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-
-        for line in blob_ref.shape.lines.iter() {
-            if line.start >= line.end {
-                continue;
-            }
-            assert!(
-                !line.caret_stops.is_empty(),
-                "expected caret stops for wrapped RTL line"
-            );
-
-            let mut x_min = f32::INFINITY;
-            let mut x_max = f32::NEG_INFINITY;
-            for (_, x) in line.caret_stops.iter() {
-                x_min = x_min.min(x.0);
-                x_max = x_max.max(x.0);
-            }
-            assert!(
-                x_min.is_finite() && x_max.is_finite() && x_max >= x_min,
-                "expected finite caret stop bounds for RTL line"
-            );
-
-            let y = Px(line.y_top.0 + line.height.0 * 0.5);
-            let left = text
-                .hit_test_point(blob, Point::new(Px(x_min), y))
-                .expect("hit test (left edge)");
-            let right = text
-                .hit_test_point(blob, Point::new(Px(x_max), y))
-                .expect("hit test (right edge)");
-
-            assert_eq!(
-                left.index, line.end,
-                "expected left edge to map to logical end for RTL line: line={:?} left={:?}",
-                line, left
-            );
-            assert_eq!(
-                right.index, line.start,
-                "expected right edge to map to logical start for RTL line: line={:?} right={:?}",
-                line, right
-            );
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "abc אבג (123) def ghi jkl mno pqr";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        let constraints = TextConstraints {
-            max_width: Some(Px(70.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let rtl_start = content.find('א').expect("hebrew start");
-        let rtl_end = content.find('ג').expect("hebrew end") + 'ג'.len_utf8();
-
-        let mut rects = Vec::new();
-        text.selection_rects(blob, (rtl_start, rtl_end), &mut rects)
-            .expect("selection rects");
-        assert!(
-            rects.iter().any(|r| r.size.width.0 > 0.1),
-            "expected a non-empty selection rect for wrapped RTL range: rects={rects:?}"
-        );
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn mixed_direction_word_wrap_caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line()
-     {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "abc אבג def ghi jkl";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-
-        // Pick a width between "…def" and "…ghi" so the first line includes mixed-direction text.
-        let single_line_constraints = TextConstraints {
-            max_width: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
-        let def_end = content.find("def").expect("def") + "def".len();
-        let ghi_end = content.find("ghi").expect("ghi") + "ghi".len();
-        let x_def_end = text.caret_x(single_blob, def_end).expect("caret_x def end");
-        let x_ghi_end = text.caret_x(single_blob, ghi_end).expect("caret_x ghi end");
-        assert!(
-            x_ghi_end.0 > x_def_end.0 + 0.1,
-            "expected ghi to advance beyond def in single-line layout"
-        );
-
-        let constraints = TextConstraints {
-            max_width: Some(Px((x_def_end.0 + x_ghi_end.0) * 0.5)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-        assert_eq!(
-            line0.end, line1.start,
-            "expected a shared soft-wrap boundary index"
-        );
-        let break_index = line1.start;
-
-        let upstream = text
-            .caret_rect(blob, break_index, CaretAffinity::Upstream)
-            .expect("caret rect upstream");
-        let downstream = text
-            .caret_rect(blob, break_index, CaretAffinity::Downstream)
-            .expect("caret rect downstream");
-
-        assert!(
-            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
-            "expected upstream caret to be on the previous line at wrap boundary"
-        );
-        assert!(
-            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
-            "expected downstream caret to be on the next line at wrap boundary"
-        );
-
-        text.release(blob);
-        text.release(single_blob);
-    }
-
-    #[test]
-    fn mixed_direction_word_wrap_hit_test_reports_expected_affinity_at_soft_wrap_boundary() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "abc אבג def ghi jkl";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: Some(Px(70.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let blob_ref = text.blob(blob).expect("wrapped blob");
-        assert!(blob_ref.shape.lines.len() >= 2, "expected wrapped lines");
-        let line0 = &blob_ref.shape.lines[0];
-        let line1 = &blob_ref.shape.lines[1];
-        assert_eq!(line0.end, line1.start, "expected shared boundary");
-        let break_index = line1.start;
-
-        let x0 = line0
-            .caret_stops
-            .iter()
-            .find_map(|(idx, x)| (*idx == break_index).then_some(*x))
-            .expect("expected caret stop at wrap boundary (line0)");
-        let x1 = line1
-            .caret_stops
-            .iter()
-            .find_map(|(idx, x)| (*idx == break_index).then_some(*x))
-            .expect("expected caret stop at wrap boundary (line1)");
-
-        let y0 = Px(line0.y_top.0 + line0.height.0 * 0.5);
-        let y1 = Px(line1.y_top.0 + line1.height.0 * 0.5);
-
-        let ht0 = text
-            .hit_test_point(blob, Point::new(x0, y0))
-            .expect("hit test (line0)");
-        assert_eq!(ht0.index, break_index);
-        assert_eq!(
-            ht0.affinity,
-            CaretAffinity::Upstream,
-            "expected wrap-boundary hit on line0 to report upstream affinity"
-        );
-
-        let ht1 = text
-            .hit_test_point(blob, Point::new(x1, y1))
-            .expect("hit test (line1)");
-        assert_eq!(ht1.index, break_index);
-        assert_eq!(
-            ht1.affinity,
-            CaretAffinity::Downstream,
-            "expected wrap-boundary hit on line1 to report downstream affinity"
-        );
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn mixed_direction_word_wrap_selection_rects_are_coalesced_per_visual_line() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = "abc אבג def ghi jkl mno pqr";
-        let style = TextStyle {
-            font: fret_core::FontId::monospace(),
-            size: Px(16.0),
-            ..Default::default()
-        };
-        let constraints = TextConstraints {
-            max_width: Some(Px(70.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-        let (blob, _metrics) = text.prepare(content, &style, constraints);
-
-        let mut rects = Vec::new();
-        text.selection_rects(blob, (0, content.len()), &mut rects)
-            .expect("selection rects");
-        assert!(
-            !rects.is_empty(),
-            "expected selection rects for full-range selection"
-        );
-
-        rects.sort_by(|a, b| {
-            a.origin
-                .y
-                .0
-                .total_cmp(&b.origin.y.0)
-                .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
-                .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
-        });
-
-        let mut prev: Option<Rect> = None;
-        for r in rects.iter() {
-            assert!(
-                r.size.width.0 > 0.0 && r.size.height.0 > 0.0,
-                "expected non-degenerate selection rects, got {r:?}"
-            );
-            if let Some(p) = prev {
-                if (p.origin.y.0 - r.origin.y.0).abs() < 1e-3
-                    && (p.size.height.0 - r.size.height.0).abs() < 1e-3
-                {
-                    let p_end = p.origin.x.0 + p.size.width.0;
-                    assert!(
-                        r.origin.x.0 + 1e-3 >= p_end,
-                        "expected coalesced selection rects to be non-overlapping on the same line: prev={p:?} next={r:?}"
-                    );
-                }
-            }
-            prev = Some(*r);
-        }
-
-        text.release(blob);
-    }
-
-    #[test]
-    fn ellipsis_overflow_truncates_single_line_layout() {
-        let text = "This is a long line that should truncate";
-        let constraints = TextConstraints {
-            max_width: Some(Px(80.0)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
-        let base = TextStyle::default();
-        let wrapped = crate::text::wrapper::wrap_with_constraints(
-            &mut shaper,
-            TextInputRef::plain(text, &base),
-            constraints,
-        );
-
-        assert_eq!(wrapped.lines.len(), 1);
-        assert!(wrapped.kept_end < text.len());
-        assert!(wrapped.lines[0].width <= 80.0 + 0.5);
-    }
-
-    #[test]
-    fn ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end() {
-        let text = "This is a long line that should truncate";
-        let constraints = TextConstraints {
-            max_width: Some(Px(80.0)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: fret_core::TextAlign::Start,
-            scale_factor: 1.0,
-        };
-
-        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
-        let base = TextStyle::default();
-        let wrapped = crate::text::wrapper::wrap_with_constraints(
-            &mut shaper,
-            TextInputRef::plain(text, &base),
-            constraints,
-        );
-
-        assert_eq!(wrapped.lines.len(), 1);
-        let kept_end = wrapped.kept_end;
-        assert!(kept_end < text.len());
-
-        let line_layout = &wrapped.lines[0];
-        assert!(
-            line_layout
-                .clusters
-                .iter()
-                .any(|c| c.text_range == (kept_end..kept_end)),
-            "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
-        );
-
-        let slice = &text[..kept_end];
-        let caret_stops = super::caret_stops_for_slice(
-            slice,
-            0,
-            &line_layout.clusters,
-            line_layout.width,
-            1.0,
-            kept_end,
-        );
-        let line = super::TextLine {
-            start: 0,
-            end: kept_end,
-            width: Px(line_layout.width),
-            y_top: Px(0.0),
-            y_baseline: Px(0.0),
-            height: Px(10.0),
-            ascent: Px(0.0),
-            descent: Px(0.0),
-            caret_stops,
-            clusters: line_clusters_from_shaped(0, &line_layout.clusters),
-        };
-
-        let x = Px((line_layout.width - 1.0).max(0.0));
-        let hit =
-            fret_render_text::geometry::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0)))
-                .expect("hit test");
-        assert_eq!(hit.index, kept_end);
-    }
-
-    #[test]
     fn emoji_sequences_use_color_quads_when_color_font_is_available() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
@@ -7101,7 +4302,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7215,7 +4416,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7276,7 +4477,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7371,7 +4572,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7809,7 +5010,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -7917,7 +5118,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8019,7 +5220,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8142,7 +5343,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8513,7 +5714,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8730,7 +5931,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 
@@ -8876,7 +6077,7 @@ mod tests {
         let _ = text.parley_shaper.set_common_fallback_stack_suffix(
             text.fallback_policy.common_fallback_stack_suffix.clone(),
         );
-        text.generic_injected_by_family.clear();
+        text.generic_injections.clear();
         text.font_db_revision = 0;
         text.font_stack_key = 0;
 

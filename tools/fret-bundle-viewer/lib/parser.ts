@@ -254,7 +254,37 @@ function normalizePerfFromDebugStats(raw: unknown): PerfData | undefined {
   }
 }
 
-function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
+function readSnapshotWindowId(obj: Record<string, unknown>): string | undefined {
+  const rawWindow = obj.window ?? obj.window_id ?? obj.windowId
+  return rawWindow != null ? String(rawWindow) : undefined
+}
+
+function readSnapshotSemanticsFingerprint(obj: Record<string, unknown>): string | undefined {
+  const rawFp = obj.semantics_fingerprint ?? obj.semanticsFingerprint
+  return rawFp != null ? String(rawFp) : undefined
+}
+
+function resolveSnapshotSemanticsRaw(
+  obj: Record<string, unknown>,
+  debug: Record<string, unknown> | undefined,
+  semanticsTable: Map<string, unknown> | undefined
+): unknown {
+  const direct = (debug?.semantics as unknown) ?? obj.semantics ?? obj.semantic_tree ?? obj.tree
+  if (direct != null) return direct
+  if (!semanticsTable) return undefined
+
+  const windowId = readSnapshotWindowId(obj)
+  const fp = readSnapshotSemanticsFingerprint(obj)
+  if (!windowId || !fp) return undefined
+
+  return semanticsTable.get(`${windowId}:${fp}`)
+}
+
+function normalizeSnapshot(
+  raw: unknown,
+  warnings: UiMessage[],
+  semanticsTable: Map<string, unknown> | undefined
+): SnapshotModel {
   if (!raw || typeof raw !== 'object') {
     return { raw }
   }
@@ -262,7 +292,9 @@ function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
   const obj = raw as Record<string, unknown>
   const debug = obj.debug && typeof obj.debug === 'object' ? (obj.debug as Record<string, unknown>) : undefined
   const debugStats = debug?.stats
-  const debugSemantics = debug?.semantics
+  const semanticsRaw = resolveSnapshotSemanticsRaw(obj, debug, semanticsTable)
+  const semanticsObj =
+    semanticsRaw && typeof semanticsRaw === 'object' ? (semanticsRaw as Record<string, unknown>) : undefined
 
   const snapshot: SnapshotModel = {
     tickId: obj.tick_id != null ? String(obj.tick_id) : obj.tickId != null ? String(obj.tickId) : undefined,
@@ -284,7 +316,7 @@ function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
           ? obj.scaleFactor
           : undefined,
     windowSizeLogical: undefined,
-    semantics: normalizeSemantics(debugSemantics ?? obj.semantics ?? obj.semantic_tree ?? obj.tree, warnings),
+    semantics: normalizeSemantics(semanticsRaw, warnings),
     focus: undefined,
     overlay: undefined,
     hitTest: undefined,
@@ -337,8 +369,8 @@ function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
   // Overlay
   const overlay = obj.overlay ?? obj.overlay_routing ?? obj.overlayRouting
   const barrierRootId =
-    debugSemantics && typeof debugSemantics === 'object' && (debugSemantics as Record<string, unknown>).barrier_root != null
-      ? String((debugSemantics as Record<string, unknown>).barrier_root)
+    semanticsObj?.barrier_root != null
+      ? String(semanticsObj.barrier_root)
       : overlay && typeof overlay === 'object'
         ? (() => {
             const o = overlay as Record<string, unknown>
@@ -349,7 +381,7 @@ function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
         : undefined
 
   const layerRootsRaw =
-    (debugSemantics && typeof debugSemantics === 'object' ? (debugSemantics as Record<string, unknown>).roots : undefined) ??
+    semanticsObj?.roots ??
     (overlay && typeof overlay === 'object'
       ? (overlay as Record<string, unknown>).layer_roots ??
         (overlay as Record<string, unknown>).layerRoots ??
@@ -428,7 +460,12 @@ function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
   return snapshot
 }
 
-function normalizeWindow(raw: unknown, index: number, warnings: UiMessage[]): WindowModel {
+function normalizeWindow(
+  raw: unknown,
+  index: number,
+  warnings: UiMessage[],
+  semanticsTable: Map<string, unknown> | undefined
+): WindowModel {
   if (!raw || typeof raw !== 'object') {
     return { windowId: `window-${index}`, snapshots: [] }
   }
@@ -448,10 +485,10 @@ function normalizeWindow(raw: unknown, index: number, warnings: UiMessage[]): Wi
   let snapshots: SnapshotModel[] = []
   const snapshotsRaw = obj.snapshots ?? obj.frames ?? obj.history
   if (Array.isArray(snapshotsRaw)) {
-    snapshots = snapshotsRaw.map((s) => normalizeSnapshot(s, warnings))
+    snapshots = snapshotsRaw.map((s) => normalizeSnapshot(s, warnings, semanticsTable))
   } else if (snapshotsRaw && typeof snapshotsRaw === 'object') {
     // Single snapshot as object
-    snapshots = [normalizeSnapshot(snapshotsRaw, warnings)]
+    snapshots = [normalizeSnapshot(snapshotsRaw, warnings, semanticsTable)]
   }
 
   const events = normalizeEvents(obj.events, warnings)
@@ -487,6 +524,28 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
   }
 
   const root = parsed as Record<string, unknown>
+  const semanticsTable: Map<string, unknown> | undefined = (() => {
+    const tables = root.tables
+    if (!tables || typeof tables !== 'object') return undefined
+    const semantics = (tables as Record<string, unknown>).semantics
+    if (!semantics || typeof semantics !== 'object') return undefined
+    const entries = (semantics as Record<string, unknown>).entries
+    if (!Array.isArray(entries)) return undefined
+
+    const map = new Map<string, unknown>()
+    for (const rawEntry of entries) {
+      if (!rawEntry || typeof rawEntry !== 'object') continue
+      const e = rawEntry as Record<string, unknown>
+      const window = e.window ?? e.window_id ?? e.windowId
+      const fp = e.semantics_fingerprint ?? e.semanticsFingerprint
+      const sem = e.semantics ?? e.semantic
+      if (window == null || fp == null || sem == null) continue
+      map.set(`${String(window)}:${String(fp)}`, sem)
+    }
+
+    return map.size > 0 ? map : undefined
+  })()
+
   let windows: WindowModel[] = []
 
   const schemaVersion = typeof root.schema_version === 'number' ? root.schema_version : undefined
@@ -496,16 +555,16 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
   // Try to find windows array
   const windowsRaw = root.windows ?? root.window_list ?? root.windowList
   if (Array.isArray(windowsRaw)) {
-    windows = windowsRaw.map((w, i) => normalizeWindow(w, i, warnings))
+    windows = windowsRaw.map((w, i) => normalizeWindow(w, i, warnings, semanticsTable))
   } else if (root.snapshots || root.frames || root.history) {
     // Single window case - the root contains snapshots directly
-    windows = [normalizeWindow(root, 0, warnings)]
+    windows = [normalizeWindow(root, 0, warnings, semanticsTable)]
   } else if (root.window_id || root.windowId || root.semantics) {
     // Root is a single snapshot
     windows = [
       {
         windowId: 'window-0',
-        snapshots: [normalizeSnapshot(root, warnings)],
+        snapshots: [normalizeSnapshot(root, warnings, semanticsTable)],
       },
     ]
   } else {

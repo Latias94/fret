@@ -93,6 +93,8 @@ Workflow tip:
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
+- To generate a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
+- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
@@ -435,6 +437,9 @@ Core:
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
+- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`: choose the `bundle.json` schema version (default: `2` for script-driven dumps; `1` for manual dumps).
+  - Schema v2 adds `tables.semantics.entries[]` to deduplicate exported semantics snapshots by `(window, semantics_fingerprint)`.
+  - Details + migration notes: `docs/workstreams/diag-bundle-schema-v2.md`.
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -450,6 +455,11 @@ Semantics export:
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
+- `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`: controls how often bundles include semantics snapshots.
+  - `all`: include semantics on every snapshot (default for manual dumps).
+  - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
+  - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
+  - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:

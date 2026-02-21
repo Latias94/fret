@@ -30,6 +30,7 @@ mod commands;
 mod compare;
 pub mod devtools;
 mod gates;
+mod json_bundle;
 mod lint;
 mod paths;
 mod perf_seed_policy;
@@ -173,9 +174,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
+    let mut meta_report: bool = false;
+    let mut index_out: Option<PathBuf> = None;
     let mut test_ids_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
+    let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -404,6 +408,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --pack-out".to_string());
                 };
                 pack_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--packet-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --packet-out".to_string());
+                };
+                ai_packet_out = Some(PathBuf::from(v));
                 i += 1;
             }
             "--include-root-artifacts" => {
@@ -638,8 +650,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 triage_out = Some(p.clone());
                 lint_out = Some(p.clone());
                 meta_out = Some(p.clone());
+                index_out = Some(p.clone());
                 query_out = Some(p.clone());
                 slice_out = Some(p.clone());
+                ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
                 i += 1;
             }
@@ -1692,6 +1706,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--meta-report" => {
+                meta_report = true;
+                i += 1;
+            }
             "--verbose" => {
                 stats_verbose = true;
                 i += 1;
@@ -2140,6 +2158,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             meta_out,
             warmup_frames,
             stats_json,
+            meta_report,
+        ),
+        "index" => commands::index::cmd_index(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            index_out,
+            warmup_frames,
+            stats_json,
         ),
         "test-ids" => commands::artifacts::cmd_test_ids(
             &rest,
@@ -2149,6 +2176,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             warmup_frames,
             max_test_ids,
             stats_json,
+        ),
+        "ai-packet" => commands::ai_packet::cmd_ai_packet(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            ai_packet_out,
+            pack_include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
         ),
         "query" => commands::query::cmd_query(
             &rest,
@@ -10976,6 +11014,8 @@ pub(crate) fn pack_bundle_dir_to_zip(
 
     if include_root_artifacts || include_triage {
         let meta_path = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)?;
+        let bundle_index_path =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames)?;
         let test_ids_index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames)?;
         let test_ids_path =
@@ -10983,6 +11023,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
 
         for (src, rel) in [
             (meta_path, "bundle.meta.json"),
+            (bundle_index_path, "bundle.index.json"),
             (test_ids_index_path, "test_ids.index.json"),
             (test_ids_path, "test_ids.json"),
         ] {

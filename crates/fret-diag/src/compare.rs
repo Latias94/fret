@@ -163,6 +163,9 @@ pub(super) fn compare_bundles_json(
     b_bundle_path: &Path,
     opts: CompareOptions,
 ) -> Result<CompareReport, String> {
+    let a_semantics = crate::json_bundle::SemanticsResolver::new(a_bundle);
+    let b_semantics = crate::json_bundle::SemanticsResolver::new(b_bundle);
+
     let a_window = first_window_from_bundle(a_bundle)?;
     let b_window = first_window_from_bundle(b_bundle)?;
 
@@ -191,7 +194,14 @@ pub(super) fn compare_bundles_json(
     }
 
     if let (Some(a_snapshot), Some(b_snapshot)) = (a_snapshot, b_snapshot) {
-        compare_semantics_by_test_id(&mut diffs, a_snapshot, b_snapshot, opts)?;
+        compare_semantics_by_test_id(
+            &mut diffs,
+            &a_semantics,
+            &b_semantics,
+            a_snapshot,
+            b_snapshot,
+            opts,
+        )?;
     }
 
     Ok(CompareReport {
@@ -258,22 +268,18 @@ struct SemanticsNodeSummary {
 
 fn compare_semantics_by_test_id(
     diffs: &mut Vec<CompareDiff>,
+    a_semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    b_semantics: &crate::json_bundle::SemanticsResolver<'_>,
     a_snapshot: &serde_json::Value,
     b_snapshot: &serde_json::Value,
     opts: CompareOptions,
 ) -> Result<(), String> {
-    let a_sem = a_snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .ok_or_else(|| {
-            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
-        })?;
-    let b_sem = b_snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .ok_or_else(|| {
-            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
-        })?;
+    let a_sem = a_semantics.semantics_snapshot(a_snapshot).ok_or_else(|| {
+        "bundle snapshot missing semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+    })?;
+    let b_sem = b_semantics.semantics_snapshot(b_snapshot).ok_or_else(|| {
+        "bundle snapshot missing semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+    })?;
 
     let (a_by_test_id, a_id_to_test_id) = semantics_nodes_by_test_id(a_sem);
     let (b_by_test_id, b_id_to_test_id) = semantics_nodes_by_test_id(b_sem);

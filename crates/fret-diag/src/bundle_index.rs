@@ -3,16 +3,10 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
-fn pick_last_snapshot_after_warmup<'a>(
-    snaps: &'a [Value],
-    warmup_frames: u64,
-) -> Option<&'a Value> {
-    snaps
-        .iter()
-        .rev()
-        .find(|s| s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0) >= warmup_frames)
-        .or_else(|| snaps.last())
-}
+use crate::json_bundle::{
+    SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
+    snapshot_semantics_fingerprint, snapshot_semantics_nodes, snapshot_window_snapshot_seq,
+};
 
 fn read_json_value(path: &Path) -> Option<Value> {
     let bytes = std::fs::read(path).ok()?;
@@ -30,6 +24,11 @@ fn write_pretty_json(path: &Path, payload: &Value) -> Result<(), String> {
 pub(crate) fn default_bundle_meta_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("bundle.meta.json")
+}
+
+pub(crate) fn default_bundle_index_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("bundle.index.json")
 }
 
 pub(crate) fn default_test_ids_path(bundle_path: &Path) -> PathBuf {
@@ -82,9 +81,37 @@ pub(crate) fn ensure_test_ids_index_json(
     Ok(out)
 }
 
+pub(crate) fn ensure_bundle_index_json(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<PathBuf, String> {
+    let out = default_bundle_index_path(bundle_path);
+    if out.is_file() && read_json_value(&out).is_some() {
+        return Ok(out);
+    }
+    let payload = build_bundle_index_payload(bundle_path, warmup_frames)?;
+    write_pretty_json(&out, &payload)?;
+    Ok(out)
+}
+
 fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_bundle_meta_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn build_bundle_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_bundle_index_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn build_bundle_meta_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -93,6 +120,10 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
     let mut out_windows: Vec<Value> = Vec::new();
     let mut total_snapshots: u64 = 0;
     let mut total_unique_test_ids: HashSet<String> = HashSet::new();
+    let mut total_snapshots_with_semantics: u64 = 0;
+    let mut total_snapshots_with_inline_semantics: u64 = 0;
+    let mut total_snapshots_with_table_semantics: u64 = 0;
+    let mut total_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -102,10 +133,60 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             .map_or(&[][..], |v| v);
         total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
 
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let mut window_snapshots_with_semantics: u64 = 0;
+        let mut window_snapshots_with_inline_semantics: u64 = 0;
+        let mut window_snapshots_with_table_semantics: u64 = 0;
+        let mut window_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
+        for s in snaps {
+            let inline_nodes = snapshot_semantics_nodes(s).is_some();
+            if inline_nodes {
+                window_snapshots_with_inline_semantics =
+                    window_snapshots_with_inline_semantics.saturating_add(1);
+                total_snapshots_with_inline_semantics =
+                    total_snapshots_with_inline_semantics.saturating_add(1);
+            }
+
+            let resolved_nodes = semantics.nodes(s).is_some();
+            if resolved_nodes {
+                window_snapshots_with_semantics = window_snapshots_with_semantics.saturating_add(1);
+                total_snapshots_with_semantics = total_snapshots_with_semantics.saturating_add(1);
+                if !inline_nodes {
+                    window_snapshots_with_table_semantics =
+                        window_snapshots_with_table_semantics.saturating_add(1);
+                    total_snapshots_with_table_semantics =
+                        total_snapshots_with_table_semantics.saturating_add(1);
+                }
+            }
+            if let Some(fp) = s.get("semantics_fingerprint").and_then(|v| v.as_u64()) {
+                window_unique_semantics_fingerprints.insert(fp);
+                total_unique_semantics_fingerprints.insert(fp);
+            }
+        }
+
+        let mut window_semantics_table_entries_total: u64 = 0;
+        for e in semantics.table_entries() {
+            if e.get("window").and_then(|v| v.as_u64()) == Some(window_id) {
+                window_semantics_table_entries_total =
+                    window_semantics_table_entries_total.saturating_add(1);
+            }
+        }
+        let window_semantics_table_unique_keys_total =
+            semantics.table_unique_keys_total_for_window(window_id) as u64;
+
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             out_windows.push(json!({
                 "window": window_id,
                 "snapshots_total": snaps.len(),
+                "snapshots_with_semantics_total": window_snapshots_with_semantics,
+                "snapshots_with_inline_semantics_total": window_snapshots_with_inline_semantics,
+                "snapshots_with_table_semantics_total": window_snapshots_with_table_semantics,
+                "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
+                "semantics_table_entries_total": window_semantics_table_entries_total,
+                "semantics_table_unique_keys_total": window_semantics_table_unique_keys_total,
                 "considered_frame_id": null,
                 "considered_timestamp_unix_ms": null,
                 "semantics_nodes_total": 0,
@@ -116,21 +197,13 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
+        let frame_id = snapshot_frame_id(snapshot);
         let ts = snapshot
             .get("timestamp_unix_ms")
             .and_then(|v| v.as_u64())
             .or_else(|| snapshot.get("timestamp_ms").and_then(|v| v.as_u64()));
 
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<&str, u64> = HashMap::new();
         for n in nodes {
@@ -156,6 +229,12 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
         out_windows.push(json!({
             "window": window_id,
             "snapshots_total": snaps.len(),
+            "snapshots_with_semantics_total": window_snapshots_with_semantics,
+            "snapshots_with_inline_semantics_total": window_snapshots_with_inline_semantics,
+            "snapshots_with_table_semantics_total": window_snapshots_with_table_semantics,
+            "unique_semantics_fingerprints_total": window_unique_semantics_fingerprints.len(),
+            "semantics_table_entries_total": window_semantics_table_entries_total,
+            "semantics_table_unique_keys_total": window_semantics_table_unique_keys_total,
             "considered_frame_id": frame_id,
             "considered_timestamp_unix_ms": ts,
             "semantics_nodes_total": semantics_nodes_total,
@@ -168,12 +247,106 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
     Ok(json!({
         "schema_version": 1,
         "kind": "bundle_meta",
-        "bundle": bundle_path.display().to_string(),
+        "bundle": bundle_label,
         "warmup_frames": warmup_frames,
         "windows_total": windows.len(),
         "snapshots_total": total_snapshots,
         "total_unique_test_ids": total_unique_test_ids.len(),
+        "snapshots_with_semantics_total": total_snapshots_with_semantics,
+        "snapshots_with_inline_semantics_total": total_snapshots_with_inline_semantics,
+        "snapshots_with_table_semantics_total": total_snapshots_with_table_semantics,
+        "semantics_table_entries_total": semantics.table_entries_total(),
+        "semantics_table_unique_keys_total": semantics.table_unique_keys_total(),
+        "unique_semantics_fingerprints_total": total_unique_semantics_fingerprints.len(),
         "windows": out_windows,
+    }))
+}
+
+fn build_bundle_index_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    let semantics = SemanticsResolver::new(bundle);
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut windows_out: Vec<Value> = Vec::new();
+    let mut total_snapshots: u64 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
+
+        let mut snapshots_out: Vec<Value> = Vec::with_capacity(snaps.len());
+
+        let mut first_frame_id: Option<u64> = None;
+        let mut last_frame_id: Option<u64> = None;
+        let mut first_timestamp_unix_ms: Option<u64> = None;
+        let mut last_timestamp_unix_ms: Option<u64> = None;
+
+        for (idx, s) in snaps.iter().enumerate() {
+            let frame_id = snapshot_frame_id(s);
+            let window_snapshot_seq = snapshot_window_snapshot_seq(s);
+            let ts = s
+                .get("timestamp_unix_ms")
+                .and_then(|v| v.as_u64())
+                .or_else(|| s.get("timestamp_ms").and_then(|v| v.as_u64()));
+
+            first_frame_id.get_or_insert(frame_id);
+            last_frame_id = Some(frame_id);
+            if first_timestamp_unix_ms.is_none() {
+                first_timestamp_unix_ms = ts;
+            }
+            last_timestamp_unix_ms = ts.or(last_timestamp_unix_ms);
+
+            let semantics_fingerprint = snapshot_semantics_fingerprint(s);
+            let has_inline_semantics = snapshot_semantics_nodes(s).is_some();
+            let has_resolved_semantics = semantics.nodes(s).is_some();
+            let semantics_source = if has_inline_semantics {
+                "inline"
+            } else if has_resolved_semantics {
+                "table"
+            } else {
+                "none"
+            };
+
+            snapshots_out.push(json!({
+                "window_snapshot_seq": window_snapshot_seq,
+                "frame_id": frame_id,
+                "timestamp_unix_ms": ts,
+                "is_warmup": (idx as u64) < warmup_frames,
+                "semantics_fingerprint": semantics_fingerprint,
+                "semantics_source": semantics_source,
+                "has_semantics": has_resolved_semantics,
+            }));
+        }
+
+        windows_out.push(json!({
+            "window": window_id,
+            "snapshots_total": snaps.len(),
+            "first_frame_id": first_frame_id,
+            "last_frame_id": last_frame_id,
+            "first_timestamp_unix_ms": first_timestamp_unix_ms,
+            "last_timestamp_unix_ms": last_timestamp_unix_ms,
+            "snapshots": snapshots_out,
+        }));
+    }
+
+    Ok(json!({
+        "schema_version": 1,
+        "kind": "bundle_index",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "windows_total": windows.len(),
+        "snapshots_total": total_snapshots,
+        "windows": windows_out,
     }))
 }
 
@@ -184,6 +357,7 @@ fn build_test_ids_payload(
 ) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -198,20 +372,16 @@ fn build_test_ids_payload(
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let frame_id = snapshot_frame_id(snapshot);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {
@@ -284,6 +454,19 @@ fn build_test_ids_payload(
 fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_test_ids_index_payload_from_json(
+        &bundle,
+        &bundle_path.display().to_string(),
+        warmup_frames,
+    )
+}
+
+fn build_test_ids_index_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -302,20 +485,16 @@ fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Resul
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let frame_id = snapshot_frame_id(snapshot);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {
@@ -378,11 +557,170 @@ fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Resul
     Ok(json!({
         "schema_version": 1,
         "kind": "test_ids_index",
-        "bundle": bundle_path.display().to_string(),
+        "bundle": bundle_label,
         "warmup_frames": warmup_frames,
         "max_unique_test_ids_budget": MAX_UNIQUE_TEST_IDS_BUDGET,
         "truncated": truncated,
         "total_unique_test_ids": total_unique.len(),
         "windows": windows_out,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn sample_v2_bundle() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "window": 1, "semantics_fingerprint": 10, "debug": {} },
+                    { "frame_id": 1, "window": 1, "semantics_fingerprint": 10, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 10,
+                        "semantics": {
+                            "nodes": [
+                                { "id": 1, "test_id": "a" },
+                                { "id": 2, "test_id": "b" }
+                            ]
+                        }
+                    }]
+                }
+            }
+        })
+    }
+
+    fn sample_v2_bundle_with_inline_semantics() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "window": 1,
+                        "window_snapshot_seq": 100,
+                        "semantics_fingerprint": 10,
+                        "debug": { "semantics": { "nodes": [{ "id": 1, "test_id": "a" }] } }
+                    },
+                    { "frame_id": 1, "window": 1, "window_snapshot_seq": 101, "semantics_fingerprint": 10, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 10,
+                        "semantics": {
+                            "nodes": [
+                                { "id": 1, "test_id": "a" },
+                                { "id": 2, "test_id": "b" }
+                            ]
+                        }
+                    }]
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn bundle_meta_counts_semantics_via_table() {
+        let bundle = sample_v2_bundle();
+        let meta = build_bundle_meta_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(meta["kind"].as_str(), Some("bundle_meta"));
+        assert_eq!(meta["snapshots_total"].as_u64(), Some(2));
+        assert_eq!(meta["snapshots_with_semantics_total"].as_u64(), Some(2));
+        assert_eq!(
+            meta["snapshots_with_inline_semantics_total"].as_u64(),
+            Some(0)
+        );
+        assert_eq!(
+            meta["snapshots_with_table_semantics_total"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(meta["semantics_table_entries_total"].as_u64(), Some(1));
+        assert_eq!(meta["semantics_table_unique_keys_total"].as_u64(), Some(1));
+        assert_eq!(
+            meta["unique_semantics_fingerprints_total"].as_u64(),
+            Some(1)
+        );
+
+        let windows = meta["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        assert_eq!(windows[0]["window"].as_u64(), Some(1));
+        assert_eq!(windows[0]["considered_frame_id"].as_u64(), Some(1));
+        assert_eq!(windows[0]["semantics_nodes_total"].as_u64(), Some(2));
+        assert_eq!(windows[0]["unique_test_ids_total"].as_u64(), Some(2));
+        assert_eq!(
+            windows[0]["snapshots_with_inline_semantics_total"].as_u64(),
+            Some(0)
+        );
+        assert_eq!(
+            windows[0]["snapshots_with_table_semantics_total"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(
+            windows[0]["semantics_table_entries_total"].as_u64(),
+            Some(1)
+        );
+        assert_eq!(
+            windows[0]["semantics_table_unique_keys_total"].as_u64(),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn bundle_index_records_snapshot_seq_and_semantics_source() {
+        let bundle = sample_v2_bundle_with_inline_semantics();
+        let idx = build_bundle_index_payload_from_json(&bundle, "bundle.json", 1).unwrap();
+
+        assert_eq!(idx["kind"].as_str(), Some("bundle_index"));
+        assert_eq!(idx["snapshots_total"].as_u64(), Some(2));
+
+        let windows = idx["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        let snaps = windows[0]["snapshots"].as_array().unwrap();
+        assert_eq!(snaps.len(), 2);
+
+        assert_eq!(snaps[0]["window_snapshot_seq"].as_u64(), Some(100));
+        assert_eq!(snaps[0]["is_warmup"].as_bool(), Some(true));
+        assert_eq!(snaps[0]["semantics_source"].as_str(), Some("inline"));
+
+        assert_eq!(snaps[1]["window_snapshot_seq"].as_u64(), Some(101));
+        assert_eq!(snaps[1]["is_warmup"].as_bool(), Some(false));
+        assert_eq!(snaps[1]["semantics_source"].as_str(), Some("table"));
+    }
+
+    #[test]
+    fn test_ids_index_uses_table_semantics() {
+        let bundle = sample_v2_bundle();
+        let idx = build_test_ids_index_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(idx["kind"].as_str(), Some("test_ids_index"));
+        assert_eq!(idx["total_unique_test_ids"].as_u64(), Some(2));
+
+        let windows = idx["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        let items = windows[0]["items"].as_array().unwrap();
+        let mut got: Vec<(String, u64)> = items
+            .iter()
+            .filter_map(|v| {
+                Some((
+                    v.get("test_id")?.as_str()?.to_string(),
+                    v.get("count")?.as_u64()?,
+                ))
+            })
+            .collect();
+        got.sort();
+        assert_eq!(got, vec![("a".to_string(), 1), ("b".to_string(), 1)]);
+    }
 }

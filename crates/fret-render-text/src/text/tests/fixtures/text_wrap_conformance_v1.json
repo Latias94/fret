@@ -156,6 +156,38 @@
       "wrap": "word_break",
       "max_width_px": 60.0,
       "expected_line_ranges": [[0, 6], [6, 8], [8, 14], [14, 20], [20, 24], [24, 30], [30, 36], [36, 38], [38, 44], [44, 50], [50, 54], [54, 59]]
+    },
+    {
+      "id": "emoji_keycap_word_break_wrap",
+      "text": "1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣1️⃣",
+      "font_family": "Noto Color Emoji",
+      "wrap": "word_break",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 21], [21, 42], [42, 63], [63, 70]]
+    },
+    {
+      "id": "emoji_regional_indicator_flag_word_break_wrap",
+      "text": "🇺🇸🇺🇸🇺🇸🇺🇸🇺🇸🇺🇸🇺🇸🇺🇸",
+      "font_family": "Noto Color Emoji",
+      "wrap": "word_break",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 24], [24, 48], [48, 64]]
+    },
+    {
+      "id": "emoji_zwj_sequence_word_break_wrap",
+      "text": "👩‍👩‍👧‍👦👩‍👩‍👧‍👦👩‍👩‍👧‍👦👩‍👩‍👧‍👦",
+      "font_family": "Noto Color Emoji",
+      "wrap": "word_break",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 75], [75, 100]]
+    },
+    {
+      "id": "emoji_vs16_word_break_wrap",
+      "text": "✈️✈️✈️✈️✈️✈️",
+      "font_family": "Noto Color Emoji",
+      "wrap": "word_break",
+      "max_width_px": 60.0,
+      "expected_line_ranges": [[0, 18], [18, 36]]
     }
   ]
 }

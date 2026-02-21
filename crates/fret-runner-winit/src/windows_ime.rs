@@ -183,7 +183,7 @@ fn set_ime_cursor_area_via_imm(window: &dyn Window, rect: Rect) {
     let candidate_form = CANDIDATEFORM {
         dwIndex: 0,
         dwStyle: CFS_EXCLUDE,
-        ptCurrentPos: POINT { x, y },
+        ptCurrentPos: POINT { x, y: spot_y },
         rcArea: rc_area,
     };
 

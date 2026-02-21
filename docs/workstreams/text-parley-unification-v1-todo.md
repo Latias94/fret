@@ -18,7 +18,8 @@ Tracking format:
 - [x] TPU-render-001 Ensure empty strings produce non-zero `TextMetrics` and caret rect height.
   - Evidence:
     - `crates/fret-render-text/src/parley_shaper.rs`
-    - `crates/fret-render-wgpu/src/text/mod.rs` (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
+    - `crates/fret-render-text/src/geometry.rs`
+      (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
 
 - [x] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).
   - Evidence:
@@ -34,8 +35,9 @@ Tracking format:
   - Evidence:
     - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
       (section “Geometry rectangles must be non-degenerate”)
-    - `crates/fret-render-wgpu/src/text/mod.rs`
-      (`selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override`)
+    - `crates/fret-render-text/src/geometry.rs`
+      (`selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override`,
+      `selection_rects_clipped_do_not_return_zero_height_rects`)
 
 ## M1 — Coordinate mapping unification
 
@@ -69,20 +71,24 @@ Tracking format:
     - `crates/fret-render-text/src/parley_shaper.rs` (single shaping engine used by default)
     - `crates/fret-render-wgpu/src/text/mod.rs` (`pub(crate) mod parley_shaper` re-export)
 
-- [~] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
+- [x] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
   - mixed scripts (LTR/RTL)
   - emoji sequences (ZWJ/VS16/keycaps)
   - identifiers + CJK punctuation
   - Evidence start:
-    - `crates/fret-render-wgpu/src/text/mod.rs`
+    - `crates/fret-render-text/src/geometry.rs`
       (`caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji`,
       `caret_rects_are_non_degenerate_at_grapheme_boundaries_for_keycap_emoji`,
       `caret_rects_are_non_degenerate_at_grapheme_boundaries_for_regional_indicator_flag`,
-      `grapheme_wrap_breaks_only_at_grapheme_boundaries_for_zwj_emoji`)
+      `caret_rects_are_non_degenerate_at_grapheme_boundaries_for_vs16_emoji`)
     - `crates/fret-render-text/src/wrapper.rs`
       (`none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster`)
       (`none_ellipsis_does_not_split_keycap_grapheme_cluster`,
       `none_ellipsis_does_not_split_regional_indicator_flag_grapheme_cluster`)
+      (`grapheme_wrap_does_not_split_zwj_clusters`)
+    - `crates/fret-render-text/src/text/tests/fixtures/text_wrap_conformance_v1.json`
+      (`emoji_keycap_word_break_wrap`, `emoji_regional_indicator_flag_word_break_wrap`,
+      `emoji_zwj_sequence_word_break_wrap`, `emoji_vs16_word_break_wrap`)
 
 ## M3 — IME + editor-grade polish
 

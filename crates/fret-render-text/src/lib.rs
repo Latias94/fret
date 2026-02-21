@@ -1,6 +1,17 @@
+pub mod cache_keys;
+pub mod cache_tuning;
+pub mod decorations;
 pub mod fallback_policy;
+pub mod font_instance_key;
+pub mod font_names;
+pub mod font_stack;
+pub mod font_trace;
 pub mod geometry;
+pub mod line_layout;
+pub mod measure;
 pub mod parley_shaper;
+pub mod prepare_layout;
+pub mod spans;
 pub mod wrapper;
 
 #[inline]
