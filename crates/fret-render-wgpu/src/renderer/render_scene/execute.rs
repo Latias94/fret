@@ -965,6 +965,30 @@ impl Renderer {
 
         let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
 
+        debug_assert!(
+            (std::mem::size_of::<RenderSpaceUniform>() as u64) <= self.render_space_stride,
+            "render_space_stride must fit RenderSpaceUniform"
+        );
+        let render_space_uniform_size = std::mem::size_of::<RenderSpaceUniform>();
+        let render_space_stride = self.render_space_stride as usize;
+        let mut render_space_bytes =
+            vec![0u8; render_space_stride.saturating_mul(plan.passes.len())];
+        for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
+            let Some((origin, size)) = render_plan_pass_render_space(planned_pass) else {
+                continue;
+            };
+            let offset = render_space_stride.saturating_mul(pass_index);
+            render_space_bytes[offset..offset + render_space_uniform_size].copy_from_slice(
+                bytemuck::bytes_of(&RenderSpaceUniform {
+                    origin_px: [origin.0 as f32, origin.1 as f32],
+                    size_px: [size.0.max(1) as f32, size.1.max(1) as f32],
+                }),
+            );
+        }
+        if !render_space_bytes.is_empty() {
+            queue.write_buffer(&self.render_space_buffer, 0, &render_space_bytes);
+        }
+
         let (_, record_elapsed) = fret_perf::measure_span(
             perf_enabled,
             trace_enabled,
@@ -991,18 +1015,6 @@ impl Renderer {
                         (pass_index as u64).saturating_mul(self.render_space_stride);
                     let render_space_offset_u32 = render_space_offset as u32;
 
-                    let render_space = render_plan_pass_render_space(planned_pass);
-
-                    if let Some((origin, size)) = render_space {
-                        queue.write_buffer(
-                            &self.render_space_buffer,
-                            render_space_offset,
-                            bytemuck::bytes_of(&RenderSpaceUniform {
-                                origin_px: [origin.0 as f32, origin.1 as f32],
-                                size_px: [size.0.max(1) as f32, size.1.max(1) as f32],
-                            }),
-                        );
-                    }
                     match planned_pass {
                         RenderPlanPass::PathClipMask(mask_pass) => {
                             let target_size = mask_pass.dst_size;
