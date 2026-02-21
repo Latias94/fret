@@ -745,6 +745,21 @@ impl ElementHostWidget {
             cx.available
         };
 
+        // If the user is already at the current scroll extent edge, avoid relying on prior-frame
+        // caches for the content extent. Otherwise the scroll container can temporarily "pin" its
+        // content size to the previous frame, making it impossible to scroll further when content
+        // grows (e.g. expanding a collapsible near the bottom of a scroll view).
+        let prev_offset = handle.offset();
+        let prev_max_offset = handle.max_offset();
+        let at_scroll_extent_edge = match props.axis {
+            crate::element::ScrollAxis::X => prev_offset.x.0 + 0.5 >= prev_max_offset.x.0,
+            crate::element::ScrollAxis::Y => prev_offset.y.0 + 0.5 >= prev_max_offset.y.0,
+            crate::element::ScrollAxis::Both => {
+                prev_offset.x.0 + 0.5 >= prev_max_offset.x.0
+                    || prev_offset.y.0 + 0.5 >= prev_max_offset.y.0
+            }
+        };
+
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
             LayoutSize::new(
@@ -781,7 +796,7 @@ impl ElementHostWidget {
                 .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child));
             // Safe fast path: only use intrinsic size caching as a substitute for measuring the
             // child when the child subtree does not need layout this frame.
-            if !cx.tree.node_needs_layout(child) {
+            if !at_scroll_extent_edge && !cx.tree.node_needs_layout(child) {
                 cached_max_child = intrinsic_cached_max_child;
             }
         }
@@ -823,7 +838,8 @@ impl ElementHostWidget {
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
             && defer_probe_on_invalidation
             && can_defer_probe_with_cached_children
-            && children_layout_invalidated;
+            && children_layout_invalidated
+            && !at_scroll_extent_edge;
 
         let stable_frames_required = scroll_defer_unbounded_probe_stable_frames();
         let (defer_state, defer_this_frame) = crate::elements::with_element_state(
@@ -857,7 +873,10 @@ impl ElementHostWidget {
                             // Under view-cache reconciliation, descendants can remain layout-invalidated
                             // for multiple frames. Keep deferring while invalidated, and only allow the
                             // expensive unbounded probe once the subtree stabilizes for a few frames.
-                            if !wants_unbounded_probe || !defer_probe_on_invalidation {
+                            if at_scroll_extent_edge {
+                                state.kind = ScrollDeferredUnboundedProbeKind::None;
+                                state.stable_frames = 0;
+                            } else if !wants_unbounded_probe || !defer_probe_on_invalidation {
                                 state.kind = ScrollDeferredUnboundedProbeKind::None;
                                 state.stable_frames = 0;
                             } else if children_layout_invalidated {
@@ -964,7 +983,8 @@ impl ElementHostWidget {
                 }
                 max_child
             }
-        } else if let Some(cached) = intrinsic_cached_max_child
+        } else if !at_scroll_extent_edge
+            && let Some(cached) = intrinsic_cached_max_child
             && cached != Size::default()
         {
             // Best-effort: reuse intrinsic sizing caches even when the child subtree is currently
