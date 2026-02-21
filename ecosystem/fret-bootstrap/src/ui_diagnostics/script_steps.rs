@@ -346,3 +346,185 @@ pub(super) fn handle_effect_only_steps(
         _ => false,
     }
 }
+
+pub(super) fn handle_capture_steps(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    scale_factor: f32,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    force_dump_max_snapshots: &mut Option<usize>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    match step {
+        UiActionStepV2::CaptureBundle {
+            label,
+            max_snapshots,
+        } => {
+            *force_dump_label =
+                Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
+            *force_dump_max_snapshots = max_snapshots.map(|n| n as usize);
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::CaptureScreenshot {
+            label,
+            timeout_frames,
+        } => {
+            let window_ffi = window.data().as_ffi();
+            active.wait_until = None;
+            if !svc.cfg.screenshots_enabled {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-capture_screenshot-disabled"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("screenshots_disabled".to_string());
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+            } else {
+                let mut state = match active.screenshot_wait.take() {
+                    Some(mut state) if state.step_index == step_index => {
+                        state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                        Some(state)
+                    }
+                    _ => None,
+                };
+
+                if state.is_none() {
+                    if svc.last_dump_dir.is_none() {
+                        let dump_label =
+                            label.as_deref().map(sanitize_label).unwrap_or_else(|| {
+                                format!("script-step-{step_index:04}-capture_screenshot")
+                            });
+                        svc.dump_bundle(Some(&dump_label));
+                    }
+
+                    let bundle_dir_name = svc
+                        .last_dump_dir
+                        .as_ref()
+                        .and_then(|p| p.file_name())
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    if bundle_dir_name.is_empty() {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-capture_screenshot-no-last-dump"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some("no_last_dump_dir".to_string());
+                        active.screenshot_wait = None;
+                        output.request_redraw = true;
+                    } else {
+                        let request_id = format!(
+                            "script-run-{run_id}-window-{window_ffi}-step-{step_index:04}",
+                            run_id = active.run_id
+                        );
+
+                        let req = serde_json::json!({
+                            "schema_version": 1,
+                            "out_dir": svc.cfg.out_dir.to_string_lossy(),
+                            "bundle_dir_name": bundle_dir_name,
+                            "request_id": request_id,
+                            "windows": [{
+                                "window": window_ffi,
+                                "tick_id": app.tick_id().0,
+                                "frame_id": app.frame_id().0,
+                                "scale_factor": scale_factor as f64,
+                            }]
+                        });
+
+                        let bytes = serde_json::to_vec_pretty(&req).ok();
+                        if let Some(bytes) = bytes {
+                            if let Some(parent) = svc.cfg.screenshot_request_path.parent() {
+                                let _ = std::fs::create_dir_all(parent);
+                            }
+                            let write_ok = std::fs::write(&svc.cfg.screenshot_request_path, bytes)
+                                .is_ok()
+                                && touch_file(&svc.cfg.screenshot_trigger_path).is_ok();
+                            if write_ok {
+                                state = Some(ScreenshotWaitState {
+                                    step_index,
+                                    remaining_frames: timeout_frames,
+                                    request_id,
+                                    window_ffi,
+                                });
+                            } else {
+                                *force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                ));
+                                *stop_script = true;
+                                *failure_reason =
+                                    Some("screenshot_request_write_failed".to_string());
+                                active.screenshot_wait = None;
+                                output.request_redraw = true;
+                            }
+                        } else {
+                            *force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-capture_screenshot-serialize-failed"
+                            ));
+                            *stop_script = true;
+                            *failure_reason =
+                                Some("screenshot_request_serialize_failed".to_string());
+                            active.screenshot_wait = None;
+                            output.request_redraw = true;
+                        }
+                    }
+                }
+
+                if !*stop_script {
+                    if let Some(state) = state {
+                        let trigger_stamp =
+                            read_touch_stamp(&svc.cfg.screenshot_result_trigger_path);
+                        let completed = trigger_stamp.is_some()
+                            && screenshot_request_completed(
+                                &svc.cfg.screenshot_result_path,
+                                &state.request_id,
+                                state.window_ffi,
+                            );
+
+                        if completed {
+                            active.screenshot_wait = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                        } else if state.remaining_frames == 0 {
+                            *force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-capture_screenshot-timeout"
+                            ));
+                            *stop_script = true;
+                            *failure_reason = Some("capture_screenshot_timeout".to_string());
+                            active.screenshot_wait = None;
+                            output.request_redraw = true;
+                        } else {
+                            active.screenshot_wait = Some(ScreenshotWaitState {
+                                step_index: state.step_index,
+                                remaining_frames: state.remaining_frames.saturating_sub(1),
+                                request_id: state.request_id,
+                                window_ffi: state.window_ffi,
+                            });
+                            output.request_redraw = true;
+                        }
+                    } else {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-capture_screenshot-no-state"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some("capture_screenshot_state_missing".to_string());
+                        active.screenshot_wait = None;
+                        output.request_redraw = true;
+                    }
+                }
+            }
+            true
+        }
+        _ => false,
+    }
+}
