@@ -175,9 +175,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
     let mut meta_report: bool = false;
+    let mut index_out: Option<PathBuf> = None;
     let mut test_ids_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
+    let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -406,6 +408,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --pack-out".to_string());
                 };
                 pack_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--packet-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --packet-out".to_string());
+                };
+                ai_packet_out = Some(PathBuf::from(v));
                 i += 1;
             }
             "--include-root-artifacts" => {
@@ -640,8 +650,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 triage_out = Some(p.clone());
                 lint_out = Some(p.clone());
                 meta_out = Some(p.clone());
+                index_out = Some(p.clone());
                 query_out = Some(p.clone());
                 slice_out = Some(p.clone());
+                ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
                 i += 1;
             }
@@ -2148,6 +2160,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             meta_report,
         ),
+        "index" => commands::index::cmd_index(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            index_out,
+            warmup_frames,
+            stats_json,
+        ),
         "test-ids" => commands::artifacts::cmd_test_ids(
             &rest,
             pack_after_run,
@@ -2156,6 +2176,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             warmup_frames,
             max_test_ids,
             stats_json,
+        ),
+        "ai-packet" => commands::ai_packet::cmd_ai_packet(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            ai_packet_out,
+            pack_include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
         ),
         "query" => commands::query::cmd_query(
             &rest,

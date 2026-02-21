@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 
 use crate::json_bundle::{
     SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
-    snapshot_semantics_nodes,
+    snapshot_semantics_fingerprint, snapshot_semantics_nodes, snapshot_window_snapshot_seq,
 };
 
 fn read_json_value(path: &Path) -> Option<Value> {
@@ -24,6 +24,11 @@ fn write_pretty_json(path: &Path, payload: &Value) -> Result<(), String> {
 pub(crate) fn default_bundle_meta_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("bundle.meta.json")
+}
+
+pub(crate) fn default_bundle_index_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("bundle.index.json")
 }
 
 pub(crate) fn default_test_ids_path(bundle_path: &Path) -> PathBuf {
@@ -76,10 +81,29 @@ pub(crate) fn ensure_test_ids_index_json(
     Ok(out)
 }
 
+pub(crate) fn ensure_bundle_index_json(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<PathBuf, String> {
+    let out = default_bundle_index_path(bundle_path);
+    if out.is_file() && read_json_value(&out).is_some() {
+        return Ok(out);
+    }
+    let payload = build_bundle_index_payload(bundle_path, warmup_frames)?;
+    write_pretty_json(&out, &payload)?;
+    Ok(out)
+}
+
 fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     build_bundle_meta_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn build_bundle_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_bundle_index_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
 }
 
 fn build_bundle_meta_payload_from_json(
@@ -235,6 +259,94 @@ fn build_bundle_meta_payload_from_json(
         "semantics_table_unique_keys_total": semantics.table_unique_keys_total(),
         "unique_semantics_fingerprints_total": total_unique_semantics_fingerprints.len(),
         "windows": out_windows,
+    }))
+}
+
+fn build_bundle_index_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    let semantics = SemanticsResolver::new(bundle);
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut windows_out: Vec<Value> = Vec::new();
+    let mut total_snapshots: u64 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        total_snapshots = total_snapshots.saturating_add(snaps.len() as u64);
+
+        let mut snapshots_out: Vec<Value> = Vec::with_capacity(snaps.len());
+
+        let mut first_frame_id: Option<u64> = None;
+        let mut last_frame_id: Option<u64> = None;
+        let mut first_timestamp_unix_ms: Option<u64> = None;
+        let mut last_timestamp_unix_ms: Option<u64> = None;
+
+        for (idx, s) in snaps.iter().enumerate() {
+            let frame_id = snapshot_frame_id(s);
+            let window_snapshot_seq = snapshot_window_snapshot_seq(s);
+            let ts = s
+                .get("timestamp_unix_ms")
+                .and_then(|v| v.as_u64())
+                .or_else(|| s.get("timestamp_ms").and_then(|v| v.as_u64()));
+
+            first_frame_id.get_or_insert(frame_id);
+            last_frame_id = Some(frame_id);
+            if first_timestamp_unix_ms.is_none() {
+                first_timestamp_unix_ms = ts;
+            }
+            last_timestamp_unix_ms = ts.or(last_timestamp_unix_ms);
+
+            let semantics_fingerprint = snapshot_semantics_fingerprint(s);
+            let has_inline_semantics = snapshot_semantics_nodes(s).is_some();
+            let has_resolved_semantics = semantics.nodes(s).is_some();
+            let semantics_source = if has_inline_semantics {
+                "inline"
+            } else if has_resolved_semantics {
+                "table"
+            } else {
+                "none"
+            };
+
+            snapshots_out.push(json!({
+                "window_snapshot_seq": window_snapshot_seq,
+                "frame_id": frame_id,
+                "timestamp_unix_ms": ts,
+                "is_warmup": (idx as u64) < warmup_frames,
+                "semantics_fingerprint": semantics_fingerprint,
+                "semantics_source": semantics_source,
+                "has_semantics": has_resolved_semantics,
+            }));
+        }
+
+        windows_out.push(json!({
+            "window": window_id,
+            "snapshots_total": snaps.len(),
+            "first_frame_id": first_frame_id,
+            "last_frame_id": last_frame_id,
+            "first_timestamp_unix_ms": first_timestamp_unix_ms,
+            "last_timestamp_unix_ms": last_timestamp_unix_ms,
+            "snapshots": snapshots_out,
+        }));
+    }
+
+    Ok(json!({
+        "schema_version": 1,
+        "kind": "bundle_index",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "windows_total": windows.len(),
+        "snapshots_total": total_snapshots,
+        "windows": windows_out,
     }))
 }
 
@@ -486,6 +598,39 @@ mod tests {
         })
     }
 
+    fn sample_v2_bundle_with_inline_semantics() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "window": 1,
+                        "window_snapshot_seq": 100,
+                        "semantics_fingerprint": 10,
+                        "debug": { "semantics": { "nodes": [{ "id": 1, "test_id": "a" }] } }
+                    },
+                    { "frame_id": 1, "window": 1, "window_snapshot_seq": 101, "semantics_fingerprint": 10, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 10,
+                        "semantics": {
+                            "nodes": [
+                                { "id": 1, "test_id": "a" },
+                                { "id": 2, "test_id": "b" }
+                            ]
+                        }
+                    }]
+                }
+            }
+        })
+    }
+
     #[test]
     fn bundle_meta_counts_semantics_via_table() {
         let bundle = sample_v2_bundle();
@@ -531,6 +676,28 @@ mod tests {
             windows[0]["semantics_table_unique_keys_total"].as_u64(),
             Some(1)
         );
+    }
+
+    #[test]
+    fn bundle_index_records_snapshot_seq_and_semantics_source() {
+        let bundle = sample_v2_bundle_with_inline_semantics();
+        let idx = build_bundle_index_payload_from_json(&bundle, "bundle.json", 1).unwrap();
+
+        assert_eq!(idx["kind"].as_str(), Some("bundle_index"));
+        assert_eq!(idx["snapshots_total"].as_u64(), Some(2));
+
+        let windows = idx["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        let snaps = windows[0]["snapshots"].as_array().unwrap();
+        assert_eq!(snaps.len(), 2);
+
+        assert_eq!(snaps[0]["window_snapshot_seq"].as_u64(), Some(100));
+        assert_eq!(snaps[0]["is_warmup"].as_bool(), Some(true));
+        assert_eq!(snaps[0]["semantics_source"].as_str(), Some("inline"));
+
+        assert_eq!(snaps[1]["window_snapshot_seq"].as_u64(), Some(101));
+        assert_eq!(snaps[1]["is_warmup"].as_bool(), Some(false));
+        assert_eq!(snaps[1]["semantics_source"].as_str(), Some("table"));
     }
 
     #[test]

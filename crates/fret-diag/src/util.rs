@@ -47,6 +47,22 @@ pub(crate) fn write_script(src: &Path, dst: &Path) -> Result<(), String> {
     std::fs::write(dst, bytes).map_err(|e| e.to_string())
 }
 
+pub(crate) fn sanitize_for_filename(raw: &str, max_len: usize, fallback: &str) -> String {
+    let mut out = String::with_capacity(raw.len().min(max_len.max(1)));
+    for ch in raw.chars().take(max_len.max(1)) {
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '.' {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.trim().is_empty() {
+        fallback.to_string()
+    } else {
+        out
+    }
+}
+
 pub(crate) fn read_script_result(path: &Path) -> Option<serde_json::Value> {
     read_json_value(path)
 }

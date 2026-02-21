@@ -6,7 +6,7 @@ use crate::json_bundle::{
     snapshot_window_snapshot_seq,
 };
 
-fn slice_test_id_payload_from_bundle(
+pub(crate) fn build_test_id_slice_payload_from_bundle(
     bundle_path: &Path,
     bundle: &serde_json::Value,
     semantics: &SemanticsResolver<'_>,
@@ -209,19 +209,7 @@ fn looks_like_path(s: &str) -> bool {
 }
 
 fn sanitize_test_id_for_filename(test_id: &str) -> String {
-    let mut out = String::with_capacity(test_id.len().min(80));
-    for ch in test_id.chars().take(80) {
-        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '.' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    if out.trim().is_empty() {
-        "test_id".to_string()
-    } else {
-        out
-    }
+    crate::util::sanitize_for_filename(test_id, 80, "test_id")
 }
 
 fn resolve_bundle_json_path_or_latest(
@@ -360,7 +348,7 @@ pub(crate) fn cmd_slice(
     let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     let semantics = SemanticsResolver::new(&bundle);
-    let payload = slice_test_id_payload_from_bundle(
+    let payload = build_test_id_slice_payload_from_bundle(
         &bundle_path,
         &bundle,
         &semantics,

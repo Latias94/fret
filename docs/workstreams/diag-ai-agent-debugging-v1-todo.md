@@ -10,9 +10,10 @@ Last updated: 2026-02-21
 
 ## M1: Index + minimal packet (Phase 1)
 
-- [ ] Define `bundle.index.json` v1 schema (typed, bounded).
-- [ ] Add tooling writers/readers for `bundle.index.json` (prefer index when present).
-- [ ] Add `fretboard diag ai-packet ...` (or similar) that exports:
+- [x] Define `bundle.index.json` v1 schema (typed, bounded).
+- [x] Add a tooling writer + `fretboard diag index` for `bundle.index.json`.
+- [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
+- [x] Add `fretboard diag ai-packet ...` that exports:
   - `bundle.meta.json`
   - `bundle.index.json`
   - stable slice outputs for a given `--test-id` or script failure anchor
@@ -29,4 +30,3 @@ Last updated: 2026-02-21
 - [ ] Prototype a manifest-first bundle layout (snapshots/logs/semantics as chunked files).
 - [ ] Add a compatibility materializer to emit `bundle.json` from the manifest (opt-in).
 - [ ] Add packing + hashing conventions to keep artifacts integrity-checkable.
-
