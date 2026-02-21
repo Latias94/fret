@@ -632,6 +632,109 @@ mod tests {
         caret_x_from_stops(lines[0].caret_stops.as_slice(), index)
     }
 
+    fn assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(text: &str, style: &TextStyle) {
+        use unicode_segmentation::UnicodeSegmentation as _;
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = shaper_with_bundled_fonts();
+        let lines = prepare_lines(&mut shaper, text, style, constraints);
+        assert_eq!(lines.len(), 1, "expected a single-line layout");
+
+        let mut boundaries: Vec<usize> = Vec::new();
+        boundaries.push(0);
+        let mut cursor = 0usize;
+        for g in text.graphemes(true) {
+            cursor = cursor.saturating_add(g.len());
+            boundaries.push(cursor.min(text.len()));
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        let mut last_x = 0.0_f32;
+        for idx in boundaries {
+            assert!(
+                text.is_char_boundary(idx),
+                "expected grapheme boundary to be a char boundary: idx={idx}"
+            );
+
+            let x = caret_x_from_stops(lines[0].caret_stops.as_slice(), idx);
+            assert!(
+                x.0.is_finite(),
+                "expected caret_x to be finite for idx={idx}, got {x:?}"
+            );
+            assert!(
+                x.0 + 0.01 >= last_x,
+                "expected caret_x to be monotonic for LTR text; idx={idx} last_x={last_x} x={x:?}"
+            );
+            last_x = x.0;
+
+            let rect =
+                caret_rect_from_lines(&lines, idx, CaretAffinity::Downstream).expect("caret rect");
+            assert!(
+                rect.origin.x.0.is_finite()
+                    && rect.origin.y.0.is_finite()
+                    && rect.size.width.0.is_finite()
+                    && rect.size.height.0.is_finite(),
+                "expected caret rect to be finite; idx={idx} rect={rect:?}"
+            );
+            assert!(
+                rect.size.height.0 > 0.1 && rect.size.width.0 > 0.0,
+                "expected non-degenerate caret rect; idx={idx} rect={rect:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji() {
+        let content = "👩‍👩‍👧‍👦 hello";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(content, &style);
+    }
+
+    #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_keycap_emoji() {
+        let content = "1️⃣ hello";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(content, &style);
+    }
+
+    #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_regional_indicator_flag() {
+        let content = "🇺🇸 hello";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(content, &style);
+    }
+
+    #[test]
+    fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_vs16_emoji() {
+        let content = "✈️ hello";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(content, &style);
+    }
+
     #[test]
     fn caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line() {
         let mut shaper = shaper_with_bundled_fonts();
