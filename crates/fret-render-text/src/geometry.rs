@@ -588,7 +588,10 @@ fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
 mod tests {
     use super::*;
     use crate::{parley_shaper::ParleyShaper, prepare_layout, wrapper};
-    use fret_core::{FontId, Px, TextConstraints, TextInputRef, TextOverflow, TextStyle, TextWrap};
+    use fret_core::{
+        FontId, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow, TextStyle,
+        TextWrap,
+    };
 
     fn shaper_with_bundled_fonts() -> ParleyShaper {
         let mut shaper = ParleyShaper::new_without_system_fonts();
@@ -603,25 +606,37 @@ mod tests {
         shaper
     }
 
+    fn prepare_layout_for_test(
+        shaper: &mut ParleyShaper,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> prepare_layout::PreparedLayout {
+        let scale = crate::effective_text_scale_factor(constraints.scale_factor);
+        let snap_vertical = scale.fract().abs() > 1e-4;
+
+        let wrapped =
+            wrapper::wrap_with_constraints(shaper, TextInputRef::plain(text, style), constraints);
+        prepare_layout::prepare_layout_from_wrapped(
+            text,
+            wrapped,
+            constraints,
+            scale,
+            snap_vertical,
+        )
+    }
+
     fn prepare_lines(
         shaper: &mut ParleyShaper,
         text: &str,
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> Vec<crate::line_layout::TextLineLayout> {
-        let scale = crate::effective_text_scale_factor(constraints.scale_factor);
-        let snap_vertical = scale.fract().abs() > 1e-4;
-
-        let wrapped =
-            wrapper::wrap_with_constraints(shaper, TextInputRef::plain(text, style), constraints);
-        let prepared = prepare_layout::prepare_layout_from_wrapped(
-            text,
-            wrapped,
-            constraints,
-            scale,
-            snap_vertical,
-        );
-        prepared.lines.into_iter().map(|l| l.layout).collect()
+        prepare_layout_for_test(shaper, text, style, constraints)
+            .lines
+            .into_iter()
+            .map(|l| l.layout)
+            .collect()
     }
 
     fn caret_x_for_index_from_single_line(
@@ -760,6 +775,227 @@ mod tests {
                 indices, expected,
                 "expected caret stops to land on grapheme boundaries ({label}): text={text:?} stops={indices:?} expected={expected:?}"
             );
+        }
+    }
+
+    #[test]
+    fn empty_string_produces_nonzero_line_metrics_and_caret_rect() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let prepared = prepare_layout_for_test(&mut shaper, "", &style, constraints);
+        assert!(
+            prepared.metrics.size.height.0 > 0.1,
+            "expected empty string to have non-zero metrics height, got {:?}",
+            prepared.metrics
+        );
+        assert!(
+            prepared.metrics.baseline.0 >= 0.0
+                && prepared.metrics.baseline.0 <= prepared.metrics.size.height.0 + 0.01,
+            "expected empty string baseline to be within the metrics box, got {:?}",
+            prepared.metrics
+        );
+
+        let lines: Vec<_> = prepared.lines.into_iter().map(|l| l.layout).collect();
+        assert!(!lines.is_empty(), "expected at least one line layout");
+        assert!(
+            lines[0].height.0 > 0.1,
+            "expected a non-zero line height for empty string, got {:?}",
+            lines[0]
+        );
+
+        let caret = caret_rect_from_lines(&lines, 0, CaretAffinity::Downstream)
+            .expect("expected caret rect for empty string");
+        assert!(
+            caret.size.height.0 > 0.1,
+            "expected a non-zero caret rect height for empty string, got {caret:?}"
+        );
+    }
+
+    #[test]
+    fn selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            line_height: Some(Px(0.0)),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, "a", &style, constraints);
+
+        let caret =
+            caret_rect_from_lines(&lines, 0, CaretAffinity::Downstream).expect("caret rect");
+        assert!(
+            caret.size.height.0 > 0.1,
+            "expected a non-zero caret rect height even with a zero line-height override, got {caret:?}"
+        );
+
+        let mut rects: Vec<Rect> = Vec::new();
+        selection_rects_from_lines(&lines, (0, 1), &mut rects);
+        assert!(
+            rects.iter().any(|r| r.size.height.0 > 0.1),
+            "expected selection rects to have non-zero height even with a zero line-height override, got {rects:?}"
+        );
+    }
+
+    #[test]
+    fn selection_rects_clipped_do_not_return_zero_height_rects() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "hello world hello world hello world";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+
+        let mut rects: Vec<Rect> = Vec::new();
+        selection_rects_from_lines_clipped(
+            &lines,
+            (0, content.len()),
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(20.0))),
+            &mut rects,
+        );
+        assert!(
+            !rects.is_empty(),
+            "expected selection_rects_from_lines_clipped to produce at least one rect"
+        );
+        for r in &rects {
+            assert!(
+                r.size.height.0 > 0.1,
+                "expected clipped selection rect height to be non-zero, got {r:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn selection_rects_clipped_handles_mixed_bidi_word_wrap_and_clips_to_rect() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        // Ensure mixed directionality plus enough content to reliably wrap.
+        let content = "hello אבג def ghi jkl אבג mno pqr stu אבג vwx yz";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let max_width = Px(80.0);
+        let constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+        assert!(lines.len() >= 2, "expected mixed bidi content to wrap");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+
+        // Clip both X and Y so we exercise trimming of partially visible runs/lines.
+        let clip_y0 = line0.y_top.0 + (line0.height.0 * 0.5);
+        let clip_y1 = line1.y_top.0 + (line1.height.0 * 0.5);
+        let clip_width = Px((max_width.0 * 0.5).max(1.0));
+        let clip_height = Px((clip_y1 - clip_y0).max(1.0));
+        let clip = Rect::new(
+            Point::new(Px(0.0), Px(clip_y0)),
+            Size::new(clip_width, clip_height),
+        );
+
+        let clip_x0 = clip.origin.x.0;
+        let clip_y0 = clip.origin.y.0;
+        let clip_x1 = clip_x0 + clip.size.width.0;
+        let clip_y1 = clip_y0 + clip.size.height.0;
+
+        // Sanity: unclipped selection should extend beyond our clip width on at least one line.
+        let mut full_rects: Vec<Rect> = Vec::new();
+        selection_rects_from_lines(&lines, (0, content.len()), &mut full_rects);
+        assert!(
+            full_rects
+                .iter()
+                .any(|r| r.origin.x.0 + r.size.width.0 > clip_x1 + 0.5),
+            "expected unclipped selection to extend beyond clip_x1"
+        );
+
+        let mut rects: Vec<Rect> = Vec::new();
+        selection_rects_from_lines_clipped(&lines, (0, content.len()), clip, &mut rects);
+
+        assert!(!rects.is_empty(), "expected clipped selection rects");
+        assert!(
+            rects.iter().any(|r| (r.origin.y.0 - clip_y0).abs() < 0.02),
+            "expected at least one rect to be trimmed at clip_y0"
+        );
+        assert!(
+            rects
+                .iter()
+                .any(|r| ((r.origin.y.0 + r.size.height.0) - clip_y1).abs() < 0.02),
+            "expected at least one rect to be trimmed at clip_y1"
+        );
+
+        let eps = 0.02;
+        for r in &rects {
+            assert!(
+                r.size.width.0 > 0.1 && r.size.height.0 > 0.1,
+                "expected non-degenerate clipped rect, got {r:?}"
+            );
+            assert!(
+                r.origin.x.0 + eps >= clip_x0
+                    && r.origin.y.0 + eps >= clip_y0
+                    && (r.origin.x.0 + r.size.width.0) <= clip_x1 + eps
+                    && (r.origin.y.0 + r.size.height.0) <= clip_y1 + eps,
+                "expected rect to be inside clip; rect={r:?} clip={clip:?}"
+            );
+        }
+
+        // Rects should already be coalesced; ensure no overlap within the same (clipped) line slice.
+        rects.sort_by(|a, b| {
+            a.origin
+                .y
+                .0
+                .total_cmp(&b.origin.y.0)
+                .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
+                .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
+        });
+        for w in rects.windows(2) {
+            let a = &w[0];
+            let b = &w[1];
+            if a.origin.y == b.origin.y && a.size.height == b.size.height {
+                assert!(
+                    b.origin.x.0 + 0.001 >= a.origin.x.0 + a.size.width.0,
+                    "expected rects on the same line slice to not overlap; a={a:?} b={b:?}"
+                );
+            }
         }
     }
 

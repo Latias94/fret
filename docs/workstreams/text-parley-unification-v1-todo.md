@@ -18,7 +18,8 @@ Tracking format:
 - [x] TPU-render-001 Ensure empty strings produce non-zero `TextMetrics` and caret rect height.
   - Evidence:
     - `crates/fret-render-text/src/parley_shaper.rs`
-    - `crates/fret-render-wgpu/src/text/mod.rs` (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
+    - `crates/fret-render-text/src/geometry.rs`
+      (`empty_string_produces_nonzero_line_metrics_and_caret_rect`)
 
 - [x] TPU-ui-001 Add a UI-side gate for empty input selection/caret visibility (TextInput + TextArea).
   - Evidence:
@@ -34,8 +35,9 @@ Tracking format:
   - Evidence:
     - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
       (section “Geometry rectangles must be non-degenerate”)
-    - `crates/fret-render-wgpu/src/text/mod.rs`
-      (`selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override`)
+    - `crates/fret-render-text/src/geometry.rs`
+      (`selection_and_caret_rects_are_nonzero_even_with_zero_line_height_override`,
+      `selection_rects_clipped_do_not_return_zero_height_rects`)
 
 ## M1 — Coordinate mapping unification
 
