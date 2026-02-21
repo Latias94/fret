@@ -281,7 +281,20 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
                 ),
             DocSection::new("Extras", extras)
                 .no_shell()
-                .test_id_prefix("ui-gallery-radio-group-extras"),
+                .test_id_prefix("ui-gallery-radio-group-extras")
+                .code(
+                    "rust",
+                    r#"// Invalid chrome + error text (app-level composition).
+shadcn::RadioGroup::uncontrolled(Some("default"))
+    .aria_invalid(true)
+    .item(shadcn::RadioGroupItem::new("default", "Default"))
+    .into_element(cx);
+
+// RTL coverage.
+doc_layout::rtl(cx, |cx| {
+    shadcn::RadioGroup::uncontrolled(Some("default")).into_element(cx)
+});"#,
+                ),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-radio-group-notes"),
