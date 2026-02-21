@@ -1,6 +1,16 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
+    /// Convenience helper for single-window/single-tree setups.
+    ///
+    /// This drains pending model changes from the host and immediately propagates them into the
+    /// tree. Multi-window runtimes should drain `take_changed_models()` once per frame and fan the
+    /// resulting list out to each window's [`UiTree`] instead.
+    pub fn propagate_pending_model_changes(&mut self, app: &mut H) -> bool {
+        let changed = app.take_changed_models();
+        self.propagate_model_changes(app, &changed)
+    }
+
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,

@@ -1104,9 +1104,8 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
     let max0 = scroll_handle.max_offset().y;
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
     let _ = show_more.update(&mut app, |v, _cx| *v = true);
-    let changed = app.take_changed_models();
     assert!(
-        ui.propagate_model_changes(&mut app, &changed),
+        ui.propagate_pending_model_changes(&mut app),
         "expected model change to invalidate the view-cache subtree"
     );
     app.advance_frame();
