@@ -12,7 +12,6 @@ use fret_launch::{
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
-use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, Invalidation, UiFrameCx, UiTree};
@@ -65,7 +64,7 @@ type RecordEngineFrameHookFn<S> = fn(
 /// A minimal, hotpatch-friendly “golden path” app driver.
 ///
 /// This wraps `fret-launch::FnDriver` and centralizes common boilerplate:
-/// - declarative root mounting (`RenderRootContext`)
+/// - declarative root mounting (`frame_pipeline`)
 /// - `UiTree` event/command routing
 /// - model/global change propagation
 /// - layout/paint submission via `UiFrameCx`
@@ -314,17 +313,24 @@ impl PendingInvalidationBatch {
         }
     }
 
+    fn take(&mut self) -> (Vec<fret_app::ModelId>, Vec<std::any::TypeId>) {
+        let models = std::mem::take(&mut self.models);
+        let globals = std::mem::take(&mut self.globals);
+        self.models_seen.clear();
+        self.globals_seen.clear();
+        (models, globals)
+    }
+
     fn flush(&mut self, app: &mut App, ui: &mut UiTree<App>) {
-        if !self.models.is_empty() {
-            ui.propagate_model_changes(app, &self.models);
-            self.models.clear();
-            self.models_seen.clear();
+        if self.models.is_empty() && self.globals.is_empty() {
+            return;
         }
-        if !self.globals.is_empty() {
-            ui.propagate_global_changes(app, &self.globals);
-            self.globals.clear();
-            self.globals_seen.clear();
-        }
+
+        fret_ui::frame_pipeline::propagate_changes(ui, app, &self.models, &self.globals);
+        self.models.clear();
+        self.globals.clear();
+        self.models_seen.clear();
+        self.globals_seen.clear();
     }
 }
 
@@ -1795,6 +1801,10 @@ fn ui_app_render<S>(
         "ui_app_render: after begin_frame window={window:?}"
     ));
 
+    // Apply invalidations before mounting the declarative root so view cache reuse sees the
+    // correct dirty flags in the same frame.
+    let (changed_models, changed_globals) = state.pending_invalidation.take();
+
     #[cfg(feature = "diagnostics")]
     {
         // Ensure optional diagnostics stores exist before layout/paint so ecosystem crates can
@@ -1814,8 +1824,15 @@ fn ui_app_render<S>(
     let view_span = tracing::info_span!("fret.ui.view");
     #[cfg(feature = "tracing")]
     let _view_guard = view_span.enter();
-    let root = RenderRootContext::new(&mut state.ui, app, services, window, bounds).render_root(
+    let root = fret_ui::frame_pipeline::render_base_root_with_changes(
+        &mut state.ui,
+        app,
+        services,
+        window,
+        bounds,
         driver.root_name,
+        &changed_models,
+        &changed_globals,
         |cx| {
             let view_depth = VIEW_DEPTH.with(|d| {
                 let next = d.get().saturating_add(1);
@@ -1852,8 +1869,8 @@ fn ui_app_render<S>(
                 ));
                 #[cfg(windows)]
                 {
-                    let view_module =
-                        hotpatch_module_path_for_address(view_ptr as usize).map(|p| p.display().to_string());
+                    let view_module = hotpatch_module_path_for_address(view_ptr as usize)
+                        .map(|p| p.display().to_string());
                     let mapped_module = mapped
                         .and_then(|p| hotpatch_module_path_for_address(p as usize))
                         .map(|p| p.display().to_string());
@@ -1861,8 +1878,8 @@ fn ui_app_render<S>(
                         "ui_app_render: view module={view_module:?} mapped_module={mapped_module:?}"
                     ));
                 }
-                let byte_diag = std::env::var_os("FRET_HOTPATCH_DIAG_BYTES")
-                    .is_some_and(|v| !v.is_empty());
+                let byte_diag =
+                    std::env::var_os("FRET_HOTPATCH_DIAG_BYTES").is_some_and(|v| !v.is_empty());
                 if byte_diag {
                     let view_head = hotpatch_head_bytes(view_ptr as usize, 16);
                     let mapped_head = mapped.and_then(|p| hotpatch_head_bytes(p as usize, 16));
@@ -1921,11 +1938,7 @@ fn ui_app_render<S>(
                             .global::<CommandPaletteService>()
                             .and_then(|svc| svc.models(cx.window))
                     {
-                        let open_now = cx
-                            .app
-                            .models()
-                            .get_copied(&models.open)
-                            .unwrap_or(false);
+                        let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
                         let entries = if open_now {
                             fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
@@ -1981,11 +1994,7 @@ fn ui_app_render<S>(
                             .global::<CommandPaletteService>()
                             .and_then(|svc| svc.models(cx.window))
                     {
-                        let open_now = cx
-                            .app
-                            .models()
-                            .get_copied(&models.open)
-                            .unwrap_or(false);
+                        let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
                         let entries = if open_now {
                             fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
@@ -2033,7 +2042,6 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after render_root window={window:?} root={root:?}"
     ));
-    state.ui.set_root(root);
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
 
     let overlay_started = hitch_config.map(|_| Instant::now());
@@ -2048,8 +2056,6 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after overlay render window={window:?}"
     ));
-
-    state.pending_invalidation.flush(app, &mut state.ui);
 
     #[cfg(feature = "diagnostics")]
     {
