@@ -781,10 +781,10 @@ pub(crate) fn cmd_slice(
                 let Some(v) = rest.get(i).cloned() else {
                     return Err("missing value for --step-index".to_string());
                 };
-                step_index = Some(
-                    v.parse::<u32>()
-                        .map_err(|_| "invalid value for --step-index (expected u32)".to_string())?,
-                );
+                step_index =
+                    Some(v.parse::<u32>().map_err(|_| {
+                        "invalid value for --step-index (expected u32)".to_string()
+                    })?);
                 i += 1;
             }
             "--max-matches" => {
@@ -968,15 +968,14 @@ pub(crate) fn cmd_slice(
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
     if let Some(step_index) = step_index {
-        let bundle_index = try_read_bundle_index(&bundle_path)
-            .or_else(|| {
-                // Best-effort: generate the index so it can also attach script markers when
-                // `script.result.json` is adjacent (run-id layout).
-                crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)
-                    .ok()
-                    .and_then(|p| std::fs::read(&p).ok())
-                    .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
-            });
+        let bundle_index = try_read_bundle_index(&bundle_path).or_else(|| {
+            // Best-effort: generate the index so it can also attach script markers when
+            // `script.result.json` is adjacent (run-id layout).
+            crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)
+                .ok()
+                .and_then(|p| std::fs::read(&p).ok())
+                .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        });
         let Some(idx) = bundle_index else {
             return Err(format!(
                 "unable to resolve --step-index {step_index}: missing bundle.index.json"

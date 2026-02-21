@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 use std::collections::{HashMap, HashSet};
 
+use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1, UiSelectorV1};
+
 #[derive(Debug, Clone)]
 struct AiPacketBudgetConfig {
     soft_total_bytes: u64,
@@ -151,6 +153,15 @@ pub(crate) fn cmd_ai_packet(
 
     write_packet_anchors_if_possible(&packet_dir)?;
 
+    if test_id.is_none() {
+        write_anchor_slices_if_possible(
+            &bundle_path,
+            warmup_frames,
+            &packet_dir,
+            AiPacketBudgetConfig::default().max_slice_bytes,
+        )?;
+    }
+
     if include_triage {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
         let report = bundle_stats_from_path(
@@ -214,6 +225,207 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
     });
     let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());
     std::fs::write(dir.join("ai.packet.json"), bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn try_read_script_result_v1(dir: &Path) -> Option<UiScriptResultV1> {
+    let path = dir.join("script.result.json");
+    let bytes = std::fs::read(path).ok()?;
+    let parsed = serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()?;
+    (parsed.schema_version == 1).then_some(parsed)
+}
+
+fn pick_candidate_test_ids_for_failed_step(script: &UiScriptResultV1) -> Vec<String> {
+    if !matches!(script.stage, UiScriptStageV1::Failed) {
+        return Vec::new();
+    }
+    let Some(step_index) = script.step_index else {
+        return Vec::new();
+    };
+    let Some(evidence) = script.evidence.as_ref() else {
+        return Vec::new();
+    };
+
+    let mut scores: HashMap<String, u32> = HashMap::new();
+    let mut bump = |id: &str, w: u32| {
+        let id = id.trim();
+        if id.is_empty() {
+            return;
+        }
+        let entry = scores.entry(id.to_string()).or_insert(0);
+        *entry = entry.saturating_add(w);
+    };
+
+    for entry in evidence
+        .selector_resolution_trace
+        .iter()
+        .filter(|e| e.step_index == step_index)
+    {
+        if let UiSelectorV1::TestId { id } = &entry.selector {
+            bump(id, 100);
+        }
+        for cand in &entry.candidates {
+            if let Some(id) = cand.test_id.as_deref() {
+                bump(id, 30);
+            }
+        }
+    }
+
+    for entry in evidence
+        .hit_test_trace
+        .iter()
+        .filter(|e| e.step_index == step_index)
+    {
+        if let Some(id) = entry.intended_test_id.as_deref() {
+            bump(id, 90);
+        }
+        if let Some(id) = entry.hit_semantics_test_id.as_deref() {
+            bump(id, 80);
+        }
+        if let Some(id) = entry.pointer_capture_test_id.as_deref() {
+            bump(id, 60);
+        }
+        if let Some(id) = entry.pointer_occlusion_test_id.as_deref() {
+            bump(id, 60);
+        }
+    }
+
+    for entry in evidence
+        .click_stable_trace
+        .iter()
+        .filter(|e| e.step_index == step_index)
+    {
+        let hit = &entry.hit_test;
+        if let Some(id) = hit.intended_test_id.as_deref() {
+            bump(id, 80);
+        }
+        if let Some(id) = hit.hit_semantics_test_id.as_deref() {
+            bump(id, 70);
+        }
+        if let Some(id) = hit.pointer_capture_test_id.as_deref() {
+            bump(id, 50);
+        }
+        if let Some(id) = hit.pointer_occlusion_test_id.as_deref() {
+            bump(id, 50);
+        }
+    }
+
+    for entry in evidence
+        .focus_trace
+        .iter()
+        .filter(|e| e.step_index == step_index)
+    {
+        if let Some(id) = entry.expected_test_id.as_deref() {
+            bump(id, 90);
+        }
+        if let Some(id) = entry.focused_test_id.as_deref() {
+            bump(id, 70);
+        }
+    }
+
+    let mut items: Vec<(String, u32)> = scores.into_iter().collect();
+    items.sort_by(|(a_id, a), (b_id, b)| b.cmp(a).then_with(|| a_id.cmp(b_id)));
+
+    items
+        .into_iter()
+        .filter_map(|(id, _)| (!id.is_empty()).then_some(id))
+        .take(6)
+        .collect()
+}
+
+fn try_read_failed_snapshot_selector_from_anchors(
+    dir: &Path,
+) -> Option<(u32, u64, Option<u64>, Option<u64>)> {
+    let path = dir.join("anchors.json");
+    let bytes = std::fs::read(path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("ai_packet_anchors") {
+        return None;
+    }
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return None;
+    }
+    let step_index = v
+        .get("failed_step_index")
+        .and_then(|v| v.as_u64())
+        .map(|v| v.min(u32::MAX as u64) as u32)?;
+    let snap = v.get("failed_snapshot")?;
+    let window = snap.get("window").and_then(|v| v.as_u64())?;
+    let frame_id = snap.get("frame_id").and_then(|v| v.as_u64());
+    let window_snapshot_seq = snap.get("window_snapshot_seq").and_then(|v| v.as_u64());
+    if frame_id.is_none() && window_snapshot_seq.is_none() {
+        return None;
+    }
+    Some((step_index, window, frame_id, window_snapshot_seq))
+}
+
+fn write_anchor_slices_if_possible(
+    bundle_path: &Path,
+    warmup_frames: u64,
+    packet_dir: &Path,
+    max_slice_bytes: u64,
+) -> Result<(), String> {
+    let Some(script) = try_read_script_result_v1(packet_dir) else {
+        return Ok(());
+    };
+    if !matches!(script.stage, UiScriptStageV1::Failed) {
+        return Ok(());
+    }
+
+    let Some((step_index, window, frame_id, window_snapshot_seq)) =
+        try_read_failed_snapshot_selector_from_anchors(packet_dir)
+    else {
+        return Ok(());
+    };
+
+    let candidates = pick_candidate_test_ids_for_failed_step(&script);
+    if candidates.is_empty() {
+        return Ok(());
+    }
+
+    let mut written: usize = 0;
+    for test_id in candidates {
+        if written >= 2 {
+            break;
+        }
+
+        let (frame_id, window_snapshot_seq) = if window_snapshot_seq.is_some() {
+            (None, window_snapshot_seq)
+        } else {
+            (frame_id, None)
+        };
+
+        let payload = match build_slice_payload_with_budget_at_selector(
+            bundle_path,
+            warmup_frames,
+            test_id.as_str(),
+            Some(window),
+            frame_id,
+            window_snapshot_seq,
+            max_slice_bytes,
+        ) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let has_matches = payload
+            .get("matches")
+            .and_then(|v| v.as_array())
+            .is_some_and(|v| !v.is_empty());
+        if !has_matches && written > 0 {
+            continue;
+        }
+
+        let stem = crate::util::sanitize_for_filename(&test_id, 80, "test_id");
+        crate::util::write_json_value(
+            &packet_dir.join(format!(
+                "slice.failed_step.{step_index}.test_id.{stem}.json"
+            )),
+            &payload,
+        )?;
+        written += 1;
+    }
+
     Ok(())
 }
 
@@ -720,8 +932,105 @@ fn build_slice_payload_with_budget(
     ))
 }
 
+fn build_slice_payload_with_budget_at_selector(
+    bundle_path: &Path,
+    warmup_frames: u64,
+    test_id: &str,
+    window_id: Option<u64>,
+    frame_id: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    max_bytes: u64,
+) -> Result<serde_json::Value, String> {
+    let configs = [(20usize, 64usize), (10, 32), (5, 16), (3, 8)];
+    for (max_matches, max_ancestors) in configs {
+        let payload = super::slice::build_test_id_slice_payload_from_bundle_path(
+            bundle_path,
+            warmup_frames,
+            test_id,
+            frame_id,
+            window_snapshot_seq,
+            window_id,
+            max_matches,
+            max_ancestors,
+        )?;
+        let bytes = serde_json::to_vec_pretty(&payload)
+            .map(|b| b.len() as u64)
+            .unwrap_or(u64::MAX);
+        if bytes <= max_bytes {
+            return Ok(payload);
+        }
+    }
+    Err(format!(
+        "slice payload exceeds max bytes budget (max_bytes={max_bytes})"
+    ))
+}
+
 fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn candidate_test_ids_are_ranked_and_deduped_for_failed_step() {
+        let v = serde_json::json!({
+            "schema_version": 1,
+            "run_id": 7,
+            "updated_unix_ms": 0,
+            "window": null,
+            "stage": "failed",
+            "step_index": 3,
+            "reason_code": null,
+            "reason": null,
+            "evidence": {
+                "selector_resolution_trace": [{
+                    "step_index": 3,
+                    "selector": { "kind": "test_id", "id": "primary" },
+                    "candidates": [
+                        { "node_id": 1, "role": "button", "test_id": "secondary" }
+                    ]
+                }],
+                "hit_test_trace": [{
+                    "step_index": 3,
+                    "selector": { "kind": "test_id", "id": "primary" },
+                    "position": { "x_px": 0.0, "y_px": 0.0 },
+                    "intended_test_id": "primary",
+                    "hit_semantics_test_id": "secondary"
+                }],
+                "focus_trace": [{
+                    "step_index": 3,
+                    "expected_test_id": "focus"
+                }]
+            },
+            "last_bundle_dir": null
+        });
+
+        let script: UiScriptResultV1 = serde_json::from_value(v).expect("parse script.result");
+        let ids = pick_candidate_test_ids_for_failed_step(&script);
+        assert_eq!(ids.get(0).map(String::as_str), Some("primary"));
+        assert_eq!(ids.get(1).map(String::as_str), Some("secondary"));
+        assert_eq!(ids.get(2).map(String::as_str), Some("focus"));
+    }
+
+    #[test]
+    fn candidate_test_ids_are_empty_when_not_failed() {
+        let script = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 1,
+            updated_unix_ms: 0,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        assert!(pick_candidate_test_ids_for_failed_step(&script).is_empty());
+    }
 }
 
 fn resolve_bundle_json_path_or_latest(

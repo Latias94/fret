@@ -59,7 +59,7 @@ Deliver an “AI packet” command that writes a directory like:
 - `bundle.meta.json`
 - `bundle.index.json`
 - `test_ids.index.json`
-- one or more slices (e.g. `slice.test_id.*.json`, `slice.viewport.*.json`)
+- one or more slices (e.g. `slice.test_id.*.json`, `slice.failed_step.*.json`, `slice.viewport.*.json`)
 - optional: referenced screenshots (bounded)
 
 This keeps the default agent workflow “small by default” and avoids full bundle reads.

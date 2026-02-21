@@ -297,10 +297,10 @@ fn cmd_query_snapshots(
                 let Some(v) = rest.get(i).cloned() else {
                     return Err("missing value for --step-index".to_string());
                 };
-                step_index = Some(
-                    v.parse::<u32>()
-                        .map_err(|_| "invalid value for --step-index (expected u32)".to_string())?,
-                );
+                step_index =
+                    Some(v.parse::<u32>().map_err(|_| {
+                        "invalid value for --step-index (expected u32)".to_string()
+                    })?);
                 i += 1;
             }
             other if other.starts_with("--") => {
@@ -368,10 +368,9 @@ fn cmd_query_snapshots(
                 "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
             ));
         };
-        let window = step
-            .get("window")
-            .and_then(|v| v.as_u64())
-            .ok_or_else(|| "invalid bundle.index.json: script step marker missing window".to_string())?;
+        let window = step.get("window").and_then(|v| v.as_u64()).ok_or_else(|| {
+            "invalid bundle.index.json: script step marker missing window".to_string()
+        })?;
         let frame_id = step.get("frame_id").and_then(|v| v.as_u64());
         let window_snapshot_seq = step.get("window_snapshot_seq").and_then(|v| v.as_u64());
         Some((window, frame_id, window_snapshot_seq))

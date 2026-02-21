@@ -34,6 +34,8 @@ Last updated: 2026-02-21
   - `bundle.meta.json`
   - `bundle.index.json`
   - stable slice outputs for a given `--test-id` or script failure anchor
+- [ ] When `script.result.json.stage=failed` and no `--test-id` is provided, have `diag ai-packet` extract candidate `test_id`s from
+  script evidence and emit 1–2 bounded `slice.failed_step.*.json` files anchored to the failed `step_index` snapshot selector.
 - [ ] Add “jump to snapshot” affordances in `diag slice` using index (avoid scanning full semantics when possible).
   - [x] When the default snapshot does not contain the requested test-id, try a small set of index-derived candidates via streaming slice before falling back to full bundle parsing.
   - [x] When `script.result.json` is present, attach `script.steps[]` markers to `bundle.index.json` and allow `diag query snapshots` /

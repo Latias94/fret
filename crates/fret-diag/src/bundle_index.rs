@@ -366,8 +366,10 @@ pub(crate) fn ensure_bundle_index_json(
         if let Some(existing) = read_json_value(&out) {
             // Best-effort upgrade: older indexes may be missing the additive `script` markers.
             // If we can compute them (script.result.json adjacent), regenerate once.
-            let missing_script_markers =
-                existing.get("script").and_then(|v| v.get("steps")).is_none();
+            let missing_script_markers = existing
+                .get("script")
+                .and_then(|v| v.get("steps"))
+                .is_none();
             if missing_script_markers
                 && let Some(script_result) = try_read_script_result_json(bundle_path)
                 && build_script_step_index_payload(&existing, &script_result).is_some()
