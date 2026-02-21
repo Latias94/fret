@@ -14,6 +14,8 @@ Last updated: 2026-02-21
 - [x] Add a tooling writer + `fretboard diag index` for `bundle.index.json`.
 - [x] Ensure `diag pack --include-root-artifacts|--include-triage` includes `bundle.index.json`.
 - [x] Make `diag slice` validate `--frame-id|--snapshot-seq` against `bundle.index.json` (when present).
+- [x] Make `diag slice` attempt a bounded parse for explicit snapshot selection (avoid full-bundle `serde_json::Value` build).
+- [x] Modularize `diag slice` fast-path implementation (extract payload + streaming parser modules).
 - [x] Allow `diag meta/index/query/slice` to operate on sidecar-only packet dirs (no `bundle.json`) when possible.
 - [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
 - [x] Add `fretboard diag ai-packet ...` that exports:

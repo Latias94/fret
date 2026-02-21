@@ -10,6 +10,9 @@ Current state (as of 2026-02-21):
   - `crates/fret-diag/src/bundle_index.rs`
   - `crates/fret-diag/src/commands/index.rs`
   - `crates/fret-diag/src/commands/ai_packet.rs`
+- Slice bounded-parse fast-path lives in:
+  - `crates/fret-diag/src/commands/slice_streaming.rs`
+  - `crates/fret-diag/src/commands/slice_payload.rs`
 
 ## Motivation
 
@@ -77,6 +80,8 @@ What ships now (Phase 1 subset):
   - `fretboard diag meta <packet_dir|bundle.meta.json> --meta-report`
   - `fretboard diag query test-id <packet_dir|test_ids.index.json> <pattern>`
   - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
+- For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
+  (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
 
 Known gaps (still planned):
 

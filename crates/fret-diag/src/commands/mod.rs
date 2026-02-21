@@ -7,3 +7,5 @@ pub(crate) mod query;
 pub(crate) mod script;
 pub(crate) mod session;
 pub(crate) mod slice;
+mod slice_payload;
+mod slice_streaming;
