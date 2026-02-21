@@ -1,18 +1,18 @@
 # diag-bundle-schema-v2 TODO
 
-Last updated: 2026-02-20
+Last updated: 2026-02-21
 
 ## M0: Docs + scaffolding
 
-- [ ] Define v2 JSON layout and env flags.
-- [ ] Add bundle viewer support for v2 semantics table.
-- [ ] Add fret-diag tooling support for v2 semantics table (meta/query/slice/stats/compare).
+- [x] Define v2 JSON layout and env flags.
+- [x] Add bundle viewer support for v2 semantics table.
+- [x] Add fret-diag tooling support for v2 semantics table (meta/query/slice/stats/compare).
 
 ## M1: Runtime export
 
-- [ ] Export `schema_version=2` bundles for script-driven dumps by default.
-- [ ] Emit `tables.semantics` with dedup keyed by `(window, semantics_fingerprint)`.
-- [ ] Keep inline semantics only per `FRET_DIAG_BUNDLE_SEMANTICS_MODE` (default `last` for scripts).
+- [x] Export `schema_version=2` bundles for script-driven dumps by default.
+- [x] Emit `tables.semantics` with dedup keyed by `(window, semantics_fingerprint)`.
+- [x] Keep inline semantics only per `FRET_DIAG_BUNDLE_SEMANTICS_MODE` (default `last` for scripts).
 
 ## M2: AI-friendly slices (post v2)
 
@@ -24,5 +24,4 @@ Last updated: 2026-02-20
 
 - [ ] Add regression tests for v2 parsing across tools.
 - [ ] Add metrics to `bundle.meta.json` for semantics density + table size.
-- [ ] Document upgrade guidance and gotchas in `docs/ui-diagnostics-and-scripted-tests.md`.
-
+- [x] Document upgrade guidance and gotchas in `docs/ui-diagnostics-and-scripted-tests.md` (baseline notes + workstream link).

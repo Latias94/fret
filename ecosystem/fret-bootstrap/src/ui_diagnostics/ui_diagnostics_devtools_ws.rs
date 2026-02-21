@@ -285,7 +285,7 @@ impl UiDiagnosticsService {
         &mut self,
         exported_unix_ms: u64,
         dir: &Path,
-        bundle: &UiDiagnosticsBundleV1,
+        bundle: &impl serde::Serialize,
         request_id: Option<u64>,
     ) {
         let embed = self.cfg.devtools_embed_bundle || cfg!(target_arch = "wasm32");

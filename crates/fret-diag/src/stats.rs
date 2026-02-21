@@ -4711,6 +4711,7 @@ pub(super) fn check_bundle_for_stale_paint_json(
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -4732,7 +4733,7 @@ pub(super) fn check_bundle_for_stale_paint_json(
         let mut prev_y: Option<f64> = None;
         let mut prev_fp: Option<u64> = None;
         for s in snaps {
-            let y = semantics_node_y_for_test_id(s, test_id);
+            let y = semantics_node_y_for_test_id(&semantics, s, test_id);
             let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
             if fp.is_none() {
                 missing_scene_fingerprint = true;
@@ -4893,6 +4894,7 @@ pub(super) fn scan_semantics_changed_repainted_json(
         return SemanticsChangedRepaintedScan::default();
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
     let mut scan = SemanticsChangedRepaintedScan::default();
 
     for w in windows {
@@ -4956,7 +4958,7 @@ pub(super) fn scan_semantics_changed_repainted_json(
                         .unwrap_or(0);
 
                     let diff_detail = prev_snapshot
-                        .map(|prev| semantics_diff_detail(prev, s))
+                        .map(|prev| semantics_diff_detail(&semantics, prev, s))
                         .unwrap_or(serde_json::Value::Null);
 
                     scan.findings.push(serde_json::json!({
@@ -4980,7 +4982,7 @@ pub(super) fn scan_semantics_changed_repainted_json(
 
                     let mut detail = String::new();
                     if let Some(prev) = prev_snapshot {
-                        let diff = semantics_diff_summary(prev, s);
+                        let diff = semantics_diff_summary(&semantics, prev, s);
                         if !diff.is_empty() {
                             detail.push(' ');
                             detail.push_str(&diff);
@@ -5008,24 +5010,15 @@ pub(super) fn scan_semantics_changed_repainted_json(
 }
 
 fn semantics_diff_detail(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     before: &serde_json::Value,
     after: &serde_json::Value,
 ) -> serde_json::Value {
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
 
-    let before_nodes = before
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-    let after_nodes = after
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-
-    let (Some(before_nodes), Some(after_nodes)) = (before_nodes, after_nodes) else {
+    let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
+    else {
         return serde_json::Value::Null;
     };
 
@@ -5138,19 +5131,13 @@ fn semantics_node_summary_json(id: u64, node: Option<&serde_json::Value>) -> ser
     })
 }
 
-fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value) -> String {
-    let before_nodes = before
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-    let after_nodes = after
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-
-    let (Some(before_nodes), Some(after_nodes)) = (before_nodes, after_nodes) else {
+fn semantics_diff_summary(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    before: &serde_json::Value,
+    after: &serde_json::Value,
+) -> String {
+    let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
+    else {
         return String::new();
     };
 
@@ -5411,6 +5398,7 @@ pub(super) fn check_bundle_for_stale_scene_json(
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -5435,7 +5423,7 @@ pub(super) fn check_bundle_for_stale_scene_json(
         let mut prev_fp: Option<u64> = None;
 
         for s in snaps {
-            let (y, label, value) = semantics_node_fields_for_test_id(s, test_id);
+            let (y, label, value) = semantics_node_fields_for_test_id(&semantics, s, test_id);
             let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
             if fp.is_none() {
                 missing_scene_fingerprint = true;
@@ -5508,12 +5496,12 @@ pub(super) fn check_bundle_for_stale_scene_json(
     Err(msg)
 }
 
-fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<f64> {
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())?;
+fn semantics_node_y_for_test_id(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+    test_id: &str,
+) -> Option<f64> {
+    let nodes = semantics.nodes(snapshot)?;
     let node = nodes.iter().find(|n| {
         n.get("test_id")
             .and_then(|v| v.as_str())
@@ -5525,15 +5513,11 @@ fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> 
 }
 
 fn semantics_node_fields_for_test_id(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     test_id: &str,
 ) -> (Option<f64>, Option<String>, Option<String>) {
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-    let Some(nodes) = nodes else {
+    let Some(nodes) = semantics.nodes(snapshot) else {
         return (None, None, None);
     };
     let node = nodes.iter().find(|n| {
@@ -5599,12 +5583,12 @@ fn first_scroll_offset_change_frame_id_for_window(
         .min()
 }
 
-fn semantics_node_id_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<u64> {
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())?;
+fn semantics_node_id_for_test_id(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+    test_id: &str,
+) -> Option<u64> {
+    let nodes = semantics.nodes(snapshot)?;
     nodes
         .iter()
         .find(|n| {
@@ -5641,14 +5625,12 @@ fn is_descendant(
     false
 }
 
-fn semantics_parent_map(snapshot: &serde_json::Value) -> std::collections::HashMap<u64, u64> {
+fn semantics_parent_map(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+) -> std::collections::HashMap<u64, u64> {
     let mut parents = std::collections::HashMap::new();
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-    let Some(nodes) = nodes else {
+    let Some(nodes) = semantics.nodes(snapshot) else {
         return parents;
     };
     for node in nodes {
@@ -5689,6 +5671,7 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -5751,21 +5734,21 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
             continue;
         };
 
-        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+        let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
             failures.push(format!(
                 "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
             ));
             continue;
         };
-        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
+        let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
             failures.push(format!(
                 "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
             ));
             continue;
         };
 
-        let before_parents = semantics_parent_map(before);
-        let after_parents = semantics_parent_map(after);
+        let before_parents = semantics_parent_map(&semantics, before);
+        let after_parents = semantics_parent_map(&semantics, after);
 
         if !is_descendant(hit_before, target_before, &before_parents) {
             failures.push(format!(
@@ -5809,6 +5792,7 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -5858,21 +5842,21 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
             continue;
         };
 
-        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+        let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
             failures.push(format!(
                 "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
             ));
             continue;
         };
-        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
+        let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
             failures.push(format!(
                 "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
             ));
             continue;
         };
 
-        let before_parents = semantics_parent_map(before);
-        let after_parents = semantics_parent_map(after);
+        let before_parents = semantics_parent_map(&semantics, before);
+        let after_parents = semantics_parent_map(&semantics, after);
 
         let Some(hit_before) = hit_test_node_id(before) else {
             failures.push(format!(
@@ -7939,6 +7923,7 @@ pub(super) fn check_bundle_for_drag_cache_root_paint_only(
 ) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = crate::json_bundle::SemanticsResolver::new(&bundle);
 
     let windows = bundle
         .get("windows")
@@ -7980,26 +7965,15 @@ pub(super) fn check_bundle_for_drag_cache_root_paint_only(
                 continue;
             }
 
-            let Some(target_node_id) = semantics_node_id_for_test_id(s, test_id) else {
+            let Some(target_node_id) = semantics_node_id_for_test_id(&semantics, s, test_id) else {
                 missing_target_count = missing_target_count.saturating_add(1);
                 continue;
             };
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .ok_or_else(|| "invalid bundle.json: missing debug.semantics.nodes".to_string())?;
-            let mut parents: std::collections::HashMap<u64, u64> = std::collections::HashMap::new();
-            for n in nodes {
-                let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
-                    continue;
-                };
-                if let Some(parent) = n.get("parent").and_then(|v| v.as_u64()) {
-                    parents.insert(id, parent);
-                }
-            }
+            let _nodes = semantics
+                .nodes(s)
+                .ok_or_else(|| "invalid bundle.json: missing semantics nodes".to_string())?;
+            let parents = semantics_parent_map(&semantics, s);
 
             let roots = s
                 .get("debug")
@@ -9287,6 +9261,8 @@ pub(super) fn bundle_stats_from_json_with_options(
         .and_then(|v| v.as_array())
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut out = BundleStatsReport {
         sort,
         warmup_frames: opts.warmup_frames,
@@ -10364,7 +10340,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
 
-            let top_invalidation_walks = snapshot_top_invalidation_walks(s, 3);
+            let top_invalidation_walks = snapshot_top_invalidation_walks(&semantics, s, 3);
             let hover_pressable_target_changes = stats
                 .and_then(|m| m.get("hover_pressable_target_changes"))
                 .and_then(|v| v.as_u64())
@@ -10399,7 +10375,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .min(u32::MAX as u64)
                 as u32;
             let top_hover_declarative_invalidations =
-                snapshot_top_hover_declarative_invalidations(s, 3);
+                snapshot_top_hover_declarative_invalidations(&semantics, s, 3);
             let (
                 cache_roots,
                 cache_roots_reused,
@@ -10407,12 +10383,13 @@ pub(super) fn bundle_stats_from_json_with_options(
                 cache_replayed_ops,
                 top_cache_roots,
                 top_contained_relayout_cache_roots,
-            ) = snapshot_cache_root_stats(s, 3);
-            let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
-            let layout_hotspots = snapshot_layout_hotspots(s, 3);
-            let widget_measure_hotspots = snapshot_widget_measure_hotspots(s, 3);
-            let paint_widget_hotspots = snapshot_paint_widget_hotspots(s, 3);
-            let paint_text_prepare_hotspots = snapshot_paint_text_prepare_hotspots(s, 3);
+            ) = snapshot_cache_root_stats(&semantics, s, 3);
+            let top_layout_engine_solves = snapshot_layout_engine_solves(&semantics, s, 3);
+            let layout_hotspots = snapshot_layout_hotspots(&semantics, s, 3);
+            let widget_measure_hotspots = snapshot_widget_measure_hotspots(&semantics, s, 3);
+            let paint_widget_hotspots = snapshot_paint_widget_hotspots(&semantics, s, 3);
+            let paint_text_prepare_hotspots =
+                snapshot_paint_text_prepare_hotspots(&semantics, s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
@@ -10508,7 +10485,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                     tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
                     frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
                     hover_declarative_layout_invalidations,
-                    hotspots: snapshot_top_hover_declarative_invalidations(s, 8),
+                    hotspots: snapshot_top_hover_declarative_invalidations(&semantics, s, 8),
                 });
             }
             out.max_hover_layout_invalidations = out
@@ -11313,6 +11290,7 @@ fn elide_middle(s: &str, max_chars: usize) -> String {
 }
 
 fn snapshot_top_invalidation_walks(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsInvalidationWalk> {
@@ -11362,7 +11340,7 @@ fn snapshot_top_invalidation_walks(
     out.truncate(max);
 
     for walk in &mut out {
-        let (role, test_id) = snapshot_lookup_semantics(snapshot, walk.root_node);
+        let (role, test_id) = snapshot_lookup_semantics(semantics, snapshot, walk.root_node);
         walk.root_role = role;
         walk.root_test_id = test_id;
     }
@@ -11371,6 +11349,7 @@ fn snapshot_top_invalidation_walks(
 }
 
 fn snapshot_cache_root_stats(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> (
@@ -11396,7 +11375,7 @@ fn snapshot_cache_root_stats(
     let mut contained_relayout: u32 = 0;
     let mut replayed_ops_sum: u64 = 0;
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsCacheRoot> = roots
         .iter()
@@ -11466,6 +11445,7 @@ fn snapshot_cache_root_stats(
 }
 
 fn snapshot_top_hover_declarative_invalidations(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsHoverDeclarativeInvalidationHotspot> {
@@ -11513,7 +11493,7 @@ fn snapshot_top_hover_declarative_invalidations(
     out.truncate(max);
 
     for item in &mut out {
-        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.node);
+        let (role, test_id) = snapshot_lookup_semantics(semantics, snapshot, item.node);
         item.role = role;
         item.test_id = test_id;
     }
@@ -11572,6 +11552,7 @@ pub(super) fn check_report_for_hover_layout_invalidations(
 }
 
 fn snapshot_paint_widget_hotspots(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsPaintWidgetHotspot> {
@@ -11586,7 +11567,7 @@ fn snapshot_paint_widget_hotspots(
         return Vec::new();
     }
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsPaintWidgetHotspot> = hotspots
         .iter()
@@ -11632,6 +11613,7 @@ fn snapshot_paint_widget_hotspots(
 }
 
 fn snapshot_layout_hotspots(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsLayoutHotspot> {
@@ -11646,7 +11628,7 @@ fn snapshot_layout_hotspots(
         return Vec::new();
     }
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsLayoutHotspot> = hotspots
         .iter()
@@ -11689,6 +11671,7 @@ fn snapshot_layout_hotspots(
 }
 
 fn snapshot_widget_measure_hotspots(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsWidgetMeasureHotspot> {
@@ -11703,7 +11686,7 @@ fn snapshot_widget_measure_hotspots(
         return Vec::new();
     }
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsWidgetMeasureHotspot> = hotspots
         .iter()
@@ -11746,6 +11729,7 @@ fn snapshot_widget_measure_hotspots(
 }
 
 fn snapshot_paint_text_prepare_hotspots(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsPaintTextPrepareHotspot> {
@@ -11760,7 +11744,7 @@ fn snapshot_paint_text_prepare_hotspots(
         return Vec::new();
     }
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsPaintTextPrepareHotspot> = hotspots
         .iter()
@@ -11858,6 +11842,7 @@ fn format_text_prepare_reasons(mask: u16) -> String {
 }
 
 fn snapshot_layout_engine_solves(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     max: usize,
 ) -> Vec<BundleStatsLayoutEngineSolve> {
@@ -11872,7 +11857,7 @@ fn snapshot_layout_engine_solves(
         return Vec::new();
     }
 
-    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
 
     let mut out: Vec<BundleStatsLayoutEngineSolve> = solves
         .iter()
@@ -12130,16 +12115,11 @@ fn snapshot_global_change_unobserved(
 }
 
 fn snapshot_lookup_semantics(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     snapshot: &serde_json::Value,
     node_id: u64,
 ) -> (Option<String>, Option<String>) {
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())
-        .map(|v| v.as_slice())
-        .unwrap_or(&[]);
+    let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
     for n in nodes {
         if n.get("id").and_then(|v| v.as_u64()) == Some(node_id) {
@@ -12172,14 +12152,11 @@ struct SemanticsIndex {
 }
 
 impl SemanticsIndex {
-    fn from_snapshot(snapshot: &serde_json::Value) -> Self {
-        let nodes = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("nodes"))
-            .and_then(|v| v.as_array())
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
+    fn from_snapshot(
+        semantics: &crate::json_bundle::SemanticsResolver<'_>,
+        snapshot: &serde_json::Value,
+    ) -> Self {
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut by_id: std::collections::HashMap<u64, SemanticsNodeLite> =
             std::collections::HashMap::new();
@@ -13384,6 +13361,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     if windows.is_empty() {
         return Ok(());
     }
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
 
     let mut examined_snapshots: u64 = 0;
     let mut ui_gallery_snapshots: u64 = 0;
@@ -13481,18 +13459,13 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
             if !enabled {
                 disabled_semantics_checked = disabled_semantics_checked.saturating_add(1);
 
-                let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+                let viewport_node_id =
+                    semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
                 if let Some(viewport_node_id) = viewport_node_id {
-                    let nodes = s
-                        .get("debug")
-                        .and_then(|v| v.get("semantics"))
-                        .and_then(|v| v.get("nodes"))
-                        .and_then(|v| v.as_array())
-                        .map(|v| v.as_slice())
-                        .unwrap_or(&[]);
+                    let nodes = semantics.nodes(s).unwrap_or(&[]);
 
                     if !nodes.is_empty() {
-                        let parents = semantics_parent_map(s);
+                        let parents = semantics_parent_map(&semantics, s);
 
                         let mut cur = viewport_node_id;
                         let mut text_field: Option<&serde_json::Value> = None;
@@ -13981,6 +13954,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
     if windows.is_empty() {
         return Ok(());
     }
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
 
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
@@ -14005,24 +13979,18 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -14351,6 +14319,8 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -14374,24 +14344,18 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -14551,6 +14515,8 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -14575,24 +14541,18 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -14783,6 +14743,8 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -14831,24 +14793,18 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
                 }
             }
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -15050,6 +15006,8 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut ui_gallery_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
@@ -15108,24 +15066,18 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
                 continue;
             }
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes: &[serde_json::Value] = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -19653,6 +19605,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut ui_gallery_snapshots: u64 = 0;
     let mut matching_snapshots: u64 = 0;
@@ -19783,7 +19737,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
                 state = 4;
             }
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 last_observed = Some(serde_json::json!({
                     "window": window_id,
@@ -19803,18 +19757,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
             };
             matched_semantics_snapshots = matched_semantics_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
             for _ in 0..128 {
@@ -20097,6 +20045,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_s
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut any_wheel = false;
     let mut examined_windows: u64 = 0;
     let mut matched_windows: u64 = 0;
@@ -20178,13 +20128,13 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_s
                 return None;
             }
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID)?;
-            let nodes = s.get("debug")?.get("semantics")?.get("nodes")?.as_array()?;
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID)?;
+            let nodes = semantics.nodes(s)?;
             if nodes.is_empty() {
                 return None;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
             for _ in 0..128 {
@@ -20408,6 +20358,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_c
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut ui_gallery_snapshots: u64 = 0;
     let mut matching_snapshots: u64 = 0;
@@ -20511,16 +20463,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_c
             let mut sem_value_len: Option<u64> = None;
             let mut sem_sel: Option<(u64, u64)> = None;
             let mut sem_comp: Option<(u64, u64)> = None;
-            if let Some(viewport_node_id) = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID) {
-                let nodes = s
-                    .get("debug")
-                    .and_then(|v| v.get("semantics"))
-                    .and_then(|v| v.get("nodes"))
-                    .and_then(|v| v.as_array())
-                    .map(|v| v.as_slice())
-                    .unwrap_or(&[]);
+            if let Some(viewport_node_id) =
+                semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID)
+            {
+                let nodes = semantics.nodes(s).unwrap_or(&[]);
                 if !nodes.is_empty() {
-                    let parents = semantics_parent_map(s);
+                    let parents = semantics_parent_map(&semantics, s);
                     let mut cur = viewport_node_id;
                     let mut text_field: Option<&serde_json::Value> = None;
                     for _ in 0..128 {
@@ -20764,6 +20712,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -20789,20 +20739,15 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
             for viewport_test_id in VIEWPORT_TEST_IDS {
-                let Some(viewport_node_id) = semantics_node_id_for_test_id(s, viewport_test_id)
+                let Some(viewport_node_id) =
+                    semantics_node_id_for_test_id(&semantics, s, viewport_test_id)
                 else {
                     continue;
                 };
@@ -20972,6 +20917,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_json(
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -20998,24 +20945,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_json(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -21181,6 +21122,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -21208,24 +21151,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -21437,6 +21374,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -21465,24 +21404,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -21694,6 +21627,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -21719,24 +21654,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -21921,6 +21850,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scro
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -21942,24 +21873,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scro
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;
@@ -22173,6 +22098,8 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json
         return Ok(());
     }
 
+    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
+
     let mut examined_snapshots: u64 = 0;
     let mut matched_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
@@ -22198,24 +22125,18 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let viewport_node_id = semantics_node_id_for_test_id(&semantics, s, VIEWPORT_TEST_ID);
             let Some(viewport_node_id) = viewport_node_id else {
                 continue;
             };
             matched_snapshots = matched_snapshots.saturating_add(1);
 
-            let nodes = s
-                .get("debug")
-                .and_then(|v| v.get("semantics"))
-                .and_then(|v| v.get("nodes"))
-                .and_then(|v| v.as_array())
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
+            let nodes = semantics.nodes(s).unwrap_or(&[]);
             if nodes.is_empty() {
                 continue;
             }
 
-            let parents = semantics_parent_map(s);
+            let parents = semantics_parent_map(&semantics, s);
 
             let mut cur = viewport_node_id;
             let mut text_field: Option<&serde_json::Value> = None;

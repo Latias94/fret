@@ -45,8 +45,9 @@ pub use semantics::{
 
 mod bundle;
 pub use bundle::{
-    UiDiagnosticsBundleConfigV1, UiDiagnosticsBundleV1, UiDiagnosticsEnvDiagnosticsV1,
-    UiDiagnosticsEnvFingerprintV1, UiDiagnosticsWindowBundleV1,
+    UiDiagnosticsBundleConfigV1, UiDiagnosticsBundleTablesV1, UiDiagnosticsBundleV1,
+    UiDiagnosticsBundleV2, UiDiagnosticsEnvDiagnosticsV1, UiDiagnosticsEnvFingerprintV1,
+    UiDiagnosticsWindowBundleV1,
 };
 
 // Split out the DevTools WS wiring to reduce churn in this file.
@@ -8173,69 +8174,127 @@ impl UiDiagnosticsService {
             }
         };
 
-        let mut bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
+        let bundle_v1 = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
+
+        let default_schema_version = if is_script_dump {
+            bundle::BundleSchemaVersionV1::V2
+        } else {
+            bundle::BundleSchemaVersionV1::V1
+        };
+        let schema_version =
+            bundle::BundleSchemaVersionV1::from_env_or_default(default_schema_version);
+
         let default_semantics_mode = if is_script_dump {
             bundle::BundleSemanticsModeV1::Last
         } else {
             bundle::BundleSemanticsModeV1::All
         };
-        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::from_env_or_default(
-            default_semantics_mode,
-        ));
+        let semantics_mode =
+            bundle::BundleSemanticsModeV1::from_env_or_default(default_semantics_mode);
 
         let mut bundle_json_bytes: Option<u64> = None;
+        let mut window_count: u64 = 0;
+        let mut event_count: u64 = 0;
+        let mut snapshot_count: u64 = 0;
+        let mut max_snapshots: u64 = 0;
+        let mut dump_max_snapshots_field: Option<u64> = None;
+
+        if !cfg!(target_arch = "wasm32") && std::fs::create_dir_all(&dir).is_err() {
+            return None;
+        }
+
+        let bundle_json_path = dir.join("bundle.json");
+        let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
+            .ok()
+            .map(|v| v.trim().to_ascii_lowercase());
+        let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
+
+        match schema_version {
+            bundle::BundleSchemaVersionV1::V1 => {
+                let mut bundle = bundle_v1;
+                bundle.apply_semantics_mode_v1(semantics_mode);
+
+                if !cfg!(target_arch = "wasm32") {
+                    let write_result = if want_pretty {
+                        write_json(bundle_json_path.clone(), &bundle)
+                    } else {
+                        write_json_compact(bundle_json_path.clone(), &bundle)
+                    };
+                    if write_result.is_err() {
+                        return None;
+                    }
+                    bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
+                } else if self.ws_is_configured() {
+                    bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
+                }
+
+                window_count = bundle.windows.len() as u64;
+                event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
+                snapshot_count = bundle
+                    .windows
+                    .iter()
+                    .map(|w| w.snapshots.len() as u64)
+                    .sum();
+                max_snapshots = bundle.config.max_snapshots as u64;
+                dump_max_snapshots_field = bundle.config.dump_max_snapshots.map(|n| n as u64);
+
+                #[cfg(feature = "diagnostics-ws")]
+                {
+                    self.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
+                }
+            }
+            bundle::BundleSchemaVersionV1::V2 => {
+                let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
+                bundle.apply_semantics_mode_v1(semantics_mode);
+
+                if !cfg!(target_arch = "wasm32") {
+                    let write_result = if want_pretty {
+                        write_json(bundle_json_path.clone(), &bundle)
+                    } else {
+                        write_json_compact(bundle_json_path.clone(), &bundle)
+                    };
+                    if write_result.is_err() {
+                        return None;
+                    }
+                    bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
+                } else if self.ws_is_configured() {
+                    bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
+                }
+
+                window_count = bundle.windows.len() as u64;
+                event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
+                snapshot_count = bundle
+                    .windows
+                    .iter()
+                    .map(|w| w.snapshots.len() as u64)
+                    .sum();
+                max_snapshots = bundle.config.max_snapshots as u64;
+                dump_max_snapshots_field = bundle.config.dump_max_snapshots.map(|n| n as u64);
+
+                #[cfg(feature = "diagnostics-ws")]
+                {
+                    self.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
+                }
+            }
+        }
 
         if !cfg!(target_arch = "wasm32") {
-            if std::fs::create_dir_all(&dir).is_err() {
-                return None;
-            }
-            let bundle_json_path = dir.join("bundle.json");
-            let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
-                .ok()
-                .map(|v| v.trim().to_ascii_lowercase());
-            let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
-
-            let write_result = if want_pretty {
-                write_json(bundle_json_path.clone(), &bundle)
-            } else {
-                // Default: compact/minified JSON. This keeps bundles smaller and avoids accidental
-                // output explosions when someone greps a bundle.
-                write_json_compact(bundle_json_path.clone(), &bundle)
-            };
-
-            if write_result.is_err() {
-                return None;
-            }
-            bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
             if self.cfg.screenshot_on_dump {
                 let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
             }
-        } else if self.ws_is_configured() {
-            // WASM apps do not have a filesystem, but we still want a bounded estimate so the
-            // artifact can report its size budget.
-            bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
         }
 
         self.last_dump_dir = Some(dir.clone());
         self.last_dump_artifact_stats = Some(UiArtifactStatsV1 {
             schema_version: 1,
             bundle_json_bytes,
-            window_count: bundle.windows.len() as u64,
-            event_count: bundle.windows.iter().map(|w| w.events.len() as u64).sum(),
-            snapshot_count: bundle
-                .windows
-                .iter()
-                .map(|w| w.snapshots.len() as u64)
-                .sum(),
-            max_snapshots: bundle.config.max_snapshots as u64,
-            dump_max_snapshots: bundle.config.dump_max_snapshots.map(|n| n as u64),
+            window_count,
+            event_count,
+            snapshot_count,
+            max_snapshots,
+            dump_max_snapshots: dump_max_snapshots_field,
         });
-
-        #[cfg(feature = "diagnostics-ws")]
-        {
-            self.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
-        }
 
         Some(dir)
     }

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use serde_json::{Value, json};
 
 use crate::json_bundle::{
-    pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id, snapshot_semantics_nodes,
+    SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
 };
 
 fn read_json_value(path: &Path) -> Option<Value> {
@@ -78,6 +78,7 @@ pub(crate) fn ensure_test_ids_index_json(
 fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -100,7 +101,7 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
         let mut window_snapshots_with_semantics: u64 = 0;
         let mut window_unique_semantics_fingerprints: HashSet<u64> = HashSet::new();
         for s in snaps {
-            if snapshot_semantics_nodes(s).is_some() {
+            if semantics.nodes(s).is_some() {
                 window_snapshots_with_semantics = window_snapshots_with_semantics.saturating_add(1);
                 total_snapshots_with_semantics = total_snapshots_with_semantics.saturating_add(1);
             }
@@ -110,8 +111,11 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             }
         }
 
-        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
-        else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             out_windows.push(json!({
                 "window": window_id,
                 "snapshots_total": snaps.len(),
@@ -127,16 +131,13 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
+        let frame_id = snapshot_frame_id(snapshot);
         let ts = snapshot
             .get("timestamp_unix_ms")
             .and_then(|v| v.as_u64())
             .or_else(|| snapshot.get("timestamp_ms").and_then(|v| v.as_u64()));
 
-        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<&str, u64> = HashMap::new();
         for n in nodes {
@@ -194,6 +195,7 @@ fn build_test_ids_payload(
 ) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -208,16 +210,16 @@ fn build_test_ids_payload(
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
-        else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
-        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
+        let frame_id = snapshot_frame_id(snapshot);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {
@@ -290,6 +292,7 @@ fn build_test_ids_payload(
 fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = SemanticsResolver::new(&bundle);
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -308,13 +311,16 @@ fn build_test_ids_index_payload(bundle_path: &Path, warmup_frames: u64) -> Resul
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
-        else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             continue;
         };
 
         let frame_id = snapshot_frame_id(snapshot);
-        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
 
         let mut counts: HashMap<String, u64> = HashMap::new();
         for n in nodes {

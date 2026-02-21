@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::json_bundle::{
-    pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id, snapshot_semantics_nodes,
+    SemanticsResolver, pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id,
     snapshot_window_snapshot_seq,
 };
 
@@ -161,6 +161,7 @@ pub(crate) fn cmd_slice(
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
     let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let semantics = SemanticsResolver::new(&bundle);
 
     let windows = bundle
         .get("windows")
@@ -172,8 +173,12 @@ pub(crate) fn cmd_slice(
         snapshot: &'a serde_json::Value,
     }
 
-    fn snapshot_has_test_id(snapshot: &serde_json::Value, target: &str) -> bool {
-        let nodes = snapshot_semantics_nodes(snapshot).unwrap_or(&[]);
+    fn snapshot_has_test_id(
+        semantics: &SemanticsResolver<'_>,
+        snapshot: &serde_json::Value,
+        target: &str,
+    ) -> bool {
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
         nodes.iter().any(|n| {
             n.get("test_id")
                 .and_then(|v| v.as_str())
@@ -205,13 +210,13 @@ pub(crate) fn cmd_slice(
         let Some(snapshot) = snapshot else {
             continue;
         };
-        if snapshot_semantics_nodes(snapshot).is_none() {
+        if semantics.nodes(snapshot).is_none() {
             if frame_id.is_some() || window_snapshot_seq.is_some() {
                 return Err("selected snapshot has no exported semantics (try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)".to_string());
             }
             continue;
         }
-        if snapshot_has_test_id(snapshot, &test_id) {
+        if snapshot_has_test_id(&semantics, snapshot, &test_id) {
             picked = Some(Picked {
                 window: w_id,
                 snapshot,
@@ -239,7 +244,8 @@ pub(crate) fn cmd_slice(
         .or_else(|| snapshot.get("timestamp_ms").and_then(|v| v.as_u64()));
     let window_bounds = snapshot.get("window_bounds").cloned();
 
-    let nodes = snapshot_semantics_nodes(snapshot)
+    let nodes = semantics
+        .nodes(snapshot)
         .ok_or_else(|| "bundle snapshot missing semantics nodes".to_string())?;
 
     let mut by_id: HashMap<u64, usize> = HashMap::new();

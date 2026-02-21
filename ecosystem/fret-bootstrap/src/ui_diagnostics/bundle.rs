@@ -3,6 +3,26 @@ use serde::{Deserialize, Serialize};
 use super::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BundleSchemaVersionV1 {
+    V1,
+    V2,
+}
+
+impl BundleSchemaVersionV1 {
+    pub(super) fn from_env_or_default(default: BundleSchemaVersionV1) -> Self {
+        let v = std::env::var("FRET_DIAG_BUNDLE_SCHEMA_VERSION")
+            .ok()
+            .map(|v| v.trim().to_ascii_lowercase());
+        match v.as_deref() {
+            None | Some("") => default,
+            Some("1") | Some("v1") => Self::V1,
+            Some("2") | Some("v2") => Self::V2,
+            Some(_) => default,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum BundleSemanticsModeV1 {
     All,
     Changed,
@@ -33,6 +53,31 @@ impl BundleSemanticsModeV1 {
         }
         default
     }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct UiDiagnosticsBundleTablesV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics: Option<UiBundleSemanticsTableV1>,
+}
+
+impl UiDiagnosticsBundleTablesV1 {
+    fn is_empty(v: &Self) -> bool {
+        v.semantics.is_none()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiBundleSemanticsTableV1 {
+    pub schema_version: u32,
+    pub entries: Vec<UiBundleSemanticsEntryV1>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiBundleSemanticsEntryV1 {
+    pub window: u64,
+    pub semantics_fingerprint: u64,
+    pub semantics: UiSemanticsSnapshotV1,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,6 +156,75 @@ pub struct UiDiagnosticsWindowBundleV1 {
     pub snapshots: Vec<UiDiagnosticsSnapshotV1>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UiDiagnosticsBundleV2 {
+    pub schema_version: u32,
+    pub exported_unix_ms: u64,
+    pub out_dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<UiDiagnosticsEnvFingerprintV1>,
+    pub config: UiDiagnosticsBundleConfigV1,
+    pub windows: Vec<UiDiagnosticsWindowBundleV1>,
+    #[serde(default, skip_serializing_if = "UiDiagnosticsBundleTablesV1::is_empty")]
+    pub tables: UiDiagnosticsBundleTablesV1,
+}
+
+fn apply_semantics_mode_to_windows(
+    windows: &mut [UiDiagnosticsWindowBundleV1],
+    mode: BundleSemanticsModeV1,
+) {
+    match mode {
+        BundleSemanticsModeV1::All => {}
+        BundleSemanticsModeV1::Off => {
+            for w in windows {
+                for s in &mut w.snapshots {
+                    s.debug.semantics = None;
+                }
+            }
+        }
+        BundleSemanticsModeV1::Last => {
+            for w in windows {
+                let mut keep_idx: Option<usize> = None;
+                for (idx, s) in w.snapshots.iter().enumerate() {
+                    if s.debug.semantics.is_some() {
+                        keep_idx = Some(idx);
+                    }
+                }
+                for (idx, s) in w.snapshots.iter_mut().enumerate() {
+                    if Some(idx) != keep_idx {
+                        s.debug.semantics = None;
+                    }
+                }
+            }
+        }
+        BundleSemanticsModeV1::Changed => {
+            for w in windows {
+                let mut last_kept_fingerprint: Option<u64> = None;
+                for (idx, s) in w.snapshots.iter_mut().enumerate() {
+                    if s.debug.semantics.is_none() {
+                        continue;
+                    }
+                    let is_last = idx + 1 == w.snapshots.len();
+                    if is_last {
+                        last_kept_fingerprint = s.semantics_fingerprint;
+                        continue;
+                    }
+                    let keep = match (last_kept_fingerprint, s.semantics_fingerprint) {
+                        (None, _) => true,
+                        (_, None) => true,
+                        (Some(a), Some(b)) => a != b,
+                    };
+                    if keep {
+                        last_kept_fingerprint = s.semantics_fingerprint;
+                    } else {
+                        s.debug.semantics = None;
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl UiDiagnosticsBundleV1 {
     pub(super) fn from_service(
         exported_unix_ms: u64,
@@ -181,56 +295,7 @@ impl UiDiagnosticsBundleV1 {
     }
 
     pub(super) fn apply_semantics_mode_v1(&mut self, mode: BundleSemanticsModeV1) {
-        match mode {
-            BundleSemanticsModeV1::All => {}
-            BundleSemanticsModeV1::Off => {
-                for w in &mut self.windows {
-                    for s in &mut w.snapshots {
-                        s.debug.semantics = None;
-                    }
-                }
-            }
-            BundleSemanticsModeV1::Last => {
-                for w in &mut self.windows {
-                    let mut keep_idx: Option<usize> = None;
-                    for (idx, s) in w.snapshots.iter().enumerate() {
-                        if s.debug.semantics.is_some() {
-                            keep_idx = Some(idx);
-                        }
-                    }
-                    for (idx, s) in w.snapshots.iter_mut().enumerate() {
-                        if Some(idx) != keep_idx {
-                            s.debug.semantics = None;
-                        }
-                    }
-                }
-            }
-            BundleSemanticsModeV1::Changed => {
-                for w in &mut self.windows {
-                    let mut last_kept_fingerprint: Option<u64> = None;
-                    for (idx, s) in w.snapshots.iter_mut().enumerate() {
-                        if s.debug.semantics.is_none() {
-                            continue;
-                        }
-                        let is_last = idx + 1 == w.snapshots.len();
-                        if is_last {
-                            last_kept_fingerprint = s.semantics_fingerprint;
-                            continue;
-                        }
-                        let keep = match (last_kept_fingerprint, s.semantics_fingerprint) {
-                            (None, _) => true,
-                            (_, None) => true,
-                            (Some(a), Some(b)) => a != b,
-                        };
-                        if keep {
-                            last_kept_fingerprint = s.semantics_fingerprint;
-                        } else {
-                            s.debug.semantics = None;
-                        }
-                    }
-                }
-            }
-        }
+        apply_semantics_mode_to_windows(&mut self.windows, mode);
     }
 }
 
@@ -288,5 +353,53 @@ impl UiDiagnosticsEnvFingerprintV1 {
             capabilities,
             scale_factors_seen,
         }
+    }
+}
+
+impl UiDiagnosticsBundleV2 {
+    pub(super) fn from_v1(bundle: UiDiagnosticsBundleV1) -> Self {
+        use std::collections::BTreeMap;
+
+        let mut table: BTreeMap<(u64, u64), UiSemanticsSnapshotV1> = BTreeMap::new();
+        for w in &bundle.windows {
+            for s in &w.snapshots {
+                let Some(sem) = &s.debug.semantics else {
+                    continue;
+                };
+                let Some(fp) = s.semantics_fingerprint else {
+                    continue;
+                };
+                table.entry((s.window, fp)).or_insert_with(|| sem.clone());
+            }
+        }
+
+        let semantics = (!table.is_empty()).then(|| UiBundleSemanticsTableV1 {
+            schema_version: 1,
+            entries: table
+                .into_iter()
+                .map(|((window, fp), semantics)| UiBundleSemanticsEntryV1 {
+                    window,
+                    semantics_fingerprint: fp,
+                    semantics,
+                })
+                .collect(),
+        });
+
+        Self {
+            schema_version: 2,
+            exported_unix_ms: bundle.exported_unix_ms,
+            out_dir: bundle.out_dir,
+            env: bundle.env,
+            config: bundle.config,
+            windows: bundle.windows,
+            tables: UiDiagnosticsBundleTablesV1 { semantics },
+        }
+    }
+
+    pub(super) fn apply_semantics_mode_v1(&mut self, mode: BundleSemanticsModeV1) {
+        if mode == BundleSemanticsModeV1::Off {
+            self.tables.semantics = None;
+        }
+        apply_semantics_mode_to_windows(&mut self.windows, mode);
     }
 }
