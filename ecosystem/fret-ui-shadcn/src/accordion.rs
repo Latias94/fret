@@ -8,8 +8,8 @@ use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, InteractivityGateProps,
-    LayoutStyle, MainAlign, OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps,
-    RowProps, VisualTransformProps,
+    LayoutStyle, Length, MainAlign, OpacityProps, PressableProps, RovingFlexProps,
+    RovingFocusProps, RowProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -42,10 +42,8 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -390,9 +388,12 @@ pub mod composable {
             let children = self.children;
 
             cx.container(props, move |cx| {
+                let mut column_layout = LayoutStyle::default();
+                column_layout.size.width = Length::Fill;
+                column_layout.size.min_width = Some(Px(0.0));
                 vec![cx.column(
                     ColumnProps {
-                        layout: LayoutStyle::default(),
+                        layout: column_layout,
                         gap: MetricRef::space(Space::N4).resolve(&theme),
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
@@ -1214,9 +1215,12 @@ impl AccordionContent {
         let children = self.children;
 
         cx.container(props, move |cx| {
+            let mut column_layout = LayoutStyle::default();
+            column_layout.size.width = Length::Fill;
+            column_layout.size.min_width = Some(Px(0.0));
             vec![cx.column(
                 ColumnProps {
-                    layout: LayoutStyle::default(),
+                    layout: column_layout,
                     gap: MetricRef::space(Space::N4).resolve(&theme),
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Start,

@@ -81,24 +81,36 @@ pub(in crate::ui) fn preview_accordion(
             .items([
                 shadcn::AccordionItem::new(
                     "item-1",
-                    shadcn::AccordionTrigger::new(vec![cx.text("How do I reset my password?")]),
-                    shadcn::AccordionContent::new(vec![cx.text(
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I reset my password?")])
+                        .test_id("ui-gallery-accordion-basic-item-1-trigger"),
+                    shadcn::AccordionContent::new(vec![ui::text_block(
+                        cx,
                         "Click on 'Forgot Password' on the login page, enter your email address, and we'll send you a link to reset your password. The link will expire in 24 hours.",
-                    )]),
+                    )
+                    .into_element(cx)])
+                    .test_id("ui-gallery-accordion-basic-item-1-content"),
                 ),
                 shadcn::AccordionItem::new(
                     "item-2",
-                    shadcn::AccordionTrigger::new(vec![cx.text("Can I change my subscription plan?")]),
-                    shadcn::AccordionContent::new(vec![cx.text(
+                    shadcn::AccordionTrigger::new(vec![cx.text("Can I change my subscription plan?")])
+                        .test_id("ui-gallery-accordion-basic-item-2-trigger"),
+                    shadcn::AccordionContent::new(vec![ui::text_block(
+                        cx,
                         "Yes, you can upgrade or downgrade your plan at any time from your account settings. Changes will be reflected in your next billing cycle.",
-                    )]),
+                    )
+                    .into_element(cx)])
+                    .test_id("ui-gallery-accordion-basic-item-2-content"),
                 ),
                 shadcn::AccordionItem::new(
                     "item-3",
-                    shadcn::AccordionTrigger::new(vec![cx.text("What payment methods do you accept?")]),
-                    shadcn::AccordionContent::new(vec![cx.text(
+                    shadcn::AccordionTrigger::new(vec![cx.text("What payment methods do you accept?")])
+                        .test_id("ui-gallery-accordion-basic-item-3-trigger"),
+                    shadcn::AccordionContent::new(vec![ui::text_block(
+                        cx,
                         "We accept all major credit cards, PayPal, and bank transfers. All payments are processed securely through our payment partners.",
-                    )]),
+                    )
+                    .into_element(cx)])
+                    .test_id("ui-gallery-accordion-basic-item-3-content"),
                 ),
             ])
             .into_element(cx);

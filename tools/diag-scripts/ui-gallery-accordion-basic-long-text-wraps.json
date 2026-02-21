@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-accordion-basic-long-text-wraps",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "accordion", "layout", "wrap"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "accordion" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-accordion" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-accordion" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-accordion" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }, "delta_y": 480.0 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }, "delta_y": 480.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-basic-item-1-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 15 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-basic-item-1-content" },
+        "min_w_px": 200.0,
+        "min_h_px": 44.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 300
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-accordion-basic-long-text-wraps" },
+    { "type": "capture_screenshot", "label": "ui-gallery-accordion-basic-long-text-wraps" }
+  ]
+}
