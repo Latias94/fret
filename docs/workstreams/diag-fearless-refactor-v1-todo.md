@@ -13,7 +13,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 
 - [x] Extract filesystem triggers into a dedicated module:
   - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
-- [ ] Extract “bundle writer” responsibilities (schema selection, semantics-mode application, JSON writing) into a module.
+- [x] Extract “bundle writer” responsibilities (schema selection, semantics-mode application, JSON writing) into a module:
+  - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`
 - [ ] Extract “script runner” responsibilities (step state machine + evidence capture) into a module.
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
@@ -38,4 +39,3 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).
 - [ ] Add a compatibility materializer to emit `bundle.json` from the manifest.
 - [ ] Add packing/hashing conventions and a `diag pack` integration path.
-
