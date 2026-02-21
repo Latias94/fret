@@ -776,6 +776,13 @@ impl ElementHostWidget {
             ),
         );
 
+        let children_layout_invalidated = cx
+            .children
+            .iter()
+            .copied()
+            .any(|child| cx.tree.node_layout_invalidated(child));
+        let must_probe_for_growing_extent = at_scroll_extent_edge && children_layout_invalidated;
+
         let mut intrinsic_cached_max_child: Option<Size> = None;
         let mut cached_max_child: Option<Size> = None;
         if !is_probe_layout && cx.children.len() == 1 {
@@ -796,7 +803,7 @@ impl ElementHostWidget {
                 .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child));
             // Safe fast path: only use intrinsic size caching as a substitute for measuring the
             // child when the child subtree does not need layout this frame.
-            if !at_scroll_extent_edge && !cx.tree.node_needs_layout(child) {
+            if !must_probe_for_growing_extent && !cx.tree.node_needs_layout(child) {
                 cached_max_child = intrinsic_cached_max_child;
             }
         }
@@ -830,11 +837,6 @@ impl ElementHostWidget {
         let should_defer_unbounded_probe_on_resize = wants_unbounded_probe
             && defer_probe_on_resize
             && (viewport_changed || viewport_became_known_during_resize);
-        let children_layout_invalidated = cx
-            .children
-            .iter()
-            .copied()
-            .any(|child| cx.tree.node_layout_invalidated(child));
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
             && defer_probe_on_invalidation
             && can_defer_probe_with_cached_children
@@ -983,7 +985,7 @@ impl ElementHostWidget {
                 }
                 max_child
             }
-        } else if !at_scroll_extent_edge
+        } else if !must_probe_for_growing_extent
             && let Some(cached) = intrinsic_cached_max_child
             && cached != Size::default()
         {

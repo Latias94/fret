@@ -750,6 +750,97 @@ fn scroll_content_extent_updates_immediately_when_growing_at_scroll_end() {
 }
 
 #[test]
+fn scroll_at_end_reuses_cached_extent_when_clean() {
+    let mut app = TestHost::new();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        (0..12)
+                            .map(|i| cx.text(format!("row {i}")))
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: populate intrinsic measurement caches and scroll to the end.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-at-end-reuses-caches",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    app.advance_frame();
+
+    // Frame 1: no content changes while at the scroll end; layout should avoid measuring children.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-at-end-reuses-caches",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root1)[0];
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected scroll layout to reuse intrinsic caches when at the extent edge and clean"
+    );
+    assert!(
+        (scroll_handle.max_offset().y.0 - max0.0).abs() <= 0.5,
+        "expected max offset to remain stable: before={max0:?} after={:?}",
+        scroll_handle.max_offset().y
+    );
+}
+
+#[test]
 fn scroll_thumb_drag_updates_offset_horizontal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
