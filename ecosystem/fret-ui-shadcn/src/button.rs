@@ -288,10 +288,8 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 

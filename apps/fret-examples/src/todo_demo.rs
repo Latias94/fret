@@ -872,6 +872,7 @@ fn todo_row(
             align: fret_core::TextAlign::Start,
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
+            ink_overflow: Default::default(),
         });
         let label = ui::container(cx, |_cx| [label_text])
             .flex_1()

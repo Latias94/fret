@@ -159,6 +159,8 @@ impl SnippetText {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                 })]
             },
         )
@@ -466,6 +468,8 @@ impl SnippetCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         })
                         .attach_semantics(
                             fret_ui::element::SemanticsDecoration::default()

@@ -1753,11 +1753,8 @@ impl DropdownMenu {
                                                         font: fret_core::FontId::default(),
                                                         size: font_size,
                                                         weight: fret_core::FontWeight::NORMAL,
-                                                        slant: Default::default(),
                                                         line_height: Some(font_line_height),
-                                                        letter_spacing_em: None,
-                                                        vertical_placement:
-                                                            fret_core::TextVerticalPlacement::CenterMetricsBox,
+                                                        ..Default::default()
                                                     };
 
                                                     let mut item_ix: usize = 0;
@@ -2662,11 +2659,8 @@ impl DropdownMenu {
                                                 font: FontId::default(),
                                                 size: font_size,
                                                 weight: FontWeight::NORMAL,
-                                                slant: Default::default(),
                                                 line_height: Some(font_line_height),
-                                                letter_spacing_em: None,
-                                                vertical_placement:
-                                                    fret_core::TextVerticalPlacement::CenterMetricsBox,
+                                                ..Default::default()
                                             };
 
                                             let mut submenu_labels: Vec<Arc<str>> =

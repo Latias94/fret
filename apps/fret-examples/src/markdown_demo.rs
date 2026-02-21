@@ -649,6 +649,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
                 align: fret_core::TextAlign::Start,
                 wrap: fret_core::TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             })]
         });
     }
@@ -661,6 +662,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
         align: fret_core::TextAlign::Start,
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
+        ink_overflow: Default::default(),
     })
 }
 

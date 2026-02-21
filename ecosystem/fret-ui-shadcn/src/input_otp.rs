@@ -210,10 +210,8 @@ impl InputOtp {
             font: FontId::default(),
             size: slot_text_px,
             weight: FontWeight::MEDIUM,
-            slant: Default::default(),
             line_height: Some(slot_line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         };
 
         let root_layout = decl_style::layout_style(&theme, self.layout.relative());

@@ -190,6 +190,7 @@ fn view(
             align: fret_core::TextAlign::Center,
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
+            ink_overflow: Default::default(),
         })
         .test_id(TEST_ID_COUNT);
 
@@ -208,6 +209,7 @@ fn view(
         align: fret_core::TextAlign::Center,
         wrap: fret_core::TextWrap::None,
         overflow: fret_core::TextOverflow::Clip,
+        ink_overflow: Default::default(),
     });
 
     let step_badge = shadcn::Badge::new(format!("Step: {effective_step}")).variant(if step_valid {
@@ -228,6 +230,7 @@ fn view(
         align: fret_core::TextAlign::Center,
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
+        ink_overflow: Default::default(),
     });
 
     let step_input = shadcn::Input::new(st.step.clone())

@@ -348,6 +348,7 @@ impl EnvironmentVariablesTitle {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let Some(test_id) = self.test_id else {
@@ -652,6 +653,7 @@ impl EnvironmentVariableName {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -709,6 +711,7 @@ impl EnvironmentVariableValue {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -957,6 +960,7 @@ impl EnvironmentVariableCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                         .attach_semantics(
                             SemanticsDecoration::default()

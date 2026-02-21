@@ -628,6 +628,7 @@ impl FileTreeName {
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }

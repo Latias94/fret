@@ -977,6 +977,7 @@ impl AudioPlayerElement {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let Some(test_id) = self.test_id else {

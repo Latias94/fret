@@ -406,6 +406,7 @@ fn section_row<H: UiHost>(
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: TextAlign::Center,
+                        ink_overflow: Default::default(),
                     })]
                 },
             ));
@@ -462,6 +463,7 @@ fn section_row<H: UiHost>(
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     align: TextAlign::Start,
+                                    ink_overflow: Default::default(),
                                 }),
                             ]
                         },
@@ -525,6 +527,7 @@ fn section_col<H: UiHost>(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }),
                 content(cx),
             ]
@@ -619,6 +622,7 @@ fn section_col_with_link<H: UiHost>(
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Ellipsis,
                                 align: TextAlign::Start,
+                                ink_overflow: Default::default(),
                             }),
                         ]
                     },

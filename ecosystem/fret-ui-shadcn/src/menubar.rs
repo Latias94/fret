@@ -1224,10 +1224,8 @@ impl MenubarMenuEntries {
                 font: FontId::default(),
                 size: font_size,
                 weight: FontWeight::MEDIUM,
-                slant: Default::default(),
                 line_height: Some(font_line_height),
-                letter_spacing_em: None,
-                vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+                ..Default::default()
             };
 
             let label = self.menu.label.clone();

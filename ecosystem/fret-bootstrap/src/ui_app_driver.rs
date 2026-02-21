@@ -674,6 +674,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         })]
                     },
                 )]
@@ -757,6 +758,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     align: fret_core::TextAlign::Start,
+                                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                                 }),
                                 close_button,
                             ]
@@ -792,6 +794,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     align: fret_core::TextAlign::Start,
+                                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                                 }),
                                 cx.text_props(fret_ui::element::TextProps {
                                     layout: Default::default(),
@@ -803,6 +806,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     align: fret_core::TextAlign::Start,
+                                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                                 }),
                             ]
                         },
@@ -864,6 +868,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                                         wrap: TextWrap::None,
                                                         overflow: TextOverflow::Clip,
                                                         align: fret_core::TextAlign::Start,
+                                                        ink_overflow:
+                                                            fret_ui::element::TextInkOverflow::None,
                                                     }),
                                                     cx.text_props(fret_ui::element::TextProps {
                                                         layout: Default::default(),
@@ -873,6 +879,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                                         wrap: TextWrap::None,
                                                         overflow: TextOverflow::Clip,
                                                         align: fret_core::TextAlign::Start,
+                                                        ink_overflow:
+                                                            fret_ui::element::TextInkOverflow::None,
                                                     }),
                                                 ]
                                             },
@@ -917,6 +925,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                                                 wrap: TextWrap::None,
                                                                 overflow: TextOverflow::Clip,
                                                                 align: fret_core::TextAlign::Start,
+                                                                ink_overflow:
+                                                                    fret_ui::element::TextInkOverflow::None,
                                                             },
                                                         )]
                                                     },
@@ -951,6 +961,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: fret_ui::element::TextInkOverflow::None,
                             })]
                         },
                     );

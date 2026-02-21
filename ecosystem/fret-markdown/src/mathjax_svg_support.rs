@@ -93,6 +93,7 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })],
             MathJaxSvgEntry::Error(err) => vec![cx.text_props(TextProps {
                 layout: Default::default(),
@@ -109,6 +110,7 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })],
         })]
     })
@@ -202,6 +204,7 @@ fn render_inline_math_source<H: UiHost>(
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })]
     })
 }

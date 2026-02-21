@@ -415,6 +415,7 @@ impl CodeBlockCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                         .attach_semantics(
                             fret_ui::element::SemanticsDecoration::default()
@@ -463,6 +464,7 @@ impl CodeBlockFilename {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }

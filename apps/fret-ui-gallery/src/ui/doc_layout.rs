@@ -235,6 +235,7 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
     })
 }
 
@@ -516,5 +517,6 @@ fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyEl
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
         align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
     })
 }

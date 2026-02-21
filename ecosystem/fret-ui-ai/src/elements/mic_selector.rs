@@ -521,6 +521,7 @@ impl MicSelectorValue {
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Ellipsis,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             }
         } else {
@@ -532,6 +533,7 @@ impl MicSelectorValue {
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
                 align: TextAlign::Start,
+                ink_overflow: Default::default(),
             })
         };
 
@@ -575,6 +577,8 @@ impl MicSelectorLabel {
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Ellipsis,
                 align: TextAlign::Start,
+
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             });
             let id_el = cx.text_props(TextProps {
                 layout: Default::default(),
@@ -584,6 +588,8 @@ impl MicSelectorLabel {
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
                 align: TextAlign::Start,
+
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             });
 
             return fret_ui_kit::declarative::stack::hstack(
@@ -604,6 +610,8 @@ impl MicSelectorLabel {
             wrap: TextWrap::None,
             overflow: fret_core::TextOverflow::Ellipsis,
             align: TextAlign::Start,
+
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
         })
     }
 }

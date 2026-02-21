@@ -914,6 +914,7 @@ impl WebPreviewBody {
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })
         };
 
@@ -1261,6 +1262,7 @@ impl WebPreviewConsole {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let msg = cx.text_props(TextProps {
@@ -1279,6 +1281,7 @@ impl WebPreviewConsole {
                         wrap: TextWrap::Word,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let row = stack::hstack(

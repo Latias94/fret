@@ -13,7 +13,8 @@ use fret_ui::action::{
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SemanticsProps, TextProps,
+    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
@@ -151,6 +152,7 @@ fn centered_row<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: TextInkOverflow::None,
             })]
         },
     )
@@ -1102,6 +1104,7 @@ impl WorkspaceTabStrip {
                                                                                 wrap: TextWrap::None,
                                                                                 overflow: TextOverflow::Ellipsis,
                                                                                 align: fret_core::TextAlign::Start,
+                                                                                ink_overflow: TextInkOverflow::None,
                                                                             }),
                                                                         ];
 
@@ -1159,6 +1162,7 @@ impl WorkspaceTabStrip {
                                                                                                         wrap: TextWrap::None,
                                                                                                         overflow: TextOverflow::Clip,
                                                                                                         align: fret_core::TextAlign::Start,
+                                                                                                        ink_overflow: TextInkOverflow::None,
                                                                                                     })]
                                                                                                 },
                                                                                             )]
@@ -1194,6 +1198,7 @@ impl WorkspaceTabStrip {
                                                                                                     wrap: TextWrap::None,
                                                                                                     overflow: TextOverflow::Clip,
                                                                                                     align: fret_core::TextAlign::Start,
+                                                                                                    ink_overflow: TextInkOverflow::None,
                                                                                                 })]
                                                                                             },
                                                                                         )]

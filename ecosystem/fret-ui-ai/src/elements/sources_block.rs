@@ -227,6 +227,7 @@ impl SourcesBlock {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let title_row = stack::hstack(
@@ -313,6 +314,7 @@ impl SourcesBlock {
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                     });
 
@@ -377,6 +379,7 @@ impl SourcesBlock {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 });
                 let chevron_id = if is_open {
                     ids::ui::CHEVRON_UP

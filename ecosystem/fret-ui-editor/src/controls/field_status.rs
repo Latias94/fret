@@ -129,6 +129,7 @@ impl FieldStatusBadge {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
                     align: TextAlign::Center,
+                    ink_overflow: Default::default(),
                 })]
             },
         )

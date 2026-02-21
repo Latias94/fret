@@ -1374,6 +1374,7 @@ fn select_trigger_label<H: UiHost>(
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })]
     })
 }
@@ -1431,6 +1432,7 @@ fn select_supporting_text<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: Default::default(),
     })
 }
 

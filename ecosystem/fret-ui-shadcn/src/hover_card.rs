@@ -120,11 +120,16 @@ fn hover_card_last_pointer_model<H: UiHost>(
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
     fn visit(node: &AnyElement, best: &mut Option<Size>) {
         if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
-            if let Length::Px(w) = layout.size.width {
-                let h = match layout.size.height {
-                    Length::Px(h) => h,
-                    _ => Px(120.0),
+            let width_hint = match layout.size.width {
+                Length::Px(w) => Some(w),
+                _ => layout.size.max_width,
+            };
+            if let Some(w) = width_hint {
+                let height_hint = match layout.size.height {
+                    Length::Px(h) => Some(h),
+                    _ => layout.size.max_height,
                 };
+                let h = height_hint.unwrap_or(Px(120.0));
                 let candidate = Size::new(w, h);
                 if best
                     .map(|cur| candidate.width.0 > cur.width.0)
@@ -742,6 +747,7 @@ impl HoverCard {
             }
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
+            let overlay_root_name_for_diag = overlay_root_name.clone();
             let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
@@ -781,18 +787,28 @@ impl HoverCard {
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                let layout = popper::popper_content_layout_sized(
+                let placement = popper::PopperContentPlacement::new(
+                    direction,
+                    placement_side,
+                    align,
+                    side_offset,
+                )
+                .with_shift_cross_axis(true)
+                .with_arrow(arrow_options, arrow_protrusion);
+                let (layout, trace) = popper::popper_layout_sized_with_trace(
                     outer,
                     anchor,
                     content_size,
-                    popper::PopperContentPlacement::new(
-                        direction,
-                        placement_side,
-                        align,
-                        side_offset,
-                    )
-                    .with_shift_cross_axis(true)
-                    .with_arrow(arrow_options, arrow_protrusion),
+                    placement.side_offset,
+                    placement.side,
+                    placement.align,
+                    placement.options(),
+                );
+                cx.diagnostics_record_overlay_placement_anchored_panel(
+                    Some(&overlay_root_name_for_diag),
+                    Some(anchor_id),
+                    Some(content_id),
+                    trace,
                 );
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.anchor_bounds = Some(anchor);
@@ -1079,7 +1095,13 @@ impl HoverCardContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let base_layout = LayoutRefinement::default().w_px(Px(256.0)).flex_shrink_0();
+        // Upstream shadcn applies `w-64` (256px) to the content, but Fret's placement solver may
+        // clamp the available main-axis space (ADR 0064). Model this as `width: 100%` with a max
+        // width hint so the content can shrink when the popper panel is clamped.
+        let base_layout = LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(256.0))
+            .min_w_0();
 
         let chrome = hover_card_content_chrome(&theme).merge(self.chrome);
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
@@ -1098,13 +1120,14 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, MouseButton, MouseButtons, PathCommand, PathConstraints,
-        PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect, SemanticsRole, SvgId,
-        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+        AppWindowId, Edges, Event, Modifiers, MouseButton, MouseButtons, PathCommand,
+        PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect,
+        SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
-        ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, SemanticsProps,
+        ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PositionStyle,
+        PressableProps, SemanticsProps,
     };
     use fret_ui::overlay_placement;
     use fret_ui::tree::UiTree;
@@ -1194,6 +1217,122 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn hover_card_content_clamps_to_default_max_width_when_space_allows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        );
+        let content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id_out_for_render = content_id_out.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            move |cx| {
+                let content =
+                    HoverCardContent::new(vec![ui::raw_text(cx, "content").into_element(cx)])
+                        .into_element(cx);
+                content_id_out_for_render.set(Some(content.id));
+
+                let container = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Start,
+                        wrap: false,
+                    },
+                    move |_cx| vec![content],
+                );
+                vec![container]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_id = content_id_out.get().expect("content id");
+        let content_bounds =
+            fret_ui::elements::bounds_for_element(&mut app, window, content_id).expect("bounds");
+        assert_eq!(content_bounds.size.width, Px(256.0));
+    }
+
+    #[test]
+    fn hover_card_content_shrinks_when_container_is_narrower_than_max_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id_out_for_render = content_id_out.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            move |cx| {
+                let content =
+                    HoverCardContent::new(vec![ui::raw_text(cx, "content").into_element(cx)])
+                        .into_element(cx);
+                content_id_out_for_render.set(Some(content.id));
+
+                let container = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Start,
+                        wrap: false,
+                    },
+                    move |_cx| vec![content],
+                );
+                vec![container]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_id = content_id_out.get().expect("content id");
+        let content_bounds =
+            fret_ui::elements::bounds_for_element(&mut app, window, content_id).expect("bounds");
+        assert_eq!(content_bounds.size.width, Px(200.0));
     }
 
     fn render_hover_card_frame(

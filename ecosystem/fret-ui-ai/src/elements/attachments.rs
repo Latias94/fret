@@ -776,6 +776,7 @@ impl AttachmentInfo {
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let media_type_row = self
@@ -801,6 +802,7 @@ impl AttachmentInfo {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             });
 
@@ -1000,6 +1002,7 @@ impl AttachmentEmpty {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })]
         } else {
             self.children

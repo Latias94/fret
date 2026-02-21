@@ -461,6 +461,7 @@ impl PackageInfoName {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let row = stack::hstack(
@@ -606,6 +607,7 @@ impl PackageInfoVersion {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }));
         }
         if has_current && has_new {
@@ -629,6 +631,7 @@ impl PackageInfoVersion {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }));
         }
 
@@ -706,6 +709,7 @@ impl PackageInfoDescription {
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let chrome = ChromeRefinement::default().merge(self.chrome);
@@ -813,6 +817,7 @@ impl PackageInfoDependencies {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let list = stack::vstack(
@@ -888,6 +893,7 @@ impl PackageInfoDependency {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let mut items = vec![name];
@@ -911,6 +917,7 @@ impl PackageInfoDependency {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }));
         }
 

@@ -74,6 +74,7 @@ impl ConversationEmptyState {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let description = self.description.map(|text| {
@@ -85,6 +86,7 @@ impl ConversationEmptyState {
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })
         });
 

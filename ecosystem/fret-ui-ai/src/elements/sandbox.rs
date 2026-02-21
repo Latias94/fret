@@ -199,6 +199,8 @@ impl SandboxHeader {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
         });
 
         let status_badge = tool_status_badge(cx, self.status);

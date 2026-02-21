@@ -417,6 +417,7 @@ impl TerminalTitle {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         stack::hstack(
@@ -739,6 +740,7 @@ impl TerminalCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                         .attach_semantics(
                             SemanticsDecoration::default()
@@ -951,6 +953,7 @@ impl TerminalContent {
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let chrome = ChromeRefinement::default().p(Space::N4).merge(self.chrome);

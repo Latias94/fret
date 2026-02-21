@@ -220,6 +220,7 @@ impl ToolHeader {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let badge = Badge::new(self.status.label())
@@ -498,6 +499,7 @@ impl ToolOutput {
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }),
             );
         }
@@ -637,6 +639,7 @@ impl ToolSectionTitle {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }

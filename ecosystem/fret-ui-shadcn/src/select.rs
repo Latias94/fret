@@ -1250,12 +1250,10 @@ fn select_impl<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::NORMAL,
-            slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_token("font.line_height"))),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         };
 
         let min_width = theme

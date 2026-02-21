@@ -122,10 +122,8 @@ fn breadcrumb_with_patch<H: UiHost>(
             font: FontId::default(),
             size: text_px,
             weight: FontWeight::NORMAL,
-            slant: Default::default(),
             line_height: Some(line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         };
 
         let props = decl_style::container_props(theme, chrome, layout);
@@ -402,10 +400,8 @@ pub mod primitives {
             font: FontId::default(),
             size: text_px,
             weight: FontWeight::NORMAL,
-            slant: Default::default(),
             line_height: Some(line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         }
     }
 

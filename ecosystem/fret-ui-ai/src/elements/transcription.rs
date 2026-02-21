@@ -342,6 +342,7 @@ impl TranscriptionSegment {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             };
             props.layout.size.width = Length::Auto;
             let el = cx.text_props(props);
@@ -386,6 +387,7 @@ impl TranscriptionSegment {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             };
             text_props.layout.size.width = Length::Auto;
             let content = cx.text_props(text_props);

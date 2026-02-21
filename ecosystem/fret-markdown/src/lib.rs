@@ -521,6 +521,7 @@ fn render_math_block_builtin<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })]
         })]
     })
@@ -986,6 +987,7 @@ fn render_inline_token<H: UiHost>(
                 wrap: TextWrap::WordBreak,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })]
         });
     }
@@ -1087,6 +1089,7 @@ fn render_inline_text_token<H: UiHost>(
             wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
     }
 
@@ -1115,6 +1118,7 @@ fn render_inline_text_token<H: UiHost>(
             wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let mut line_layout = LayoutStyle::default();
@@ -1205,6 +1209,7 @@ fn render_image_placeholder<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })]
         });
         return el.attach_semantics(SemanticsDecoration::default().value(href));
@@ -1226,6 +1231,7 @@ fn render_image_placeholder<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: Default::default(),
     })
 }
 
@@ -1287,6 +1293,7 @@ fn render_inline_math_builtin<H: UiHost>(
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })]
     })
 }

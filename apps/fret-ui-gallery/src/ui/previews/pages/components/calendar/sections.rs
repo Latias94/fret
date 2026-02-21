@@ -46,6 +46,7 @@ pub(super) fn basic(
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         })]
                     },
                 ),
@@ -97,6 +98,7 @@ pub(super) fn range(
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: fret_ui::element::TextInkOverflow::None,
                             }),
                             cx.text_props(TextProps {
                                 layout: Default::default(),
@@ -106,6 +108,7 @@ pub(super) fn range(
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: fret_ui::element::TextInkOverflow::None,
                             }),
                         ]
                     },
@@ -275,6 +278,7 @@ pub(super) fn booked_dates(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                 }),
             ]
         },

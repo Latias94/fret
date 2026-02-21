@@ -46,6 +46,17 @@ pub fn interpolated_label_text_style(
         (None, Some(b)) => Some(b),
         (None, None) => None,
     };
+    let line_height_em = match (large.line_height_em, small.line_height_em) {
+        (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    let line_height_policy = if is_floated(progress) {
+        small.line_height_policy
+    } else {
+        large.line_height_policy
+    };
     let letter_spacing_em = match (large.letter_spacing_em, small.letter_spacing_em) {
         (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
         (Some(a), None) => Some(a),
@@ -59,6 +70,8 @@ pub fn interpolated_label_text_style(
         weight: large.weight,
         slant: large.slant,
         line_height,
+        line_height_em,
+        line_height_policy,
         letter_spacing_em,
         vertical_placement,
     })

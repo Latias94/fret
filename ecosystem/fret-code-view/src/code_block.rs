@@ -12,8 +12,8 @@ use fret_core::{
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, OpacityProps,
     Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
-    ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextProps,
-    VirtualListKeyCacheMode, VirtualListOptions,
+    ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextInkOverflow,
+    TextProps, VirtualListKeyCacheMode, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -653,6 +653,7 @@ fn render_code_block_header<H: UiHost>(
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: TextInkOverflow::None,
                     }));
                 }
                 left.extend(header.left.iter().cloned());
@@ -1056,6 +1057,7 @@ fn render_code_block_line_row<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     });
 
     if !prepared.show_line_numbers {
@@ -1090,6 +1092,7 @@ fn render_code_block_line_row<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     });
 
     let gutter = cx.container(
@@ -1378,6 +1381,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     });
 
     let gutter = cx.container(
@@ -1477,6 +1481,7 @@ fn render_code_block_text<H: UiHost>(
                 wrap: text_wrap,
                 overflow,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: TextInkOverflow::None,
                 interactive_spans: std::sync::Arc::from([]),
             })]
         },

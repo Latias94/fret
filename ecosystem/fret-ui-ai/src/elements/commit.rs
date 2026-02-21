@@ -353,6 +353,7 @@ impl CommitHash {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         stack::hstack(
@@ -397,6 +398,7 @@ impl CommitMessage {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -470,6 +472,7 @@ impl CommitSeparator {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -579,6 +582,7 @@ impl CommitTimestamp {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -837,6 +841,7 @@ impl CommitCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                         .attach_semantics(
                             SemanticsDecoration::default()
@@ -1027,6 +1032,7 @@ impl CommitFileStatus {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -1107,6 +1113,7 @@ impl CommitFilePath {
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         };
 
         let Some(on_click) = self.on_click else {
@@ -1206,6 +1213,7 @@ impl CommitFileAdditions {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         stack::hstack(
@@ -1251,6 +1259,7 @@ impl CommitFileDeletions {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         stack::hstack(

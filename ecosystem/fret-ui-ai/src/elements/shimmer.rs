@@ -135,6 +135,8 @@ impl Shimmer {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                 });
 
                 let canvas_layout = decl_style::layout_style(

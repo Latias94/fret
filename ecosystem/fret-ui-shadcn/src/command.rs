@@ -469,10 +469,8 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::NORMAL,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -489,10 +487,8 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -512,11 +508,10 @@ pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::NORMAL,
-        slant: Default::default(),
         line_height: Some(line_height),
         // new-york-v4: `tracking-widest`.
         letter_spacing_em: Some(0.10),
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
