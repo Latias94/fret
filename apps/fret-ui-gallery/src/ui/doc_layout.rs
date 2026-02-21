@@ -474,12 +474,10 @@ fn code_block_shell(
     block: DocCodeBlock,
 ) -> AnyElement {
     let code: Arc<str> = Arc::from(block.code);
-    let copy = ui_ai::CodeBlockCopyButton::new(code.clone()).into_element(cx);
     let code_block = ui_ai::CodeBlock::new(code)
         .language(block.language)
         .show_header(true)
         .show_language(true)
-        .header_right([copy])
         .into_element(cx);
 
     let props = cx.with_theme(|theme| {
