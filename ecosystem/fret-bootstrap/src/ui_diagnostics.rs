@@ -890,28 +890,7 @@ impl UiDiagnosticsService {
             return self.script_output_for_non_active_window(app, devtools_request_redraw);
         };
 
-        let now_unix_ms = unix_ms_now();
-        if active.last_reported_unix_ms == 0
-            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000
-        {
-            self.write_script_result(UiScriptResultV1 {
-                schema_version: 1,
-                run_id: active.run_id,
-                updated_unix_ms: now_unix_ms,
-                window: Some(window.data().as_ffi()),
-                stage: UiScriptStageV1::Running,
-                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
-                reason_code: None,
-                reason: None,
-                evidence: None,
-                last_bundle_dir: self
-                    .last_dump_dir
-                    .as_ref()
-                    .map(|p| display_path(&self.cfg.out_dir, p)),
-                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-            });
-            active.last_reported_unix_ms = now_unix_ms;
-        }
+        self.maybe_write_running_heartbeat_for_active_window(window, &mut active);
 
         if let Some(mut pending) = active.pending_cancel_cross_window_drag.take() {
             let pointer_id = pending.pointer_id;
