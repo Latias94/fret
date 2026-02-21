@@ -33,6 +33,7 @@ pub(super) fn custom_items_top(
             .width(Px(280.0))
             .placeholder("Select framework")
             .query_model(models.custom_query.clone())
+            .test_id_prefix("ui-gallery-combobox-custom-items")
             .items([
                 shadcn::ComboboxItem::new("next", "Next.js (React)"),
                 shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
@@ -112,6 +113,7 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
             .width(Px(300.0))
             .placeholder("Select a timezone")
             .query_model(models.groups_query.clone())
+            .test_id_prefix("ui-gallery-combobox-groups")
             .items([
                 shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
                 shadcn::ComboboxItem::new("americas-la", "Americas / (GMT-8) Los Angeles"),
@@ -157,6 +159,7 @@ pub(super) fn invalid(
             .width(Px(260.0))
             .placeholder("Select required option")
             .query_model(models.invalid_query.clone())
+            .test_id_prefix("ui-gallery-combobox-invalid")
             .items(helpers::base_items())
             .refine_style(
                 ChromeRefinement::default()
@@ -193,6 +196,7 @@ pub(super) fn disabled(cx: &mut ElementContext<'_, App>, models: &ComboboxModels
             .width(Px(260.0))
             .placeholder("Disabled")
             .query_model(models.disabled_query.clone())
+            .test_id_prefix("ui-gallery-combobox-disabled")
             .items(helpers::base_items())
             .disabled(true)
             .into_element(cx)
@@ -227,6 +231,7 @@ pub(super) fn input_group(cx: &mut ElementContext<'_, App>, models: &ComboboxMod
     .width(Px(220.0))
     .placeholder("Search command")
     .query_model(models.input_group_query.clone())
+    .test_id_prefix("ui-gallery-combobox-input-group")
     .items([
         shadcn::ComboboxItem::new("new-file", "New File"),
         shadcn::ComboboxItem::new("open-file", "Open File"),
@@ -284,6 +289,7 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> 
             .width(Px(260.0))
             .placeholder("ابحث عن إطار عمل")
             .query_model(models.rtl_query.clone())
+            .test_id_prefix("ui-gallery-combobox-rtl")
             .items([
                 shadcn::ComboboxItem::new("next", "Next.js"),
                 shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
