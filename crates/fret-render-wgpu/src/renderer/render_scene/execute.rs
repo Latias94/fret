@@ -1192,6 +1192,301 @@ impl Renderer {
         }
     }
 
+    fn record_scale_nearest_pass(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        format: wgpu::TextureFormat,
+        target_view: &wgpu::TextureView,
+        viewport_size: (u32, u32),
+        usage: wgpu::TextureUsages,
+        encoder: &mut wgpu::CommandEncoder,
+        frame_targets: &mut FrameTargets,
+        encoding: &SceneEncoding,
+        render_space_offset_u32: u32,
+        scale_param_size: u64,
+        scale_param_cursor: &mut u32,
+        perf_enabled: bool,
+        frame_perf: &mut RenderPerfStats,
+        pass: &ScaleNearestPass,
+    ) {
+        let scale = pass.scale.max(1);
+        let scale_param_offset = u64::from(*scale_param_cursor) * self.scale_param_stride;
+        let scale_param_offset_u32 = scale_param_offset as u32;
+        *scale_param_cursor = scale_param_cursor.saturating_add(1);
+        let params = ScaleParamsUniform {
+            scale,
+            _pad0: 0,
+            src_origin: [pass.src_origin.0, pass.src_origin.1],
+            dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
+            _pad1: 0,
+            _pad2: 0,
+        };
+        queue.write_buffer(
+            &self.scale_param_buffer,
+            scale_param_offset,
+            bytemuck::bytes_of(&params),
+        );
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf
+                .uniform_bytes
+                .saturating_add(std::mem::size_of::<ScaleParamsUniform>() as u64);
+        }
+        let scale_param_size_nz =
+            std::num::NonZeroU64::new(scale_param_size).expect("scale params size");
+        let scale_param_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            buffer: &self.scale_param_buffer,
+            offset: 0,
+            size: Some(scale_param_size_nz),
+        });
+
+        let src_view = match pass.src {
+            PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                debug_assert!(false, "ScaleNearest src cannot be Output/mask targets");
+                return;
+            }
+            PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+                frame_targets.require_target(pass.src, pass.src_size)
+            }
+        };
+
+        let dst_view_owned = match pass.dst {
+            PlanTarget::Output => None,
+            PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+                Some(frame_targets.ensure_target(
+                    &mut self.intermediate_pool,
+                    device,
+                    pass.dst,
+                    pass.dst_size,
+                    format,
+                    usage,
+                ))
+            }
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                debug_assert!(false, "ScaleNearest dst cannot be mask targets");
+                None
+            }
+        };
+        let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+        if let Some(mask) = pass.mask {
+            debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+            debug_assert!(matches!(
+                mask.target,
+                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+            ));
+            debug_assert_eq!(
+                pass.dst_size, viewport_size,
+                "mask-based scale-nearest expects full-size destination"
+            );
+
+            let mask_uniform_index = pass
+                .mask_uniform_index
+                .expect("mask pass needs uniform index");
+            let uniform_offset = (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+            let mask_view = frame_targets.require_target(mask.target, mask.size);
+            let mask_layout = self
+                .scale_mask_bind_group_layout
+                .as_ref()
+                .expect("scale mask bind group layout must exist");
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("fret scale-nearest mask bind group"),
+                layout: mask_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&src_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: scale_param_binding,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::TextureView(&mask_view),
+                    },
+                ],
+            });
+
+            let pipeline = self
+                .upscale_mask_pipeline
+                .as_ref()
+                .expect("upscale mask pipeline must exist");
+            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("fret upscale-nearest mask pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: dst_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: pass.load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            rp.set_pipeline(pipeline);
+            if perf_enabled {
+                frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
+                frame_perf.pipeline_switches_fullscreen =
+                    frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+            }
+            rp.set_bind_group(
+                0,
+                self.pick_uniform_bind_group_for_mask_image(
+                    encoding
+                        .uniform_mask_images
+                        .get(mask_uniform_index as usize)
+                        .copied()
+                        .flatten(),
+                ),
+                &[uniform_offset, render_space_offset_u32],
+            );
+            if perf_enabled {
+                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+            }
+            rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+            if perf_enabled {
+                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+            }
+            if let Some(scissor) = pass.dst_scissor
+                && scissor.w != 0
+                && scissor.h != 0
+            {
+                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                if perf_enabled {
+                    frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                }
+            }
+            rp.draw(0..3, 0..1);
+            if perf_enabled {
+                frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                frame_perf.fullscreen_draw_calls =
+                    frame_perf.fullscreen_draw_calls.saturating_add(1);
+            }
+        } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+            debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+            let pipeline = self
+                .upscale_masked_pipeline
+                .as_ref()
+                .expect("upscale masked pipeline must exist");
+            let uniform_offset = (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+            let layout = self
+                .scale_bind_group_layout
+                .as_ref()
+                .expect("scale bind group layout must exist");
+            let bind_group = create_texture_uniform_bind_group(
+                device,
+                "fret scale-nearest bind group",
+                layout,
+                &src_view,
+                scale_param_binding,
+            );
+
+            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("fret upscale-nearest masked pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: dst_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: pass.load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            rp.set_pipeline(pipeline);
+            if perf_enabled {
+                frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
+                frame_perf.pipeline_switches_fullscreen =
+                    frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+            }
+            rp.set_bind_group(
+                0,
+                self.pick_uniform_bind_group_for_mask_image(
+                    encoding
+                        .uniform_mask_images
+                        .get(mask_uniform_index as usize)
+                        .copied()
+                        .flatten(),
+                ),
+                &[uniform_offset, render_space_offset_u32],
+            );
+            if perf_enabled {
+                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+                frame_perf.uniform_bind_group_switches =
+                    frame_perf.uniform_bind_group_switches.saturating_add(1);
+            }
+            rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+            if perf_enabled {
+                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+                frame_perf.texture_bind_group_switches =
+                    frame_perf.texture_bind_group_switches.saturating_add(1);
+            }
+            if let Some(scissor) = pass.dst_scissor
+                && scissor.w != 0
+                && scissor.h != 0
+            {
+                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                if perf_enabled {
+                    frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                }
+            }
+            rp.draw(0..3, 0..1);
+            if perf_enabled {
+                frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                frame_perf.fullscreen_draw_calls =
+                    frame_perf.fullscreen_draw_calls.saturating_add(1);
+            }
+        } else {
+            let layout = self
+                .scale_bind_group_layout
+                .as_ref()
+                .expect("scale bind group layout must exist");
+            let bind_group = create_texture_uniform_bind_group(
+                device,
+                "fret scale-nearest bind group",
+                layout,
+                &src_view,
+                scale_param_binding,
+            );
+            let (pipeline, label) = match pass.mode {
+                ScaleMode::Downsample => (
+                    self.downsample_pipeline
+                        .as_ref()
+                        .expect("downsample pipeline must exist"),
+                    "fret downsample-nearest pass",
+                ),
+                ScaleMode::Upscale => (
+                    self.upscale_pipeline
+                        .as_ref()
+                        .expect("upscale pipeline must exist"),
+                    "fret upscale-nearest pass",
+                ),
+            };
+            run_fullscreen_triangle_pass(
+                encoder,
+                label,
+                pipeline,
+                dst_view,
+                pass.load,
+                &bind_group,
+                &[scale_param_offset_u32],
+                pass.dst_scissor,
+                if perf_enabled { Some(frame_perf) } else { None },
+            );
+        }
+    }
+
     pub(super) fn render_scene_execute(
         &mut self,
         device: &wgpu::Device,
@@ -2253,316 +2548,23 @@ impl Renderer {
                             );
                         }
                         RenderPlanPass::ScaleNearest(pass) => {
-                            let scale = pass.scale.max(1);
-                            let scale_param_offset =
-                                u64::from(scale_param_cursor) * self.scale_param_stride;
-                            let scale_param_offset_u32 = scale_param_offset as u32;
-                            scale_param_cursor = scale_param_cursor.saturating_add(1);
-                            let params = ScaleParamsUniform {
-                                scale,
-                                _pad0: 0,
-                                src_origin: [pass.src_origin.0, pass.src_origin.1],
-                                dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
-                                _pad1: 0,
-                                _pad2: 0,
-                            };
-                            queue.write_buffer(
-                                &self.scale_param_buffer,
-                                scale_param_offset,
-                                bytemuck::bytes_of(&params),
+                            self.record_scale_nearest_pass(
+                                device,
+                                queue,
+                                format,
+                                target_view,
+                                viewport_size,
+                                usage,
+                                &mut encoder,
+                                &mut frame_targets,
+                                &encoding,
+                                render_space_offset_u32,
+                                scale_param_size,
+                                &mut scale_param_cursor,
+                                perf_enabled,
+                                &mut frame_perf,
+                                pass,
                             );
-                            if perf_enabled {
-                                frame_perf.uniform_bytes =
-                                    frame_perf.uniform_bytes.saturating_add(std::mem::size_of::<
-                                        ScaleParamsUniform,
-                                    >(
-                                    )
-                                        as u64);
-                            }
-                            let scale_param_size_nz = std::num::NonZeroU64::new(scale_param_size)
-                                .expect("scale params size");
-                            let scale_param_binding =
-                                wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                                    buffer: &self.scale_param_buffer,
-                                    offset: 0,
-                                    size: Some(scale_param_size_nz),
-                                });
-
-                            let src_view = match pass.src {
-                                PlanTarget::Output
-                                | PlanTarget::Mask0
-                                | PlanTarget::Mask1
-                                | PlanTarget::Mask2 => {
-                                    debug_assert!(
-                                        false,
-                                        "ScaleNearest src cannot be Output/mask targets"
-                                    );
-                                    continue;
-                                }
-                                PlanTarget::Intermediate0
-                                | PlanTarget::Intermediate1
-                                | PlanTarget::Intermediate2 => {
-                                    frame_targets.require_target(pass.src, pass.src_size)
-                                }
-                            };
-
-                            let dst_view_owned = match pass.dst {
-                                PlanTarget::Output => None,
-                                PlanTarget::Intermediate0
-                                | PlanTarget::Intermediate1
-                                | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
-                                    &mut self.intermediate_pool,
-                                    device,
-                                    pass.dst,
-                                    pass.dst_size,
-                                    format,
-                                    usage,
-                                )),
-                                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-                                    debug_assert!(false, "ScaleNearest dst cannot be mask targets");
-                                    None
-                                }
-                            };
-                            let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
-
-                            if let Some(mask) = pass.mask {
-                                debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
-                                debug_assert!(matches!(
-                                    mask.target,
-                                    PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-                                ));
-                                debug_assert_eq!(
-                                    pass.dst_size, viewport_size,
-                                    "mask-based scale-nearest expects full-size destination"
-                                );
-
-                                let mask_uniform_index = pass
-                                    .mask_uniform_index
-                                    .expect("mask pass needs uniform index");
-                                let uniform_offset =
-                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
-
-                                let mask_view =
-                                    frame_targets.require_target(mask.target, mask.size);
-                                let mask_layout = self
-                                    .scale_mask_bind_group_layout
-                                    .as_ref()
-                                    .expect("scale mask bind group layout must exist");
-                                let bind_group =
-                                    device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                        label: Some("fret scale-nearest mask bind group"),
-                                        layout: mask_layout,
-                                        entries: &[
-                                            wgpu::BindGroupEntry {
-                                                binding: 0,
-                                                resource: wgpu::BindingResource::TextureView(
-                                                    &src_view,
-                                                ),
-                                            },
-                                            wgpu::BindGroupEntry {
-                                                binding: 1,
-                                                resource: scale_param_binding,
-                                            },
-                                            wgpu::BindGroupEntry {
-                                                binding: 2,
-                                                resource: wgpu::BindingResource::TextureView(
-                                                    &mask_view,
-                                                ),
-                                            },
-                                        ],
-                                    });
-
-                                let pipeline = self
-                                    .upscale_mask_pipeline
-                                    .as_ref()
-                                    .expect("upscale mask pipeline must exist");
-                                let mut rp =
-                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                        label: Some("fret upscale-nearest mask pass"),
-                                        color_attachments: &[Some(
-                                            wgpu::RenderPassColorAttachment {
-                                                view: dst_view,
-                                                depth_slice: None,
-                                                resolve_target: None,
-                                                ops: wgpu::Operations {
-                                                    load: pass.load,
-                                                    store: wgpu::StoreOp::Store,
-                                                },
-                                            },
-                                        )],
-                                        depth_stencil_attachment: None,
-                                        timestamp_writes: None,
-                                        occlusion_query_set: None,
-                                        multiview_mask: None,
-                                    });
-                                rp.set_pipeline(pipeline);
-                                if perf_enabled {
-                                    frame_perf.pipeline_switches =
-                                        frame_perf.pipeline_switches.saturating_add(1);
-                                    frame_perf.pipeline_switches_fullscreen =
-                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-                                }
-                                rp.set_bind_group(
-                                    0,
-                                    self.pick_uniform_bind_group_for_mask_image(
-                                        encoding
-                                            .uniform_mask_images
-                                            .get(mask_uniform_index as usize)
-                                            .copied()
-                                            .flatten(),
-                                    ),
-                                    &[uniform_offset, render_space_offset_u32],
-                                );
-                                if perf_enabled {
-                                    frame_perf.bind_group_switches =
-                                        frame_perf.bind_group_switches.saturating_add(1);
-                                }
-                                rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
-                                if perf_enabled {
-                                    frame_perf.bind_group_switches =
-                                        frame_perf.bind_group_switches.saturating_add(1);
-                                }
-                                if let Some(scissor) = pass.dst_scissor
-                                    && scissor.w != 0
-                                    && scissor.h != 0
-                                {
-                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                    if perf_enabled {
-                                        frame_perf.scissor_sets =
-                                            frame_perf.scissor_sets.saturating_add(1);
-                                    }
-                                }
-                                rp.draw(0..3, 0..1);
-                                if perf_enabled {
-                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-                                    frame_perf.fullscreen_draw_calls =
-                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
-                                }
-                            } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-                                debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
-                                let pipeline = self
-                                    .upscale_masked_pipeline
-                                    .as_ref()
-                                    .expect("upscale masked pipeline must exist");
-                                let uniform_offset =
-                                    (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
-
-                                let layout = self
-                                    .scale_bind_group_layout
-                                    .as_ref()
-                                    .expect("scale bind group layout must exist");
-                                let bind_group = create_texture_uniform_bind_group(
-                                    device,
-                                    "fret scale-nearest bind group",
-                                    layout,
-                                    &src_view,
-                                    scale_param_binding,
-                                );
-
-                                let mut rp =
-                                    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                        label: Some("fret upscale-nearest masked pass"),
-                                        color_attachments: &[Some(
-                                            wgpu::RenderPassColorAttachment {
-                                                view: dst_view,
-                                                depth_slice: None,
-                                                resolve_target: None,
-                                                ops: wgpu::Operations {
-                                                    load: pass.load,
-                                                    store: wgpu::StoreOp::Store,
-                                                },
-                                            },
-                                        )],
-                                        depth_stencil_attachment: None,
-                                        timestamp_writes: None,
-                                        occlusion_query_set: None,
-                                        multiview_mask: None,
-                                    });
-                                rp.set_pipeline(pipeline);
-                                if perf_enabled {
-                                    frame_perf.pipeline_switches =
-                                        frame_perf.pipeline_switches.saturating_add(1);
-                                    frame_perf.pipeline_switches_fullscreen =
-                                        frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-                                }
-                                rp.set_bind_group(
-                                    0,
-                                    self.pick_uniform_bind_group_for_mask_image(
-                                        encoding
-                                            .uniform_mask_images
-                                            .get(mask_uniform_index as usize)
-                                            .copied()
-                                            .flatten(),
-                                    ),
-                                    &[uniform_offset, render_space_offset_u32],
-                                );
-                                if perf_enabled {
-                                    frame_perf.bind_group_switches =
-                                        frame_perf.bind_group_switches.saturating_add(1);
-                                    frame_perf.uniform_bind_group_switches =
-                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
-                                }
-                                rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
-                                if perf_enabled {
-                                    frame_perf.bind_group_switches =
-                                        frame_perf.bind_group_switches.saturating_add(1);
-                                    frame_perf.texture_bind_group_switches =
-                                        frame_perf.texture_bind_group_switches.saturating_add(1);
-                                }
-                                if let Some(scissor) = pass.dst_scissor
-                                    && scissor.w != 0
-                                    && scissor.h != 0
-                                {
-                                    rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                    if perf_enabled {
-                                        frame_perf.scissor_sets =
-                                            frame_perf.scissor_sets.saturating_add(1);
-                                    }
-                                }
-                                rp.draw(0..3, 0..1);
-                                if perf_enabled {
-                                    frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-                                    frame_perf.fullscreen_draw_calls =
-                                        frame_perf.fullscreen_draw_calls.saturating_add(1);
-                                }
-                            } else {
-                                let layout = self
-                                    .scale_bind_group_layout
-                                    .as_ref()
-                                    .expect("scale bind group layout must exist");
-                                let bind_group = create_texture_uniform_bind_group(
-                                    device,
-                                    "fret scale-nearest bind group",
-                                    layout,
-                                    &src_view,
-                                    scale_param_binding,
-                                );
-                                let (pipeline, label) = match pass.mode {
-                                    ScaleMode::Downsample => (
-                                        self.downsample_pipeline
-                                            .as_ref()
-                                            .expect("downsample pipeline must exist"),
-                                        "fret downsample-nearest pass",
-                                    ),
-                                    ScaleMode::Upscale => (
-                                        self.upscale_pipeline
-                                            .as_ref()
-                                            .expect("upscale pipeline must exist"),
-                                        "fret upscale-nearest pass",
-                                    ),
-                                };
-                                run_fullscreen_triangle_pass(
-                                    &mut encoder,
-                                    label,
-                                    pipeline,
-                                    dst_view,
-                                    pass.load,
-                                    &bind_group,
-                                    &[scale_param_offset_u32],
-                                    pass.dst_scissor,
-                                    perf_enabled.then_some(&mut frame_perf),
-                                );
-                            }
                         }
                         RenderPlanPass::Blur(pass) => {
                             let src_view = match pass.src {
