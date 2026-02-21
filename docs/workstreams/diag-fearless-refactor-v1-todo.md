@@ -28,6 +28,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
   - [x] Extract per-step evidence scoping + step-state reset helpers:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract window/cursor/mouse/insets effect-only steps:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
