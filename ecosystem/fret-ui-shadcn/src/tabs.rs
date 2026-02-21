@@ -1794,6 +1794,9 @@ impl Tabs {
                                                     // the configured line height.
                                                     text = text
                                                         .line_height_px(line_height)
+                                                        .line_height_policy(
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                        )
                                                         .h_full()
                                                         .line_box_in_bounds();
                                                 }

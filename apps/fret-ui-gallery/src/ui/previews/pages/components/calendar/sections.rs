@@ -3,14 +3,6 @@ use super::super::super::super::super::*;
 use super::models::CalendarHandles;
 use fret_ui::ThemeSnapshot;
 
-fn section(cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        move |cx| vec![shadcn::typography::h4(cx, title), body],
-    )
-}
-
 pub(super) fn basic(
     cx: &mut ElementContext<'_, App>,
     theme: &ThemeSnapshot,
@@ -53,7 +45,7 @@ pub(super) fn basic(
             ]
         },
     );
-    section(cx, "Basic", body)
+    body
 }
 
 pub(super) fn range(
@@ -116,7 +108,7 @@ pub(super) fn range(
             ]
         },
     );
-    section(cx, "Range Calendar", body)
+    body
 }
 
 pub(super) fn month_year_selector(
@@ -131,7 +123,7 @@ pub(super) fn month_year_selector(
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
-    section(cx, "Month and Year Selector", body)
+    body
 }
 
 pub(super) fn presets(
@@ -191,7 +183,7 @@ pub(super) fn presets(
     )
     .into_element(cx);
 
-    section(cx, "Presets", card)
+    card
 }
 
 pub(super) fn date_and_time_picker(
@@ -247,7 +239,7 @@ pub(super) fn date_and_time_picker(
     .refine_layout(LayoutRefinement::default().min_w_0())
     .into_element(cx);
 
-    section(cx, "Date and Time Picker", card)
+    card
 }
 
 pub(super) fn booked_dates(
@@ -283,7 +275,7 @@ pub(super) fn booked_dates(
             ]
         },
     );
-    section(cx, "Booked dates", body)
+    body
 }
 
 pub(super) fn custom_cell_size(
@@ -298,7 +290,7 @@ pub(super) fn custom_cell_size(
         .cell_size(Px(44.0))
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
-    section(cx, "Custom Cell Size", body)
+    body
 }
 
 pub(super) fn week_numbers(
@@ -313,7 +305,7 @@ pub(super) fn week_numbers(
         .show_week_number(true)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
-    section(cx, "Week Numbers", body)
+    body
 }
 
 pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
@@ -332,5 +324,5 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) ->
                 .into_element(cx)
         },
     );
-    section(cx, "RTL", body)
+    body
 }

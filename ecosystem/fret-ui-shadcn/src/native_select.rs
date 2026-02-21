@@ -168,6 +168,7 @@ pub fn native_select<H: UiHost>(
     let mut content = ui::text(cx, label)
         .text_size_px(text_style.size)
         .line_height_px(text_style.line_height.unwrap_or(text_style.size))
+        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
         .font_normal()
         .nowrap()
         .text_color(ColorRef::Color(resolved.text_color));

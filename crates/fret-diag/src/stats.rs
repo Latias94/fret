@@ -4,12 +4,21 @@ use std::path::{Path, PathBuf};
 use super::util::{now_unix_ms, write_json_value};
 
 mod script_runtime;
+mod semantics;
+mod stale;
 mod ui_gallery_markdown_editor;
+mod vlist;
+mod wheel_scroll;
+mod windowed_rows;
 pub(super) use script_runtime::{
     ScriptResultSummary, apply_pick_to_script, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
 };
+use semantics::{semantics_node_id_for_test_id, semantics_parent_map};
+#[cfg(test)]
+pub(super) use stale::SemanticsChangedRepaintedScan;
+use wheel_scroll::first_wheel_frame_id_for_window;
 
 pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits(
     bundle_path: &Path,
@@ -4747,105 +4756,18 @@ pub(super) fn check_bundle_for_stale_paint(
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_stale_paint_json(&bundle, bundle_path, test_id, eps)
+    stale::check_bundle_for_stale_paint(bundle_path, test_id, eps)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_stale_paint_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
-    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut suspicious: Vec<String> = Vec::new();
-    let mut missing_scene_fingerprint = false;
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        let mut prev_y: Option<f64> = None;
-        let mut prev_fp: Option<u64> = None;
-        for s in snaps {
-            let y = semantics_node_y_for_test_id(&semantics, s, test_id);
-            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
-            if fp.is_none() {
-                missing_scene_fingerprint = true;
-            }
-            let (Some(y), Some(fp)) = (y, fp) else {
-                prev_y = y;
-                prev_fp = fp;
-                continue;
-            };
-
-            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp)
-                && (y - prev_y).abs() >= eps as f64
-                && fp == prev_fp
-            {
-                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                let paint_nodes_performed = s
-                    .get("debug")
-                    .and_then(|v| v.get("stats"))
-                    .and_then(|v| v.get("paint_nodes_performed"))
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
-                let paint_replayed_ops = s
-                    .get("debug")
-                    .and_then(|v| v.get("stats"))
-                    .and_then(|v| v.get("paint_cache_replayed_ops"))
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
-                suspicious.push(format!(
-                        "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} delta_y={:.2} scene_fingerprint=0x{:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_replayed_ops}",
-                        y - prev_y,
-                        fp
-                    ));
-                if suspicious.len() >= 8 {
-                    break;
-                }
-            }
-
-            prev_y = Some(y);
-            prev_fp = Some(fp);
-        }
-    }
-
-    if missing_scene_fingerprint {
-        return Err(format!(
-            "stale paint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
-    }
-
-    if suspicious.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str(
-        "stale paint suspected (semantics bounds moved but scene fingerprint did not change)\n",
-    );
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in suspicious {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
+    stale::check_bundle_for_stale_paint_json(bundle, bundle_path, test_id, eps)
 }
 
 pub(super) fn check_bundle_for_stale_scene(
@@ -4853,17 +4775,7 @@ pub(super) fn check_bundle_for_stale_scene(
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_stale_scene_json(&bundle, bundle_path, test_id, eps)
-}
-
-#[derive(Debug, Clone, Default)]
-pub(super) struct SemanticsChangedRepaintedScan {
-    missing_scene_fingerprint: bool,
-    missing_semantics_fingerprint: bool,
-    suspicious_lines: Vec<String>,
-    pub(super) findings: Vec<serde_json::Value>,
+    stale::check_bundle_for_stale_scene(bundle_path, test_id, eps)
 }
 
 pub(super) fn check_bundle_for_semantics_changed_repainted(
@@ -4871,825 +4783,34 @@ pub(super) fn check_bundle_for_semantics_changed_repainted(
     warmup_frames: u64,
     dump_json: bool,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-
-    let scan = scan_semantics_changed_repainted_json(&bundle, warmup_frames);
-    if dump_json && !scan.findings.is_empty() {
-        let out_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-        let out_path = out_dir.join("check.semantics_changed_repainted.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "kind": "semantics_changed_repainted",
-            "bundle_json": bundle_path.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "findings": scan.findings,
-        });
-        let _ = write_json_value(&out_path, &payload);
-    }
-
-    check_bundle_for_semantics_changed_repainted_json(&bundle, bundle_path, warmup_frames)
+    stale::check_bundle_for_semantics_changed_repainted(bundle_path, warmup_frames, dump_json)
 }
 
+#[cfg(test)]
 pub(super) fn check_bundle_for_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let scan = scan_semantics_changed_repainted_json(bundle, warmup_frames);
-
-    if scan.missing_scene_fingerprint {
-        return Err(format!(
-            "semantics repaint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
-    }
-
-    if scan.missing_semantics_fingerprint {
-        return Err(format!(
-            "semantics repaint check requires `semantics_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
-    }
-
-    if scan.suspicious_lines.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str(
-        "missing repaint suspected (semantics fingerprint changed but scene fingerprint did not)\n",
-    );
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in scan.suspicious_lines {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
+    stale::check_bundle_for_semantics_changed_repainted_json(bundle, bundle_path, warmup_frames)
 }
 
+#[cfg(test)]
 pub(super) fn scan_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     warmup_frames: u64,
 ) -> SemanticsChangedRepaintedScan {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .map_or(&[][..], |v| v);
-    if windows.is_empty() {
-        return SemanticsChangedRepaintedScan::default();
-    }
-
-    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
-    let mut scan = SemanticsChangedRepaintedScan::default();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        let mut prev_scene_fingerprint: Option<u64> = None;
-        let mut prev_semantics_fingerprint: Option<u64> = None;
-        let mut prev_tick_id: u64 = 0;
-        let mut prev_frame_id: u64 = 0;
-        let mut prev_snapshot: Option<&serde_json::Value> = None;
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-
-            let scene_fingerprint = s.get("scene_fingerprint").and_then(|v| v.as_u64());
-            if scene_fingerprint.is_none() {
-                scan.missing_scene_fingerprint = true;
-            }
-
-            let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
-            if semantics_fingerprint.is_none() {
-                scan.missing_semantics_fingerprint = true;
-            }
-
-            let (Some(scene_fingerprint), Some(semantics_fingerprint)) =
-                (scene_fingerprint, semantics_fingerprint)
-            else {
-                prev_scene_fingerprint = None;
-                prev_semantics_fingerprint = None;
-                prev_tick_id = tick_id;
-                prev_frame_id = frame_id;
-                prev_snapshot = Some(s);
-                continue;
-            };
-
-            if let (Some(prev_scene), Some(prev_sem)) =
-                (prev_scene_fingerprint, prev_semantics_fingerprint)
-            {
-                let semantics_changed = semantics_fingerprint != prev_sem;
-                let scene_unchanged = scene_fingerprint == prev_scene;
-                if semantics_changed && scene_unchanged {
-                    let paint_nodes_performed = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_nodes_performed"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-                    let paint_cache_replayed_ops = s
-                        .get("debug")
-                        .and_then(|v| v.get("stats"))
-                        .and_then(|v| v.get("paint_cache_replayed_ops"))
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
-
-                    let diff_detail = prev_snapshot
-                        .map(|prev| semantics_diff_detail(&semantics, prev, s))
-                        .unwrap_or(serde_json::Value::Null);
-
-                    scan.findings.push(serde_json::json!({
-                        "window": window_id,
-                        "prev": {
-                            "tick_id": prev_tick_id,
-                            "frame_id": prev_frame_id,
-                            "scene_fingerprint": prev_scene,
-                            "semantics_fingerprint": prev_sem,
-                        },
-                        "now": {
-                            "tick_id": tick_id,
-                            "frame_id": frame_id,
-                            "scene_fingerprint": scene_fingerprint,
-                            "semantics_fingerprint": semantics_fingerprint,
-                        },
-                        "paint_nodes_performed": paint_nodes_performed,
-                        "paint_cache_replayed_ops": paint_cache_replayed_ops,
-                        "semantics_diff": diff_detail,
-                    }));
-
-                    let mut detail = String::new();
-                    if let Some(prev) = prev_snapshot {
-                        let diff = semantics_diff_summary(&semantics, prev, s);
-                        if !diff.is_empty() {
-                            detail.push(' ');
-                            detail.push_str(&diff);
-                        }
-                    }
-
-                    scan.suspicious_lines.push(format!(
-                        "window={window_id} tick={tick_id} frame={frame_id} prev_tick={prev_tick_id} prev_frame={prev_frame_id} semantics_fingerprint=0x{semantics_fingerprint:016x} prev_semantics_fingerprint=0x{prev_sem:016x} scene_fingerprint=0x{scene_fingerprint:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_cache_replayed_ops}{detail}"
-                    ));
-                    if scan.suspicious_lines.len() >= 8 {
-                        break;
-                    }
-                }
-            }
-
-            prev_scene_fingerprint = Some(scene_fingerprint);
-            prev_semantics_fingerprint = Some(semantics_fingerprint);
-            prev_tick_id = tick_id;
-            prev_frame_id = frame_id;
-            prev_snapshot = Some(s);
-        }
-    }
-
-    scan
+    stale::scan_semantics_changed_repainted_json(bundle, warmup_frames)
 }
 
-fn semantics_diff_detail(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    before: &serde_json::Value,
-    after: &serde_json::Value,
-) -> serde_json::Value {
-    use serde_json::json;
-    use std::collections::{HashMap, HashSet};
-
-    let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
-    else {
-        return serde_json::Value::Null;
-    };
-
-    let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
-    for node in before_nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        before_by_id.insert(id, node);
-    }
-
-    let mut after_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
-    for node in after_nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        after_by_id.insert(id, node);
-    }
-
-    let before_ids: HashSet<u64> = before_by_id.keys().copied().collect();
-    let after_ids: HashSet<u64> = after_by_id.keys().copied().collect();
-
-    let mut added: Vec<u64> = after_ids.difference(&before_ids).copied().collect();
-    let mut removed: Vec<u64> = before_ids.difference(&after_ids).copied().collect();
-    added.sort_unstable();
-    removed.sort_unstable();
-
-    let mut changed: Vec<(u64, u64)> = Vec::new(); // (score, id)
-    for id in before_ids.intersection(&after_ids).copied() {
-        let Some(a) = after_by_id.get(&id).copied() else {
-            continue;
-        };
-        let Some(b) = before_by_id.get(&id).copied() else {
-            continue;
-        };
-        let fp_a = semantics_node_fingerprint_json(a);
-        let fp_b = semantics_node_fingerprint_json(b);
-        if fp_a != fp_b {
-            let score = semantics_node_score_json(a);
-            changed.push((score, id));
-        }
-    }
-    changed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
-
-    let sample_len = 6usize;
-
-    let added_nodes = added
-        .iter()
-        .take(sample_len)
-        .map(|id| semantics_node_summary_json(*id, after_by_id.get(id).copied()))
-        .collect::<Vec<_>>();
-    let removed_nodes = removed
-        .iter()
-        .take(sample_len)
-        .map(|id| semantics_node_summary_json(*id, before_by_id.get(id).copied()))
-        .collect::<Vec<_>>();
-    let changed_nodes = changed
-        .iter()
-        .take(sample_len)
-        .map(|(_score, id)| {
-            let before = semantics_node_summary_json(*id, before_by_id.get(id).copied());
-            let after = semantics_node_summary_json(*id, after_by_id.get(id).copied());
-            json!({ "id": id, "before": before, "after": after })
-        })
-        .collect::<Vec<_>>();
-
-    json!({
-        "counts": {
-            "added": added.len(),
-            "removed": removed.len(),
-            "changed": changed.len(),
-        },
-        "samples": {
-            "added_nodes": added_nodes,
-            "removed_nodes": removed_nodes,
-            "changed_nodes": changed_nodes,
-        }
-    })
-}
-
-fn semantics_node_summary_json(id: u64, node: Option<&serde_json::Value>) -> serde_json::Value {
-    use serde_json::json;
-    let Some(node) = node else {
-        return json!({ "id": id });
-    };
-
-    let role = node.get("role").and_then(|v| v.as_str());
-    let parent = node.get("parent").and_then(|v| v.as_u64());
-    let test_id = node.get("test_id").and_then(|v| v.as_str());
-    let label = node.get("label").and_then(|v| v.as_str());
-    let value = node.get("value").and_then(|v| v.as_str());
-
-    let bounds = node.get("bounds").map(|b| {
-        json!({
-            "x": b.get("x").and_then(|v| v.as_f64()),
-            "y": b.get("y").and_then(|v| v.as_f64()),
-            "w": b.get("w").and_then(|v| v.as_f64()),
-            "h": b.get("h").and_then(|v| v.as_f64()),
-        })
-    });
-
-    json!({
-        "id": id,
-        "parent": parent,
-        "role": role,
-        "test_id": test_id,
-        "label": label,
-        "value": value,
-        "bounds": bounds,
-    })
-}
-
-fn semantics_diff_summary(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    before: &serde_json::Value,
-    after: &serde_json::Value,
-) -> String {
-    let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
-    else {
-        return String::new();
-    };
-
-    use std::collections::{HashMap, HashSet};
-
-    let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
-    for node in before_nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        before_by_id.insert(id, node);
-    }
-
-    let mut after_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
-    for node in after_nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        after_by_id.insert(id, node);
-    }
-
-    let before_ids: HashSet<u64> = before_by_id.keys().copied().collect();
-    let after_ids: HashSet<u64> = after_by_id.keys().copied().collect();
-
-    let mut added: Vec<u64> = after_ids.difference(&before_ids).copied().collect();
-    let mut removed: Vec<u64> = before_ids.difference(&after_ids).copied().collect();
-    added.sort_unstable();
-    removed.sort_unstable();
-
-    let mut changed: Vec<(u64, u64, u64)> = Vec::new(); // (score, id, fp_after)
-    for id in before_ids.intersection(&after_ids).copied() {
-        let Some(a) = after_by_id.get(&id).copied() else {
-            continue;
-        };
-        let Some(b) = before_by_id.get(&id).copied() else {
-            continue;
-        };
-        let fp_a = semantics_node_fingerprint_json(a);
-        let fp_b = semantics_node_fingerprint_json(b);
-        if fp_a != fp_b {
-            // Score heuristic: test_id changes are the most useful to report.
-            let score = semantics_node_score_json(a);
-            changed.push((score, id, fp_a));
-        }
-    }
-
-    if added.is_empty() && removed.is_empty() && changed.is_empty() {
-        return String::new();
-    }
-
-    changed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
-
-    let mut out = String::new();
-    out.push_str("semantics_diff={");
-    out.push_str(&format!(
-        "added={} removed={} changed={}",
-        added.len(),
-        removed.len(),
-        changed.len()
-    ));
-
-    let sample_len = 6usize;
-    if !changed.is_empty() {
-        out.push_str(" changed_nodes=[");
-        for (i, (_score, id, _fp)) in changed.iter().take(sample_len).enumerate() {
-            if i > 0 {
-                out.push_str(", ");
-            }
-            let node = after_by_id.get(id).copied();
-            out.push_str(&semantics_node_label_json(*id, node));
-        }
-        if changed.len() > sample_len {
-            out.push_str(", ...");
-        }
-        out.push(']');
-    }
-
-    if !added.is_empty() {
-        out.push_str(" added_nodes=[");
-        for (i, id) in added.iter().take(sample_len).enumerate() {
-            if i > 0 {
-                out.push_str(", ");
-            }
-            let node = after_by_id.get(id).copied();
-            out.push_str(&semantics_node_label_json(*id, node));
-        }
-        if added.len() > sample_len {
-            out.push_str(", ...");
-        }
-        out.push(']');
-    }
-
-    if !removed.is_empty() {
-        out.push_str(" removed_nodes=[");
-        for (i, id) in removed.iter().take(sample_len).enumerate() {
-            if i > 0 {
-                out.push_str(", ");
-            }
-            let node = before_by_id.get(id).copied();
-            out.push_str(&semantics_node_label_json(*id, node));
-        }
-        if removed.len() > sample_len {
-            out.push_str(", ...");
-        }
-        out.push(']');
-    }
-
-    out.push('}');
-    out
-}
-
-fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
-    // Higher is "more useful for debugging".
-    let mut score: u64 = 0;
-    if node.get("test_id").and_then(|v| v.as_str()).is_some() {
-        score += 10_000;
-    }
-    if node.get("label").and_then(|v| v.as_str()).is_some() {
-        score += 1_000;
-    }
-    if node.get("value").and_then(|v| v.as_str()).is_some() {
-        score += 500;
-    }
-    score
-}
-
-fn semantics_node_label_json(id: u64, node: Option<&serde_json::Value>) -> String {
-    let Some(node) = node else {
-        return format!("id={id}");
-    };
-    let role = node
-        .get("role")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown");
-    let test_id = node
-        .get("test_id")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.trim().is_empty());
-    let label = node
-        .get("label")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.trim().is_empty());
-    let value = node
-        .get("value")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.trim().is_empty());
-
-    let mut out = format!("id={id} role={role}");
-    if let Some(v) = test_id {
-        out.push_str(" test_id=");
-        out.push_str(v);
-    }
-    if let Some(v) = label {
-        out.push_str(" label=");
-        out.push_str(v);
-    }
-    if let Some(v) = value {
-        out.push_str(" value=");
-        out.push_str(v);
-    }
-    out
-}
-
-fn semantics_node_fingerprint_json(node: &serde_json::Value) -> u64 {
-    use std::hash::{Hash, Hasher};
-
-    // Use a stable hash for a curated subset of fields.
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-
-    node.get("id").and_then(|v| v.as_u64()).hash(&mut hasher);
-    node.get("parent")
-        .and_then(|v| v.as_u64())
-        .hash(&mut hasher);
-    node.get("role").and_then(|v| v.as_str()).hash(&mut hasher);
-
-    if let Some(bounds) = node.get("bounds") {
-        if let Some(v) = bounds.get("x").and_then(|v| v.as_f64()) {
-            v.to_bits().hash(&mut hasher);
-        }
-        if let Some(v) = bounds.get("y").and_then(|v| v.as_f64()) {
-            v.to_bits().hash(&mut hasher);
-        }
-        if let Some(v) = bounds.get("w").and_then(|v| v.as_f64()) {
-            v.to_bits().hash(&mut hasher);
-        }
-        if let Some(v) = bounds.get("h").and_then(|v| v.as_f64()) {
-            v.to_bits().hash(&mut hasher);
-        }
-    }
-
-    if let Some(flags) = node.get("flags") {
-        flags
-            .get("focused")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        flags
-            .get("captured")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        flags
-            .get("disabled")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        flags
-            .get("selected")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        flags
-            .get("expanded")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        flags
-            .get("checked")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-    }
-
-    node.get("test_id")
-        .and_then(|v| v.as_str())
-        .hash(&mut hasher);
-    node.get("active_descendant")
-        .and_then(|v| v.as_u64())
-        .hash(&mut hasher);
-    node.get("pos_in_set")
-        .and_then(|v| v.as_u64())
-        .hash(&mut hasher);
-    node.get("set_size")
-        .and_then(|v| v.as_u64())
-        .hash(&mut hasher);
-    node.get("label").and_then(|v| v.as_str()).hash(&mut hasher);
-    node.get("value").and_then(|v| v.as_str()).hash(&mut hasher);
-
-    if let Some(actions) = node.get("actions") {
-        actions
-            .get("focus")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        actions
-            .get("invoke")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        actions
-            .get("set_value")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-        actions
-            .get("set_text_selection")
-            .and_then(|v| v.as_bool())
-            .hash(&mut hasher);
-    }
-
-    hasher.finish()
-}
-
+#[cfg(test)]
 pub(super) fn check_bundle_for_stale_scene_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
-    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut suspicious: Vec<String> = Vec::new();
-    let mut missing_scene_fingerprint = false;
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        let mut prev_y: Option<f64> = None;
-        let mut prev_label: Option<String> = None;
-        let mut prev_value: Option<String> = None;
-        let mut prev_fp: Option<u64> = None;
-
-        for s in snaps {
-            let (y, label, value) = semantics_node_fields_for_test_id(&semantics, s, test_id);
-            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
-            if fp.is_none() {
-                missing_scene_fingerprint = true;
-            }
-
-            let Some(fp) = fp else {
-                prev_y = y;
-                prev_label = label;
-                prev_value = value;
-                prev_fp = None;
-                continue;
-            };
-
-            if let (Some(prev_fp), Some(prev_y)) = (prev_fp, prev_y) {
-                let moved = y
-                    .zip(Some(prev_y))
-                    .is_some_and(|(y, prev_y)| (y - prev_y).abs() >= eps as f64);
-                let label_changed = label.as_deref() != prev_label.as_deref();
-                let value_changed = value.as_deref() != prev_value.as_deref();
-                let changed = moved || label_changed || value_changed;
-
-                if changed && fp == prev_fp {
-                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let label_len_prev = prev_label.as_deref().map(|s| s.len()).unwrap_or(0);
-                    let label_len_now = label.as_deref().map(|s| s.len()).unwrap_or(0);
-                    let value_len_prev = prev_value.as_deref().map(|s| s.len()).unwrap_or(0);
-                    let value_len_now = value.as_deref().map(|s| s.len()).unwrap_or(0);
-                    let delta_y = y
-                        .zip(Some(prev_y))
-                        .map(|(y, prev_y)| y - prev_y)
-                        .unwrap_or(0.0);
-                    suspicious.push(format!(
-                        "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} changed={{moved={moved} label={label_changed} value={value_changed}}} delta_y={delta_y:.2} label_len={label_len_prev}->{label_len_now} value_len={value_len_prev}->{value_len_now} scene_fingerprint=0x{fp:016x}",
-                    ));
-                    if suspicious.len() >= 8 {
-                        break;
-                    }
-                }
-            }
-
-            prev_y = y;
-            prev_label = label;
-            prev_value = value;
-            prev_fp = Some(fp);
-        }
-    }
-
-    if missing_scene_fingerprint {
-        return Err(format!(
-            "stale scene check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
-    }
-
-    if suspicious.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str(
-        "stale scene suspected (semantics changed but scene fingerprint did not change)\n",
-    );
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in suspicious {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
-}
-
-fn semantics_node_y_for_test_id(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    snapshot: &serde_json::Value,
-    test_id: &str,
-) -> Option<f64> {
-    let nodes = semantics.nodes(snapshot)?;
-    let node = nodes.iter().find(|n| {
-        n.get("test_id")
-            .and_then(|v| v.as_str())
-            .is_some_and(|id| id == test_id)
-    })?;
-    node.get("bounds")
-        .and_then(|v| v.get("y"))
-        .and_then(|v| v.as_f64())
-}
-
-fn semantics_node_fields_for_test_id(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    snapshot: &serde_json::Value,
-    test_id: &str,
-) -> (Option<f64>, Option<String>, Option<String>) {
-    let Some(nodes) = semantics.nodes(snapshot) else {
-        return (None, None, None);
-    };
-    let node = nodes.iter().find(|n| {
-        n.get("test_id")
-            .and_then(|v| v.as_str())
-            .is_some_and(|id| id == test_id)
-    });
-    let Some(node) = node else {
-        return (None, None, None);
-    };
-    let y = node
-        .get("bounds")
-        .and_then(|v| v.get("y"))
-        .and_then(|v| v.as_f64());
-    let label = node
-        .get("label")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let value = node
-        .get("value")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    (y, label, value)
-}
-
-fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
-    window
-        .get("events")
-        .and_then(|v| v.as_array())?
-        .iter()
-        .filter(|e| e.get("kind").and_then(|v| v.as_str()) == Some("pointer.wheel"))
-        .filter_map(|e| e.get("frame_id").and_then(|v| v.as_u64()))
-        .min()
-}
-
-fn first_scroll_offset_change_frame_id_for_window(
-    window: &serde_json::Value,
-    warmup_frames: u64,
-) -> Option<u64> {
-    let snaps = window
-        .get("snapshots")
-        .and_then(|v| v.as_array())
-        .map_or(&[][..], |v| v);
-    snaps
-        .iter()
-        .filter_map(|s| {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64())?;
-            if frame_id < warmup_frames {
-                return None;
-            }
-            let changes = s
-                .get("debug")
-                .and_then(|v| v.get("scroll_handle_changes"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            let any_offset_changed = changes.iter().any(|c| {
-                c.get("offset_changed")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-            });
-            any_offset_changed.then_some(frame_id)
-        })
-        .min()
-}
-
-fn semantics_node_id_for_test_id(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    snapshot: &serde_json::Value,
-    test_id: &str,
-) -> Option<u64> {
-    let nodes = semantics.nodes(snapshot)?;
-    nodes
-        .iter()
-        .find(|n| {
-            n.get("test_id")
-                .and_then(|v| v.as_str())
-                .is_some_and(|id| id == test_id)
-        })?
-        .get("id")
-        .and_then(|v| v.as_u64())
-}
-
-fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
-    snapshot
-        .get("debug")
-        .and_then(|v| v.get("hit_test"))
-        .and_then(|v| v.get("hit"))
-        .and_then(|v| v.as_u64())
-}
-
-fn is_descendant(
-    mut node: u64,
-    ancestor: u64,
-    parents: &std::collections::HashMap<u64, u64>,
-) -> bool {
-    if node == ancestor {
-        return true;
-    }
-    while let Some(parent) = parents.get(&node).copied() {
-        if parent == ancestor {
-            return true;
-        }
-        node = parent;
-    }
-    false
-}
-
-fn semantics_parent_map(
-    semantics: &crate::json_bundle::SemanticsResolver<'_>,
-    snapshot: &serde_json::Value,
-) -> std::collections::HashMap<u64, u64> {
-    let mut parents = std::collections::HashMap::new();
-    let Some(nodes) = semantics.nodes(snapshot) else {
-        return parents;
-    };
-    for node in nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        let Some(parent) = node.get("parent").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        parents.insert(id, parent);
-    }
-    parents
+    stale::check_bundle_for_stale_scene_json(bundle, bundle_path, test_id, eps)
 }
 
 pub(super) fn check_bundle_for_wheel_scroll(
@@ -5697,9 +4818,7 @@ pub(super) fn check_bundle_for_wheel_scroll(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
+    wheel_scroll::check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)
 }
 
 pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
@@ -5707,281 +4826,33 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_wheel_scroll_hit_changes_json(&bundle, bundle_path, test_id, warmup_frames)
+    wheel_scroll::check_bundle_for_wheel_scroll_hit_changes(bundle_path, test_id, warmup_frames)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_wheel = false;
-    let mut failures: Vec<String> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
-            continue;
-        };
-        any_wheel = true;
-
-        let after_frame = wheel_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        let mut before: Option<&serde_json::Value> = None;
-        let mut before_frame: u64 = 0;
-        let mut after: Option<&serde_json::Value> = None;
-        let mut after_frame_id: u64 = 0;
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                if frame_id >= before_frame && frame_id < after_frame {
-                    before = Some(s);
-                    before_frame = frame_id;
-                }
-                continue;
-            }
-            after = Some(s);
-            after_frame_id = frame_id;
-            break;
-        }
-
-        let (Some(before), Some(after)) = (before, after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
-            ));
-            continue;
-        };
-
-        let Some(hit_before) = hit_test_node_id(before) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
-            ));
-            continue;
-        };
-        let Some(hit_after) = hit_test_node_id(after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
-            ));
-            continue;
-        };
-
-        let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
-            continue;
-        };
-        let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
-            ));
-            continue;
-        };
-
-        let before_parents = semantics_parent_map(&semantics, before);
-        let after_parents = semantics_parent_map(&semantics, after);
-
-        if !is_descendant(hit_before, target_before, &before_parents) {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
-            ));
-            continue;
-        }
-
-        if is_descendant(hit_after, target_after, &after_parents) {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_still_within_target_after hit={hit_after} target={target_after}"
-            ));
-        }
-    }
-
-    if !any_wheel {
-        return Err(format!(
-            "wheel scroll check requires at least one pointer.wheel event in the bundle: {}",
-            bundle_path.display()
-        ));
-    }
-
-    if failures.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str("wheel scroll check failed (expected hit-test result to move after wheel)\n");
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in failures {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
+    wheel_scroll::check_bundle_for_wheel_scroll_json(bundle, bundle_path, test_id, warmup_frames)
 }
 
+#[cfg(test)]
 pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_wheel = false;
-    let mut failures: Vec<String> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
-            continue;
-        };
-        any_wheel = true;
-
-        let after_frame = wheel_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        let mut before: Option<&serde_json::Value> = None;
-        let mut before_frame: u64 = 0;
-        let mut after: Option<&serde_json::Value> = None;
-        let mut after_frame_id: u64 = 0;
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                if frame_id >= before_frame && frame_id < after_frame {
-                    before = Some(s);
-                    before_frame = frame_id;
-                }
-                continue;
-            }
-            after = Some(s);
-            after_frame_id = frame_id;
-            break;
-        }
-
-        let (Some(before), Some(after)) = (before, after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
-            ));
-            continue;
-        };
-
-        let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
-            continue;
-        };
-        let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
-            ));
-            continue;
-        };
-
-        let before_parents = semantics_parent_map(&semantics, before);
-        let after_parents = semantics_parent_map(&semantics, after);
-
-        let Some(hit_before) = hit_test_node_id(before) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
-            ));
-            continue;
-        };
-        let Some(hit_after) = hit_test_node_id(after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
-            ));
-            continue;
-        };
-
-        if !is_descendant(hit_before, target_before, &before_parents) {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
-            ));
-            continue;
-        }
-        if !is_descendant(hit_after, target_after, &after_parents) {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_not_within_target_after hit={hit_after} target={target_after}"
-            ));
-            continue;
-        }
-
-        // Prefer a vlist-driven signal when available: for virtualized surfaces the hit-test node
-        // can remain stable (e.g. when hovering a static region), but the scroll offset must move.
-        let before_offset = before
-            .get("debug")
-            .and_then(|v| v.get("virtual_list_windows"))
-            .and_then(|v| v.as_array())
-            .and_then(|v| v.first())
-            .and_then(|v| v.get("offset"))
-            .and_then(|v| v.as_f64());
-        let after_offset = after
-            .get("debug")
-            .and_then(|v| v.get("virtual_list_windows"))
-            .and_then(|v| v.as_array())
-            .and_then(|v| v.first())
-            .and_then(|v| v.get("offset"))
-            .and_then(|v| v.as_f64());
-        if let (Some(a), Some(b)) = (before_offset, after_offset)
-            && (a - b).abs() > 0.1
-        {
-            continue;
-        }
-
-        if hit_before == hit_after {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_did_not_change hit={hit_after}"
-            ));
-        }
-    }
-
-    if !any_wheel {
-        return Err(format!(
-            "wheel scroll hit-change check requires at least one pointer.wheel event in the bundle: {}",
-            bundle_path.display()
-        ));
-    }
-
-    if failures.is_empty() {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str(
-        "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
-    );
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in failures {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
+    wheel_scroll::check_bundle_for_wheel_scroll_hit_changes_json(
+        bundle,
+        bundle_path,
+        test_id,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
@@ -5990,10 +4861,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     max_total_refreshes: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_visible_range_refreshes_max_json(
-        &bundle,
+    vlist::check_bundle_for_vlist_visible_range_refreshes_max(
         bundle_path,
         out_dir,
         max_total_refreshes,
@@ -6006,14 +4874,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_window_shifts_explainable_json(
-        &bundle,
-        bundle_path,
-        out_dir,
-        warmup_frames,
-    )
+    vlist::check_bundle_for_vlist_window_shifts_explainable(bundle_path, out_dir, warmup_frames)
 }
 
 pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
@@ -6022,10 +4883,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
     max_total_non_retained_shifts: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_window_shifts_non_retained_max_json(
-        &bundle,
+    vlist::check_bundle_for_vlist_window_shifts_non_retained_max(
         bundle_path,
         out_dir,
         max_total_non_retained_shifts,
@@ -6040,10 +4898,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
     max_total_kind_shifts: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_window_shifts_kind_max_json(
-        &bundle,
+    vlist::check_bundle_for_vlist_window_shifts_kind_max(
         bundle_path,
         out_dir,
         kind,
@@ -6057,108 +4912,23 @@ pub(super) fn check_bundle_for_vlist_policy_key_stable(
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_policy_key_stable_json(&bundle, bundle_path, out_dir, warmup_frames)
+    vlist::check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_policy_key_stable_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_signal = false;
-    let mut examined_snapshots: u64 = 0;
-    let mut by_surface: std::collections::BTreeMap<(u64, u64), std::collections::BTreeSet<u64>> =
-        std::collections::BTreeMap::new();
-
-    for w in windows {
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            examined_snapshots = examined_snapshots.saturating_add(1);
-
-            let vlist_windows = s
-                .get("debug")
-                .and_then(|v| v.get("virtual_list_windows"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if vlist_windows.is_empty() {
-                continue;
-            }
-
-            any_signal = true;
-            for win in vlist_windows {
-                let node = win.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
-                let element = win.get("element").and_then(|v| v.as_u64()).unwrap_or(0);
-                let policy_key = win.get("policy_key").and_then(|v| v.as_u64()).unwrap_or(0);
-                by_surface
-                    .entry((node, element))
-                    .or_default()
-                    .insert(policy_key);
-            }
-        }
-    }
-
-    let offenders: Vec<serde_json::Value> = by_surface
-        .iter()
-        .filter(|(_, keys)| keys.len() > 1)
-        .take(64)
-        .map(|((node, element), keys)| {
-            serde_json::json!({
-                "node": node,
-                "element": element,
-                "policy_keys": keys.iter().copied().collect::<Vec<u64>>(),
-            })
-        })
-        .collect();
-
-    let out_path = out_dir.join("check.vlist_policy_key_stable.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_policy_key_stable",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "examined_snapshots": examined_snapshots,
-        "surfaces_seen": by_surface.len(),
-        "offenders": offenders,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if !any_signal {
-        return Err(format!(
-            "vlist policy-key stability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if offenders.is_empty() {
-        return Ok(());
-    }
-
-    Err(format!(
-        "vlist policy-key stability gate failed (expected each vlist surface to keep a stable policy_key after warmup)\n  bundle: {}\n  evidence: {}",
-        bundle_path.display(),
-        out_path.display()
-    ))
+    vlist::check_bundle_for_vlist_policy_key_stable_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
@@ -6167,10 +4937,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     min_total_refreshes: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_visible_range_refreshes_min_json(
-        &bundle,
+    vlist::check_bundle_for_vlist_visible_range_refreshes_min(
         bundle_path,
         out_dir,
         min_total_refreshes,
@@ -6185,10 +4952,7 @@ pub(super) fn check_bundle_for_windowed_rows_offset_changes_min(
     warmup_frames: u64,
     eps_px: f32,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_windowed_rows_offset_changes_min_json(
-        &bundle,
+    windowed_rows::check_bundle_for_windowed_rows_offset_changes_min(
         bundle_path,
         out_dir,
         min_total_offset_changes,
@@ -6197,6 +4961,8 @@ pub(super) fn check_bundle_for_windowed_rows_offset_changes_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_windowed_rows_offset_changes_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -6205,198 +4971,14 @@ pub(super) fn check_bundle_for_windowed_rows_offset_changes_min_json(
     warmup_frames: u64,
     eps_px: f32,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    #[derive(Default)]
-    struct SurfaceStats {
-        location: Option<serde_json::Value>,
-        samples: u64,
-        offset_changes: u64,
-        visible_start_changes: u64,
-        prev_offset_y: Option<f32>,
-        prev_visible_start: Option<u64>,
-    }
-
-    let mut any_scroll = false;
-    let mut examined_snapshots: u64 = 0;
-    let mut scroll_offset_changed_events: u64 = 0;
-    let mut total_offset_changes: u64 = 0;
-
-    let mut surfaces: std::collections::BTreeMap<(u64, u64), SurfaceStats> =
-        std::collections::BTreeMap::new();
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(scroll_frame) = first_scroll_offset_change_frame_id_for_window(w, warmup_frames)
-        else {
-            continue;
-        };
-        any_scroll = true;
-
-        let after_frame = scroll_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            examined_snapshots = examined_snapshots.saturating_add(1);
-
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-
-            let scroll_changes = s
-                .get("debug")
-                .and_then(|v| v.get("scroll_handle_changes"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            for c in scroll_changes {
-                if c.get("offset_changed")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-                {
-                    scroll_offset_changed_events = scroll_offset_changed_events.saturating_add(1);
-                }
-            }
-
-            let list = s
-                .get("debug")
-                .and_then(|v| v.get("windowed_rows_surfaces"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if list.is_empty() {
-                continue;
-            }
-
-            for entry in list {
-                let Some(callsite_id) = entry.get("callsite_id").and_then(|v| v.as_u64()) else {
-                    continue;
-                };
-                let Some(offset_y) = entry
-                    .get("offset_y")
-                    .and_then(|v| v.as_f64())
-                    .map(|v| v as f32)
-                else {
-                    continue;
-                };
-
-                let stats = surfaces.entry((window_id, callsite_id)).or_default();
-                stats.samples = stats.samples.saturating_add(1);
-                if stats.location.is_none() {
-                    stats.location = entry.get("location").cloned();
-                }
-
-                if let Some(prev) = stats.prev_offset_y {
-                    let delta = offset_y - prev;
-                    if delta.abs() >= eps_px {
-                        stats.offset_changes = stats.offset_changes.saturating_add(1);
-                        total_offset_changes = total_offset_changes.saturating_add(1);
-
-                        if samples.len() < 32 {
-                            samples.push(serde_json::json!({
-                                "window": window_id,
-                                "tick_id": tick_id,
-                                "frame_id": frame_id,
-                                "callsite_id": callsite_id,
-                                "delta_offset_y": delta,
-                                "prev_offset_y": prev,
-                                "offset_y": offset_y,
-                            }));
-                        }
-                    }
-                }
-                stats.prev_offset_y = Some(offset_y);
-
-                if let Some(visible_start) = entry.get("visible_start").and_then(|v| v.as_u64()) {
-                    if let Some(prev) = stats.prev_visible_start
-                        && visible_start != prev
-                    {
-                        stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
-                    }
-                    stats.prev_visible_start = Some(visible_start);
-                }
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.windowed_rows_offset_changes_min.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "windowed_rows_offset_changes_min",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "eps_px": eps_px,
-        "min_total_offset_changes": min_total_offset_changes,
-        "any_scroll": any_scroll,
-        "examined_snapshots": examined_snapshots,
-        "scroll_offset_changed_events": scroll_offset_changed_events,
-        "surfaces_seen": surfaces.len(),
-        "total_offset_changes": total_offset_changes,
-        "surfaces": surfaces.iter().map(|((window, callsite_id), stats)| serde_json::json!({
-            "window": window,
-            "callsite_id": callsite_id,
-            "location": stats.location,
-            "samples": stats.samples,
-            "offset_changes": stats.offset_changes,
-            "visible_start_changes": stats.visible_start_changes,
-        })).collect::<Vec<_>>(),
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if !any_scroll {
-        return Err(format!(
-            "windowed rows offset-change gate requires scroll offset changes after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if examined_snapshots == 0 {
-        return Err(format!(
-            "windowed rows offset-change gate requires snapshots after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if scroll_offset_changed_events == 0 {
-        return Err(format!(
-            "windowed rows offset-change gate requires debug.scroll_handle_changes events after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if surfaces.is_empty() {
-        return Err(format!(
-            "windowed rows offset-change gate requires debug.windowed_rows_surfaces after scroll changes, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if min_total_offset_changes > 0 && total_offset_changes < min_total_offset_changes {
-        return Err(format!(
-            "expected windowed rows surfaces to observe scroll offset changes, but total_offset_changes={total_offset_changes} was below min_total_offset_changes={min_total_offset_changes} (warmup_frames={warmup_frames}, eps_px={eps_px})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    windowed_rows::check_bundle_for_windowed_rows_offset_changes_min_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        min_total_offset_changes,
+        warmup_frames,
+        eps_px,
+    )
 }
 
 pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted(
@@ -6404,231 +4986,27 @@ pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted(
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_windowed_rows_visible_start_changes_repainted_json(
-        &bundle,
+    windowed_rows::check_bundle_for_windowed_rows_visible_start_changes_repainted(
         bundle_path,
         out_dir,
         warmup_frames,
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    #[derive(Default)]
-    struct SurfaceStats {
-        location: Option<serde_json::Value>,
-        samples: u64,
-        visible_start_changes: u64,
-        suspicious_visible_start_changes: u64,
-        prev_visible_start: Option<u64>,
-        prev_scene_fingerprint: Option<u64>,
-    }
-
-    let mut any_scroll = false;
-    let mut examined_snapshots: u64 = 0;
-    let mut scroll_offset_changed_events: u64 = 0;
-    let mut total_visible_start_changes: u64 = 0;
-    let mut total_suspicious_changes: u64 = 0;
-    let mut missing_scene_fingerprint = false;
-
-    let mut surfaces: std::collections::BTreeMap<(u64, u64), SurfaceStats> =
-        std::collections::BTreeMap::new();
-    let mut suspicious: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(scroll_frame) = first_scroll_offset_change_frame_id_for_window(w, warmup_frames)
-        else {
-            continue;
-        };
-        any_scroll = true;
-
-        let after_frame = scroll_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            examined_snapshots = examined_snapshots.saturating_add(1);
-
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
-            if fp.is_none() {
-                missing_scene_fingerprint = true;
-            }
-
-            let scroll_changes = s
-                .get("debug")
-                .and_then(|v| v.get("scroll_handle_changes"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            for c in scroll_changes {
-                if c.get("offset_changed")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-                {
-                    scroll_offset_changed_events = scroll_offset_changed_events.saturating_add(1);
-                }
-            }
-
-            let list = s
-                .get("debug")
-                .and_then(|v| v.get("windowed_rows_surfaces"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if list.is_empty() {
-                continue;
-            }
-
-            for entry in list {
-                let Some(callsite_id) = entry.get("callsite_id").and_then(|v| v.as_u64()) else {
-                    continue;
-                };
-                let Some(visible_start) = entry.get("visible_start").and_then(|v| v.as_u64())
-                else {
-                    continue;
-                };
-                let Some(fp) = fp else {
-                    continue;
-                };
-
-                let stats = surfaces.entry((window_id, callsite_id)).or_default();
-                stats.samples = stats.samples.saturating_add(1);
-                if stats.location.is_none() {
-                    stats.location = entry.get("location").cloned();
-                }
-
-                if let (Some(prev_start), Some(prev_fp)) =
-                    (stats.prev_visible_start, stats.prev_scene_fingerprint)
-                    && visible_start != prev_start
-                {
-                    stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
-                    total_visible_start_changes = total_visible_start_changes.saturating_add(1);
-                    if fp == prev_fp {
-                        stats.suspicious_visible_start_changes =
-                            stats.suspicious_visible_start_changes.saturating_add(1);
-                        total_suspicious_changes = total_suspicious_changes.saturating_add(1);
-                        if suspicious.len() < 32 {
-                            suspicious.push(serde_json::json!({
-                                "window": window_id,
-                                "tick_id": tick_id,
-                                "frame_id": frame_id,
-                                "callsite_id": callsite_id,
-                                "prev_visible_start": prev_start,
-                                "visible_start": visible_start,
-                                "scene_fingerprint": fp,
-                            }));
-                        }
-                    }
-                }
-
-                stats.prev_visible_start = Some(visible_start);
-                stats.prev_scene_fingerprint = Some(fp);
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.windowed_rows_visible_start_changes_repainted.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "windowed_rows_visible_start_changes_repainted",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "any_scroll": any_scroll,
-        "examined_snapshots": examined_snapshots,
-        "scroll_offset_changed_events": scroll_offset_changed_events,
-        "surfaces_seen": surfaces.len(),
-        "total_visible_start_changes": total_visible_start_changes,
-        "total_suspicious_changes": total_suspicious_changes,
-        "surfaces": surfaces.iter().map(|((window, callsite_id), stats)| serde_json::json!({
-            "window": window,
-            "callsite_id": callsite_id,
-            "location": stats.location,
-            "samples": stats.samples,
-            "visible_start_changes": stats.visible_start_changes,
-            "suspicious_visible_start_changes": stats.suspicious_visible_start_changes,
-        })).collect::<Vec<_>>(),
-        "suspicious_samples": suspicious,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if missing_scene_fingerprint {
-        return Err(format!(
-            "windowed rows repaint gate requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
-    }
-
-    if !any_scroll {
-        return Err(format!(
-            "windowed rows repaint gate requires scroll offset changes after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if examined_snapshots == 0 {
-        return Err(format!(
-            "windowed rows repaint gate requires snapshots after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if scroll_offset_changed_events == 0 {
-        return Err(format!(
-            "windowed rows repaint gate requires debug.scroll_handle_changes events after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if surfaces.is_empty() {
-        return Err(format!(
-            "windowed rows repaint gate requires debug.windowed_rows_surfaces after scroll changes, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if total_visible_start_changes == 0 {
-        return Err(format!(
-            "windowed rows repaint gate requires at least one visible_start change after the first scroll change (otherwise stale paint cannot be evaluated)\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if total_suspicious_changes == 0 {
-        return Ok(());
-    }
-
-    Err(format!(
-        "windowed rows repaint gate failed (visible_start changed but scene fingerprint did not; suspected stale paint / stale lines)\n  bundle: {}\n  evidence: {}",
-        bundle_path.display(),
-        out_path.display()
-    ))
+    windowed_rows::check_bundle_for_windowed_rows_visible_start_changes_repainted_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_layout_fast_path_min(
@@ -6723,6 +5101,8 @@ pub(super) fn check_bundle_for_layout_fast_path_min_json(
     ))
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -6730,289 +5110,29 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     min_total_refreshes: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_wheel = false;
-    let mut total_refreshes: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
-            continue;
-        };
-        any_wheel = true;
-
-        let after_frame = wheel_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            let refreshes = s
-                .get("debug")
-                .and_then(|v| v.get("stats"))
-                .and_then(|v| v.get("virtual_list_visible_range_refreshes"))
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            if refreshes == 0 {
-                continue;
-            }
-            total_refreshes = total_refreshes.saturating_add(refreshes);
-            if samples.len() < 32 {
-                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                samples.push(serde_json::json!({
-                    "window": window_id,
-                    "tick_id": tick_id,
-                    "frame_id": frame_id,
-                    "refreshes": refreshes,
-                }));
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.vlist_visible_range_refreshes_min.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_visible_range_refreshes_min",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "min_total_refreshes": min_total_refreshes,
-        "any_wheel": any_wheel,
-        "total_refreshes": total_refreshes,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if !any_wheel {
-        return Err(format!(
-            "vlist visible-range refresh gate requires wheel events, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if min_total_refreshes > 0 && total_refreshes < min_total_refreshes {
-        return Err(format!(
-            "expected virtual list visible-range refreshes to occur after wheel events, but total_refreshes={total_refreshes} was below min_total_refreshes={min_total_refreshes} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    vlist::check_bundle_for_vlist_visible_range_refreshes_min_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        min_total_refreshes,
+        warmup_frames,
+    )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_signal = false;
-    let mut total_shifts: u64 = 0;
-    let mut offenders: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-    let mut failures: Vec<String> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let wheel_frame = first_wheel_frame_id_for_window(w);
-        let after_frame = wheel_frame.unwrap_or(warmup_frames).max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-
-            let list = s
-                .get("debug")
-                .and_then(|v| v.get("virtual_list_windows"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if list.is_empty() {
-                continue;
-            }
-            any_signal = true;
-
-            for win in list {
-                let mismatch = win
-                    .get("window_mismatch")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                let kind = win
-                    .get("window_shift_kind")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or(if mismatch { "escape" } else { "none" });
-                if kind == "none" {
-                    continue;
-                }
-                total_shifts = total_shifts.saturating_add(1);
-
-                let reason = win.get("window_shift_reason").and_then(|v| v.as_str());
-                let mode = win.get("window_shift_apply_mode").and_then(|v| v.as_str());
-                let invalidation_detail = win
-                    .get("window_shift_invalidation_detail")
-                    .and_then(|v| v.as_str());
-                if reason.is_some() && mode.is_some() {
-                    if mode == Some("non_retained_rerender") {
-                        let expected_detail = match reason {
-                            Some("scroll_to_item") => {
-                                Some("scroll_handle_scroll_to_item_window_update")
-                            }
-                            Some("viewport_resize") => {
-                                Some("scroll_handle_viewport_resize_window_update")
-                            }
-                            Some("items_revision") => {
-                                Some("scroll_handle_items_revision_window_update")
-                            }
-                            _ => match kind {
-                                "escape" => Some("scroll_handle_window_update"),
-                                "prefetch" => Some("scroll_handle_prefetch_window_update"),
-                                _ => None,
-                            },
-                        };
-                        if invalidation_detail.is_none() {
-                            offenders = offenders.saturating_add(1);
-                            failures.push(format!(
-                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_invalidation_detail kind={kind} apply_mode={mode:?}"
-                            ));
-                            if samples.len() < 64 {
-                                samples.push(serde_json::json!({
-                                    "window": window_id,
-                                    "tick_id": tick_id,
-                                    "frame_id": frame_id,
-                                    "kind": kind,
-                                    "reason": reason,
-                                    "apply_mode": mode,
-                                    "invalidation_detail": invalidation_detail,
-                                    "expected_invalidation_detail": expected_detail,
-                                    "node": win.get("node").and_then(|v| v.as_u64()),
-                                    "element": win.get("element").and_then(|v| v.as_u64()),
-                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
-                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
-                                }));
-                            }
-                        } else if expected_detail.is_some()
-                            && invalidation_detail != expected_detail
-                        {
-                            offenders = offenders.saturating_add(1);
-                            failures.push(format!(
-                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=unexpected_shift_invalidation_detail kind={kind} got={invalidation_detail:?} expected={expected_detail:?}"
-                            ));
-                            if samples.len() < 64 {
-                                samples.push(serde_json::json!({
-                                    "window": window_id,
-                                    "tick_id": tick_id,
-                                    "frame_id": frame_id,
-                                    "kind": kind,
-                                    "reason": reason,
-                                    "apply_mode": mode,
-                                    "invalidation_detail": invalidation_detail,
-                                    "expected_invalidation_detail": expected_detail,
-                                    "node": win.get("node").and_then(|v| v.as_u64()),
-                                    "element": win.get("element").and_then(|v| v.as_u64()),
-                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
-                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
-                                }));
-                            }
-                        }
-                    }
-                    continue;
-                }
-
-                offenders = offenders.saturating_add(1);
-                failures.push(format!(
-                    "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_explainability kind={kind} reason={reason:?} apply_mode={mode:?} invalidation_detail={invalidation_detail:?}"
-                ));
-
-                if samples.len() < 64 {
-                    samples.push(serde_json::json!({
-                        "window": window_id,
-                        "tick_id": tick_id,
-                        "frame_id": frame_id,
-                        "kind": kind,
-                        "reason": reason,
-                        "apply_mode": mode,
-                        "invalidation_detail": invalidation_detail,
-                        "node": win.get("node").and_then(|v| v.as_u64()),
-                        "element": win.get("element").and_then(|v| v.as_u64()),
-                        "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
-                        "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
-                        "window_range": win.get("window_range"),
-                        "prev_window_range": win.get("prev_window_range"),
-                        "render_window_range": win.get("render_window_range"),
-                        "deferred_scroll_to_item": win.get("deferred_scroll_to_item").and_then(|v| v.as_bool()),
-                        "deferred_scroll_consumed": win.get("deferred_scroll_consumed").and_then(|v| v.as_bool()),
-                    }));
-                }
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.vlist_window_shifts_explainable.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_window_shifts_explainable",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "total_shifts": total_shifts,
-        "offenders": offenders,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if !any_signal {
-        return Err(format!(
-            "vlist window-shift explainability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if offenders == 0 {
-        return Ok(());
-    }
-
-    let mut msg = String::new();
-    msg.push_str("vlist window-shift explainability gate failed (expected every window shift to have reason + apply_mode)\n");
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    msg.push_str(&format!("evidence: {}\n", out_path.display()));
-    for line in failures.into_iter().take(12) {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
-    }
-    Err(msg)
+    vlist::check_bundle_for_vlist_window_shifts_explainable_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_prepaint_actions_min(
@@ -7458,6 +5578,8 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
     Ok(())
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -7465,98 +5587,17 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     max_total_non_retained_shifts: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut snapshots_examined: u64 = 0;
-    let mut total_non_retained_shifts: u64 = 0;
-    let mut total_shifts: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            snapshots_examined = snapshots_examined.saturating_add(1);
-
-            let debug_stats = s.get("debug").and_then(|v| v.get("stats"));
-            let window_shifts_total = debug_stats
-                .and_then(|v| v.get("virtual_list_window_shifts_total"))
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            let window_shifts_non_retained = debug_stats
-                .and_then(|v| v.get("virtual_list_window_shifts_non_retained"))
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-
-            total_shifts = total_shifts.saturating_add(window_shifts_total);
-            if window_shifts_non_retained == 0 {
-                continue;
-            }
-            total_non_retained_shifts =
-                total_non_retained_shifts.saturating_add(window_shifts_non_retained);
-
-            if samples.len() < 64 {
-                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                let shift_samples = s
-                    .get("debug")
-                    .and_then(|v| v.get("virtual_list_window_shift_samples"))
-                    .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().take(8).cloned().collect::<Vec<_>>())
-                    .unwrap_or_default();
-
-                samples.push(serde_json::json!({
-                    "window": window_id,
-                    "tick_id": tick_id,
-                    "frame_id": frame_id,
-                    "non_retained_shifts": window_shifts_non_retained,
-                    "window_shifts_total": window_shifts_total,
-                    "shift_samples": shift_samples,
-                }));
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.vlist_window_shifts_non_retained_max.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_window_shifts_non_retained_max",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "max_total_non_retained_shifts": max_total_non_retained_shifts,
-        "snapshots_examined": snapshots_examined,
-        "total_window_shifts": total_shifts,
-        "total_non_retained_shifts": total_non_retained_shifts,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if total_non_retained_shifts > max_total_non_retained_shifts {
-        return Err(format!(
-            "vlist non-retained window-shift gate failed: total_non_retained_shifts={total_non_retained_shifts} exceeded max_total_non_retained_shifts={max_total_non_retained_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    vlist::check_bundle_for_vlist_window_shifts_non_retained_max_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        max_total_non_retained_shifts,
+        warmup_frames,
+    )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -7565,156 +5606,14 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     max_total_kind_shifts: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let kind = match kind {
-        "prefetch" | "escape" => kind,
-        _ => {
-            return Err(format!(
-                "vlist window-shift kind must be one of: prefetch|escape (got: {kind})"
-            ));
-        }
-    };
-
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut snapshots_examined: u64 = 0;
-    let mut total_kind_shifts: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| "invalid bundle.json: missing snapshots".to_string())?;
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            snapshots_examined = snapshots_examined.saturating_add(1);
-
-            let shift_entries = s
-                .get("debug")
-                .and_then(|v| v.get("virtual_list_windows"))
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter(|w| {
-                            w.get("source")
-                                .and_then(|v| v.as_str())
-                                .is_some_and(|s| s == "prepaint")
-                                && w.get("window_shift_kind")
-                                    .and_then(|v| v.as_str())
-                                    .is_some_and(|k| k == kind)
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-
-            if shift_entries.is_empty() {
-                continue;
-            }
-
-            let mut unique_entries: Vec<&serde_json::Value> = Vec::new();
-            type VirtualListShiftKey = (
-                Option<u64>,
-                Option<u64>,
-                Option<String>,
-                Option<String>,
-                Option<String>,
-                Option<String>,
-                Option<bool>,
-            );
-            let mut seen_keys: std::collections::HashSet<VirtualListShiftKey> =
-                std::collections::HashSet::new();
-            for w in shift_entries {
-                let key = (
-                    w.get("node").and_then(|v| v.as_u64()),
-                    w.get("element").and_then(|v| v.as_u64()),
-                    w.get("source")
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_string()),
-                    w.get("window_shift_kind")
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_string()),
-                    w.get("window_shift_reason")
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_string()),
-                    w.get("window_shift_apply_mode")
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_string()),
-                    w.get("window_mismatch").and_then(|v| v.as_bool()),
-                );
-                if seen_keys.insert(key) {
-                    unique_entries.push(w);
-                }
-            }
-            if unique_entries.is_empty() {
-                continue;
-            }
-
-            total_kind_shifts = total_kind_shifts.saturating_add(unique_entries.len() as u64);
-
-            if samples.len() < 64 {
-                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                let entries = unique_entries
-                    .iter()
-                    .take(4)
-                    .map(|w| {
-                        serde_json::json!({
-                            "node": w.get("node").cloned().unwrap_or(serde_json::Value::Null),
-                            "element": w.get("element").cloned().unwrap_or(serde_json::Value::Null),
-                            "window_shift_kind": w.get("window_shift_kind").cloned().unwrap_or(serde_json::Value::Null),
-                            "window_shift_reason": w.get("window_shift_reason").cloned().unwrap_or(serde_json::Value::Null),
-                            "window_shift_apply_mode": w.get("window_shift_apply_mode").cloned().unwrap_or(serde_json::Value::Null),
-                            "window_mismatch": w.get("window_mismatch").cloned().unwrap_or(serde_json::Value::Null),
-                        })
-                    })
-                    .collect::<Vec<_>>();
-
-                samples.push(serde_json::json!({
-                    "window": window_id,
-                    "tick_id": tick_id,
-                    "frame_id": frame_id,
-                    "kind": kind,
-                    "shifts_in_frame": unique_entries.len(),
-                    "entries": entries,
-                }));
-            }
-        }
-    }
-
-    let out_path = out_dir.join(format!("check.vlist_window_shifts_{kind}_max.json"));
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": format!("vlist_window_shifts_{kind}_max"),
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "max_total_kind_shifts": max_total_kind_shifts,
-        "snapshots_examined": snapshots_examined,
-        "total_kind_shifts": total_kind_shifts,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if total_kind_shifts > max_total_kind_shifts {
-        return Err(format!(
-            "vlist window-shift kind gate failed: total_{kind}_shifts={total_kind_shifts} exceeded max_total_kind_shifts={max_total_kind_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    vlist::check_bundle_for_vlist_window_shifts_kind_max_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        kind,
+        max_total_kind_shifts,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
@@ -7722,154 +5621,31 @@ pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
-        &bundle,
+    vlist::check_bundle_for_vlist_window_shifts_have_prepaint_actions(
         bundle_path,
         out_dir,
         warmup_frames,
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let after_frame = warmup_frames.saturating_add(1);
-    let mut offenders: u64 = 0;
-    let mut failures: Vec<String> = Vec::new();
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-
-            let debug = s.get("debug").unwrap_or(&serde_json::Value::Null);
-            let vlist = debug
-                .get("virtual_list_windows")
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if vlist.is_empty() {
-                continue;
-            }
-            let actions = debug
-                .get("prepaint_actions")
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-
-            let shift_actions: Vec<&serde_json::Value> = actions
-                .iter()
-                .filter(|a| {
-                    a.get("kind").and_then(|v| v.as_str()) == Some("virtual_list_window_shift")
-                })
-                .collect();
-
-            for win in vlist {
-                let source = win.get("source").and_then(|v| v.as_str());
-                if source != Some("prepaint") {
-                    continue;
-                }
-                let shift_kind = win
-                    .get("window_shift_kind")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("none");
-                if shift_kind == "none" {
-                    continue;
-                }
-
-                let node = win.get("node").and_then(|v| v.as_u64());
-                let element = win.get("element").and_then(|v| v.as_u64());
-                let shift_reason = win.get("window_shift_reason").and_then(|v| v.as_str());
-
-                let found = shift_actions.iter().any(|a| {
-                    let a_node = a.get("node").and_then(|v| v.as_u64());
-                    let a_element = a.get("element").and_then(|v| v.as_u64());
-                    let a_kind = a
-                        .get("virtual_list_window_shift_kind")
-                        .and_then(|v| v.as_str());
-                    let a_reason = a
-                        .get("virtual_list_window_shift_reason")
-                        .and_then(|v| v.as_str());
-
-                    a_node == node
-                        && a_element == element
-                        && a_kind == Some(shift_kind)
-                        && (shift_reason.is_none() || a_reason == shift_reason)
-                });
-
-                if !found {
-                    offenders = offenders.saturating_add(1);
-                    failures.push(format!(
-                        "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_vlist_window_shift_prepaint_action node={node:?} element={element:?} shift_kind={shift_kind} shift_reason={shift_reason:?}"
-                    ));
-                    if samples.len() < 64 {
-                        samples.push(serde_json::json!({
-                            "window": window_id,
-                            "tick_id": tick_id,
-                            "frame_id": frame_id,
-                            "node": node,
-                            "element": element,
-                            "shift_kind": shift_kind,
-                            "shift_reason": shift_reason,
-                            "available_shift_actions": shift_actions.iter().take(8).map(|a| serde_json::json!({
-                                "node": a.get("node").and_then(|v| v.as_u64()),
-                                "element": a.get("element").and_then(|v| v.as_u64()),
-                                "shift_kind": a.get("virtual_list_window_shift_kind").and_then(|v| v.as_str()),
-                                "shift_reason": a.get("virtual_list_window_shift_reason").and_then(|v| v.as_str()),
-                            })).collect::<Vec<_>>(),
-                        }));
-                    }
-                }
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.vlist_window_shifts_have_prepaint_actions.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_window_shifts_have_prepaint_actions",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "offenders": offenders,
-        "failures": failures,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if offenders > 0 {
-        return Err(format!(
-            "vlist window-shift prepaint-action gate failed: offenders={offenders} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    vlist::check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -7877,90 +5653,13 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     max_total_refreshes: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut any_wheel = false;
-    let mut total_refreshes: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
-            continue;
-        };
-        any_wheel = true;
-
-        let after_frame = wheel_frame.max(warmup_frames);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                continue;
-            }
-            let refreshes = s
-                .get("debug")
-                .and_then(|v| v.get("stats"))
-                .and_then(|v| v.get("virtual_list_visible_range_refreshes"))
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            if refreshes == 0 {
-                continue;
-            }
-            total_refreshes = total_refreshes.saturating_add(refreshes);
-            if samples.len() < 32 {
-                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                samples.push(serde_json::json!({
-                    "window": window_id,
-                    "tick_id": tick_id,
-                    "frame_id": frame_id,
-                    "refreshes": refreshes,
-                }));
-            }
-        }
-    }
-
-    let out_path = out_dir.join("check.vlist_visible_range_refreshes_max.json");
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "vlist_visible_range_refreshes_max",
-        "bundle_json": bundle_path.display().to_string(),
-        "out_dir": out_dir.display().to_string(),
-        "warmup_frames": warmup_frames,
-        "max_total_refreshes": max_total_refreshes,
-        "any_wheel": any_wheel,
-        "total_refreshes": total_refreshes,
-        "samples": samples,
-    });
-    write_json_value(&out_path, &payload)?;
-
-    if !any_wheel {
-        return Err(format!(
-            "vlist visible-range refresh gate requires wheel events, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    if max_total_refreshes > 0 && total_refreshes > max_total_refreshes {
-        return Err(format!(
-            "expected virtual list visible-range refreshes to stay under budget after wheel events, but total_refreshes={total_refreshes} exceeded max_total_refreshes={max_total_refreshes} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            out_path.display()
-        ));
-    }
-
-    Ok(())
+    vlist::check_bundle_for_vlist_visible_range_refreshes_max_json(
+        bundle,
+        bundle_path,
+        out_dir,
+        max_total_refreshes,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_drag_cache_root_paint_only(

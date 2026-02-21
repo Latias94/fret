@@ -59,3 +59,21 @@ Exit criteria:
 
 - A canonical config file exists and tooling can launch with it.
 - Ambiguous env vars have explicit replacements (old names still supported).
+
+## M7: Implementation split (reduce monolith risk)
+
+Exit criteria:
+
+- [x] Stale bundle checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+  - Evidence: `crates/fret-diag/src/stats/stale.rs`
+- [x] Wheel scroll checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+  - Evidence: `crates/fret-diag/src/stats/wheel_scroll.rs`
+- [x] Vlist checks (refresh/policy/window shifts) are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+  - Evidence: `crates/fret-diag/src/stats/vlist.rs`
+- [x] Windowed rows checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+  - Evidence: `crates/fret-diag/src/stats/windowed_rows.rs`
+- [x] Runtime diagnostics config resolution is isolated from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` to reduce churn risk.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`
+- [ ] `crates/fret-diag/src/stats.rs` is decomposed into domain-focused modules (reduce merge conflicts; improve reviewability).
+- [ ] `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` is split into a `ui_diagnostics/` module tree (service/export/script/inspect),
+  while keeping existing public API and `use` paths stable for downstream crates.

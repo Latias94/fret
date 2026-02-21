@@ -104,8 +104,13 @@ Evidence pointers:
 
 ## Phase 7: Implementation split (reduce monolith risk)
 
+- [x] Extract diagnostics config resolution from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`.
 - [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
 - [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
+- [x] Extract stale bundle checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/stale.rs`.
+- [x] Extract wheel scroll checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/wheel_scroll.rs`.
+- [x] Extract vlist checks (refresh/policy/window shifts) from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/vlist.rs`.
+- [x] Extract windowed rows checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/windowed_rows.rs`.
 - [x] Extract pick subcommand handlers into `crates/fret-diag/src/commands/pick.rs` (reduce `lib.rs` churn surface).
 - [x] Extract inspect subcommand handler into `crates/fret-diag/src/commands/inspect.rs` (reduce `lib.rs` churn surface).
 - [x] Extract pack/triage/lint subcommand handlers into `crates/fret-diag/src/commands/artifacts.rs` (reduce `lib.rs` churn surface).
@@ -114,3 +119,5 @@ Evidence pointers:
 - [x] Extract script path helpers into `crates/fret-diag/src/paths.rs` (reduce `lib.rs` churn surface).
 - [x] Extract runtime DevTools WS handling (inbox/send + per-window request drivers + bundle.dumped export + result pushes) into `ecosystem/fret-bootstrap/src/ui_diagnostics_devtools_ws.rs` (reduce `ui_diagnostics.rs` churn surface).
 - [x] Deduplicate wasm+WS-only filesystem gating in runtime diagnostics triggers (reduce repeated `cfg!(wasm32)` checks).
+- [ ] Continue splitting `crates/fret-diag/src/stats.rs` by domain (viewport/scroll/vlist/text/etc) to reduce merge churn.
+- [ ] Split `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into a `ui_diagnostics/` module tree (service/export/script/inspect) while preserving public re-exports.

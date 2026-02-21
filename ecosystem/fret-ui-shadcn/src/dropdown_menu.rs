@@ -552,6 +552,7 @@ impl DropdownMenuShortcut {
             .layout(LayoutRefinement::default().ml_auto())
             .text_size_px(font_size)
             .line_height_px(font_line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_normal()
             .letter_spacing_em(0.10)
             .nowrap()

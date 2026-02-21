@@ -33,26 +33,7 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
         rows_per_page_open: Option<Model<bool>>,
     }
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
+    use crate::ui::doc_layout::{self, DocSection};
 
     let state = cx.with_state(PaginationModels::default, |st| st.clone());
     let rows_per_page = match state.rows_per_page {
@@ -114,9 +95,9 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
         ])
         .into_element(cx);
 
-        let pagination = shadcn::Pagination::new([content]).into_element(cx);
-        let body = centered(cx, pagination);
-        section(cx, "Demo", body)
+        shadcn::Pagination::new([content])
+            .into_element(cx)
+            .test_id("ui-gallery-pagination-demo")
     };
 
     let simple = {
@@ -155,9 +136,9 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
         ])
         .into_element(cx);
 
-        let pagination = shadcn::Pagination::new([content]).into_element(cx);
-        let body = centered(cx, pagination);
-        section(cx, "Simple", body)
+        shadcn::Pagination::new([content])
+            .into_element(cx)
+            .test_id("ui-gallery-pagination-simple")
     };
 
     let icons_only = {
@@ -210,7 +191,7 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
             move |_cx| [rows_field, pagination],
         );
 
-        section(cx, "Icons Only", row)
+        row.test_id("ui-gallery-pagination-icons-only")
     };
 
     let rtl = {
@@ -222,60 +203,124 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
                 .collect()
         }
 
-        let pagination = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let content = shadcn::PaginationContent::new([
-                    shadcn::PaginationItem::new(
-                        shadcn::PaginationPrevious::new()
-                            .text("السابق")
-                            .on_click(CMD_APP_OPEN)
-                            .into_element(cx),
-                    )
-                    .into_element(cx),
-                    shadcn::PaginationItem::new(
-                        shadcn::PaginationLink::new([cx.text(to_arabic_numerals(1))])
-                            .on_click(CMD_APP_OPEN)
-                            .into_element(cx),
-                    )
-                    .into_element(cx),
-                    shadcn::PaginationItem::new(
-                        shadcn::PaginationLink::new([cx.text(to_arabic_numerals(2))])
-                            .on_click(CMD_APP_SAVE)
-                            .active(true)
-                            .into_element(cx),
-                    )
-                    .into_element(cx),
-                    shadcn::PaginationItem::new(
-                        shadcn::PaginationLink::new([cx.text(to_arabic_numerals(3))])
-                            .on_click(CMD_APP_SAVE)
-                            .into_element(cx),
-                    )
-                    .into_element(cx),
-                    shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx))
+        doc_layout::rtl(cx, |cx| {
+            let content = shadcn::PaginationContent::new([
+                shadcn::PaginationItem::new(
+                    shadcn::PaginationPrevious::new()
+                        .text("السابق")
+                        .on_click(CMD_APP_OPEN)
                         .into_element(cx),
-                    shadcn::PaginationItem::new(
-                        shadcn::PaginationNext::new()
-                            .text("التالي")
-                            .on_click(CMD_APP_SAVE)
-                            .into_element(cx),
-                    )
+                )
+                .into_element(cx),
+                shadcn::PaginationItem::new(
+                    shadcn::PaginationLink::new([cx.text(to_arabic_numerals(1))])
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+                shadcn::PaginationItem::new(
+                    shadcn::PaginationLink::new([cx.text(to_arabic_numerals(2))])
+                        .on_click(CMD_APP_SAVE)
+                        .active(true)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+                shadcn::PaginationItem::new(
+                    shadcn::PaginationLink::new([cx.text(to_arabic_numerals(3))])
+                        .on_click(CMD_APP_SAVE)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+                shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx))
                     .into_element(cx),
-                ])
-                .into_element(cx);
+                shadcn::PaginationItem::new(
+                    shadcn::PaginationNext::new()
+                        .text("التالي")
+                        .on_click(CMD_APP_SAVE)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
 
-                shadcn::Pagination::new([content]).into_element(cx)
-            },
-        );
-
-        let body = centered(cx, pagination);
-        section(cx, "RTL", body)
+            shadcn::Pagination::new([content])
+                .into_element(cx)
+                .test_id("ui-gallery-pagination-rtl")
+        })
     };
 
-    vec![stack::vstack(
+    let extras = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N6).items_start(),
-        |_cx| vec![demo, simple, icons_only, rtl],
-    )]
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        |cx| {
+            vec![
+                shadcn::typography::muted(
+                    cx,
+                    "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
+                ),
+                simple,
+                icons_only,
+            ]
+        },
+    )
+    .test_id("ui-gallery-pagination-extras");
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows shadcn Pagination demo (new-york-v4).",
+            "Pagination primitives are intentionally small; compose them with routing/actions in your app layer.",
+            "Use `doc_layout::rtl` to validate icon direction and number shaping under RTL.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Preview follows shadcn Pagination demo: Previous, numbered links, ellipsis, Next."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-pagination-demo")
+                .code(
+                    "rust",
+                    r#"let content = shadcn::PaginationContent::new([
+    shadcn::PaginationItem::new(shadcn::PaginationPrevious::new().into_element(cx)).into_element(cx),
+    shadcn::PaginationItem::new(shadcn::PaginationLink::new([cx.text("1")]).into_element(cx)).into_element(cx),
+    shadcn::PaginationItem::new(shadcn::PaginationLink::new([cx.text("2")]).active(true).into_element(cx)).into_element(cx),
+    shadcn::PaginationItem::new(shadcn::PaginationLink::new([cx.text("3")]).into_element(cx)).into_element(cx),
+    shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx)).into_element(cx),
+    shadcn::PaginationItem::new(shadcn::PaginationNext::new().into_element(cx)).into_element(cx),
+])
+.into_element(cx);
+
+shadcn::Pagination::new([content]).into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-pagination-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Pagination::new([content]).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Extras", extras)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-pagination-extras")
+                .code(
+                    "rust",
+                    r#"// Simple
+shadcn::Pagination::new([simple_content]).into_element(cx);
+
+// Icons only + "Rows per page" field (app-level recipe)
+stack::hstack(cx, props, |cx| vec![rows_field, pagination]);"#,
+                ),
+            DocSection::new("Notes", notes).max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-pagination")]
 }

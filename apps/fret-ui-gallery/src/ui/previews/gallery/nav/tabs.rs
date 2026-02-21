@@ -1,9 +1,58 @@
 use super::super::super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(in crate::ui) fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
     _value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
+    #[derive(Default, Clone)]
+    struct TabsModels {
+        name: Option<Model<String>>,
+        username: Option<Model<String>>,
+        current_password: Option<Model<String>>,
+        new_password: Option<Model<String>>,
+    }
+
+    let state = cx.with_state(TabsModels::default, |st| st.clone());
+
+    let name = match state.name {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert("Pedro Duarte".to_string());
+            cx.with_state(TabsModels::default, |st| st.name = Some(model.clone()));
+            model
+        }
+    };
+    let username = match state.username {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert("@peduarte".to_string());
+            cx.with_state(TabsModels::default, |st| st.username = Some(model.clone()));
+            model
+        }
+    };
+    let current_password = match state.current_password {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(TabsModels::default, |st| {
+                st.current_password = Some(model.clone())
+            });
+            model
+        }
+    };
+    let new_password = match state.new_password {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(TabsModels::default, |st| {
+                st.new_password = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let primary = cx.with_theme(|theme| theme.color_token("primary"));
     let line_style = shadcn::tabs::TabsStyle::default()
         .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(
@@ -17,375 +66,317 @@ pub(in crate::ui) fn preview_tabs(
                 ),
         );
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
+    let tab_trigger_with_icon =
+        |cx: &mut ElementContext<'_, App>, icon: &'static str, label: &'static str| {
+            stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N1).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon)),
+                        cx.text(label),
+                    ]
+                },
             )
-        });
-        cx.container(props, move |_cx| [body])
-    };
-
-    let card_panel = |cx: &mut ElementContext<'_, App>,
-                      title: &'static str,
-                      description: &'static str,
-                      content: &'static str| {
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new(title).into_element(cx),
-                shadcn::CardDescription::new(description).into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![shadcn::typography::muted(cx, content)]).into_element(cx),
-        ])
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-        .into_element(cx)
-    };
+        };
 
     let demo = {
-        let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-            .items([
-                shadcn::TabsItem::new(
-                    "overview",
-                    "Overview",
-                    [card_panel(
-                        cx,
-                        "Overview",
-                        "View your key metrics and recent project activity.",
-                        "You have 12 active projects and 3 pending tasks.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "analytics",
-                    "Analytics",
-                    [card_panel(
-                        cx,
-                        "Analytics",
-                        "Track performance and user engagement metrics.",
-                        "Page views are up 25% compared to last month.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "reports",
-                    "Reports",
-                    [card_panel(
-                        cx,
-                        "Reports",
-                        "Generate and download your detailed reports.",
-                        "You have 5 reports ready and available to export.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "settings",
-                    "Settings",
-                    [card_panel(
-                        cx,
-                        "Settings",
-                        "Manage your account preferences and options.",
-                        "Configure notifications, security, and themes.",
-                    )],
-                ),
+        let field = |cx: &mut ElementContext<'_, App>,
+                     label: &'static str,
+                     model: Model<String>,
+                     a11y: &'static str| {
+            let input = shadcn::Input::new(model)
+                .a11y_label(a11y)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |cx| vec![shadcn::Label::new(label).into_element(cx), input],
+            )
+        };
+
+        let account_card = {
+            let header = shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Account").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Make changes to your account here. Click save when you're done.",
+                )
+                .into_element(cx),
             ])
-            .into_element(cx)
-            .test_id("ui-gallery-tabs-demo");
+            .into_element(cx);
 
-        let demo_shell = shell(cx, tabs);
-        let body = centered(cx, demo_shell);
-        section(cx, "Demo", body)
-    };
+            let content = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |cx| {
+                    vec![
+                        field(cx, "Name", name.clone(), "Name"),
+                        field(cx, "Username", username.clone(), "Username"),
+                    ]
+                },
+            );
+            let content = shadcn::CardContent::new(vec![content]).into_element(cx);
+            let footer =
+                shadcn::CardFooter::new(vec![shadcn::Button::new("Save changes").into_element(cx)])
+                    .into_element(cx);
+            shadcn::Card::new(vec![header, content, footer]).into_element(cx)
+        };
 
-    let line = {
-        let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
-            .style(line_style.clone())
-            .refine_style(ChromeRefinement::default().bg(ColorRef::Color(CoreColor::TRANSPARENT)))
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-            .items([
-                shadcn::TabsItem::new("overview", "Overview", Vec::<AnyElement>::new()),
-                shadcn::TabsItem::new("analytics", "Analytics", Vec::<AnyElement>::new()),
-                shadcn::TabsItem::new("reports", "Reports", Vec::<AnyElement>::new()),
+        let password_card = {
+            let header = shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Password").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Change your password here. After saving, you'll be logged out.",
+                )
+                .into_element(cx),
             ])
-            .into_element(cx)
-            .test_id("ui-gallery-tabs-line");
+            .into_element(cx);
 
-        let group = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
-            vec![
-                tabs,
-                shadcn::typography::muted(
-                    cx,
-                    "Line variant is approximated with trigger style overrides in current API.",
-                ),
-            ]
-        });
-        let body = centered(cx, group);
-        section(cx, "Line", body)
-    };
+            let content = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |cx| {
+                    vec![
+                        field(
+                            cx,
+                            "Current password",
+                            current_password.clone(),
+                            "Current password",
+                        ),
+                        field(cx, "New password", new_password.clone(), "New password"),
+                    ]
+                },
+            );
+            let content = shadcn::CardContent::new(vec![content]).into_element(cx);
+            let footer = shadcn::CardFooter::new(vec![
+                shadcn::Button::new("Save password").into_element(cx),
+            ])
+            .into_element(cx);
+            shadcn::Card::new(vec![header, content, footer]).into_element(cx)
+        };
 
-    let flex_1_triggers = {
-        let tabs = shadcn::Tabs::uncontrolled(Some("overview"))
+        shadcn::Tabs::uncontrolled(Some("account"))
             .list_full_width(true)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
             .items([
-                shadcn::TabsItem::new(
-                    "overview",
-                    "Overview",
-                    [card_panel(
-                        cx,
-                        "Overview",
-                        "Stretch triggers via `flex-1` (`list_full_width=true`).",
-                        "This section is a control chrome fill regression gate.",
-                    )],
-                )
-                .trigger_test_id("ui-gallery-tabs-flex1-trigger-overview"),
-                shadcn::TabsItem::new(
-                    "analytics",
-                    "Analytics",
-                    [card_panel(
-                        cx,
-                        "Analytics",
-                        "Each trigger should keep hit/visual bounds aligned.",
-                        "Trigger chrome must fill the pressable box.",
-                    )],
-                )
-                .trigger_test_id("ui-gallery-tabs-flex1-trigger-analytics"),
-                shadcn::TabsItem::new(
-                    "reports",
-                    "Reports",
-                    [card_panel(
-                        cx,
-                        "Reports",
-                        "Used by diag scripts for chrome bounds equality assertions.",
-                        "",
-                    )],
-                )
-                .trigger_test_id("ui-gallery-tabs-flex1-trigger-reports"),
+                shadcn::TabsItem::new("account", "Account", [account_card]),
+                shadcn::TabsItem::new("password", "Password", [password_card]),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-tabs-demo")
+    };
+
+    let list = shadcn::Tabs::uncontrolled(Some("home"))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("home", "Home", Vec::<AnyElement>::new()),
+            shadcn::TabsItem::new("settings", "Settings", Vec::<AnyElement>::new()),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-list");
+
+    let disabled = shadcn::Tabs::uncontrolled(Some("home"))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("home", "Home", Vec::<AnyElement>::new()),
+            shadcn::TabsItem::new("settings", "Settings", Vec::<AnyElement>::new()).disabled(true),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-disabled");
+
+    let icons = shadcn::Tabs::uncontrolled(Some("preview"))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-icons");
+
+    let line = shadcn::Tabs::uncontrolled(Some("preview"))
+        .style(line_style.clone())
+        .refine_style(ChromeRefinement::default().bg(ColorRef::Color(CoreColor::TRANSPARENT)))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-line");
+
+    let vertical = shadcn::Tabs::uncontrolled(Some("preview"))
+        .orientation(shadcn::tabs::TabsOrientation::Vertical)
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-vertical");
+
+    let vertical_line = shadcn::Tabs::uncontrolled(Some("preview"))
+        .orientation(shadcn::tabs::TabsOrientation::Vertical)
+        .style(line_style.clone())
+        .refine_style(ChromeRefinement::default().bg(ColorRef::Color(CoreColor::TRANSPARENT)))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+        .items([
+            shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+            shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
+                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-vertical-line");
+
+    let extras = {
+        let muted = shadcn::typography::muted(
+            cx,
+            "Extras are Fret-specific regression gates (not part of upstream shadcn TabsDemo).",
+        );
+
+        let flex_1_triggers = shadcn::Tabs::uncontrolled(Some("overview"))
+            .list_full_width(true)
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+            .items([
+                shadcn::TabsItem::new("overview", "Overview", Vec::<AnyElement>::new())
+                    .trigger_test_id("ui-gallery-tabs-flex1-trigger-overview"),
+                shadcn::TabsItem::new("analytics", "Analytics", Vec::<AnyElement>::new())
+                    .trigger_test_id("ui-gallery-tabs-flex1-trigger-analytics"),
+                shadcn::TabsItem::new("reports", "Reports", Vec::<AnyElement>::new())
+                    .trigger_test_id("ui-gallery-tabs-flex1-trigger-reports"),
             ])
             .into_element(cx)
             .test_id("ui-gallery-tabs-flex1");
 
-        let demo_shell = shell(cx, tabs);
-        let body = centered(cx, demo_shell);
-        section(cx, "Flex-1 triggers", body)
-    };
-
-    let vertical = {
-        let tabs = shadcn::Tabs::uncontrolled(Some("account"))
-            .orientation(shadcn::tabs::TabsOrientation::Vertical)
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
-            .items([
-                shadcn::TabsItem::new(
-                    "account",
-                    "Account",
-                    [card_panel(
-                        cx,
-                        "Account",
-                        "Update your account details and profile settings.",
-                        "Display name and avatar were updated 2 days ago.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "password",
-                    "Password",
-                    [card_panel(
-                        cx,
-                        "Password",
-                        "Change your password and keep your account secure.",
-                        "Last password update was 28 days ago.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "notifications",
-                    "Notifications",
-                    [card_panel(
-                        cx,
-                        "Notifications",
-                        "Choose how and when you receive updates.",
-                        "Email alerts are enabled for build failures.",
-                    )],
-                ),
-            ])
-            .into_element(cx)
-            .test_id("ui-gallery-tabs-vertical");
-
-        let vertical_shell = shell(cx, tabs);
-        let body = centered(cx, vertical_shell);
-        section(cx, "Vertical", body)
-    };
-
-    let disabled = {
-        let tabs = shadcn::Tabs::uncontrolled(Some("home"))
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-            .items([
-                shadcn::TabsItem::new(
-                    "home",
-                    "Home",
-                    [card_panel(
-                        cx,
-                        "Home",
-                        "This panel remains interactive.",
-                        "The disabled tab cannot be focused or activated.",
-                    )],
-                ),
-                shadcn::TabsItem::new(
-                    "settings",
-                    "Disabled",
-                    [card_panel(
-                        cx,
-                        "Disabled",
-                        "This panel should not become active.",
-                        "",
-                    )],
-                )
-                .disabled(true),
-            ])
-            .into_element(cx)
-            .test_id("ui-gallery-tabs-disabled");
-
-        let disabled_shell = shell(cx, tabs);
-        let body = centered(cx, disabled_shell);
-        section(cx, "Disabled", body)
-    };
-
-    let icons = {
-        let preview_trigger = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N1).items_center(),
-            |cx| {
-                vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.app-window")),
-                    cx.text("Preview"),
-                ]
-            },
-        );
-        let code_trigger = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N1).items_center(),
-            |cx| {
-                vec![
-                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.code")),
-                    cx.text("Code"),
-                ]
-            },
-        );
-
-        let tabs = shadcn::Tabs::uncontrolled(Some("preview"))
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-            .items([
-                shadcn::TabsItem::new(
-                    "preview",
-                    "Preview",
-                    [card_panel(
-                        cx,
-                        "Preview",
-                        "Visual output for the current component.",
-                        "Switch between preview and code using icon tabs.",
-                    )],
-                )
-                .trigger_child(preview_trigger),
-                shadcn::TabsItem::new(
-                    "code",
-                    "Code",
-                    [card_panel(
-                        cx,
-                        "Code",
-                        "Implementation details and source view.",
-                        "This panel can host syntax-highlighted snippets.",
-                    )],
-                )
-                .trigger_child(code_trigger),
-            ])
-            .into_element(cx)
-            .test_id("ui-gallery-tabs-icons");
-
-        let icons_shell = shell(cx, tabs);
-        let body = centered(cx, icons_shell);
-        section(cx, "Icons", body)
-    };
-
-    let rtl = {
-        let tabs = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                shadcn::Tabs::uncontrolled(Some("overview"))
-                    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-                    .items([
-                        shadcn::TabsItem::new(
-                            "overview",
-                            "Overview",
-                            [card_panel(
-                                cx,
-                                "Overview",
-                                "RTL layout should keep keyboard and focus behavior intact.",
-                                "Direction-sensitive navigation is provided by direction context.",
-                            )],
-                        ),
-                        shadcn::TabsItem::new(
-                            "analytics",
-                            "Analytics",
-                            [card_panel(
-                                cx,
-                                "Analytics",
-                                "Arrow-key movement follows RTL expectations.",
-                                "Verify trigger order and selected styling in RTL mode.",
-                            )],
-                        ),
-                        shadcn::TabsItem::new(
-                            "reports",
-                            "Reports",
-                            [card_panel(
-                                cx,
-                                "Reports",
-                                "Panel composition remains identical under RTL.",
-                                "Only directional behavior should change.",
-                            )],
-                        ),
-                    ])
-                    .into_element(cx)
-            },
-        )
+        let rtl = doc_layout::rtl(cx, |cx| {
+            shadcn::Tabs::uncontrolled(Some("preview"))
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+                .items([
+                    shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
+                    shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
+                ])
+                .into_element(cx)
+        })
         .test_id("ui-gallery-tabs-rtl");
 
-        let rtl_shell = shell(cx, tabs);
-        let body = centered(cx, rtl_shell);
-        section(cx, "RTL", body)
-    };
-
-    vec![
-        cx.text("A set of layered sections of content that are displayed one at a time."),
         stack::vstack(
             cx,
             stack::VStackProps::default()
-                .gap(Space::N6)
+                .gap(Space::N4)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![demo, line, flex_1_triggers, vertical, disabled, icons, rtl],
-        ),
-    ]
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| vec![muted, flex_1_triggers, rtl],
+        )
+        .test_id("ui-gallery-tabs-extras")
+    };
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows `tabs-demo.tsx` (new-york-v4) order: Demo, list-only, disabled, icons, line, vertical, vertical line.",
+            "Fret shadcn `Input` does not implement a password-masked input yet; password fields here are plain text (parity gap).",
+            "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("A set of layered sections of content that are displayed one at a time."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Account/password card example with inputs and footer actions.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("account"))
+    .list_full_width(true)
+    .items([
+        shadcn::TabsItem::new("account", "Account", [account_card]),
+        shadcn::TabsItem::new("password", "Password", [password_card]),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("List", list)
+                .description("Tabs list without any mounted content.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("home")).items([
+    shadcn::TabsItem::new("home", "Home", Vec::<AnyElement>::new()),
+    shadcn::TabsItem::new("settings", "Settings", Vec::<AnyElement>::new()),
+]);"#,
+                ),
+            DocSection::new("Disabled", disabled)
+                .description("Disable individual triggers.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::TabsItem::new("settings", "Settings", Vec::<AnyElement>::new())
+    .disabled(true)"#,
+                ),
+            DocSection::new("Icons", icons)
+                .description("Compose icons into triggers.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+    .trigger_child(icon_row)"#,
+                ),
+            DocSection::new("Line", line)
+                .description("Line-style list with transparent background.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("preview"))
+    .style(line_style)
+    .refine_style(ChromeRefinement::default().bg(ColorRef::Color(CoreColor::TRANSPARENT)))"#,
+                ),
+            DocSection::new("Vertical", vertical)
+                .description("Vertical orientation (Radix parity).")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("preview"))
+    .orientation(shadcn::tabs::TabsOrientation::Vertical)"#,
+                ),
+            DocSection::new("Vertical (Line)", vertical_line)
+                .description("Vertical + line style.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("preview"))
+    .orientation(shadcn::tabs::TabsOrientation::Vertical)
+    .style(line_style)"#,
+                ),
+            DocSection::new("Extras", extras)
+                .description("Fret-specific regression gates (flex-1 triggers + RTL).")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Tabs::uncontrolled(Some("overview"))
+    .list_full_width(true)
+    .items([/* ... */])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes).description("Parity notes and references."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-tabs")]
 }

@@ -194,6 +194,20 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         DocSection::new("Footer", table)
             .description("Adds a <TableFooter /> section.")
             .max_w(Px(760.0))
+            .code(
+                "rust",
+                r#"let footer = shadcn::TableFooter::new([
+    shadcn::TableRow::new(4, [
+        shadcn::TableCell::new(cx.text("Total")).into_element(cx),
+        // ...
+    ])
+    .border_bottom(false)
+    .into_element(cx),
+])
+.into_element(cx);
+
+shadcn::Table::new([header, body, footer, caption]).into_element(cx);"#,
+            )
     };
 
     let actions = {
@@ -277,6 +291,30 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         DocSection::new("Actions", table)
             .description("Uses <DropdownMenu /> as an actions column.")
             .max_w(Px(760.0))
+            .code(
+                "rust",
+                r#"let dropdown = shadcn::DropdownMenu::new(open_model).into_element(
+    cx,
+    |cx| {
+        shadcn::Button::new("?")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Icon)
+            .toggle_model(open_model)
+            .into_element(cx)
+    },
+    |_cx| vec![
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Edit")),
+        shadcn::DropdownMenuEntry::Separator,
+        shadcn::DropdownMenuEntry::Item(
+            shadcn::DropdownMenuItem::new("Delete")
+                .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
+        ),
+    ],
+);
+
+let action_cell = align_end(cx, dropdown);
+shadcn::TableCell::new(action_cell).into_element(cx);"#,
+            )
     };
 
     let rtl = {
@@ -292,6 +330,14 @@ pub(in crate::ui) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         DocSection::new("RTL", rtl_table)
             .description("Validates right-to-left direction support.")
             .max_w(Px(760.0))
+            .code(
+                "rust",
+                r#"let rtl_table = doc_layout::rtl(cx, |cx| {
+    make_invoice_table(cx, &rows, true, "ui-gallery-table-rtl")
+});
+
+DocSection::new("RTL", rtl_table);"#,
+            )
     };
 
     let page = doc_layout::render_doc_page(

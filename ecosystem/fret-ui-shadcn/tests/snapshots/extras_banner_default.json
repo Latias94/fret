@@ -575,10 +575,10 @@
         "a": 0.0
       },
       "corner_radii": {
-        "top_left": 8.0,
-        "top_right": 8.0,
-        "bottom_right": 8.0,
-        "bottom_left": 8.0
+        "top_left": 10.0,
+        "top_right": 10.0,
+        "bottom_right": 10.0,
+        "bottom_left": 10.0
       }
     },
     {
@@ -612,10 +612,10 @@
         "a": 0.0
       },
       "corner_radii": {
-        "top_left": 7.0,
-        "top_right": 7.0,
-        "bottom_right": 7.0,
-        "bottom_left": 7.0
+        "top_left": 9.0,
+        "top_right": 9.0,
+        "bottom_right": 9.0,
+        "bottom_left": 9.0
       }
     },
     {
@@ -649,10 +649,10 @@
         "a": 0.0
       },
       "corner_radii": {
-        "top_left": 6.0,
-        "top_right": 6.0,
-        "bottom_right": 6.0,
-        "bottom_left": 6.0
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
       }
     },
     {

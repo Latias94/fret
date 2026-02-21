@@ -692,6 +692,7 @@ impl Button {
                             ui::text(cx, a11y_label.clone())
                                 .text_size_px(text_px)
                                 .line_height_px(text_line_height)
+                                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                                 .font_weight(text_weight)
                                 .nowrap()
                                 .text_color(fg.clone())

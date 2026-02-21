@@ -4,6 +4,8 @@ pub(in crate::ui) fn preview_popover(
     cx: &mut ElementContext<'_, App>,
     _open: Model<bool>,
 ) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     #[derive(Default, Clone)]
     struct PopoverModels {
         demo_width: Option<Model<String>>,
@@ -21,17 +23,6 @@ pub(in crate::ui) fn preview_popover(
                 .layout(LayoutRefinement::default().w_full())
                 .justify_center(),
             move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
         )
     };
 
@@ -98,84 +89,78 @@ pub(in crate::ui) fn preview_popover(
     };
 
     let demo = {
-        let popover = shadcn::Popover::new_controllable(cx, None, false).into_element(
-            cx,
-            |cx| {
-                shadcn::Button::new("Open popover")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| {
-                let row = |cx: &mut ElementContext<'_, App>,
-                           label: &'static str,
-                           model: Model<_>| {
-                    stack::hstack(
+        let popover = shadcn::Popover::new_controllable(cx, None, false)
+            .align(shadcn::PopoverAlign::Start)
+            .into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open popover")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    let row =
+                        |cx: &mut ElementContext<'_, App>, label: &'static str, model: Model<_>| {
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N4)
+                                    .items_center(),
+                                move |cx| {
+                                    vec![
+                                        stack::hstack(
+                                            cx,
+                                            stack::HStackProps::default()
+                                                .layout(
+                                                    LayoutRefinement::default()
+                                                        .w_px(Px(96.0))
+                                                        .flex_shrink_0(),
+                                                )
+                                                .justify_end()
+                                                .items_center(),
+                                            move |cx| vec![ui::label(cx, label).into_element(cx)],
+                                        ),
+                                        shadcn::Input::new(model)
+                                            .size(fret_ui_kit::Size::Small)
+                                            .refine_layout(
+                                                LayoutRefinement::default().flex_1().min_w_0(),
+                                            )
+                                            .into_element(cx),
+                                    ]
+                                },
+                            )
+                        };
+
+                    let header = shadcn::PopoverHeader::new([
+                        shadcn::PopoverTitle::new("Dimensions").into_element(cx),
+                        shadcn::PopoverDescription::new("Set the dimensions for the layer.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx);
+
+                    let fields = stack::vstack(
                         cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N4)
-                            .items_center(),
+                        stack::VStackProps::default()
+                            .gap(Space::N2)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_full()),
                         move |cx| {
                             vec![
-                                stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .layout(
-                                            LayoutRefinement::default()
-                                                .w_px(Px(96.0))
-                                                .flex_shrink_0(),
-                                        )
-                                        .justify_end()
-                                        .items_center(),
-                                    move |cx| vec![ui::label(cx, label).into_element(cx)],
-                                ),
-                                shadcn::Input::new(model)
-                                    .size(fret_ui_kit::Size::Small)
-                                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                                    .into_element(cx),
+                                row(cx, "Width", demo_width.clone()),
+                                row(cx, "Max. width", demo_max_width.clone()),
+                                row(cx, "Height", demo_height.clone()),
+                                row(cx, "Max. height", demo_max_height.clone()),
                             ]
                         },
-                    )
-                };
+                    );
 
-                let header = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
-                        vec![
-                            shadcn::PopoverTitle::new("Dimensions").into_element(cx),
-                            shadcn::PopoverDescription::new("Set the dimensions for the layer.")
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let fields = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |cx| {
-                        vec![
-                            row(cx, "Width", demo_width.clone()),
-                            row(cx, "Max. width", demo_max_width.clone()),
-                            row(cx, "Height", demo_height.clone()),
-                            row(cx, "Max. height", demo_max_height.clone()),
-                        ]
-                    },
-                );
-
-                shadcn::PopoverContent::new([header, fields])
-                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
-                    .into_element(cx)
-            },
-        );
-        let body = centered(cx, popover);
-        section(cx, "Demo", body)
+                    shadcn::PopoverContent::new([header, fields])
+                        .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                        .into_element(cx)
+                },
+            );
+        centered(cx, popover).test_id("ui-gallery-popover-demo")
     };
 
     let basic = {
@@ -198,8 +183,7 @@ pub(in crate::ui) fn preview_popover(
                     .into_element(cx)
                 },
             );
-        let body = centered(cx, popover);
-        section(cx, "Basic", body)
+        centered(cx, popover).test_id("ui-gallery-popover-basic")
     };
 
     let align = {
@@ -263,7 +247,7 @@ pub(in crate::ui) fn preview_popover(
                 ]
             },
         );
-        section(cx, "Align", body)
+        body.test_id("ui-gallery-popover-align")
     };
 
     let with_form = {
@@ -313,90 +297,157 @@ pub(in crate::ui) fn preview_popover(
                     .into_element(cx)
                 },
             );
-        let body = centered(cx, popover);
-        section(cx, "With Form", body)
+        centered(cx, popover).test_id("ui-gallery-popover-with-form")
     };
 
     let rtl = {
-        let body = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let popover = |cx: &mut ElementContext<'_, App>,
-                               label: &'static str,
-                               side: shadcn::PopoverSide| {
-                    shadcn::Popover::new_controllable(cx, None, false)
-                        .side(side)
-                        .into_element(
-                            cx,
-                            |cx| {
-                                shadcn::Button::new(label)
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .into_element(cx)
-                            },
-                            |cx| {
-                                shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
-                                    shadcn::PopoverTitle::new("الأبعاد").into_element(cx),
-                                    shadcn::PopoverDescription::new("تعيين الأبعاد للطبقة.")
-                                        .into_element(cx),
-                                ])
-                                .into_element(cx)])
+        doc_layout::rtl(cx, |cx| {
+            let popover = |cx: &mut ElementContext<'_, App>, label: &'static str, side| {
+                shadcn::Popover::new_controllable(cx, None, false)
+                    .side(side)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new(label)
+                                .variant(shadcn::ButtonVariant::Outline)
                                 .into_element(cx)
-                            },
-                        )
-                };
+                        },
+                        |cx| {
+                            shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
+                                shadcn::PopoverTitle::new("الأبعاد").into_element(cx),
+                                shadcn::PopoverDescription::new("تعيين الأبعاد للطبقة.")
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx)])
+                            .into_element(cx)
+                        },
+                    )
+            };
 
-                let physical = stack::hstack_build(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center(),
-                    |cx, out| {
-                        for (id, label, side) in [
-                            ("left", "يسار", shadcn::PopoverSide::Left),
-                            ("top", "أعلى", shadcn::PopoverSide::Top),
-                            ("bottom", "أسفل", shadcn::PopoverSide::Bottom),
-                            ("right", "يمين", shadcn::PopoverSide::Right),
-                        ] {
-                            out.push(cx.keyed(id, |cx| popover(cx, label, side)));
-                        }
-                    },
-                );
+            let physical = stack::hstack_build(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_center(),
+                |cx, out| {
+                    for (id, label, side) in [
+                        ("left", "يسار", shadcn::PopoverSide::Left),
+                        ("top", "أعلى", shadcn::PopoverSide::Top),
+                        ("bottom", "أسفل", shadcn::PopoverSide::Bottom),
+                        ("right", "يمين", shadcn::PopoverSide::Right),
+                    ] {
+                        out.push(cx.keyed(id, |cx| popover(cx, label, side)));
+                    }
+                },
+            );
 
-                let logical = stack::hstack_build(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center(),
-                    |cx, out| {
-                        for (id, label, side) in [
-                            (
-                                "inline-start",
-                                "بداية السطر",
-                                shadcn::PopoverSide::InlineStart,
-                            ),
-                            ("inline-end", "نهاية السطر", shadcn::PopoverSide::InlineEnd),
-                        ] {
-                            out.push(cx.keyed(id, |cx| popover(cx, label, side)));
-                        }
-                    },
-                );
+            let logical = stack::hstack_build(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_center(),
+                |cx, out| {
+                    for (id, label, side) in [
+                        (
+                            "inline-start",
+                            "بداية السطر",
+                            shadcn::PopoverSide::InlineStart,
+                        ),
+                        ("inline-end", "نهاية السطر", shadcn::PopoverSide::InlineEnd),
+                    ] {
+                        out.push(cx.keyed(id, |cx| popover(cx, label, side)));
+                    }
+                },
+            );
 
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N4)
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |_cx| [physical, logical],
-                )
-            },
-        );
-        section(cx, "RTL", body)
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N4)
+                    .layout(LayoutRefinement::default().w_full()),
+                move |_cx| [physical, logical],
+            )
+        })
+        .test_id("ui-gallery-popover-rtl")
     };
 
-    vec![demo, basic, align, with_form, rtl]
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows shadcn Popover demo (new-york-v4).",
+            "Use `align(Start)` to match the default docs layout; keep content width explicit (e.g. 320px).",
+            "For dense input rows, prefer `Field`/`FieldGroup` recipes to keep spacing consistent with other form surfaces.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Preview follows shadcn Popover demo: Dimensions form (align=start, w=320px)."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-popover-demo")
+                .code(
+                    "rust",
+                    r#"shadcn::Popover::new_controllable(cx, None, false)
+    .align(shadcn::PopoverAlign::Start)
+    .into_element(
+        cx,
+        |cx| shadcn::Button::new("Open popover")
+            .variant(shadcn::ButtonVariant::Outline)
+            .into_element(cx),
+        |cx| shadcn::PopoverContent::new([/* content */])
+            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .into_element(cx),
+    );"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-popover-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Popover::new_controllable(cx, None, false)
+        .side(shadcn::PopoverSide::InlineStart)
+        .into_element(cx, trigger, content)
+});"#,
+                ),
+            DocSection::new("Basic", basic)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-popover-basic")
+                .code(
+                    "rust",
+                    r#"shadcn::Popover::new_controllable(cx, None, false)
+    .align(shadcn::PopoverAlign::Start)
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("Align", align)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-popover-align")
+                .code(
+                    "rust",
+                    r#"shadcn::Popover::new_controllable(cx, None, false)
+    .align(shadcn::PopoverAlign::End)
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("With Form", with_form)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-popover-with-form")
+                .code(
+                    "rust",
+                    r#"shadcn::PopoverContent::new([
+    shadcn::PopoverHeader::new([title, description]).into_element(cx),
+    shadcn::FieldGroup::new([/* fields */]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes).max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-popover")]
 }
