@@ -13,6 +13,15 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::avatar as radix_avatar;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
+/// shadcn/ui avatar size variants (`size="sm" | "default" | "lg"`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AvatarSize {
+    #[default]
+    Default,
+    Sm,
+    Lg,
+}
+
 /// shadcn/ui `Avatar` root.
 ///
 /// This is a fixed-size, overflow-clipped, fully-rounded container intended to host exactly one
@@ -20,6 +29,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 #[derive(Debug, Clone)]
 pub struct Avatar {
     children: Vec<AnyElement>,
+    size: AvatarSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -29,9 +39,15 @@ impl Avatar {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: AvatarSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn size(mut self, size: AvatarSize) -> Self {
+        self.size = size;
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -48,11 +64,17 @@ impl Avatar {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let size = match self.size {
+            AvatarSize::Sm => Space::N6,
+            AvatarSize::Default => Space::N8,
+            AvatarSize::Lg => Space::N10,
+        };
+
         let base_chrome = ChromeRefinement::default().rounded(Radius::Full);
         let base_layout = LayoutRefinement::default()
             .relative()
-            .w_px(MetricRef::space(Space::N8))
-            .h_px(MetricRef::space(Space::N8))
+            .w_px(MetricRef::space(size))
+            .h_px(MetricRef::space(size))
             .flex_shrink_0();
 
         let mut props = decl_style::container_props(
