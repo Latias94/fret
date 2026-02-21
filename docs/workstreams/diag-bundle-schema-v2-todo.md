@@ -22,6 +22,6 @@ Last updated: 2026-02-21
 
 ## M3: Hardening
 
-- [ ] Add regression tests for v2 parsing across tools.
-- [ ] Add metrics to `bundle.meta.json` for semantics density + table size.
+- [ ] Add regression tests for v2 parsing across tools (at least: `fret-diag`; optionally: viewer parser).
+- [x] Add metrics to `bundle.meta.json` for semantics density + table size.
 - [x] Document upgrade guidance and gotchas in `docs/ui-diagnostics-and-scripted-tests.md` (baseline notes + workstream link).

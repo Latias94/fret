@@ -29,6 +29,7 @@ Done when:
 
 Done when:
 
+- `bundle.meta.json` includes semantics table metrics (inline vs table, entries, unique keys).
+- `fretboard diag meta --meta-report` surfaces the key size/semantics indicators in a human-readable way.
 - CI gate(s) exist to ensure v2 bundles remain parseable and bounded.
 - Docs are updated and stable.
-

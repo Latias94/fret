@@ -174,6 +174,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
+    let mut meta_report: bool = false;
     let mut test_ids_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
@@ -1693,6 +1694,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--meta-report" => {
+                meta_report = true;
+                i += 1;
+            }
             "--verbose" => {
                 stats_verbose = true;
                 i += 1;
@@ -2141,6 +2146,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             meta_out,
             warmup_frames,
             stats_json,
+            meta_report,
         ),
         "test-ids" => commands::artifacts::cmd_test_ids(
             &rest,

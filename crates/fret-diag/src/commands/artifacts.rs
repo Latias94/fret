@@ -245,9 +245,13 @@ pub(crate) fn cmd_meta(
     meta_out: Option<PathBuf>,
     warmup_frames: u64,
     stats_json: bool,
+    meta_report: bool,
 ) -> Result<(), String> {
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
+    }
+    if stats_json && meta_report {
+        return Err("--meta-report cannot be combined with --json".to_string());
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
@@ -272,6 +276,11 @@ pub(crate) fn cmd_meta(
                 "{}",
                 std::fs::read_to_string(&out).map_err(|e| e.to_string())?
             );
+        } else if meta_report {
+            let meta: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&out).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
+            print_meta_report(&meta, &out);
         } else {
             println!("{}", out.display());
         }
@@ -291,8 +300,76 @@ pub(crate) fn cmd_meta(
             "{}",
             std::fs::read_to_string(&out).map_err(|e| e.to_string())?
         );
+    } else if meta_report {
+        let meta: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&out).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        print_meta_report(&meta, &out);
     } else {
         println!("{}", out.display());
     }
     Ok(())
+}
+
+fn print_meta_report(meta: &serde_json::Value, meta_path: &Path) {
+    fn u64_field(v: &serde_json::Value, key: &str) -> u64 {
+        v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
+    }
+
+    fn str_field<'a>(v: &'a serde_json::Value, key: &str) -> &'a str {
+        v.get(key).and_then(|v| v.as_str()).unwrap_or("")
+    }
+
+    println!("bundle_meta:");
+    println!("  meta_json: {}", meta_path.display());
+    println!("  bundle: {}", str_field(meta, "bundle"));
+    println!("  warmup_frames: {}", u64_field(meta, "warmup_frames"));
+    println!("  windows_total: {}", u64_field(meta, "windows_total"));
+    println!("  snapshots_total: {}", u64_field(meta, "snapshots_total"));
+    println!(
+        "  semantics: resolved={} inline={} table={} table_entries={} table_unique_keys={}",
+        u64_field(meta, "snapshots_with_semantics_total"),
+        u64_field(meta, "snapshots_with_inline_semantics_total"),
+        u64_field(meta, "snapshots_with_table_semantics_total"),
+        u64_field(meta, "semantics_table_entries_total"),
+        u64_field(meta, "semantics_table_unique_keys_total"),
+    );
+
+    let Some(windows) = meta.get("windows").and_then(|v| v.as_array()) else {
+        return;
+    };
+    if windows.is_empty() {
+        return;
+    }
+
+    println!("  windows:");
+    let max = 6usize;
+    for w in windows.iter().take(max) {
+        let window = u64_field(w, "window");
+        let snapshots_total = u64_field(w, "snapshots_total");
+        let sem_resolved = u64_field(w, "snapshots_with_semantics_total");
+        let sem_inline = u64_field(w, "snapshots_with_inline_semantics_total");
+        let sem_table = u64_field(w, "snapshots_with_table_semantics_total");
+        let table_entries = u64_field(w, "semantics_table_entries_total");
+        let table_keys = u64_field(w, "semantics_table_unique_keys_total");
+        let considered_frame_id = w
+            .get("considered_frame_id")
+            .and_then(|v| v.as_u64())
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "null".to_string());
+        println!(
+            "    - window={} snapshots={} considered_frame={} semantics(resolved/inline/table)={}/{}/{} table(entries/keys)={}/{}",
+            window,
+            snapshots_total,
+            considered_frame_id,
+            sem_resolved,
+            sem_inline,
+            sem_table,
+            table_entries,
+            table_keys,
+        );
+    }
+    if windows.len() > max {
+        println!("    - ... ({} more)", windows.len() - max);
+    }
 }

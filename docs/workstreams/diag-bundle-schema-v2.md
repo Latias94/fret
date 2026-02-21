@@ -74,3 +74,7 @@ See:
 - `docs/workstreams/diag-bundle-schema-v2-todo.md`
 - `docs/workstreams/diag-bundle-schema-v2-milestones.md`
 
+Operational notes:
+
+- `bundle.meta.json` now includes semantics table metrics (inline vs table-resolved counts, table entries, unique keys).
+- Use `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report` to print a compact human summary.
