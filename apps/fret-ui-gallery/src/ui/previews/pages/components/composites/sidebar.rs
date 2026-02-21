@@ -1,6 +1,8 @@
 use super::super::super::super::super::*;
 
 pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     #[derive(Default, Clone)]
     struct SidebarModels {
         demo_collapsed: Option<Model<bool>>,
@@ -9,38 +11,6 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
         controlled_selected: Option<Model<Arc<str>>>,
         rtl_selected: Option<Model<Arc<str>>>,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default().border_1().rounded(Radius::Md),
-                LayoutRefinement::default().w_full(),
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
 
     let state = cx.with_state(SidebarModels::default, |st| st.clone());
 
@@ -303,16 +273,15 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 .test_id("ui-gallery-sidebar-demo"),
         );
 
-        let framed = shell(cx, frame);
         let body = stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N3)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![toolbar, framed],
+            |_cx| vec![toolbar, frame],
         );
-        section(cx, "Demo", body)
+        body
     };
 
     let controlled = {
@@ -450,119 +419,155 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 .test_id("ui-gallery-sidebar-controlled"),
         );
 
-        let framed = shell(cx, frame);
         let body = stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N3)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![header, framed],
+            |_cx| vec![header, frame],
         );
 
-        section(cx, "Controlled", body)
+        body
     };
 
     let rtl = {
         let selected_value = resolve_selected(cx, &rtl_selected, "playground");
 
-        let rtl_layout = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let platform = shadcn::SidebarGroup::new([
-                    shadcn::SidebarGroupLabel::new("المنصة")
-                        .collapsed(false)
-                        .into_element(cx),
-                    shadcn::SidebarMenu::new([
-                        shadcn::SidebarMenuItem::new(menu_button(
-                            cx,
-                            rtl_selected.clone(),
-                            &selected_value,
-                            "playground",
-                            "ساحة اللعب",
-                            "lucide.square-terminal",
-                            false,
-                            Arc::from("ui-gallery-sidebar-rtl-item-playground"),
-                        ))
-                        .into_element(cx),
-                        shadcn::SidebarMenuItem::new(menu_button(
-                            cx,
-                            rtl_selected.clone(),
-                            &selected_value,
-                            "documentation",
-                            "الوثائق",
-                            "lucide.book-open",
-                            false,
-                            Arc::from("ui-gallery-sidebar-rtl-item-documentation"),
-                        ))
-                        .into_element(cx),
-                        shadcn::SidebarMenuItem::new(menu_button(
-                            cx,
-                            rtl_selected.clone(),
-                            &selected_value,
-                            "settings",
-                            "الإعدادات",
-                            "lucide.settings-2",
-                            false,
-                            Arc::from("ui-gallery-sidebar-rtl-item-settings"),
-                        ))
-                        .into_element(cx),
-                    ])
+        let rtl_layout = doc_layout::rtl(cx, |cx| {
+            let platform = shadcn::SidebarGroup::new([
+                shadcn::SidebarGroupLabel::new("المنصة")
+                    .collapsed(false)
+                    .into_element(cx),
+                shadcn::SidebarMenu::new([
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        rtl_selected.clone(),
+                        &selected_value,
+                        "playground",
+                        "ساحة اللعب",
+                        "lucide.square-terminal",
+                        false,
+                        Arc::from("ui-gallery-sidebar-rtl-item-playground"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        rtl_selected.clone(),
+                        &selected_value,
+                        "documentation",
+                        "الوثائق",
+                        "lucide.book-open",
+                        false,
+                        Arc::from("ui-gallery-sidebar-rtl-item-documentation"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        rtl_selected.clone(),
+                        &selected_value,
+                        "settings",
+                        "الإعدادات",
+                        "lucide.settings-2",
+                        false,
+                        Arc::from("ui-gallery-sidebar-rtl-item-settings"),
+                    ))
                     .into_element(cx),
                 ])
-                .into_element(cx);
+                .into_element(cx),
+            ])
+            .into_element(cx);
 
-                let sidebar = shadcn::Sidebar::new([
-                    shadcn::SidebarHeader::new([shadcn::typography::small(cx, "مؤسسة مثال")])
-                        .into_element(cx),
-                    shadcn::SidebarContent::new([platform])
-                        .collapsed(false)
-                        .into_element(cx),
-                    shadcn::SidebarFooter::new([shadcn::typography::small(cx, "الدعم")])
-                        .into_element(cx),
-                ])
-                .collapsed(false)
-                .refine_layout(LayoutRefinement::default().h_full())
-                .into_element(cx);
-
-                let content = shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("RTL").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardContent::new(vec![
-                        cx.text("Direction provider flips layout and inline icon/text flow."),
-                        cx.text(format!("active={}", selected_value.as_ref())),
-                    ])
+            let sidebar = shadcn::Sidebar::new([
+                shadcn::SidebarHeader::new([shadcn::typography::small(cx, "مؤسسة مثال")])
                     .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
-                .into_element(cx);
+                shadcn::SidebarContent::new([platform])
+                    .collapsed(false)
+                    .into_element(cx),
+                shadcn::SidebarFooter::new([shadcn::typography::small(cx, "الدعم")])
+                    .into_element(cx),
+            ])
+            .collapsed(false)
+            .refine_layout(LayoutRefinement::default().h_full())
+            .into_element(cx);
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N4)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
-                    |_cx| vec![content, sidebar],
-                )
-            },
-        )
+            let content = shadcn::Card::new(vec![
+                shadcn::CardHeader::new(vec![shadcn::CardTitle::new("RTL").into_element(cx)])
+                    .into_element(cx),
+                shadcn::CardContent::new(vec![
+                    cx.text("Direction provider flips layout and inline icon/text flow."),
+                    cx.text(format!("active={}", selected_value.as_ref())),
+                ])
+                .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+            .into_element(cx);
+
+            stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
+                |_cx| vec![content, sidebar],
+            )
+        })
         .attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-sidebar-rtl"),
         );
 
-        let framed = shell(cx, rtl_layout);
-        let body = centered(cx, framed);
-        section(cx, "RTL", body)
+        rtl_layout
     };
 
-    vec![
-        cx.text("A composable, themeable and customizable sidebar component."),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
-            vec![demo, controlled, rtl]
-        }),
-    ]
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "This is a Fret-specific demo (not part of upstream shadcn sink components).",
+            "The controlled example approximates the shadcn SidebarProvider open state with a `Model<bool>`.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("A composable, themeable and customizable sidebar component."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sidebar-demo")
+                .code(
+                    "rust",
+                    r#"shadcn::Sidebar::new([
+    shadcn::SidebarHeader::new([...]).into_element(cx),
+    shadcn::SidebarContent::new([...]).into_element(cx),
+    shadcn::SidebarFooter::new([...]).into_element(cx),
+]).into_element(cx);"#,
+                ),
+            DocSection::new("Controlled", controlled)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sidebar-controlled")
+                .code(
+                    "rust",
+                    r#"shadcn::Sidebar::new([shadcn::SidebarContent::new([...]).into_element(cx)])
+    .collapsible(shadcn::SidebarCollapsible::Icon)
+    .collapsed(is_collapsed)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sidebar-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Sidebar::new([...]).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Notes", notes)
+                .no_shell()
+                .test_id_prefix("ui-gallery-sidebar-notes"),
+        ],
+    );
+
+    vec![body]
 }
