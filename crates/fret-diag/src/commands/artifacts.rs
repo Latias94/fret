@@ -264,11 +264,35 @@ pub(crate) fn cmd_meta(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+
+    let (meta_path, default_out) = if src.is_file()
+        && src
+            .file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s == "bundle.meta.json")
+    {
+        (src.clone(), src.clone())
+    } else if src.is_dir() {
+        let direct = src.join("bundle.meta.json");
+        if direct.is_file() {
+            (direct.clone(), direct)
+        } else {
+            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let canonical =
+                crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+            let out = crate::default_meta_out_path(&bundle_path);
+            (canonical, out)
+        }
+    } else {
+        let bundle_path = crate::resolve_bundle_json_path(&src);
+        let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+        let out = crate::default_meta_out_path(&bundle_path);
+        (canonical, out)
+    };
 
     let out = meta_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| crate::default_meta_out_path(&bundle_path));
+        .unwrap_or(default_out);
 
     if out.is_file() {
         if stats_json {
@@ -287,12 +311,11 @@ pub(crate) fn cmd_meta(
         return Ok(());
     }
 
-    let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-    if out != canonical {
+    if out != meta_path {
         if let Some(parent) = out.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        std::fs::copy(&canonical, &out).map_err(|e| e.to_string())?;
+        std::fs::copy(&meta_path, &out).map_err(|e| e.to_string())?;
     }
 
     if stats_json {

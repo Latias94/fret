@@ -132,11 +132,12 @@ pub(crate) fn cmd_ai_packet(
             20,
             64,
         )?;
-        let name = format!(
-            "slice.test_id.{}.json",
-            crate::util::sanitize_for_filename(test_id, 80, "test_id")
-        );
-        crate::util::write_json_value(&packet_dir.join(name), &payload)?;
+        let stem = crate::util::sanitize_for_filename(test_id, 80, "test_id");
+        crate::util::write_json_value(
+            &packet_dir.join(format!("slice.test_id.{stem}.json")),
+            &payload,
+        )?;
+        crate::util::write_json_value(&packet_dir.join(format!("slice.{stem}.json")), &payload)?;
     }
 
     println!("{}", packet_dir.display());

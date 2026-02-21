@@ -73,10 +73,14 @@ What ships now (Phase 1 subset):
   - `bundle.index.json`
   - `test_ids.index.json`
   - `test_ids.json` (human-facing; may be deprecated later)
+- The sidecars are usable on their own (no `bundle.json`) for common “AI packet” loops:
+  - `fretboard diag meta <packet_dir|bundle.meta.json> --meta-report`
+  - `fretboard diag query test-id <packet_dir|test_ids.index.json> <pattern>`
+  - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
 
 Known gaps (still planned):
 
-- `diag slice` and `diag query` do not yet prefer `bundle.index.json` for fast-path selection (they still parse `bundle.json`).
+- `diag slice` and `diag query` do not yet prefer `bundle.index.json` for fast-path selection (they still parse `bundle.json` when computing new outputs).
 - `diag slice` currently only uses `bundle.index.json` as an optional validation layer when `--frame-id`/`--snapshot-seq` is provided.
 - “Test-id presence per snapshot” is not yet indexed; finding “first snapshot that contains X” still requires semantics reads.
 

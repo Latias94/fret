@@ -38,6 +38,63 @@ fn resolve_latest_bundle_json_path(out_dir: &Path) -> Result<PathBuf, String> {
     Ok(crate::resolve_bundle_json_path(&latest))
 }
 
+fn try_read_test_ids_index_json(path: &Path) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("test_ids_index") {
+        return None;
+    }
+    Some(v)
+}
+
+fn resolve_test_ids_index_from_src(
+    src: &Path,
+    warmup_frames: u64,
+) -> Result<(String, PathBuf, serde_json::Value), String> {
+    if src.is_dir() {
+        let direct = src.join("test_ids.index.json");
+        if direct.is_file() {
+            if let Some(v) = try_read_test_ids_index_json(&direct) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| direct.display().to_string());
+                return Ok((bundle, direct, v));
+            }
+        }
+
+        let bundle_path = crate::resolve_bundle_json_path(src);
+        let index_path =
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
+        let v = try_read_test_ids_index_json(&index_path)
+            .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
+        return Ok((bundle_path.display().to_string(), index_path, v));
+    }
+
+    if src.is_file()
+        && src
+            .file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s == "test_ids.index.json")
+    {
+        let v = try_read_test_ids_index_json(src)
+            .ok_or_else(|| format!("invalid test_ids.index.json: {}", src.display()))?;
+        let bundle = v
+            .get("bundle")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| src.display().to_string());
+        return Ok((bundle, src.to_path_buf(), v));
+    }
+
+    let bundle_path = crate::resolve_bundle_json_path(src);
+    let index_path = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
+    let v = try_read_test_ids_index_json(&index_path)
+        .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
+    Ok((bundle_path.display().to_string(), index_path, v))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_query(
     rest: &[String],
@@ -154,9 +211,17 @@ fn cmd_query_test_id(
         _ => unreachable!(),
     };
 
-    let index_path = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-    let bytes = std::fs::read(&index_path).map_err(|e| e.to_string())?;
-    let index: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let (bundle_label, index_path, index) = if positionals.len() == 2 {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(&positionals[0]));
+        resolve_test_ids_index_from_src(&src, warmup_frames)?
+    } else {
+        let bundle_path = bundle_path;
+        let index_path =
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
+        let index = try_read_test_ids_index_json(&index_path)
+            .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
+        (bundle_path.display().to_string(), index_path, index)
+    };
 
     let truncated = index
         .get("truncated")
@@ -256,7 +321,7 @@ fn cmd_query_test_id(
     let payload = serde_json::json!({
         "schema_version": 1,
         "kind": "query.test_id",
-        "bundle": bundle_path.display().to_string(),
+        "bundle": bundle_label,
         "index": index_path.display().to_string(),
         "warmup_frames": warmup_frames,
         "mode": mode.as_str(),

@@ -14,6 +14,7 @@ Last updated: 2026-02-21
 - [x] Add a tooling writer + `fretboard diag index` for `bundle.index.json`.
 - [x] Ensure `diag pack --include-root-artifacts|--include-triage` includes `bundle.index.json`.
 - [x] Make `diag slice` validate `--frame-id|--snapshot-seq` against `bundle.index.json` (when present).
+- [x] Allow `diag meta/index/query/slice` to operate on sidecar-only packet dirs (no `bundle.json`) when possible.
 - [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
 - [x] Add `fretboard diag ai-packet ...` that exports:
   - `bundle.meta.json`

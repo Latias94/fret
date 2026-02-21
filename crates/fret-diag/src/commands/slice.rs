@@ -290,6 +290,15 @@ fn find_snapshot_in_bundle_index(
     None
 }
 
+fn try_read_slice_payload(path: &Path) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("slice.test_id") {
+        return None;
+    }
+    Some(v)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_slice(
     rest: &[String],
@@ -405,6 +414,66 @@ pub(crate) fn cmd_slice(
     let test_id = test_id.ok_or_else(|| {
         "missing --test-id (try: fretboard diag slice --test-id <test_id>)".to_string()
     })?;
+
+    if let Some(bundle_arg) = bundle_arg.as_deref() {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
+        if src.is_dir() {
+            let stem = crate::util::sanitize_for_filename(test_id.as_str(), 80, "test_id");
+            let candidates = [
+                src.join(format!("slice.test_id.{stem}.json")),
+                src.join(format!("slice.{stem}.json")),
+            ];
+
+            let found = candidates
+                .iter()
+                .find(|p| p.is_file())
+                .and_then(|p| try_read_slice_payload(p).map(|v| (p.to_path_buf(), v)));
+
+            if let Some((slice_path, payload)) = found {
+                let req_window = window_id;
+                let req_frame = frame_id;
+                let req_seq = window_snapshot_seq;
+
+                if req_window.is_some() || req_frame.is_some() || req_seq.is_some() {
+                    let got_window = payload.get("window").and_then(|v| v.as_u64());
+                    let got_frame = payload.get("frame_id").and_then(|v| v.as_u64());
+                    let got_seq = payload.get("window_snapshot_seq").and_then(|v| v.as_u64());
+
+                    if req_window.is_some_and(|w| Some(w) != got_window)
+                        || req_frame.is_some_and(|f| Some(f) != got_frame)
+                        || req_seq.is_some_and(|s| Some(s) != got_seq)
+                    {
+                        return Err(format!(
+                            "found precomputed slice, but it doesn't match the requested selection (requested window={req_window:?} frame_id={req_frame:?} snapshot_seq={req_seq:?}; slice has window={got_window:?} frame_id={got_frame:?} snapshot_seq={got_seq:?})"
+                        ));
+                    }
+                }
+
+                let out = slice_out
+                    .map(|p| crate::resolve_path(workspace_root, p))
+                    .unwrap_or_else(|| slice_path.clone());
+
+                if out != slice_path {
+                    if let Some(parent) = out.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    }
+                    let pretty =
+                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+                }
+
+                if stats_json {
+                    println!(
+                        "{}",
+                        std::fs::read_to_string(&out).map_err(|e| e.to_string())?
+                    );
+                } else {
+                    println!("{}", out.display());
+                }
+                return Ok(());
+            }
+        }
+    }
 
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
