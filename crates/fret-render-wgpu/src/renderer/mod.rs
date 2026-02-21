@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // Split from the original single-file renderer for maintainability.
+mod bind_group_caches;
 mod clip_path_mask_cache;
 mod path;
 mod revisioned_cache;
@@ -36,12 +37,12 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
-use revisioned_cache::RevisionedCache;
 use types::*;
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use util::*;
@@ -267,16 +268,12 @@ pub struct Renderer {
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
 
-    viewport_bind_groups: RevisionedCache<fret_core::RenderTargetId, wgpu::BindGroup>,
+    bind_group_caches: BindGroupCaches,
     render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
     render_targets_generation: u64,
 
-    image_bind_groups: RevisionedCache<fret_core::ImageId, (wgpu::BindGroup, wgpu::BindGroup)>,
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
-
-    uniform_mask_image_bind_groups:
-        RevisionedCache<fret_core::ImageId, (wgpu::BindGroup, wgpu::BindGroup)>,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

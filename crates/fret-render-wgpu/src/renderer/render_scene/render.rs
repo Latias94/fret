@@ -38,7 +38,7 @@ impl Renderer {
         image: fret_core::ImageId,
         sampling: fret_core::scene::ImageSamplingHint,
     ) -> Option<&wgpu::BindGroup> {
-        let (linear, nearest) = self.image_bind_groups.get(image)?;
+        let (linear, nearest) = self.bind_group_caches.get_image_bind_groups(image)?;
         match sampling {
             fret_core::scene::ImageSamplingHint::Nearest => Some(nearest),
             fret_core::scene::ImageSamplingHint::Default
@@ -53,7 +53,10 @@ impl Renderer {
         let Some(sel) = mask_image else {
             return &self.uniform_bind_group;
         };
-        let Some((linear, nearest)) = self.uniform_mask_image_bind_groups.get(sel.image) else {
+        let Some((linear, nearest)) = self
+            .bind_group_caches
+            .get_uniform_mask_image_bind_groups(sel.image)
+        else {
             return &self.uniform_bind_group;
         };
         match sel.sampling {
@@ -1395,8 +1398,9 @@ impl Renderer {
                                                 active_uniform_offset = Some(uniform_offset);
                                                 active_mask_image = mask_image;
                                             }
-                                            let Some(bind_group) =
-                                                self.viewport_bind_groups.get(draw.target)
+                                            let Some(bind_group) = self
+                                                .bind_group_caches
+                                                .get_viewport_bind_group(draw.target)
                                             else {
                                                 // Missing bind group should only happen if the target vanished
                                                 // between encoding and rendering.

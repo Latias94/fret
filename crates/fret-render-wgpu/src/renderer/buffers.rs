@@ -281,7 +281,7 @@ impl Renderer {
 
         self.uniform_buffer = uniform_buffer;
         self.uniform_bind_group = uniform_bind_group;
-        self.uniform_mask_image_bind_groups.clear();
+        self.bind_group_caches.clear_uniform_mask_images();
         self.uniform_capacity = new_capacity;
     }
 
@@ -315,7 +315,7 @@ impl Renderer {
 
         self.render_space_buffer = render_space_buffer;
         self.uniform_bind_group = uniform_bind_group;
-        self.uniform_mask_image_bind_groups.clear();
+        self.bind_group_caches.clear_uniform_mask_images();
         self.render_space_capacity = new_capacity;
     }
 
@@ -366,7 +366,7 @@ impl Renderer {
 
         self.clip_buffer = clip_buffer;
         self.uniform_bind_group = uniform_bind_group;
-        self.uniform_mask_image_bind_groups.clear();
+        self.bind_group_caches.clear_uniform_mask_images();
         self.clip_capacity = new_capacity;
     }
 
@@ -399,7 +399,7 @@ impl Renderer {
 
         self.mask_buffer = mask_buffer;
         self.uniform_bind_group = uniform_bind_group;
-        self.uniform_mask_image_bind_groups.clear();
+        self.bind_group_caches.clear_uniform_mask_images();
         self.mask_capacity = new_capacity;
     }
 }

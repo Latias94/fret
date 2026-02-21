@@ -21,22 +21,23 @@ impl Renderer {
                 .get(&target)
                 .copied()
                 .unwrap_or(0);
-            self.viewport_bind_groups.ensure(target, revision, || {
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("fret viewport texture bind group"),
-                    layout: &self.viewport_bind_group_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(view),
-                        },
-                    ],
-                })
-            });
+            self.bind_group_caches
+                .ensure_viewport_bind_group(target, revision, || {
+                    device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret viewport texture bind group"),
+                        layout: &self.viewport_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::TextureView(view),
+                            },
+                        ],
+                    })
+                });
         }
     }
 
@@ -56,38 +57,41 @@ impl Renderer {
             };
 
             let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
-            self.image_bind_groups.ensure(image, revision, || {
-                let bind_group_linear = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("fret image texture bind group (linear)"),
-                    layout: &self.viewport_bind_group_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(view),
-                        },
-                    ],
-                });
-                let bind_group_nearest = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("fret image texture bind group (nearest)"),
-                    layout: &self.viewport_bind_group_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Sampler(&self.image_sampler_nearest),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::TextureView(view),
-                        },
-                    ],
-                });
+            self.bind_group_caches
+                .ensure_image_bind_groups(image, revision, || {
+                    let bind_group_linear = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret image texture bind group (linear)"),
+                        layout: &self.viewport_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::TextureView(view),
+                            },
+                        ],
+                    });
+                    let bind_group_nearest = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret image texture bind group (nearest)"),
+                        layout: &self.viewport_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::Sampler(
+                                    &self.image_sampler_nearest,
+                                ),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::TextureView(view),
+                            },
+                        ],
+                    });
 
-                (bind_group_linear, bind_group_nearest)
-            });
+                    (bind_group_linear, bind_group_nearest)
+                });
         }
     }
 
@@ -106,8 +110,8 @@ impl Renderer {
             };
 
             let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
-            self.uniform_mask_image_bind_groups
-                .ensure(image, revision, || {
+            self.bind_group_caches
+                .ensure_uniform_mask_image_bind_groups(image, revision, || {
                     let bind_group_linear = device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: Some("fret uniforms bind group (mask image override, linear)"),
                         layout: &self.uniform_bind_group_layout,
