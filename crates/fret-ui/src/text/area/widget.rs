@@ -1432,6 +1432,27 @@ impl<H: UiHost> Widget<H> for TextArea {
             self.text_dirty = false;
         }
 
+        let show_placeholder = self.preedit.is_empty()
+            && self.text.is_empty()
+            && self.placeholder.as_ref().is_some_and(|s| !s.is_empty());
+        if show_placeholder
+            && (self.placeholder_blob.is_none() || self.placeholder_prepared_key != Some(key))
+        {
+            self.queue_release_placeholder_blob();
+            self.flush_pending_releases(cx.services);
+            let Some(placeholder) = self.placeholder.as_deref() else {
+                debug_assert!(false, "placeholder checked above");
+                return;
+            };
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare_str(placeholder, &self.text_style, constraints);
+            self.placeholder_blob = Some(blob);
+            self.placeholder_metrics = Some(metrics);
+            self.placeholder_prepared_key = Some(key);
+        }
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
@@ -1541,11 +1562,19 @@ impl<H: UiHost> Widget<H> for TextArea {
         }
 
         let text_origin = mapping.baseline_origin(metrics.baseline);
+        let (text, paint) = if show_placeholder {
+            (
+                self.placeholder_blob.unwrap_or(blob),
+                fret_core::scene::Paint::Solid(self.style.placeholder_color),
+            )
+        } else {
+            (blob, fret_core::scene::Paint::Solid(self.style.text_color))
+        };
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(0),
             origin: text_origin,
-            text: blob,
-            paint: fret_core::scene::Paint::Solid(self.style.text_color),
+            text,
+            paint,
             outline: None,
             shadow: None,
         });

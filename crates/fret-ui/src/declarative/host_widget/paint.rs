@@ -1538,6 +1538,7 @@ impl ElementHostWidget {
                 }
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
+                area.set_placeholder(props.placeholder);
                 area.set_min_height(props.min_height);
                 area.paint(cx);
             }

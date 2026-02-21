@@ -27,6 +27,12 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 shadcn::Badge::new("Outline")
                     .variant(shadcn::BadgeVariant::Outline)
                     .into_element(cx),
+                shadcn::Badge::new("Ghost")
+                    .variant(shadcn::BadgeVariant::Ghost)
+                    .into_element(cx),
+                shadcn::Badge::new("Link")
+                    .variant(shadcn::BadgeVariant::Link)
+                    .into_element(cx),
             ]
         })
         .test_id("ui-gallery-badge-variants")
@@ -75,13 +81,15 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let link = {
-        let outline_fg = ColorRef::Color(theme.color_token("foreground"));
-
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Badge::new("Open Link")
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                shadcn::Badge::new("Link")
+                    .variant(shadcn::BadgeVariant::Link)
+                    .children([icon(
+                        cx,
+                        "lucide.arrow-right",
+                        ColorRef::Color(theme.color_token("primary")),
+                    )])
                     .into_element(cx),
             ]
         })
@@ -186,6 +194,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         [
             "Badge is a small status/label primitive; prefer concise text and keep contrast high.",
             "API reference: `ecosystem/fret-ui-shadcn/src/badge.rs`.",
+            "Gap: upstream shadcn uses a `render/asChild` prop to turn a badge into a real link. Fret currently exposes a `Link` variant style but not a render hook.",
             "If you customize colors, verify hover/focus states and token-driven variants stay consistent.",
         ],
     );

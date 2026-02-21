@@ -14,6 +14,8 @@ pub enum BadgeVariant {
     Secondary,
     Destructive,
     Outline,
+    Ghost,
+    Link,
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +84,8 @@ fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
             .color_by_key("white")
             .unwrap_or_else(|| theme.color_token("destructive-foreground")),
         BadgeVariant::Outline => theme.color_token("foreground"),
+        BadgeVariant::Ghost => theme.color_token("foreground"),
+        BadgeVariant::Link => theme.color_token("primary"),
     }
 }
 
@@ -91,6 +95,8 @@ fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
         BadgeVariant::Secondary => Some(theme.color_token("secondary")),
         BadgeVariant::Destructive => Some(theme.color_token("destructive")),
         BadgeVariant::Outline => None,
+        BadgeVariant::Ghost => None,
+        BadgeVariant::Link => None,
     }
 }
 
@@ -204,12 +210,19 @@ fn badge_with_patch<H: UiHost>(
         .px(Space::N2)
         .py(Space::N0p5)
         .rounded(Radius::Full)
-        .border_1()
-        .border_color(ColorRef::Color(border_color(&theme)));
+        .border_1();
     if let Some(bg) = bg_for(&theme, variant) {
         chrome = chrome.bg(ColorRef::Color(bg));
     }
-    chrome = chrome.merge(chrome_override);
+    let chrome = match variant {
+        BadgeVariant::Outline => chrome.border_color(ColorRef::Color(border_color(&theme))),
+        BadgeVariant::Default
+        | BadgeVariant::Secondary
+        | BadgeVariant::Destructive
+        | BadgeVariant::Ghost
+        | BadgeVariant::Link => chrome.border_color(ColorRef::Color(Color::TRANSPARENT)),
+    };
+    let chrome = chrome.merge(chrome_override);
 
     let fg = fg_for(&theme, variant);
     let theme_fg = theme.color_token("foreground");

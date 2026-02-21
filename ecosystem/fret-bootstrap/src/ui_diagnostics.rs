@@ -10,18 +10,18 @@ use fret_diag_protocol::{
     UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
-    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiArtifactStatsV1, UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1,
-    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1,
-    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
-    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
-    UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
-    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
-    UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1,
-    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
-    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiArtifactStatsV1,
+    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
+    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1,
+    UiIncomingOpenInjectItemV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
+    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
+    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayPlacementTraceKindV1,
+    UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
+    UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
+    UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
+    UiWebImeTraceEntryV1, UiWindowTargetV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
@@ -48,16 +48,19 @@ pub use bundle::{
     UiDiagnosticsWindowBundleV1,
 };
 
+mod bundle_dump;
+mod fs_triggers;
 mod pick;
 pub(crate) use pick::pick_semantics_node_by_bounds;
-use pick::{pick_best_match, pick_semantics_node_at, pick_semantics_node_at_routing};
+use pick::{pick_best_match, pick_semantics_node_at};
+mod script_runner;
 
 mod selector;
 use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
-    select_semantics_node, selector_ancestors_for, suggest_selectors, truncate_debug_value,
+    select_semantics_node, suggest_selectors, truncate_debug_value,
 };
 
 // Split out the DevTools WS wiring to reduce churn in this file.
@@ -66,26 +69,6 @@ mod ui_diagnostics_devtools_ws;
 
 mod config;
 pub use config::UiDiagnosticsConfig;
-
-fn warn_fs_once(
-    warned: &mut bool,
-    out_dir: &Path,
-    message: &str,
-    path: &Path,
-    err: &dyn std::fmt::Display,
-) {
-    if *warned {
-        return;
-    }
-    *warned = true;
-    tracing::warn!(
-        target: "fret",
-        out_dir = ?out_dir,
-        path = %path.display(),
-        error = %err,
-        "{message}"
-    );
-}
 
 #[derive(Default)]
 pub struct UiDiagnosticsService {
@@ -543,40 +526,6 @@ impl UiDiagnosticsService {
             .is_some_and(active_script_needs_semantics_snapshot)
     }
 
-    pub fn poll_exit_trigger(&mut self) -> bool {
-        if !self.is_enabled() {
-            return false;
-        }
-
-        if let Some(deadline) = self.ws_exit_deadline_unix_ms
-            && unix_ms_now() >= deadline
-        {
-            self.ws_exit_deadline_unix_ms = None;
-            return true;
-        }
-
-        let current_mtime = std::fs::metadata(&self.cfg.exit_path)
-            .and_then(|m| m.modified())
-            .ok();
-
-        if !self.exit_armed {
-            self.exit_last_mtime = current_mtime;
-            self.exit_armed = true;
-            return false;
-        }
-
-        let Some(current_mtime) = current_mtime else {
-            return false;
-        };
-
-        let triggered = match self.exit_last_mtime {
-            Some(prev) => current_mtime > prev,
-            None => true,
-        };
-        self.exit_last_mtime = Some(current_mtime);
-        triggered
-    }
-
     pub fn redact_text(&self) -> bool {
         self.cfg.redact_text
     }
@@ -933,85 +882,7 @@ impl UiDiagnosticsService {
         #[cfg(not(feature = "diagnostics-ws"))]
         let devtools_request_redraw = false;
 
-        if self.active_scripts.is_empty()
-            && let Some(script) = self.pending_script.take()
-        {
-            let run_id = self.pending_script_run_id.take().unwrap_or(0);
-            // Prefer a deterministic anchor window when starting a script. The trigger touch can
-            // be observed by any window, and multi-window apps may produce frames in a different
-            // order across runs. Using the smallest observed window key (best-effort "first
-            // created") keeps `first_seen` window targets stable for scripts.
-            let anchor_window = self
-                .known_windows
-                .iter()
-                .copied()
-                .min_by_key(|w| w.data().as_ffi())
-                .unwrap_or(window);
-            let mut active_script = ActiveScript {
-                steps: script.steps,
-                run_id,
-                anchor_window,
-                next_step: 0,
-                event_log: Vec::new(),
-                event_log_dropped: 0,
-                event_log_active_step: None,
-                last_injected_step: None,
-                wait_frames_remaining: 0,
-                wait_until: None,
-                wait_shortcut_routing_trace: None,
-                wait_overlay_placement_trace: None,
-                screenshot_wait: None,
-                v2_step_state: None,
-                pointer_session: None,
-                pending_cancel_cross_window_drag: None,
-                last_reported_step: Some(0),
-                last_reported_unix_ms: 0,
-                selector_resolution_trace: Vec::new(),
-                hit_test_trace: Vec::new(),
-                click_stable_trace: Vec::new(),
-                bounds_stable_trace: Vec::new(),
-                focus_trace: Vec::new(),
-                shortcut_routing_trace: Vec::new(),
-                last_shortcut_routing_seq: 0,
-                overlay_placement_trace: Vec::new(),
-                web_ime_trace: Vec::new(),
-                ime_event_trace: Vec::new(),
-            };
-            push_script_event_log(
-                &mut active_script,
-                &self.cfg,
-                UiScriptEventLogEntryV1 {
-                    unix_ms: unix_ms_now(),
-                    kind: "script_start".to_string(),
-                    step_index: Some(0),
-                    note: None,
-                    bundle_dir: None,
-                    window: Some(anchor_window.data().as_ffi()),
-                    tick_id: Some(app.tick_id().0),
-                    frame_id: Some(app.frame_id().0),
-                    window_snapshot_seq: None,
-                },
-            );
-            self.active_scripts.insert(anchor_window, active_script);
-            self.write_script_result(UiScriptResultV1 {
-                schema_version: 1,
-                run_id,
-                updated_unix_ms: unix_ms_now(),
-                window: Some(anchor_window.data().as_ffi()),
-                stage: UiScriptStageV1::Running,
-                step_index: Some(0),
-                reason_code: None,
-                reason: None,
-                evidence: None,
-                last_bundle_dir: self
-                    .last_dump_dir
-                    .as_ref()
-                    .map(|p| display_path(&self.cfg.out_dir, p)),
-                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-            });
-            app.request_redraw(anchor_window);
-            app.push_effect(Effect::RequestAnimationFrame(anchor_window));
-        }
+        self.maybe_start_pending_script(app, window);
 
         // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
         // scheduling, the newly created window may become the only one receiving redraw callbacks
@@ -6548,150 +6419,6 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
     }
 
-    fn ensure_ready_file(&mut self) {
-        if self.ready_written {
-            return;
-        }
-        if !self.cfg.enabled {
-            return;
-        }
-
-        if self.is_wasm_ws_only() {
-            // Web runners do not have a stable filesystem surface for the legacy `ready.touch` file.
-            self.ready_written = true;
-            return;
-        }
-
-        if let Some(parent) = self.cfg.ready_path.parent() {
-            if let Err(err) = std::fs::create_dir_all(parent) {
-                warn_fs_once(
-                    &mut self.ready_write_warned,
-                    &self.cfg.out_dir,
-                    "ui diagnostics: failed to create ready.touch parent dir",
-                    parent,
-                    &err,
-                );
-                return;
-            }
-        }
-
-        self.ensure_capabilities_file();
-
-        let ts = unix_ms_now();
-        let mut f = match std::fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&self.cfg.ready_path)
-        {
-            Ok(f) => f,
-            Err(err) => {
-                warn_fs_once(
-                    &mut self.ready_write_warned,
-                    &self.cfg.out_dir,
-                    "ui diagnostics: failed to open ready.touch",
-                    &self.cfg.ready_path,
-                    &err,
-                );
-                return;
-            }
-        };
-
-        use std::io::Write as _;
-        if let Err(err) = writeln!(f, "{ts}") {
-            warn_fs_once(
-                &mut self.ready_write_warned,
-                &self.cfg.out_dir,
-                "ui diagnostics: failed to write ready.touch",
-                &self.cfg.ready_path,
-                &err,
-            );
-            return;
-        }
-        if let Err(err) = f.flush() {
-            warn_fs_once(
-                &mut self.ready_write_warned,
-                &self.cfg.out_dir,
-                "ui diagnostics: failed to flush ready.touch",
-                &self.cfg.ready_path,
-                &err,
-            );
-            return;
-        }
-
-        self.ready_written = true;
-    }
-
-    fn ensure_capabilities_file(&mut self) {
-        if self.capabilities_written {
-            return;
-        }
-        if !self.cfg.enabled {
-            return;
-        }
-        if self.is_wasm_ws_only() {
-            self.capabilities_written = true;
-            return;
-        }
-
-        let mut caps = vec!["diag.script_v2".to_string()];
-        if self.cfg.screenshots_enabled {
-            caps.push("diag.screenshot_png".to_string());
-        }
-        caps.push("diag.inject_ime".to_string());
-        if !cfg!(target_arch = "wasm32") {
-            caps.push("diag.multi_window".to_string());
-        }
-        caps.push("diag.text_ime_trace".to_string());
-        caps.push("diag.text_input_snapshot".to_string());
-        caps.push("diag.shortcut_routing_trace".to_string());
-        caps.push("diag.overlay_placement_trace".to_string());
-        caps.push("diag.window_insets_override".to_string());
-        caps.push("diag.clipboard_force_unavailable".to_string());
-        caps.push("diag.incoming_open_inject".to_string());
-        if cfg!(any(
-            target_os = "windows",
-            target_os = "macos",
-            target_os = "linux"
-        )) {
-            caps.push("diag.mouse_buttons_override".to_string());
-        }
-
-        let path = self.cfg.out_dir.join("capabilities.json");
-        if let Some(parent) = path.parent() {
-            if let Err(err) = std::fs::create_dir_all(parent) {
-                warn_fs_once(
-                    &mut self.capabilities_write_warned,
-                    &self.cfg.out_dir,
-                    "ui diagnostics: failed to create capabilities.json parent dir",
-                    parent,
-                    &err,
-                );
-                return;
-            }
-        }
-
-        let payload = FilesystemCapabilitiesV1 {
-            schema_version: 1,
-            capabilities: caps,
-        };
-        if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
-            text.push('\n');
-            if let Err(err) = std::fs::write(&path, text) {
-                warn_fs_once(
-                    &mut self.capabilities_write_warned,
-                    &self.cfg.out_dir,
-                    "ui diagnostics: failed to write capabilities.json",
-                    &path,
-                    &err,
-                );
-                return;
-            }
-        }
-
-        self.capabilities_written = true;
-    }
-
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
@@ -7490,195 +7217,6 @@ impl UiDiagnosticsService {
         });
     }
 
-    fn poll_script_trigger(&mut self) {
-        if self.poll_ws_inbox_and_is_wasm_ws_only() {
-            return;
-        }
-
-        let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
-            if let Some(dir) = self.cfg.script_trigger_path.parent() {
-                let _ = std::fs::create_dir_all(dir);
-            }
-            // Prime the trigger file with a baseline stamp so external drivers can reliably
-            // advance it (Windows mtime resolution is not always sufficient for edge detection).
-            let _ = std::fs::write(&self.cfg.script_trigger_path, b"0\n");
-            self.last_script_trigger_stamp = Some(0);
-            return;
-        };
-
-        // Treat the first observed value as a baseline, not a trigger (avoids re-running stale scripts
-        // when the diagnostics directory is reused between runs).
-        let Some(prev) = self.last_script_trigger_stamp else {
-            self.last_script_trigger_stamp = Some(stamp);
-            return;
-        };
-        if prev == stamp {
-            return;
-        }
-        self.last_script_trigger_stamp = Some(stamp);
-
-        let run_id = self.next_script_run_id();
-        self.pending_script_run_id = Some(run_id);
-        self.write_script_result(UiScriptResultV1 {
-            schema_version: 1,
-            run_id,
-            updated_unix_ms: unix_ms_now(),
-            window: None,
-            stage: UiScriptStageV1::Queued,
-            step_index: None,
-            reason_code: None,
-            reason: None,
-            evidence: None,
-            last_bundle_dir: self
-                .last_dump_dir
-                .as_ref()
-                .map(|p| display_path(&self.cfg.out_dir, p)),
-            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-        });
-
-        let bytes = match std::fs::read(&self.cfg.script_path) {
-            Ok(bytes) => bytes,
-            Err(_) => {
-                self.pending_script_run_id = None;
-                self.write_script_result(UiScriptResultV1 {
-                    schema_version: 1,
-                    run_id,
-                    updated_unix_ms: unix_ms_now(),
-                    window: None,
-                    stage: UiScriptStageV1::Failed,
-                    step_index: None,
-                    reason_code: Some("script.read_failed".to_string()),
-                    reason: Some("failed to read script.json".to_string()),
-                    evidence: None,
-                    last_bundle_dir: self
-                        .last_dump_dir
-                        .as_ref()
-                        .map(|p| display_path(&self.cfg.out_dir, p)),
-                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                });
-                return;
-            }
-        };
-        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
-            .ok()
-            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
-            .unwrap_or(0)
-            .min(u32::MAX as u64) as u32;
-
-        let script = match schema_version {
-            1 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.parse_failed".to_string()),
-                        reason: Some("failed to parse script as schema v1".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
-                };
-                let Some(script) = PendingScript::from_v1(script) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.invalid".to_string()),
-                        reason: Some("invalid schema v1 script".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
-                };
-                script
-            }
-            2 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.parse_failed".to_string()),
-                        reason: Some("failed to parse script as schema v2".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
-                };
-                let Some(script) = PendingScript::from_v2(script) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.invalid".to_string()),
-                        reason: Some("invalid schema v2 script".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
-                };
-                script
-            }
-            _ => {
-                self.pending_script_run_id = None;
-                self.write_script_result(UiScriptResultV1 {
-                    schema_version: 1,
-                    run_id,
-                    updated_unix_ms: unix_ms_now(),
-                    window: None,
-                    stage: UiScriptStageV1::Failed,
-                    step_index: None,
-                    reason_code: Some("script.schema_unsupported".to_string()),
-                    reason: Some(format!(
-                        "unsupported script schema_version={schema_version}"
-                    )),
-                    evidence: None,
-                    last_bundle_dir: self
-                        .last_dump_dir
-                        .as_ref()
-                        .map(|p| display_path(&self.cfg.out_dir, p)),
-                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                });
-                return;
-            }
-        };
-        self.pending_script = Some(script);
-        self.pending_script_run_id = Some(run_id);
-    }
-
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
         self.dump_bundle_with_options(label, None, None)
     }
@@ -7689,166 +7227,7 @@ impl UiDiagnosticsService {
         dump_max_snapshots_override: Option<usize>,
         request_id: Option<u64>,
     ) -> Option<PathBuf> {
-        #[cfg(not(feature = "diagnostics-ws"))]
-        let _ = request_id;
-
-        let ts = unix_ms_now();
-        let mut dir_name = ts.to_string();
-        if let Some(label) = label {
-            if !label.is_empty() {
-                dir_name = format!("{dir_name}-{label}");
-            }
-        }
-
-        let dir = self.cfg.out_dir.join(dir_name);
-
-        let is_script_dump = label.is_some()
-            && (!self.active_scripts.is_empty()
-                || self.pending_script.is_some()
-                || self.pending_script_run_id.is_some()
-                || label.unwrap_or_default().trim().starts_with("script-step-"));
-        let dump_max_snapshots = {
-            let default = if is_script_dump {
-                self.cfg.script_dump_max_snapshots
-            } else {
-                self.cfg.max_snapshots
-            };
-
-            match dump_max_snapshots_override {
-                Some(want) => {
-                    if self.cfg.max_snapshots == 0 {
-                        0
-                    } else {
-                        want.clamp(1, self.cfg.max_snapshots)
-                    }
-                }
-                None => default,
-            }
-        };
-
-        let bundle_v1 = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
-
-        let default_schema_version = if is_script_dump {
-            bundle::BundleSchemaVersionV1::V2
-        } else {
-            bundle::BundleSchemaVersionV1::V1
-        };
-        let schema_version =
-            bundle::BundleSchemaVersionV1::from_env_or_default(default_schema_version);
-
-        let default_semantics_mode = if is_script_dump {
-            bundle::BundleSemanticsModeV1::Last
-        } else {
-            bundle::BundleSemanticsModeV1::All
-        };
-        let semantics_mode =
-            bundle::BundleSemanticsModeV1::from_env_or_default(default_semantics_mode);
-
-        let mut bundle_json_bytes: Option<u64> = None;
-        let mut window_count: u64 = 0;
-        let mut event_count: u64 = 0;
-        let mut snapshot_count: u64 = 0;
-        let mut max_snapshots: u64 = 0;
-        let mut dump_max_snapshots_field: Option<u64> = None;
-
-        if !cfg!(target_arch = "wasm32") && std::fs::create_dir_all(&dir).is_err() {
-            return None;
-        }
-
-        let bundle_json_path = dir.join("bundle.json");
-        let bundle_json_format = std::env::var("FRET_DIAG_BUNDLE_JSON_FORMAT")
-            .ok()
-            .map(|v| v.trim().to_ascii_lowercase());
-        let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
-
-        match schema_version {
-            bundle::BundleSchemaVersionV1::V1 => {
-                let mut bundle = bundle_v1;
-                bundle.apply_semantics_mode_v1(semantics_mode);
-
-                if !cfg!(target_arch = "wasm32") {
-                    let write_result = if want_pretty {
-                        write_json(bundle_json_path.clone(), &bundle)
-                    } else {
-                        write_json_compact(bundle_json_path.clone(), &bundle)
-                    };
-                    if write_result.is_err() {
-                        return None;
-                    }
-                    bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
-                } else if self.ws_is_configured() {
-                    bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
-                }
-
-                window_count = bundle.windows.len() as u64;
-                event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-                snapshot_count = bundle
-                    .windows
-                    .iter()
-                    .map(|w| w.snapshots.len() as u64)
-                    .sum();
-                max_snapshots = bundle.config.max_snapshots as u64;
-                dump_max_snapshots_field = bundle.config.dump_max_snapshots.map(|n| n as u64);
-
-                #[cfg(feature = "diagnostics-ws")]
-                {
-                    self.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
-                }
-            }
-            bundle::BundleSchemaVersionV1::V2 => {
-                let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
-                bundle.apply_semantics_mode_v1(semantics_mode);
-
-                if !cfg!(target_arch = "wasm32") {
-                    let write_result = if want_pretty {
-                        write_json(bundle_json_path.clone(), &bundle)
-                    } else {
-                        write_json_compact(bundle_json_path.clone(), &bundle)
-                    };
-                    if write_result.is_err() {
-                        return None;
-                    }
-                    bundle_json_bytes = std::fs::metadata(&bundle_json_path).ok().map(|m| m.len());
-                } else if self.ws_is_configured() {
-                    bundle_json_bytes = serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64);
-                }
-
-                window_count = bundle.windows.len() as u64;
-                event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-                snapshot_count = bundle
-                    .windows
-                    .iter()
-                    .map(|w| w.snapshots.len() as u64)
-                    .sum();
-                max_snapshots = bundle.config.max_snapshots as u64;
-                dump_max_snapshots_field = bundle.config.dump_max_snapshots.map(|n| n as u64);
-
-                #[cfg(feature = "diagnostics-ws")]
-                {
-                    self.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
-                }
-            }
-        }
-
-        if !cfg!(target_arch = "wasm32") {
-            let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
-            if self.cfg.screenshot_on_dump {
-                let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
-            }
-        }
-
-        self.last_dump_dir = Some(dir.clone());
-        self.last_dump_artifact_stats = Some(UiArtifactStatsV1 {
-            schema_version: 1,
-            bundle_json_bytes,
-            window_count,
-            event_count,
-            snapshot_count,
-            max_snapshots,
-            dump_max_snapshots: dump_max_snapshots_field,
-        });
-
-        Some(dir)
+        bundle_dump::dump_bundle_with_options(self, label, dump_max_snapshots_override, request_id)
     }
 
     fn next_script_run_id(&mut self) -> u64 {
@@ -7899,100 +7278,6 @@ impl UiDiagnosticsService {
         {
             self.ws_send_pick_result_v1(&result);
         }
-    }
-
-    fn poll_pick_trigger(&mut self) {
-        if self.poll_ws_inbox_and_is_wasm_ws_only() {
-            return;
-        }
-
-        let modified =
-            match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
-                Ok(modified) => modified,
-                Err(_) => {
-                    if let Some(dir) = self.cfg.pick_trigger_path.parent() {
-                        let _ = std::fs::create_dir_all(dir);
-                    }
-                    if std::fs::OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .open(&self.cfg.pick_trigger_path)
-                        .is_ok()
-                        && let Ok(modified) = std::fs::metadata(&self.cfg.pick_trigger_path)
-                            .and_then(|m| m.modified())
-                    {
-                        self.last_pick_trigger_mtime = Some(modified);
-                    }
-                    return;
-                }
-            };
-        if self.last_pick_trigger_mtime.is_none() {
-            self.last_pick_trigger_mtime = Some(modified);
-            return;
-        }
-        if self
-            .last_pick_trigger_mtime
-            .is_some_and(|prev| prev >= modified)
-        {
-            return;
-        }
-        self.last_pick_trigger_mtime = Some(modified);
-
-        self.pending_pick = None;
-        self.pick_armed_run_id = Some(self.next_pick_run_id());
-    }
-
-    fn poll_inspect_trigger(&mut self) {
-        if self.poll_ws_inbox_and_is_wasm_ws_only() {
-            return;
-        }
-
-        let modified =
-            match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
-                Ok(modified) => modified,
-                Err(_) => {
-                    if let Some(dir) = self.cfg.inspect_trigger_path.parent() {
-                        let _ = std::fs::create_dir_all(dir);
-                    }
-                    if std::fs::OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .open(&self.cfg.inspect_trigger_path)
-                        .is_ok()
-                        && let Ok(modified) = std::fs::metadata(&self.cfg.inspect_trigger_path)
-                            .and_then(|m| m.modified())
-                    {
-                        self.last_inspect_trigger_mtime = Some(modified);
-                    }
-                    return;
-                }
-            };
-        if self.last_inspect_trigger_mtime.is_none() {
-            self.last_inspect_trigger_mtime = Some(modified);
-            return;
-        }
-        if self
-            .last_inspect_trigger_mtime
-            .is_some_and(|prev| prev >= modified)
-        {
-            return;
-        }
-        self.last_inspect_trigger_mtime = Some(modified);
-
-        let bytes = std::fs::read(&self.cfg.inspect_path).ok();
-        let Some(bytes) = bytes else {
-            return;
-        };
-        let cfg: UiInspectConfigV1 = match serde_json::from_slice(&bytes) {
-            Ok(cfg) => cfg,
-            Err(_) => return,
-        };
-        if cfg.schema_version != 1 {
-            return;
-        }
-
-        self.inspect_enabled = cfg.enabled;
-        self.inspect_consume_clicks = cfg.consume_clicks;
     }
 
     fn resolve_pending_pick_for_window(
