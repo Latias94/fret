@@ -2,59 +2,17 @@ use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
 
-use std::sync::Arc;
-use std::time::Duration;
-
-use fret_runtime::Model;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign, PressableProps, ScrollAxis};
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct CarouselModels {
-        demo_inner_clicked: Option<Model<bool>>,
-        animata_expand_selected: Option<Model<u64>>,
-    }
-
-    let demo_inner_clicked =
-        cx.with_state(CarouselModels::default, |st| st.demo_inner_clicked.clone());
-    let animata_expand_selected = cx.with_state(CarouselModels::default, |st| {
-        st.animata_expand_selected.clone()
-    });
-    let demo_inner_clicked = match demo_inner_clicked {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(CarouselModels::default, |st| {
-                st.demo_inner_clicked = Some(model.clone());
-            });
-            model
-        }
-    };
-    let animata_expand_selected = match animata_expand_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(1u64);
-            cx.with_state(CarouselModels::default, |st| {
-                st.animata_expand_selected = Some(model.clone());
-            });
-            model
-        }
-    };
-
     #[derive(Debug, Clone, Copy)]
     struct SlideVisual {
         text_px: Px,
         line_height_px: Px,
-        aspect_square: bool,
     }
 
     let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
-
-        let mut content_layout = LayoutRefinement::default().w_full();
-        if visual.aspect_square {
-            content_layout = content_layout.aspect_ratio(1.0);
-        }
 
         let number = ui::text(cx, format!("{idx}"))
             .text_size_px(visual.text_px)
@@ -64,7 +22,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
         let content = cx.flex(
             FlexProps {
-                layout: decl_style::layout_style(&theme, content_layout),
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().aspect_ratio(1.0),
+                ),
                 direction: fret_core::Axis::Horizontal,
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
@@ -80,526 +41,115 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .into_element(cx)
     };
 
-    let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
-        if idx != 1 {
-            return slide(cx, idx, visual);
-        }
+    let max_w_sm = Px(384.0);
 
-        let theme = Theme::global(&*cx.app).clone();
-        let mut content_layout = LayoutRefinement::default().w_full();
-        if visual.aspect_square {
-            content_layout = content_layout.aspect_ratio(1.0);
-        }
-
-        let number = ui::text(cx, format!("{idx}"))
-            .text_size_px(visual.text_px)
-            .line_height_px(visual.line_height_px)
-            .font_semibold()
-            .into_element(cx);
-
-        let on_inner_activate: fret_ui::action::OnActivate = {
-            let demo_inner_clicked = demo_inner_clicked.clone();
-            Arc::new(move |host, cx, _reason| {
-                let _ = host.models_mut().update(&demo_inner_clicked, |v| *v = true);
-                host.request_redraw(cx.window);
-            })
-        };
-
-        let inner_button = shadcn::Button::new("Inner button")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Sm)
-            .test_id("ui-gallery-carousel-demo-inner-button")
-            .on_activate(on_inner_activate)
-            .into_element(cx);
-
-        let children = vec![number, inner_button];
-
-        let content = cx.flex(
-            FlexProps {
-                layout: decl_style::layout_style(&theme, content_layout),
-                direction: fret_core::Axis::Vertical,
-                justify: MainAlign::Center,
-                align: CrossAlign::Center,
-                gap: Px(12.0),
-                padding: Edges::all(Px(24.0)),
-                ..Default::default()
-            },
-            move |_cx| children,
-        );
-
-        let card = shadcn::Card::new([content]).into_element(cx);
-        ui::container(cx, move |_cx| vec![card])
-            .p_1()
-            .into_element(cx)
-    };
-
-    let build_carousel = |cx: &mut ElementContext<'_, App>,
-                          items: Vec<AnyElement>,
-                          test_id: &'static str,
-                          orientation: shadcn::CarouselOrientation,
-                          basis: Px,
-                          spacing: Space,
-                          max_w: Px,
-                          viewport_h: Option<Px>| {
-        let mut base = shadcn::Carousel::new(items)
-            .orientation(orientation)
-            .item_basis_main_px(basis)
-            .track_start_neg_margin(spacing)
-            .item_padding_start(spacing)
-            .test_id(test_id)
-            .refine_layout({
-                let mut layout = LayoutRefinement::default().w_full().max_w(max_w).mx_auto();
-                if orientation == shadcn::CarouselOrientation::Vertical {
-                    // Vertical controls sit outside the carousel bounds (`-top-12` / `-bottom-12`).
-                    // Reserve vertical margin so the buttons don't overlap neighboring doc text.
-                    layout = layout.my(Space::N12);
-                }
-                layout
-            });
-
-        if let Some(viewport_h) = viewport_h {
-            base = base.refine_viewport_layout(LayoutRefinement::default().h_px(viewport_h));
-        }
-
-        base.into_element(cx).test_id(test_id)
-    };
-
-    let carousel = |cx: &mut ElementContext<'_, App>,
-                    test_id: &'static str,
-                    orientation: shadcn::CarouselOrientation,
-                    basis: Px,
-                    spacing: Space,
-                    max_w: Px,
-                    viewport_h: Option<Px>,
-                    slide_visual: SlideVisual| {
-        let items = (1..=5)
-            .map(|idx| slide(cx, idx, slide_visual))
-            .collect::<Vec<_>>();
-        build_carousel(
-            cx,
-            items,
-            test_id,
-            orientation,
-            basis,
-            spacing,
-            max_w,
-            viewport_h,
-        )
-    };
-
-    let demo_visual = SlideVisual {
+    let basic_visual = SlideVisual {
         text_px: Px(36.0),
-        line_height_px: Px(40.0),
-        aspect_square: true,
+        line_height_px: Px(44.0),
     };
-    let demo_items = (1..=5)
-        .map(|idx| demo_slide(cx, idx, demo_visual))
+    let basic_items = (1..=5)
+        .map(|idx| slide(cx, idx, basic_visual))
         .collect::<Vec<_>>();
-    let demo_content = build_carousel(
-        cx,
-        demo_items,
-        "ui-gallery-carousel-demo",
-        shadcn::CarouselOrientation::Horizontal,
-        Px(320.0),
-        Space::N4,
-        Px(320.0),
-        None,
-    );
-
-    let demo_inner_clicked_now = cx
-        .watch_model(&demo_inner_clicked)
-        .copied()
-        .unwrap_or(false);
-
-    let demo_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        move |cx| {
-            let mut out = vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Drag starting on the inner button must not activate it; a click must activate it.",
-                ),
-                demo_content,
-            ];
-
-            if demo_inner_clicked_now {
-                out.push(
-                    shadcn::typography::muted(cx, "Inner button: clicked")
-                        .test_id("ui-gallery-carousel-demo-inner-clicked"),
-                );
-            }
-
-            out
-        },
-    );
-
-    let animata_expandable = {
-        let theme = Theme::global(&*cx.app).clone();
-        let duration_ms = theme.duration_ms_token("duration.motion.layout.expand");
-        let duration = Duration::from_millis(duration_ms as u64);
-        let easing = theme
-            .easing_by_key("easing.motion.layout.expand")
-            .unwrap_or_else(|| theme.easing_token("easing.motion.emphasized"));
-
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N4)
-                .items_center(),
-            |cx| {
-                (1u64..=5)
-                    .map(|idx| {
-                        let selected_model = animata_expand_selected.clone();
-                        let is_selected = cx
-                            .watch_model(&selected_model)
-                            .paint()
-                            .copied()
-                            .unwrap_or(1)
-                            == idx;
-
-                        let t = cx.keyed(("ui-gallery-carousel-expandable-transition", idx), |cx| {
-                            fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
-                                cx,
-                                is_selected,
-                                duration,
-                                duration,
-                                easing,
-                                false,
-                            )
-                        });
-
-                        let collapsed_w = 140.0;
-                        let expanded_w = 320.0;
-                        let collapsed_h = 160.0;
-                        let expanded_h = 220.0;
-
-                        let w = collapsed_w + (expanded_w - collapsed_w) * t.progress;
-                        let h = collapsed_h + (expanded_h - collapsed_h) * t.progress;
-
-                        let on_activate: fret_ui::action::OnActivate = {
-                            let selected_model = selected_model.clone();
-                            Arc::new(move |host, action_cx, _reason| {
-                                let _ = host.models_mut().update(&selected_model, |v| *v = idx);
-                                host.request_redraw(action_cx.window);
-                            })
-                        };
-
-                        cx.pressable(PressableProps::default(), move |cx, st| {
-                                cx.pressable_on_activate(on_activate.clone());
-
-                                let theme = Theme::global(&*cx.app).clone();
-
-                                let header = stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .justify_between()
-                                        .items_center(),
-                                    move |cx| {
-                                        vec![
-                                            shadcn::Badge::new(format!("{idx}"))
-                                                .variant(shadcn::BadgeVariant::Secondary)
-                                                .into_element(cx),
-                                            shadcn::Badge::new(if is_selected {
-                                                "Expanded"
-                                            } else {
-                                                "Collapsed"
-                                            })
-                                            .variant(if st.hovered || is_selected {
-                                                shadcn::BadgeVariant::Default
-                                            } else {
-                                                shadcn::BadgeVariant::Outline
-                                            })
-                                            .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let body = cx.flex(
-                                    FlexProps {
-                                        layout: decl_style::layout_style(
-                                            &theme,
-                                            LayoutRefinement::default()
-                                                .w_full()
-                                                .h_full(),
-                                        ),
-                                        direction: fret_core::Axis::Vertical,
-                                        justify: MainAlign::Center,
-                                        align: CrossAlign::Center,
-                                        padding: Edges::all(Px(16.0)),
-                                        ..Default::default()
-                                    },
-                                    move |cx| vec![
-                                        header,
-                                        shadcn::typography::muted(
-                                            cx,
-                                            "Animata recipe: layout.expand (size interpolation; no DOM FLIP).",
-                                        ),
-                                    ],
-                                );
-
-                                let card = shadcn::Card::new([body])
-                                    .refine_layout(
-                                        LayoutRefinement::default().w_px(Px(w)).h_px(Px(h)),
-                                    )
-                                    .into_element(cx)
-                                    .test_id(format!("ui-gallery-carousel-expandable-card-{idx}"));
-
-                                vec![card]
-                            })
-                        .test_id(format!("ui-gallery-carousel-expandable-item-{idx}"))
-                    })
-                    .collect::<Vec<_>>()
-            },
+    let basic = shadcn::Carousel::new(basic_items)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-expandable-row");
+        .test_id("ui-gallery-carousel-basic")
+        .into_element(cx);
 
-        let scroll = shadcn::ScrollArea::new([row])
-            .axis(ScrollAxis::X)
-            .show_scrollbar(true)
-            .viewport_test_id("ui-gallery-carousel-expandable-viewport")
-            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(260.0)))
-            .into_element(cx);
-
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::muted(
-                        cx,
-                        "Animata alignment pilot: expandable carousel that interpolates size via a deterministic transition driver (no DOM-based FLIP).",
-                    ),
-                    scroll,
-                ]
-            },
-        )
-        .test_id("ui-gallery-carousel-expandable");
-        content
+    let align_start_visual = SlideVisual {
+        text_px: Px(30.0),
+        line_height_px: Px(36.0),
     };
-
-    let sizes_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Sizes`: use a smaller item basis to show multiple active items.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-size",
-                    shadcn::CarouselOrientation::Horizontal,
-                    Px(133.328),
-                    Space::N4,
-                    Px(384.0),
-                    None,
-                    SlideVisual {
-                        text_px: Px(30.0),
-                        line_height_px: Px(36.0),
-                        aspect_square: true,
-                    },
-                ),
-            ]
-        },
-    );
-
-    let spacing_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Spacing`: tune track negative margin + item start padding together.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-spacing",
-                    shadcn::CarouselOrientation::Horizontal,
-                    Px(129.328),
-                    Space::N1,
-                    Px(384.0),
-                    None,
-                    SlideVisual {
-                        text_px: Px(24.0),
-                        line_height_px: Px(32.0),
-                        aspect_square: true,
-                    },
-                ),
-            ]
-        },
-    );
-
-    let orientation_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Match docs `Orientation`: vertical mode stacks items and rotates the controls.",
-                ),
-                carousel(
-                    cx,
-                    "ui-gallery-carousel-orientation-vertical",
-                    shadcn::CarouselOrientation::Vertical,
-                    Px(100.0),
-                    Space::N1,
-                    Px(320.0),
-                    Some(Px(200.0)),
-                    SlideVisual {
-                        text_px: Px(30.0),
-                        line_height_px: Px(36.0),
-                        aspect_square: false,
-                    },
-                ),
-            ]
-        },
-    );
-
-    let rtl = doc_layout::rtl(cx, |cx| {
-        carousel(
-            cx,
-            "ui-gallery-carousel-rtl",
-            shadcn::CarouselOrientation::Horizontal,
-            Px(129.328),
-            Space::N1,
-            Px(384.0),
-            None,
-            SlideVisual {
-                text_px: Px(24.0),
-                line_height_px: Px(32.0),
-                aspect_square: true,
-            },
+    let align_start_items = (1..=5)
+        .map(|idx| slide(cx, idx, align_start_visual))
+        .collect::<Vec<_>>();
+    let align_start = shadcn::Carousel::new(align_start_items)
+        .item_basis_main_px(Px(192.0))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
         )
-    });
+        .test_id("ui-gallery-carousel-align-start")
+        .into_element(cx);
+
+    let spacing_visual = SlideVisual {
+        text_px: Px(24.0),
+        line_height_px: Px(32.0),
+    };
+    let spacing_items = (1..=5)
+        .map(|idx| slide(cx, idx, spacing_visual))
+        .collect::<Vec<_>>();
+    let spacing = shadcn::Carousel::new(spacing_items)
+        .item_basis_main_px(Px(192.0))
+        .track_start_neg_margin(Space::N1)
+        .item_padding_start(Space::N1)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-spacing")
+        .into_element(cx);
 
     let notes_stack = doc_layout::notes(
         cx,
         [
-            "Gallery layout references shadcn/ui docs, but the API is a Fret-native builder (not Embla).",
-            "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
-            "Spacing parity with shadcn examples depends on pairing negative track margin with item start padding.",
-            "Vertical orientation should set viewport height explicitly (content tracks don't auto-size deterministically).",
-            "Embla-only surfaces (`opts`, `setApi`, plugins/events) are intentionally not exposed by Fret Carousel yet.",
+            "Preview follows shadcn Carousel demo: Basic, Align Start, and Spacing.",
+            "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret uses a fixed `item_basis_main_px` to keep geometry deterministic in native builds.",
+            "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start`.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some(
-            "Gallery sections are inspired by shadcn Carousel docs (Demo, Sizes, Spacing, Orientation) and adapted to Fret's builder API.",
-        ),
+        Some("Preview follows shadcn Carousel demo cards (Fret builder API; not Embla)."),
         vec![
-            DocSection::new("Demo", demo_body)
+            DocSection::new("Basic", basic)
+                .description("Default slide width (basis-full).")
                 .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-carousel-demo")
+                .test_id_prefix("ui-gallery-carousel-basic")
                 .code(
                     "rust",
-                    r#"let items = vec![/* slides */];
+                    r#"let items = (1..=5).map(|idx| slide(cx, idx)).collect::<Vec<_>>();
 
 shadcn::Carousel::new(items)
-    .orientation(shadcn::CarouselOrientation::Horizontal)
-    .item_basis_main_px(Px(320.0))
-    .track_start_neg_margin(Space::N4)
-    .item_padding_start(Space::N4)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Animata: Expandable", animata_expandable)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"let selected = cx.app.models_mut().insert(1u64);
-
-// Drive a deterministic expand/collapse transition (no DOM-based FLIP).
-let t = fret_ui_kit::primitives::transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
-    cx,
-    is_selected,
-    Duration::from_millis(220),
-    Duration::from_millis(220),
-    easing,
-    false,
-);
-
-let w = collapsed_w + (expanded_w - collapsed_w) * t.progress;
-let h = collapsed_h + (expanded_h - collapsed_h) * t.progress;
-
-shadcn::Card::new([/* content */])
-    .refine_layout(LayoutRefinement::default().w_px(Px(w)).h_px(Px(h)))
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Sizes", sizes_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Carousel::new(items)
-    .orientation(shadcn::CarouselOrientation::Horizontal)
-    .item_basis_main_px(Px(133.328))
-    .track_start_neg_margin(Space::N4)
-    .item_padding_start(Space::N4)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
                 ),
-            DocSection::new("Spacing", spacing_content)
+            DocSection::new("Align Start", align_start)
+                .description("Fixed basis to approximate the upstream responsive layout.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-align-start")
+                .code(
+                    "rust",
+                    r#"// Upstream: responsive widths (`md:basis-1/2` / `lg:basis-1/3`).
+// Here: fixed basis for deterministic native layout.
+shadcn::Carousel::new(items)
+    .item_basis_main_px(Px(192.0))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Spacing", spacing)
+                .description(
+                    "Tighter track negative margin + item start padding (shadcn `-ml-1` / `pl-1`).",
+                )
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-spacing")
                 .code(
                     "rust",
                     r#"shadcn::Carousel::new(items)
-    .orientation(shadcn::CarouselOrientation::Horizontal)
-    .item_basis_main_px(Px(129.328))
+    .item_basis_main_px(Px(192.0))
     .track_start_neg_margin(Space::N1)
     .item_padding_start(Space::N1)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
-                ),
-            DocSection::new("Orientation", orientation_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Carousel::new(items)
-    .orientation(shadcn::CarouselOrientation::Vertical)
-    .item_basis_main_px(Px(100.0))
-    .track_start_neg_margin(Space::N1)
-    .item_padding_start(Space::N1)
-    // Controls sit outside the viewport bounds (shadcn `-top-12` / `-bottom-12`).
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto().my(Space::N12))
-    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
-    .into_element(cx);"#,
-                ),
-            DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-carousel-rtl")
-                .code(
-                    "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| {
-        shadcn::Carousel::new(items)
-            .orientation(shadcn::CarouselOrientation::Horizontal)
-            .into_element(cx)
-    },
-);"#,
                 ),
             DocSection::new("Notes", notes_stack).max_w(Px(760.0)),
         ],
