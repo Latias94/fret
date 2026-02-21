@@ -13,6 +13,8 @@ pub struct TextLineLayout {
     pub height: Px,
     pub ascent: Px,
     pub descent: Px,
+    pub ink_ascent: Px,
+    pub ink_descent: Px,
     pub caret_stops: Vec<(usize, Px)>,
     clusters: Arc<[TextLineCluster]>,
 }
@@ -27,6 +29,8 @@ impl TextLineLayout {
         height: Px,
         ascent: Px,
         descent: Px,
+        ink_ascent: Px,
+        ink_descent: Px,
         caret_stops: Vec<(usize, Px)>,
         clusters: Arc<[TextLineCluster]>,
     ) -> Self {
@@ -39,6 +43,8 @@ impl TextLineLayout {
             height,
             ascent,
             descent,
+            ink_ascent,
+            ink_descent,
             caret_stops,
             clusters,
         }

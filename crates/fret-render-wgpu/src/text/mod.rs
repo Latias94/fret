@@ -3236,6 +3236,34 @@ impl TextSystem {
         })
     }
 
+    pub fn first_line_ink_metrics(&self, blob: TextBlobId) -> Option<fret_core::TextInkMetrics> {
+        let blob = self.blobs.get(blob)?;
+        let line = blob.shape.lines.first()?;
+        Some(fret_core::TextInkMetrics {
+            ascent: line.ink_ascent,
+            descent: line.ink_descent,
+        })
+    }
+
+    pub fn last_line_metrics(&self, blob: TextBlobId) -> Option<fret_core::TextLineMetrics> {
+        let blob = self.blobs.get(blob)?;
+        let line = blob.shape.lines.last()?;
+        Some(fret_core::TextLineMetrics {
+            ascent: line.ascent,
+            descent: line.descent,
+            line_height: line.height,
+        })
+    }
+
+    pub fn last_line_ink_metrics(&self, blob: TextBlobId) -> Option<fret_core::TextInkMetrics> {
+        let blob = self.blobs.get(blob)?;
+        let line = blob.shape.lines.last()?;
+        Some(fret_core::TextInkMetrics {
+            ascent: line.ink_ascent,
+            descent: line.ink_descent,
+        })
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let entries = fret_render_text::cache_tuning::released_blob_cache_entries();
 

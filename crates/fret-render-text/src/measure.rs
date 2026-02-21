@@ -137,6 +137,11 @@ impl TextMeasureCaches {
                     TextSlant::Oblique => 2,
                 },
                 line_height_bits: style.line_height.map(|px| px.0.to_bits()),
+                line_height_em_bits: style.line_height_em.map(|v| v.to_bits()),
+                line_height_policy: match style.line_height_policy {
+                    fret_core::TextLineHeightPolicy::ExpandToFit => 0,
+                    fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
+                },
                 letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
                 scale_bits: constraints.scale_factor.to_bits(),
             };
@@ -342,6 +347,11 @@ impl TextMeasureCaches {
                     TextSlant::Oblique => 2,
                 },
                 line_height_bits: base_style.line_height.map(|px| px.0.to_bits()),
+                line_height_em_bits: base_style.line_height_em.map(|v| v.to_bits()),
+                line_height_policy: match base_style.line_height_policy {
+                    fret_core::TextLineHeightPolicy::ExpandToFit => 0,
+                    fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
+                },
                 letter_spacing_bits: base_style.letter_spacing_em.map(|v| v.to_bits()),
                 scale_bits: constraints.scale_factor.to_bits(),
             };
