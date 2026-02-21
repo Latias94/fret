@@ -8,6 +8,8 @@ pub(in crate::ui) fn preview_calendar(
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     let theme = Theme::global(&*cx.app).snapshot();
 
     fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
@@ -40,24 +42,103 @@ pub(in crate::ui) fn preview_calendar(
     let week_numbers = sections::week_numbers(cx, &models);
     let rtl = sections::rtl(cx, &models);
 
-    vec![stack::vstack(
+    let notes = doc_layout::notes(
         cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
-            vec![
-                basic,
-                range,
-                month_year_selector,
-                presets,
-                date_and_time_picker,
-                booked_dates,
-                custom_cell_size,
-                week_numbers,
-                rtl,
-            ]
-        },
-    )]
+        [
+            "Preview follows shadcn Calendar demo (new-york-v4).",
+            "Not all upstream variants are implemented yet (multiple selection, locale demo, custom day renderers/modifiers).",
+            "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Calendar demos for single selection, ranges, presets, and layout variants."),
+        vec![
+            DocSection::new("Single selection", basic)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-single")
+                .code(
+                    "rust",
+                    r#"shadcn::Calendar::new(month, selected)
+    .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Range selection", range)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-range")
+                .code(
+                    "rust",
+                    r#"shadcn::CalendarRange::new(month, selected)
+    .number_of_months(2)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Month and year selector", month_year_selector)
+                .test_id_prefix("ui-gallery-calendar-caption")
+                .code(
+                    "rust",
+                    r#"shadcn::Calendar::new(month, selected)
+    .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Presets", presets)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-presets")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardContent::new(vec![calendar]).into_element(cx),
+    shadcn::CardFooter::new(buttons).into_element(cx),
+]);"#,
+                ),
+            DocSection::new("With time input", date_and_time_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-time")
+                .code(
+                    "rust",
+                    r#"shadcn::InputGroup::new(time_model)
+    .a11y_label("Start Time")
+    .trailing([clock_icon])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Disabled dates", booked_dates)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-booked")
+                .code(
+                    "rust",
+                    r#"shadcn::Calendar::new(month, selected)
+    .disabled_by(|d| matches!(d.weekday(), time::Weekday::Saturday | time::Weekday::Sunday))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Custom cell size", custom_cell_size)
+                .test_id_prefix("ui-gallery-calendar-custom-cell")
+                .code(
+                    "rust",
+                    r#"shadcn::Calendar::new(month, selected)
+    .cell_size(Px(44.0))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Week numbers", week_numbers)
+                .test_id_prefix("ui-gallery-calendar-week-numbers")
+                .code(
+                    "rust",
+                    r#"shadcn::Calendar::new(month, selected)
+    .show_week_number(true)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .test_id_prefix("ui-gallery-calendar-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Calendar::new(month, selected).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Notes", notes)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-notes"),
+        ],
+    );
+
+    vec![body]
 }
