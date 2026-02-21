@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use fret_runtime::{Model, ModelHost, ModelId, ModelStore};
+use fret_ui::action::UiActionHost;
 
 use crate::headless::form_state::{FormFieldId, FormState, FormValidateMode};
 
@@ -193,5 +194,35 @@ impl FormRegistry {
         host.models()
             .read(form_state, |st| st.is_valid())
             .unwrap_or(false)
+    }
+
+    /// Object-safe form submission helper for action hooks.
+    ///
+    /// `fret_ui::action` callbacks receive a `&mut dyn UiActionHost` (object-safe by design),
+    /// while `submit()` is generic over `ModelHost`. This helper bridges that gap without
+    /// exposing `FormRegistry` internals to call sites.
+    pub fn submit_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        form_state: &Model<FormState>,
+    ) -> bool {
+        let store = host.models_mut();
+        let mut evals: Vec<(FormFieldId, FieldEval)> = self
+            .fields
+            .iter()
+            .map(|f| (Arc::clone(&f.id), (f.eval)(&*store, true)))
+            .collect();
+
+        let _ = store.update(form_state, move |st| {
+            st.begin_submit();
+            st.touch_all_registered();
+            for (id, eval) in evals.drain(..) {
+                st.set_dirty(Arc::clone(&id), eval.dirty);
+                st.set_error_opt(id, eval.error);
+            }
+            st.end_submit();
+        });
+
+        store.read(form_state, |st| st.is_valid()).unwrap_or(false)
     }
 }

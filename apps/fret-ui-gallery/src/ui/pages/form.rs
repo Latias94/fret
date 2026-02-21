@@ -758,29 +758,40 @@ fn preview_form_demo_upstream(
         let security_emails = security_emails.clone();
 
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            let valid = registry.submit(host, &form_state);
+            let valid = registry.submit_action_host(host, &form_state);
             if !valid {
                 host.request_redraw(action_cx.window);
                 return;
             }
 
-            let read = |m, f: fn(&_) -> _| host.models().read(m, f).ok();
-            let username = read(&username, |v| v.clone()).unwrap_or_default();
-            let email = read(&email, |v| v.clone()).flatten().map(|v| v.to_string());
-            let bio = read(&bio, |v| v.clone()).unwrap_or_default();
-            let notify_type = read(&notify_type, |v| v.clone())
+            fn read_model<T: std::any::Any, R>(
+                host: &mut dyn fret_ui::action::UiActionHost,
+                model: &Model<T>,
+                f: impl FnOnce(&T) -> R,
+            ) -> Option<R> {
+                host.models_mut().read(model, f).ok()
+            }
+
+            let username = read_model(host, &username, |v| v.clone()).unwrap_or_default();
+            let email = read_model(host, &email, |v| v.clone())
+                .flatten()
+                .map(|v| v.to_string());
+            let bio = read_model(host, &bio, |v| v.clone()).unwrap_or_default();
+            let notify_type = read_model(host, &notify_type, |v| v.clone())
                 .flatten()
                 .map(|v| v.to_string());
 
-            let mobile = read(&mobile, |v| *v).unwrap_or(false);
-            let items: Vec<String> = read(&sidebar_items, |v| v.clone())
+            let mobile = read_model(host, &mobile, |v| *v).unwrap_or(false);
+            let items: Vec<String> = read_model(host, &sidebar_items, |v| v.clone())
                 .unwrap_or_default()
                 .into_iter()
                 .map(|v| v.to_string())
                 .collect();
-            let dob = read(&dob_selected, |v| *v).flatten().map(|v| v.to_string());
-            let marketing_emails = read(&marketing_emails, |v| *v).unwrap_or(false);
-            let security_emails = read(&security_emails, |v| *v).unwrap_or(true);
+            let dob = read_model(host, &dob_selected, |v| *v)
+                .flatten()
+                .map(|v| v.to_string());
+            let marketing_emails = read_model(host, &marketing_emails, |v| *v).unwrap_or(false);
+            let security_emails = read_model(host, &security_emails, |v| *v).unwrap_or(true);
 
             let payload = serde_json::json!({
                 "username": username,
@@ -892,7 +903,9 @@ fn preview_form_demo_upstream(
                         .layout(LayoutRefinement::default().w_full().min_w_0()),
                     |cx| {
                         vec![
-                            shadcn::Label::new("Use different settings for my mobile devices")
+                            shadcn::FieldLabel::new(
+                                "Use different settings for my mobile devices",
+                            )
                                 .for_control(control_id)
                                 .into_element(cx),
                             shadcn::typography::muted(
@@ -957,7 +970,9 @@ fn preview_form_demo_upstream(
                                     .control_id(id)
                                     .a11y_label(label)
                                     .into_element(cx),
-                                shadcn::Label::new(label).for_control(id).into_element(cx),
+                                shadcn::FieldLabel::new(label)
+                                    .for_control(id)
+                                    .into_element(cx),
                             ]
                         },
                     )
