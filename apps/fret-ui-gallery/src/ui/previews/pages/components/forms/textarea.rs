@@ -87,6 +87,7 @@ pub(in crate::ui) fn preview_textarea(
 
     let demo_inner = shadcn::Textarea::new(value)
         .a11y_label("Message")
+        .placeholder("Type your message here.")
         .min_height(Px(96.0))
         .refine_layout(area_layout.clone())
         .into_element(cx)
@@ -95,6 +96,7 @@ pub(in crate::ui) fn preview_textarea(
 
     let invalid_inner = shadcn::Textarea::new(invalid_value)
         .a11y_label("Message")
+        .placeholder("Type your message here.")
         .aria_invalid(true)
         .min_height(Px(96.0))
         .refine_layout(area_layout.clone())
@@ -113,6 +115,7 @@ pub(in crate::ui) fn preview_textarea(
                 shadcn::Label::new("Label").into_element(cx),
                 shadcn::Textarea::new(labeled_value)
                     .a11y_label("Label")
+                    .placeholder("Type your message here.")
                     .min_height(Px(144.0))
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
@@ -133,6 +136,7 @@ pub(in crate::ui) fn preview_textarea(
                 shadcn::Label::new("With label and description").into_element(cx),
                 shadcn::Textarea::new(labeled_description_value)
                     .a11y_label("With label and description")
+                    .placeholder("Type your message here.")
                     .min_height(Px(144.0))
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
@@ -154,6 +158,7 @@ pub(in crate::ui) fn preview_textarea(
                 shadcn::Label::new("Disabled").into_element(cx),
                 shadcn::Textarea::new(disabled_value)
                     .a11y_label("Disabled")
+                    .placeholder("Type your message here.")
                     .disabled(true)
                     .min_height(Px(96.0))
                     .refine_layout(LayoutRefinement::default().w_full())
@@ -173,6 +178,7 @@ pub(in crate::ui) fn preview_textarea(
             vec![
                 shadcn::Textarea::new(extras_button_value)
                     .a11y_label("Send message")
+                    .placeholder("Type your message here.")
                     .min_height(Px(96.0))
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
@@ -195,6 +201,7 @@ pub(in crate::ui) fn preview_textarea(
                     shadcn::Label::new("Label").into_element(cx),
                     shadcn::Textarea::new(rtl_value)
                         .a11y_label("Label")
+                        .placeholder("Type your message here.")
                         .min_height(Px(144.0))
                         .refine_layout(LayoutRefinement::default().w_full())
                         .into_element(cx),
@@ -227,7 +234,7 @@ pub(in crate::ui) fn preview_textarea(
         cx,
         [
             "Preview follows shadcn Textarea demo (new-york-v4).",
-            "Unlike shadcn, `TextArea` currently does not expose placeholder text; the demo uses empty models instead.",
+            "Placeholder text is rendered when the model is empty.",
         ],
     );
 
@@ -243,6 +250,7 @@ pub(in crate::ui) fn preview_textarea(
                     "rust",
                     r#"shadcn::Textarea::new(model)
     .a11y_label("Message")
+    .placeholder("Type your message here.")
     .min_height(Px(96.0))
     .into_element(cx);"#,
                 ),
@@ -252,6 +260,7 @@ pub(in crate::ui) fn preview_textarea(
                     "rust",
                     r#"shadcn::Textarea::new(model)
     .a11y_label("Message")
+    .placeholder("Type your message here.")
     .aria_invalid(true)
     .into_element(cx);"#,
                 ),
@@ -261,7 +270,10 @@ pub(in crate::ui) fn preview_textarea(
                     "rust",
                     r#"stack::vstack(cx, props, |cx| vec![
     shadcn::Label::new("Label").into_element(cx),
-    shadcn::Textarea::new(model).a11y_label("Label").into_element(cx),
+    shadcn::Textarea::new(model)
+        .a11y_label("Label")
+        .placeholder("Type your message here.")
+        .into_element(cx),
 ]);"#,
                 ),
             DocSection::new("With label and description", labeled_description)
@@ -272,6 +284,7 @@ pub(in crate::ui) fn preview_textarea(
     shadcn::Label::new("With label and description").into_element(cx),
     shadcn::Textarea::new(model)
         .a11y_label("With label and description")
+        .placeholder("Type your message here.")
         .into_element(cx),
     shadcn::typography::muted(cx, "Type your message and press enter to send."),
 ]);"#,
@@ -282,6 +295,7 @@ pub(in crate::ui) fn preview_textarea(
                     "rust",
                     r#"shadcn::Textarea::new(model)
     .a11y_label("Disabled")
+    .placeholder("Type your message here.")
     .disabled(true)
     .into_element(cx);"#,
                 ),
@@ -290,8 +304,11 @@ pub(in crate::ui) fn preview_textarea(
                 .code(
                     "rust",
                     r#"doc_layout::rtl(cx, |cx| {
-    shadcn::Textarea::new(model).a11y_label("Label").into_element(cx)
-});"#,
+    shadcn::Textarea::new(model)
+        .a11y_label("Label")
+        .placeholder("Type your message here.")
+        .into_element(cx)
+ });"#,
                 ),
             DocSection::new("Extras", extras)
                 .no_shell()

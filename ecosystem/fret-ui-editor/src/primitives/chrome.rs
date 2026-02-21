@@ -196,6 +196,7 @@ pub(crate) fn resolve_editor_text_area_style(
         }),
         corner_radii: Corners::all(resolved.radius),
         text_color: resolved.text_color,
+        placeholder_color: theme.color_token("muted-foreground"),
         selection_color: resolved.selection_color,
         caret_color: resolved.text_color,
         preedit_bg_color: Color {

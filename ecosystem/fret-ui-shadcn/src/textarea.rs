@@ -17,6 +17,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 pub struct Textarea {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     disabled: bool,
     min_height: Px,
@@ -30,6 +31,10 @@ impl std::fmt::Debug for Textarea {
         f.debug_struct("Textarea")
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "placeholder",
+                &self.placeholder.as_ref().map(|s| s.as_ref()),
+            )
             .field("min_height", &self.min_height)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -43,6 +48,7 @@ impl Textarea {
         Self {
             model,
             a11y_label: None,
+            placeholder: None,
             aria_invalid: false,
             disabled: false,
             min_height: Px(64.0),
@@ -54,6 +60,11 @@ impl Textarea {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -93,6 +104,7 @@ impl Textarea {
             cx,
             self.model,
             self.a11y_label,
+            self.placeholder,
             self.aria_invalid,
             self.disabled,
             self.min_height,
@@ -107,6 +119,7 @@ pub fn textarea<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     disabled: bool,
     min_height: Px,
@@ -136,6 +149,9 @@ pub fn textarea<H: UiHost>(
     chrome.border_color = resolved.border_color;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.text_color = resolved.text_color;
+    chrome.placeholder_color = theme
+        .color_by_key("muted-foreground")
+        .unwrap_or(chrome.placeholder_color);
     chrome.selection_color = alpha_mul(resolved.selection_color, 0.65);
     chrome.caret_color = resolved.text_color;
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
@@ -165,6 +181,7 @@ pub fn textarea<H: UiHost>(
     props.enabled = !disabled;
     props.focusable = !disabled;
     props.a11y_label = a11y_label;
+    props.placeholder = placeholder;
     props.chrome = chrome;
     props.text_style = text_style;
     props.min_height = min_height;

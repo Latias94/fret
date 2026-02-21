@@ -224,7 +224,7 @@ pub(super) fn preview_forms(
             "API reference: `ecosystem/fret-ui-shadcn/src/form.rs` (Form alias), `ecosystem/fret-ui-shadcn/src/field.rs` (FieldSet), and control primitives: `input.rs`, `textarea.rs`, `checkbox.rs`, `switch.rs`.",
             "The first section mirrors upstream `FormDemo` using `FormState` + `FormRegistry`; the remaining sections are gallery recipes (composition hub).",
             "Keep stable test IDs for each recipe so future diag automation can target composition surfaces.",
-            "Gap: `Textarea` placeholder is not implemented in `fret-ui-shadcn` yet; the upstream Bio example uses a placeholder string.",
+            "Textarea supports placeholder text; the upstream Bio example uses a placeholder string.",
         ],
     );
 
@@ -856,6 +856,7 @@ fn preview_form_demo_upstream(
         form_state.clone(),
         "bio",
         [shadcn::Textarea::new(bio.clone())
+            .placeholder("Tell us a little bit about yourself")
             .refine_layout(
                 LayoutRefinement::default()
                     .w_full()

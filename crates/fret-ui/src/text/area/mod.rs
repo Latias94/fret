@@ -62,6 +62,7 @@ pub struct TextAreaStyle {
     pub focus_ring: Option<crate::element::RingStyle>,
     pub corner_radii: Corners,
     pub text_color: Color,
+    pub placeholder_color: Color,
     pub selection_color: Color,
     pub caret_color: Color,
     pub preedit_bg_color: Color,
@@ -93,6 +94,12 @@ impl Default for TextAreaStyle {
                 g: 0.92,
                 b: 0.92,
                 a: 1.0,
+            },
+            placeholder_color: Color {
+                r: 0.92,
+                g: 0.92,
+                b: 0.92,
+                a: 0.5,
             },
             selection_color: Color {
                 r: 0.24,
@@ -127,6 +134,7 @@ pub struct TextArea {
     enabled: bool,
     focusable: bool,
     text: String,
+    placeholder: Option<std::sync::Arc<str>>,
     text_style: TextStyle,
     wrap: TextWrap,
     min_height: Px,
@@ -138,8 +146,11 @@ pub struct TextArea {
 
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
+    placeholder_blob: Option<fret_core::TextBlobId>,
+    placeholder_metrics: Option<TextMetrics>,
     pending_release: Vec<fret_core::TextBlobId>,
     prepared_key: Option<PreparedKey>,
+    placeholder_prepared_key: Option<PreparedKey>,
     text_dirty: bool,
     show_scrollbar: bool,
 
@@ -181,6 +192,7 @@ impl Default for TextArea {
             enabled: true,
             focusable: true,
             text: String::new(),
+            placeholder: None,
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -195,8 +207,11 @@ impl Default for TextArea {
             last_text_style_theme_revision: None,
             blob: None,
             metrics: None,
+            placeholder_blob: None,
+            placeholder_metrics: None,
             pending_release: Vec::new(),
             prepared_key: None,
+            placeholder_prepared_key: None,
             text_dirty: true,
             show_scrollbar: false,
             offset_x: Px(0.0),
@@ -233,6 +248,14 @@ impl Default for TextArea {
 impl TextArea {
     pub fn new(text: impl Into<String>) -> Self {
         Self::default().with_text(text)
+    }
+
+    pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {
+        if self.placeholder == placeholder {
+            return;
+        }
+        self.placeholder = placeholder;
+        self.queue_release_placeholder_blob();
     }
 
     pub fn set_enabled(&mut self, enabled: bool) {
@@ -309,6 +332,7 @@ impl TextArea {
             self.style.focus_ring = None;
             self.style.corner_radii = Corners::all(theme.metric_token("metric.radius.md"));
             self.style.text_color = theme.color(ThemeColorKey::Foreground);
+            self.style.placeholder_color = theme.color_token("muted-foreground");
             self.style.selection_color = theme.color_token("selection.background");
             self.style.caret_color = theme.color(ThemeColorKey::Foreground);
             self.style.preedit_bg_color = Color {
@@ -461,6 +485,14 @@ impl TextArea {
             self.pending_release.push(blob);
         }
         self.prepared_key = None;
+    }
+
+    fn queue_release_placeholder_blob(&mut self) {
+        if let Some(blob) = self.placeholder_blob.take() {
+            self.pending_release.push(blob);
+        }
+        self.placeholder_metrics = None;
+        self.placeholder_prepared_key = None;
     }
 
     fn flush_pending_releases(&mut self, services: &mut dyn fret_core::UiServices) {

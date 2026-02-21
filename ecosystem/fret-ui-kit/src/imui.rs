@@ -1470,6 +1470,7 @@ fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAr
         focus_ring: input_style.focus_ring,
         corner_radii: input_style.corner_radii,
         text_color: input_style.text_color,
+        placeholder_color: input_style.placeholder_color,
         selection_color: input_style.selection_color,
         caret_color: input_style.caret_color,
         preedit_bg_color,

@@ -1,5 +1,6 @@
 use fret_core::{Event, Point, Px, Rect, Size, TextStyle};
 use fret_runtime::Model;
+use std::sync::Arc;
 
 use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
@@ -32,6 +33,7 @@ impl BoundTextArea {
 
     pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.area.queue_release_blob();
+        self.area.queue_release_placeholder_blob();
         self.area.flush_pending_releases(services);
         self.area.metrics = None;
         self.area.prepared_key = None;
@@ -50,6 +52,10 @@ impl BoundTextArea {
         self.area.text_style_override = true;
         self.area.last_text_style_theme_revision = None;
         self.area.text_dirty = true;
+    }
+
+    pub fn set_placeholder(&mut self, placeholder: Option<Arc<str>>) {
+        self.area.set_placeholder(placeholder);
     }
 
     pub fn with_min_height(mut self, min_height: Px) -> Self {

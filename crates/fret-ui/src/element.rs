@@ -1443,6 +1443,7 @@ pub struct TextAreaProps {
     pub enabled: bool,
     pub focusable: bool,
     pub model: Model<String>,
+    pub placeholder: Option<std::sync::Arc<str>>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
@@ -1457,6 +1458,7 @@ impl TextAreaProps {
             enabled: true,
             focusable: true,
             model,
+            placeholder: None,
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),
@@ -1473,6 +1475,10 @@ impl std::fmt::Debug for TextAreaProps {
             .field("enabled", &self.enabled)
             .field("focusable", &self.focusable)
             .field("model", &"<model>")
+            .field(
+                "placeholder",
+                &self.placeholder.as_ref().map(|s| s.as_ref()),
+            )
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
