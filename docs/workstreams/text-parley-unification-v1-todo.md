@@ -69,7 +69,7 @@ Tracking format:
     - `crates/fret-render-text/src/parley_shaper.rs` (single shaping engine used by default)
     - `crates/fret-render-wgpu/src/text/mod.rs` (`pub(crate) mod parley_shaper` re-export)
 
-- [~] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
+- [x] TPU-render-021 Ensure wrapping/ellipsis policies are deterministic and tested for “hard” strings:
   - mixed scripts (LTR/RTL)
   - emoji sequences (ZWJ/VS16/keycaps)
   - identifiers + CJK punctuation
@@ -83,6 +83,9 @@ Tracking format:
       (`none_ellipsis_does_not_split_zwj_emoji_grapheme_cluster`)
       (`none_ellipsis_does_not_split_keycap_grapheme_cluster`,
       `none_ellipsis_does_not_split_regional_indicator_flag_grapheme_cluster`)
+    - `crates/fret-render-text/src/text/tests/fixtures/text_wrap_conformance_v1.json`
+      (`emoji_keycap_word_break_wrap`, `emoji_regional_indicator_flag_word_break_wrap`,
+      `emoji_zwj_sequence_word_break_wrap`, `emoji_vs16_word_break_wrap`)
 
 ## M3 — IME + editor-grade polish
 
