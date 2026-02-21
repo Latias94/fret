@@ -321,8 +321,43 @@ impl TextArea {
         if !self.text_style_override && self.last_text_style_theme_revision != Some(rev) {
             self.last_text_style_theme_revision = Some(rev);
             let next_size = theme.metric(ThemeMetricKey::FontSize);
+            let mut changed = false;
             if self.text_style.size != next_size {
                 self.text_style.size = next_size;
+                changed = true;
+            }
+
+            let (base_size, base_line_height) = match self.text_style.font {
+                fret_core::FontId::Monospace => (
+                    theme.metric(ThemeMetricKey::MonoFontSize),
+                    theme.metric(ThemeMetricKey::MonoFontLineHeight),
+                ),
+                _ => (
+                    theme.metric(ThemeMetricKey::FontSize),
+                    theme.metric(ThemeMetricKey::FontLineHeight),
+                ),
+            };
+
+            let base_size_px = base_size.0;
+            let base_line_height_px = base_line_height.0;
+            let ratio = if base_size_px.is_finite()
+                && base_line_height_px.is_finite()
+                && base_size_px > 0.0
+                && base_line_height_px > 0.0
+            {
+                base_line_height_px / base_size_px
+            } else {
+                1.25
+            };
+            let size_px = self.text_style.size.0.max(0.0);
+            let next_line_height = Px((size_px * ratio).max(size_px));
+
+            if self.text_style.line_height != Some(next_line_height) {
+                self.text_style.line_height = Some(next_line_height);
+                changed = true;
+            }
+
+            if changed {
                 self.text_dirty = true;
                 self.prepared_key = None;
                 if let Some(blob) = self.blob.take() {

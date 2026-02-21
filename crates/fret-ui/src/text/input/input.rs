@@ -124,9 +124,44 @@ impl TextInput {
         self.last_text_style_theme_revision = Some(theme.revision);
 
         let next_size = theme.metric_token("font.size");
+
+        let mut changed = false;
         if self.style.size != next_size {
-            self.queue_release_all_text_blobs();
             self.style.size = next_size;
+            changed = true;
+        }
+
+        let (base_size, base_line_height) = match self.style.font {
+            FontId::Monospace => (
+                theme.metric_token("mono_font.size"),
+                theme.metric_token("mono_font.line_height"),
+            ),
+            _ => (
+                theme.metric_token("font.size"),
+                theme.metric_token("font.line_height"),
+            ),
+        };
+        let base_size_px = base_size.0;
+        let base_line_height_px = base_line_height.0;
+        let ratio = if base_size_px.is_finite()
+            && base_line_height_px.is_finite()
+            && base_size_px > 0.0
+            && base_line_height_px > 0.0
+        {
+            base_line_height_px / base_size_px
+        } else {
+            1.25
+        };
+        let size_px = self.style.size.0.max(0.0);
+        let next_line_height = Px((size_px * ratio).max(size_px));
+
+        if self.style.line_height != Some(next_line_height) {
+            self.style.line_height = Some(next_line_height);
+            changed = true;
+        }
+
+        if changed {
+            self.queue_release_all_text_blobs();
             self.prepared_scale_factor_bits = None;
             self.last_sent_cursor = None;
         }
