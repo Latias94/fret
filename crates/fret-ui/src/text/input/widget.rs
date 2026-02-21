@@ -1688,7 +1688,19 @@ impl<H: UiHost> Widget<H> for TextInput {
         // Note that render transforms (scrolling, anchored popovers, etc) do not affect layout
         // bounds. For platform IME positioning we must apply the accumulated transform so the OS
         // sees the same coordinates the user sees on screen.
-        let ime_rect = cx.visual_rect_aabb(caret);
+        //
+        // Many platform IME implementations anchor candidate UI at the *origin* of this rect. We
+        // prefer anchoring to the caret *bottom* so candidate windows appear below the insertion
+        // point instead of at the top-left of the caret box.
+        let ime_anchor_layout = {
+            let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
+            let w = Px(hairline.0.max(1.0 / 8.0));
+            let h = hairline;
+            let y_bottom = caret.origin.y.0 + caret.size.height.0;
+            let y = Px((y_bottom - h.0).max(caret.origin.y.0));
+            Rect::new(fret_core::Point::new(caret.origin.x, y), Size::new(w, h))
+        };
+        let ime_rect = cx.visual_rect_aabb(ime_anchor_layout);
 
         if self.last_sent_cursor != Some(ime_rect) {
             self.last_sent_cursor = Some(ime_rect);

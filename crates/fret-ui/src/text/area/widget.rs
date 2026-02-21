@@ -1649,7 +1649,20 @@ impl<H: UiHost> Widget<H> for TextArea {
                 caret_rect
             };
 
-            let ime_rect = cx.visual_rect_aabb(ime_rect_layout);
+            // Anchor IME UI to the caret *bottom* (see `TextInput` for rationale).
+            let ime_anchor_layout = {
+                let hairline = Px((1.0 / cx.scale_factor.max(1.0)).max(1.0 / 8.0));
+                let w = Px(hairline.0.max(1.0 / 8.0));
+                let h = hairline;
+                let y_bottom = ime_rect_layout.origin.y.0 + ime_rect_layout.size.height.0;
+                let y = Px((y_bottom - h.0).max(ime_rect_layout.origin.y.0));
+                Rect::new(
+                    fret_core::Point::new(ime_rect_layout.origin.x, y),
+                    Size::new(w, h),
+                )
+            };
+
+            let ime_rect = cx.visual_rect_aabb(ime_anchor_layout);
 
             if let Some(window) = cx.window
                 && self.last_sent_cursor != Some(ime_rect)
