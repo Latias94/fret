@@ -28,7 +28,8 @@ Exit criteria:
 Current status:
 
 - `bundle.index.json` v1 is produced by tooling (`fretboard diag index`).
-- Consumers still need migration (`diag slice/query` fast-paths).
+- `diag slice` uses `bundle.index.json` to pick a default snapshot for bounded parsing, and prefers bloom hints when a `--test-id` is provided.
+- `diag query snapshots` can use bloom hints to rank/annotate candidates when a `--test-id` is provided.
 
 ## M2: AI packet shipping
 

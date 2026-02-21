@@ -116,6 +116,21 @@ Keep `bundle.json` as a materialized compatibility surface, but treat it as a de
 
 Tools prefer the manifest + indexes and only materialize/parse `bundle.json` when needed.
 
+## Schema evolution and deprecations
+
+The default direction is additive + compat-first:
+
+- `bundle.json`:
+  - v1: inline per-snapshot semantics (`debug.semantics.nodes`).
+  - v2: semantics table (`tables.semantics.entries`) + snapshots reference by `semantics_fingerprint`.
+  - Tracking: `docs/workstreams/diag-bundle-schema-v2.md`.
+- `bundle.index.json` (sidecar):
+  - schema v1: per-snapshot jump table + bounded membership hints (`test_id_bloom_hex`, `semantics_blooms`).
+  - Future: schema v2 can add event markers / step ids without breaking v1 readers (ship as additive fields first).
+- Deprecation candidates (not removed yet):
+  - `test_ids.json` is human-facing and may be replaced by `test_ids.index.json` + query tooling once parity is proven.
+  - “Open the full `bundle.json` and grep” workflows should be replaced by `diag meta/query/slice` (bounded, cacheable, shareable).
+
 ## Related workstreams / dependencies
 
 - Semantics dedup: `docs/workstreams/diag-bundle-schema-v2.md`
