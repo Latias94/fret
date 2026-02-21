@@ -18,8 +18,9 @@ use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Size, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    resolve_override_slot, ui, ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement,
+    MetricRef, OverrideSlot, Radius, ShadowPreset, Size, Space, WidgetState, WidgetStateProperty,
+    WidgetStates,
 };
 
 use crate::{
@@ -795,9 +796,20 @@ fn combobox_with_patch<H: UiHost>(
                             .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                             .unwrap_or(Px(280.0));
 
-                        let transparent = Color::TRANSPARENT;
                         let list = if search_enabled {
                             let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                            let popover_surface = ChromeRefinement::default()
+                                .rounded(Radius::Md)
+                                .border_width(Px(1.0))
+                                .border_color(ColorRef::Token {
+                                    key: "border",
+                                    fallback: ColorFallback::ThemePanelBorder,
+                                })
+                                .bg(ColorRef::Token {
+                                    key: "popover.background",
+                                    fallback: ColorFallback::ThemePanelBackground,
+                                })
+                                .shadow(ShadowPreset::Md);
 
                             let mut command_items: Vec<CommandItem> =
                                 Vec::with_capacity(items.len());
@@ -848,13 +860,7 @@ fn combobox_with_patch<H: UiHost>(
                                         .placeholder(search_placeholder.clone())
                                         .disabled(disabled)
                                         .empty_text(empty_text.clone())
-                                        .refine_style(
-                                            ChromeRefinement::default()
-                                                .radius(Px(0.0))
-                                                .border_width(Px(0.0))
-                                                .bg(ColorRef::Color(transparent))
-                                                .border_color(ColorRef::Color(transparent)),
-                                        )
+                                        .refine_style(popover_surface.clone())
                                         .refine_scroll_layout(
                                             LayoutRefinement::default().max_h(max_list_h),
                                         );
@@ -1264,8 +1270,19 @@ fn combobox_with_patch<H: UiHost>(
                             .into_element(cx)
                     };
 
+                    let content_chrome = if search_enabled {
+                        ChromeRefinement::default()
+                            .p(Space::N0)
+                            .border_width(Px(0.0))
+                            .bg(ColorRef::Color(Color::TRANSPARENT))
+                            .border_color(ColorRef::Color(Color::TRANSPARENT))
+                            .shadow(ShadowPreset::None)
+                    } else {
+                        ChromeRefinement::default().p(Space::N0)
+                    };
+
                     PopoverContent::new(vec![list])
-                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_style(content_chrome)
                         .refine_layout(LayoutRefinement::default().w_px(desired_w).min_w_0())
                         .into_element(cx)
                 },
