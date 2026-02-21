@@ -664,6 +664,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
                             });
                             stack::hstack(
                                 cx,
@@ -689,6 +690,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                     }
                 };
@@ -746,6 +748,7 @@ fn render_task_list_marker<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: Default::default(),
     });
 
     let Some(role) = components.task_list_marker_role else {
@@ -796,6 +799,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+        ink_overflow: Default::default(),
     });
 
     let body = if children.len() == 1 {

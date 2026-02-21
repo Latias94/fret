@@ -229,6 +229,8 @@ impl Persona {
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
                 align: TextAlign::Start,
+
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             }))
         } else {
             None

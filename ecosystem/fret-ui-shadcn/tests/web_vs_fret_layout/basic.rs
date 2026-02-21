@@ -206,6 +206,7 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
         let desc = cx.semantics(
             fret_ui::element::SemanticsProps {

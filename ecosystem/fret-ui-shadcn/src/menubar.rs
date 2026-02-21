@@ -312,6 +312,7 @@ impl MenubarShortcut {
             .ml_auto()
             .text_size_px(font_size)
             .line_height_px(font_line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_normal()
             .letter_spacing_em(0.12)
             .text_color(ColorRef::Color(fg))
@@ -1224,10 +1225,8 @@ impl MenubarMenuEntries {
                 font: FontId::default(),
                 size: font_size,
                 weight: FontWeight::MEDIUM,
-                slant: Default::default(),
                 line_height: Some(font_line_height),
-                letter_spacing_em: None,
-                vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+                ..Default::default()
             };
 
             let label = self.menu.label.clone();

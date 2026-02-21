@@ -148,6 +148,8 @@ impl MessageParts {
                                 wrap: TextWrap::Word,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+
+                                ink_overflow: fret_ui::element::TextInkOverflow::None,
                             });
 
                             let Some(test_id) = part_id else {

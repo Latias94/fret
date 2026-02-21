@@ -288,6 +288,7 @@ impl ArtifactTitle {
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         if let Some(test_id) = self.test_id {
@@ -351,6 +352,7 @@ impl ArtifactDescription {
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         if let Some(test_id) = self.test_id {

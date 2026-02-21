@@ -257,6 +257,7 @@ impl TaskTrigger {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             });
             let left = stack::hstack(
                 cx,

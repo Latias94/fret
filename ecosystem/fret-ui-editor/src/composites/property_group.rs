@@ -269,6 +269,7 @@ impl PropertyGroup {
                                         wrap: TextWrap::None,
                                         overflow: TextOverflow::Ellipsis,
                                         align: TextAlign::Start,
+                                        ink_overflow: Default::default(),
                                     }));
                                     out.push(cx.spacer(SpacerProps::default()));
                                     if let Some(actions) = actions {

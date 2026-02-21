@@ -288,10 +288,8 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -694,6 +692,7 @@ impl Button {
                             ui::text(cx, a11y_label.clone())
                                 .text_size_px(text_px)
                                 .line_height_px(text_line_height)
+                                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                                 .font_weight(text_weight)
                                 .nowrap()
                                 .text_color(fg.clone())

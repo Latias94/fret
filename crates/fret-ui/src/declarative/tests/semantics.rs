@@ -82,6 +82,7 @@ fn selectable_text_emits_inline_link_spans_in_semantics_snapshot() {
                     wrap: fret_core::TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                     interactive_spans: Arc::from([span]),
                 }),
             ]

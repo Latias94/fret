@@ -5216,6 +5216,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         weight: FontWeight::NORMAL,
                         slant: TextSlant::Normal,
                         line_height: None,
+                        line_height_em: None,
+                        line_height_policy: Default::default(),
                         letter_spacing_em: None,
                         vertical_placement: Default::default(),
                     };
@@ -6188,6 +6190,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         weight: FontWeight::NORMAL,
                         slant: TextSlant::Normal,
                         line_height: None,
+                        line_height_em: None,
+                        line_height_policy: Default::default(),
                         letter_spacing_em: None,
                         vertical_placement: Default::default(),
                     };
@@ -6910,6 +6914,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: None,
+                    line_height_em: None,
+                    line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: Default::default(),
                 };
@@ -7369,6 +7375,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             weight: FontWeight::BOLD,
             slant: TextSlant::Normal,
             line_height: None,
+            line_height_em: None,
+            line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: Default::default(),
         };
@@ -7678,6 +7686,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: None,
+                line_height_em: None,
+                line_height_policy: Default::default(),
                 letter_spacing_em: None,
                 vertical_placement: Default::default(),
             };
@@ -7750,6 +7760,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: None,
+                    line_height_em: None,
+                    line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: Default::default(),
                 };
@@ -8129,6 +8141,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: None,
+                line_height_em: None,
+                line_height_policy: Default::default(),
                 letter_spacing_em: None,
                 vertical_placement: Default::default(),
             };

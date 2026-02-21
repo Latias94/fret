@@ -277,6 +277,7 @@ impl PropertyRow {
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::Center,
+                                ink_overflow: Default::default(),
                             })]
                         },
                     )]

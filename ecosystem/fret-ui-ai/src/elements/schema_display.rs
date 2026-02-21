@@ -555,6 +555,8 @@ impl SchemaDisplayMethod {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             })]
         })
     }
@@ -1274,6 +1276,8 @@ impl SchemaDisplayExample {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             })]
         });
 
@@ -1345,6 +1349,8 @@ fn monospace_text<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
+
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
     })
 }
 

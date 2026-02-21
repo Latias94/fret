@@ -875,6 +875,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             } else {
                 cx.text_props(TextProps {
@@ -885,6 +886,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             };
 
@@ -1434,6 +1436,7 @@ fn render_menu_item<H: UiHost>(
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let item_text_for_leading = item_text.clone();
@@ -1479,6 +1482,7 @@ fn render_menu_item<H: UiHost>(
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     })]
                 },
             )
@@ -1493,6 +1497,7 @@ fn render_menu_item<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }))
         } else if item.has_submenu {
             Some(cx.text_props(TextProps {
@@ -1503,6 +1508,7 @@ fn render_menu_item<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }))
         } else {
             None

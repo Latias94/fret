@@ -420,6 +420,7 @@ impl StackTraceCopyButton {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         })
                         .attach_semantics(
                             SemanticsDecoration::default()
@@ -549,6 +550,7 @@ impl StackTraceFrames {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })]
         } else {
             frames
@@ -574,6 +576,7 @@ impl StackTraceFrames {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
                         });
 
                         let mut parts: Vec<AnyElement> = vec![label_at];
@@ -587,6 +590,7 @@ impl StackTraceFrames {
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
                             }));
                         }
 
@@ -599,6 +603,7 @@ impl StackTraceFrames {
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
                             }));
 
                             let label = {
@@ -655,6 +660,7 @@ impl StackTraceFrames {
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
                                     align: fret_core::TextAlign::Start,
+                                    ink_overflow: Default::default(),
                                 })]
                             });
 
@@ -668,6 +674,7 @@ impl StackTraceFrames {
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
                             }));
                         }
 
@@ -681,6 +688,7 @@ impl StackTraceFrames {
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
                             }));
                         }
 
@@ -974,6 +982,7 @@ impl StackTrace {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let msg = cx.text_props(TextProps {
@@ -992,6 +1001,7 @@ impl StackTrace {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let error_row = stack::hstack(

@@ -424,6 +424,7 @@ impl ContextMenuShortcut {
             .layout(LayoutRefinement::default().ml_auto())
             .text_size_px(font_size)
             .line_height_px(font_line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_normal()
             .letter_spacing_em(0.12)
             .nowrap()
@@ -2159,10 +2160,8 @@ fn context_menu_submenu_panel<H: UiHost>(
         font: fret_core::FontId::default(),
         size: font_size,
         weight: fret_core::FontWeight::NORMAL,
-        slant: Default::default(),
         line_height: Some(font_line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     };
     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
     let label_fg = theme.color_token("muted-foreground");
@@ -2876,10 +2875,8 @@ impl ContextMenu {
                         font: fret_core::FontId::default(),
                         size: font_size,
                         weight: fret_core::FontWeight::NORMAL,
-                        slant: Default::default(),
                         line_height: Some(font_line_height),
-                        letter_spacing_em: None,
-                        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+                        ..Default::default()
                     };
                     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
                     let label_fg = theme.color_token("muted-foreground");

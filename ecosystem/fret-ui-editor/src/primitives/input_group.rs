@@ -540,6 +540,7 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: TextAlign::Center,
+                ink_overflow: Default::default(),
             })]
         },
     )

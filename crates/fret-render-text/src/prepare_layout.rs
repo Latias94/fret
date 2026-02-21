@@ -188,6 +188,8 @@ pub fn prepare_layout_from_wrapped(
             Px(((line_height_px / scale).max(0.0)).max(1.0)),
             Px((line.ascent.max(0.0) / scale).max(0.0)),
             Px((line.descent.max(0.0) / scale).max(0.0)),
+            Px((line.ink_ascent.max(0.0) / scale).max(0.0)),
+            Px((line.ink_descent.max(0.0) / scale).max(0.0)),
             caret_stops,
             clusters,
         );
@@ -212,6 +214,8 @@ pub fn prepare_layout_from_wrapped(
                 Px(0.0),
                 Px(0.0),
                 Px(1.0),
+                Px(0.0),
+                Px(0.0),
                 Px(0.0),
                 Px(0.0),
                 caret_stops,

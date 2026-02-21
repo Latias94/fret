@@ -19,12 +19,16 @@ struct CachedPreparedTextByWidth {
     width: Px,
     blob: fret_core::TextBlobId,
     metrics: TextMetrics,
+    ink_pad_top: Px,
+    ink_pad_bottom: Px,
 }
 
 #[derive(Debug, Default, Clone)]
 struct TextCache {
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
+    ink_pad_top: Px,
+    ink_pad_bottom: Px,
     prepared_scale_factor_bits: Option<u32>,
     measured_scale_factor_bits: Option<u32>,
     prepared_by_width: Vec<CachedPreparedTextByWidth>,
@@ -34,6 +38,7 @@ struct TextCache {
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,
     last_align: Option<fret_core::TextAlign>,
+    last_ink_overflow: Option<crate::element::TextInkOverflow>,
     last_width: Option<Px>,
     last_measure_width: Option<Px>,
     last_font_stack_key: Option<u64>,

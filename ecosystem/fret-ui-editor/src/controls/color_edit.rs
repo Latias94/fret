@@ -318,6 +318,7 @@ impl ColorEdit {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
                 align: TextAlign::Start,
+                ink_overflow: Default::default(),
             })
         });
 

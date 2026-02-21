@@ -136,6 +136,7 @@ fn flex_1_item(
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
             align: fret_core::TextAlign::Center,
+            ink_overflow: Default::default(),
         })]
     })
 }

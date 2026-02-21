@@ -121,10 +121,8 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -1796,6 +1794,9 @@ impl Tabs {
                                                     // the configured line height.
                                                     text = text
                                                         .line_height_px(line_height)
+                                                        .line_height_policy(
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                        )
                                                         .h_full()
                                                         .line_box_in_bounds();
                                                 }

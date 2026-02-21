@@ -152,6 +152,7 @@ pub(crate) fn sidebar_view(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
                 }),
                 stack::vstack(
                     cx,

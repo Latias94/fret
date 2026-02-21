@@ -559,6 +559,8 @@ fn wrap_none_ellipsis(
             width: max_width_px,
             ascent: kept.ascent.max(ellipsis.ascent),
             descent: kept.descent.max(ellipsis.descent),
+            ink_ascent: kept.ink_ascent.max(ellipsis.ink_ascent),
+            ink_descent: kept.ink_descent.max(ellipsis.ink_descent),
             baseline: kept.baseline.max(ellipsis.baseline),
             line_height: kept.line_height.max(ellipsis.line_height),
             glyphs,

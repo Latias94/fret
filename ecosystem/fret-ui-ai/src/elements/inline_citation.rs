@@ -371,6 +371,7 @@ impl InlineCitation {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: TextAlign::End,
+                    ink_overflow: Default::default(),
                 });
 
                 let index_inner = cx.container(
@@ -413,6 +414,7 @@ impl InlineCitation {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: TextAlign::End,
+                    ink_overflow: Default::default(),
                 });
 
                 let index_inner = cx.container(
@@ -470,6 +472,7 @@ impl InlineCitation {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
                 align: TextAlign::Start,
+                ink_overflow: Default::default(),
             });
 
             let url_text = match (source.url.clone(), self.on_open_url.clone()) {
@@ -490,6 +493,7 @@ impl InlineCitation {
                         wrap: TextWrap::Grapheme,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     Some(cx.pressable(
@@ -516,6 +520,7 @@ impl InlineCitation {
                     wrap: TextWrap::Grapheme,
                     overflow: TextOverflow::Ellipsis,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })),
                 _ => None,
             };
@@ -532,6 +537,7 @@ impl InlineCitation {
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 });
 
                 cx.container(

@@ -184,6 +184,7 @@ fn status_badge<H: UiHost>(
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         vec![stack::hstack(
@@ -502,6 +503,7 @@ impl TestResultsDuration {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         cx.container(
@@ -641,6 +643,7 @@ impl TestResultsProgress {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     }),
                     cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
@@ -650,6 +653,7 @@ impl TestResultsProgress {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     }),
                 ]
             },
@@ -870,6 +874,7 @@ impl TestSuiteName {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let stats = {
@@ -883,6 +888,7 @@ impl TestSuiteName {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }));
             }
             if self.failed > 0 {
@@ -894,6 +900,7 @@ impl TestSuiteName {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }));
             }
             if self.skipped > 0 {
@@ -905,6 +912,7 @@ impl TestSuiteName {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }));
             }
 
@@ -1083,6 +1091,7 @@ impl Test {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Ellipsis,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             });
 
             let duration_el = duration.map(|ms| {
@@ -1094,6 +1103,7 @@ impl Test {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             });
 
@@ -1250,6 +1260,7 @@ impl TestErrorMessage {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         })
     }
 }
@@ -1298,6 +1309,7 @@ impl TestErrorStack {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let mut scroll = fret_ui_shadcn::ScrollArea::new([text])

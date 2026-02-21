@@ -191,6 +191,7 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })]
             } else {
                 header.left

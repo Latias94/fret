@@ -673,6 +673,7 @@ where
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                                 align: TextAlign::End,
+                                ink_overflow: Default::default(),
                             });
 
                             let value_seg = editor_input_group_segment(

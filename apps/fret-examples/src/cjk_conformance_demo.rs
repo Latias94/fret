@@ -101,6 +101,7 @@ impl CjkConformanceDriver {
                     align: fret_core::TextAlign::Start,
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
+                    ink_overflow: Default::default(),
                 })
             };
 
@@ -129,6 +130,7 @@ impl CjkConformanceDriver {
                 align: fret_core::TextAlign::Start,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             }));
             rows.push(cx.text_props(fret_ui::element::TextProps {
                 layout: Default::default(),
@@ -138,6 +140,7 @@ impl CjkConformanceDriver {
                 align: fret_core::TextAlign::Start,
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             }));
             rows.push(cx.text_props(fret_ui::element::TextProps {
                 layout: Default::default(),
@@ -147,6 +150,7 @@ impl CjkConformanceDriver {
                 align: fret_core::TextAlign::Start,
                 wrap: TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             }));
             rows.push(cx.text_props(fret_ui::element::TextProps {
                 layout: Default::default(),
@@ -156,6 +160,7 @@ impl CjkConformanceDriver {
                 align: fret_core::TextAlign::Start,
                 wrap: TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             }));
 
             for case in CJK_CASES {
@@ -167,6 +172,7 @@ impl CjkConformanceDriver {
                     align: fret_core::TextAlign::Start,
                     wrap: TextWrap::None,
                     overflow: fret_core::TextOverflow::Clip,
+                    ink_overflow: Default::default(),
                 }));
 
                 rows.push(cx.text_props(fret_ui::element::TextProps {
@@ -177,6 +183,7 @@ impl CjkConformanceDriver {
                     align: fret_core::TextAlign::Start,
                     wrap: TextWrap::Word,
                     overflow: fret_core::TextOverflow::Clip,
+                    ink_overflow: Default::default(),
                 }));
             }
 

@@ -525,6 +525,7 @@ impl VoiceSelectorList {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 });
                 let desc_el = desc.map(|d| {
                     cx.text_props(TextProps {
@@ -535,6 +536,7 @@ impl VoiceSelectorList {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,
+                        ink_overflow: Default::default(),
                     })
                 });
 
@@ -638,6 +640,7 @@ impl VoiceSelectorValue {
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         if let Some(test_id) = self.test_id {

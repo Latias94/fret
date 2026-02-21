@@ -1,4 +1,6 @@
-use fret_core::{FontId, TextInputRef, TextShapingStyle, TextSlant, TextSpan, TextStyle};
+use fret_core::{
+    FontId, TextInputRef, TextLineHeightPolicy, TextShapingStyle, TextSlant, TextSpan, TextStyle,
+};
 use parley::FontContext;
 use parley::FontData;
 use parley::Layout;
@@ -11,6 +13,7 @@ use parley::style::{
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
+use std::hash::{Hash as _, Hasher as _};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -43,6 +46,33 @@ fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
     ascent + descent_mag
 }
 
+fn normalize_descent(descent: f32) -> f32 {
+    if descent.is_sign_negative() {
+        (-descent).max(0.0)
+    } else {
+        descent.max(0.0)
+    }
+}
+
+fn requested_line_height_logical_px(style: &TextStyle) -> Option<f32> {
+    if let Some(px) = style.line_height {
+        return Some(px.0.max(0.0));
+    }
+    let em = style.line_height_em?;
+    if !em.is_finite() || em <= 0.0 {
+        return None;
+    }
+    Some((style.size.0 * em).max(0.0))
+}
+
+fn baseline_for_fixed_line_box(ascent_px: f32, descent_px: f32, line_height_px: f32) -> f32 {
+    let ascent_px = ascent_px.max(0.0);
+    let descent_px = descent_px.max(0.0);
+    let line_height_px = line_height_px.max(0.0);
+    let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+    (padding_top_px + ascent_px).clamp(0.0, line_height_px.max(0.0))
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParleyGlyph {
     pub id: u32,
@@ -70,6 +100,8 @@ pub struct ShapedLineLayout {
     pub width: f32,
     pub ascent: f32,
     pub descent: f32,
+    pub ink_ascent: f32,
+    pub ink_descent: f32,
     pub baseline: f32,
     pub line_height: f32,
     pub glyphs: Vec<ParleyGlyph>,
@@ -88,6 +120,7 @@ pub struct ParleyShaper {
     family_id_cache_lower: HashMap<String, FamilyId>,
     all_font_names_cache: Option<Vec<String>>,
     all_font_catalog_entries_cache: Option<Vec<FontCatalogEntryMetadata>>,
+    base_line_metrics_cache: HashMap<u64, (f32, f32)>,
 }
 
 #[derive(Debug, Clone)]
@@ -138,6 +171,7 @@ impl Default for ParleyShaper {
             family_id_cache_lower: HashMap::new(),
             all_font_names_cache: None,
             all_font_catalog_entries_cache: None,
+            base_line_metrics_cache: HashMap::new(),
         }
     }
 }
@@ -472,10 +506,109 @@ impl ParleyShaper {
         true
     }
 
+    fn base_line_metrics_cache_key(&self, style: &TextStyle, scale: f32) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        "fret.text.base_line_metrics.v1".hash(&mut hasher);
+        style.font.hash(&mut hasher);
+        style.size.0.to_bits().hash(&mut hasher);
+        style.weight.0.hash(&mut hasher);
+        match style.slant {
+            TextSlant::Normal => 0u8,
+            TextSlant::Italic => 1u8,
+            TextSlant::Oblique => 2u8,
+        }
+        .hash(&mut hasher);
+        style
+            .letter_spacing_em
+            .map(|v| v.to_bits())
+            .unwrap_or(0)
+            .hash(&mut hasher);
+        self.default_locale.as_deref().hash(&mut hasher);
+        self.common_fallback_stack_suffix.hash(&mut hasher);
+        scale.to_bits().hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn parley_first_line_metrics(
+        &mut self,
+        input: TextInputRef<'_>,
+        scale: f32,
+    ) -> Option<parley::layout::LineMetrics> {
+        let (text, base_style, spans) = match input {
+            TextInputRef::Plain { text, style } => (text, style, &[][..]),
+            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
+        };
+
+        let root_style = ParleyTextStyle::default();
+        let mut builder = self
+            .lcx
+            .tree_builder(&mut self.fcx, scale, true, &root_style);
+
+        builder.push_style_span(base_parley_style(
+            base_style,
+            self.default_locale.as_deref(),
+            &self.common_fallback_stack_suffix,
+        ));
+
+        if let Some(span_ranges) = resolve_span_ranges(text, spans) {
+            for (range, span) in span_ranges {
+                let chunk = &text[range.clone()];
+                if let Some(props) = shaping_properties_for_span(
+                    base_style,
+                    span,
+                    &self.common_fallback_stack_suffix,
+                ) {
+                    builder.push_style_modification_span(props.iter());
+                    builder.push_text(chunk);
+                    builder.pop_style_span();
+                } else {
+                    builder.push_text(chunk);
+                }
+            }
+        } else {
+            builder.push_text(text);
+        }
+
+        builder.pop_style_span();
+
+        let mut tmp_layout: Layout<[u8; 4]> = Layout::default();
+        let _built_text = builder.build_into(&mut tmp_layout);
+        tmp_layout.break_all_lines(None);
+        let line = tmp_layout.lines().next()?;
+        Some(*line.metrics())
+    }
+
+    fn base_ascent_descent_px_for_style(
+        &mut self,
+        style: &TextStyle,
+        scale: f32,
+    ) -> Option<(f32, f32)> {
+        let key = self.base_line_metrics_cache_key(style, scale);
+        if let Some(hit) = self.base_line_metrics_cache.get(&key).copied() {
+            return Some(hit);
+        }
+
+        let metrics = self.parley_first_line_metrics(TextInputRef::plain(" ", style), scale)?;
+        let ascent = metrics.ascent.max(0.0);
+        let descent = normalize_descent(metrics.descent);
+        self.base_line_metrics_cache.insert(key, (ascent, descent));
+        Some((ascent, descent))
+    }
+
     pub fn shape_single_line(&mut self, input: TextInputRef<'_>, scale: f32) -> ShapedLineLayout {
         let (text, base_style, spans) = match input {
             TextInputRef::Plain { text, style } => (text, style, &[][..]),
             TextInputRef::Attributed { text, base, spans } => (text, base, spans),
+        };
+
+        let requested_line_height_px =
+            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
+        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+            && requested_line_height_px.is_some();
+        let fixed_ascent_descent = if fixed_line_box {
+            self.base_ascent_descent_px_for_style(base_style, scale)
+        } else {
+            None
         };
 
         if text.is_empty() {
@@ -484,6 +617,8 @@ impl ParleyShaper {
                 width: 0.0,
                 ascent: fallback.ascent,
                 descent: fallback.descent,
+                ink_ascent: fallback.ink_ascent,
+                ink_descent: fallback.ink_descent,
                 baseline: fallback.baseline,
                 line_height: fallback.line_height,
                 glyphs: Vec::new(),
@@ -530,6 +665,8 @@ impl ParleyShaper {
                 width: 0.0,
                 ascent: 0.0,
                 descent: 0.0,
+                ink_ascent: 0.0,
+                ink_descent: 0.0,
                 baseline: 0.0,
                 line_height: 0.0,
                 glyphs: Vec::new(),
@@ -538,15 +675,34 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
-        let base_line_height = metrics.line_height.max(0.0);
-        let mut line_height = metrics.line_height.max(0.0);
-        line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
-        if let Some(requested) = base_style.line_height {
-            line_height = line_height.max((requested.0 * scale).max(0.0));
-        }
-        let baseline = (metrics.baseline.max(0.0)
-            + ((line_height - base_line_height).max(0.0) * 0.5))
-            .clamp(0.0, line_height.max(0.0));
+        let ink_ascent = metrics.ascent.max(0.0);
+        let ink_descent = normalize_descent(metrics.descent);
+        let (ascent, descent, line_height, baseline) = if base_style.line_height_policy
+            == TextLineHeightPolicy::FixedFromStyle
+            && let Some(fixed_line_height_px) = requested_line_height_px
+        {
+            let (ascent, descent) = fixed_ascent_descent
+                .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
+            (
+                ascent,
+                descent,
+                fixed_line_height_px,
+                baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
+            )
+        } else {
+            let ascent = metrics.ascent.max(0.0);
+            let descent = normalize_descent(metrics.descent);
+            let base_line_height = metrics.line_height.max(0.0);
+            let mut line_height = metrics.line_height.max(0.0);
+            line_height = line_height.max(min_line_height_for_metrics(ascent, descent));
+            if let Some(requested) = requested_line_height_px {
+                line_height = line_height.max(requested.max(0.0));
+            }
+            let baseline = (metrics.baseline.max(0.0)
+                + ((line_height - base_line_height).max(0.0) * 0.5))
+                .clamp(0.0, line_height.max(0.0));
+            (ascent, descent, line_height, baseline)
+        };
 
         let mut glyphs: Vec<ParleyGlyph> = Vec::new();
         let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -595,8 +751,10 @@ impl ParleyShaper {
 
         ShapedLineLayout {
             width: metrics.advance,
-            ascent: metrics.ascent,
-            descent: metrics.descent,
+            ascent,
+            descent,
+            ink_ascent,
+            ink_descent,
             baseline,
             line_height,
             glyphs,
@@ -686,6 +844,16 @@ impl ParleyShaper {
             TextInputRef::Attributed { text, base, spans } => (text, base, spans),
         };
 
+        let requested_line_height_px =
+            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
+        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+            && requested_line_height_px.is_some();
+        let fixed_ascent_descent = if fixed_line_box {
+            self.base_ascent_descent_px_for_style(base_style, scale)
+        } else {
+            None
+        };
+
         if text.is_empty() {
             let fallback =
                 self.shape_single_line_metrics(TextInputRef::plain(" ", base_style), scale);
@@ -693,6 +861,8 @@ impl ParleyShaper {
                 width: 0.0,
                 ascent: fallback.ascent,
                 descent: fallback.descent,
+                ink_ascent: fallback.ink_ascent,
+                ink_descent: fallback.ink_descent,
                 baseline: fallback.baseline,
                 line_height: fallback.line_height,
                 glyphs: Vec::new(),
@@ -739,6 +909,8 @@ impl ParleyShaper {
                 width: 0.0,
                 ascent: 0.0,
                 descent: 0.0,
+                ink_ascent: 0.0,
+                ink_descent: 0.0,
                 baseline: 0.0,
                 line_height: 0.0,
                 glyphs: Vec::new(),
@@ -747,15 +919,34 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
-        let base_line_height = metrics.line_height.max(0.0);
-        let mut line_height = metrics.line_height.max(0.0);
-        line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
-        if let Some(requested) = base_style.line_height {
-            line_height = line_height.max((requested.0 * scale).max(0.0));
-        }
-        let baseline = (metrics.baseline.max(0.0)
-            + ((line_height - base_line_height).max(0.0) * 0.5))
-            .clamp(0.0, line_height.max(0.0));
+        let ink_ascent = metrics.ascent.max(0.0);
+        let ink_descent = normalize_descent(metrics.descent);
+        let (ascent, descent, line_height, baseline) = if base_style.line_height_policy
+            == TextLineHeightPolicy::FixedFromStyle
+            && let Some(fixed_line_height_px) = requested_line_height_px
+        {
+            let (ascent, descent) = fixed_ascent_descent
+                .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
+            (
+                ascent,
+                descent,
+                fixed_line_height_px,
+                baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
+            )
+        } else {
+            let ascent = metrics.ascent.max(0.0);
+            let descent = normalize_descent(metrics.descent);
+            let base_line_height = metrics.line_height.max(0.0);
+            let mut line_height = metrics.line_height.max(0.0);
+            line_height = line_height.max(min_line_height_for_metrics(ascent, descent));
+            if let Some(requested) = requested_line_height_px {
+                line_height = line_height.max(requested.max(0.0));
+            }
+            let baseline = (metrics.baseline.max(0.0)
+                + ((line_height - base_line_height).max(0.0) * 0.5))
+                .clamp(0.0, line_height.max(0.0));
+            (ascent, descent, line_height, baseline)
+        };
 
         let mut clusters: Vec<ShapedCluster> = Vec::new();
 
@@ -776,8 +967,10 @@ impl ParleyShaper {
 
         ShapedLineLayout {
             width: metrics.advance,
-            ascent: metrics.ascent,
-            descent: metrics.descent,
+            ascent,
+            descent,
+            ink_ascent,
+            ink_descent,
             baseline,
             line_height,
             glyphs: Vec::new(),
@@ -812,6 +1005,8 @@ impl ParleyShaper {
                     width: 0.0,
                     ascent: fallback.ascent,
                     descent: fallback.descent,
+                    ink_ascent: fallback.ink_ascent,
+                    ink_descent: fallback.ink_descent,
                     baseline: fallback.baseline,
                     line_height: fallback.line_height,
                     glyphs: Vec::new(),
@@ -866,21 +1061,47 @@ impl ParleyShaper {
 
         let mut out: Vec<(Range<usize>, ShapedLineLayout)> = Vec::new();
 
+        let requested_line_height_px =
+            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
+        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+            && requested_line_height_px.is_some();
+        let fixed_ascent_descent = if fixed_line_box {
+            self.base_ascent_descent_px_for_style(base_style, scale)
+        } else {
+            None
+        };
+
         for line in self.layout.lines() {
             let line_range = line.text_range();
             let line_start = line_range.start;
             let metrics = *line.metrics();
 
-            let base_line_height = metrics.line_height.max(0.0);
-            let mut line_height = metrics.line_height.max(0.0);
-            line_height =
-                line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
-            if let Some(requested) = base_style.line_height {
-                line_height = line_height.max((requested.0 * scale).max(0.0));
-            }
-            let baseline = (metrics.baseline.max(0.0)
-                + ((line_height - base_line_height).max(0.0) * 0.5))
-                .clamp(0.0, line_height.max(0.0));
+            let ink_ascent = metrics.ascent.max(0.0);
+            let ink_descent = normalize_descent(metrics.descent);
+            let (ascent, descent, line_height, baseline) =
+                if fixed_line_box && let Some(fixed_line_height_px) = requested_line_height_px {
+                    let (ascent, descent) = fixed_ascent_descent
+                        .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
+                    (
+                        ascent,
+                        descent,
+                        fixed_line_height_px,
+                        baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
+                    )
+                } else {
+                    let ascent = metrics.ascent.max(0.0);
+                    let descent = normalize_descent(metrics.descent);
+                    let base_line_height = metrics.line_height.max(0.0);
+                    let mut line_height = metrics.line_height.max(0.0);
+                    line_height = line_height.max(min_line_height_for_metrics(ascent, descent));
+                    if let Some(requested) = requested_line_height_px {
+                        line_height = line_height.max(requested.max(0.0));
+                    }
+                    let baseline = (metrics.baseline.max(0.0)
+                        + ((line_height - base_line_height).max(0.0) * 0.5))
+                        .clamp(0.0, line_height.max(0.0));
+                    (ascent, descent, line_height, baseline)
+                };
 
             let mut glyphs: Vec<ParleyGlyph> = Vec::new();
             let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -935,8 +1156,10 @@ impl ParleyShaper {
                 line_range.clone(),
                 ShapedLineLayout {
                     width: metrics.advance,
-                    ascent: metrics.ascent,
-                    descent: metrics.descent,
+                    ascent,
+                    descent,
+                    ink_ascent,
+                    ink_descent,
                     baseline,
                     line_height,
                     glyphs,
@@ -1194,6 +1417,19 @@ mod tests {
         LOCK.get_or_init(|| Mutex::new(()))
     }
 
+    fn shaper_with_bundled_fonts() -> ParleyShaper {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let added = shaper.add_fonts(
+            fret_fonts::bootstrap_fonts()
+                .iter()
+                .chain(fret_fonts::emoji_fonts().iter())
+                .chain(fret_fonts::cjk_lite_fonts().iter())
+                .map(|b| b.to_vec()),
+        );
+        assert!(added > 0, "expected bundled fonts to load");
+        shaper
+    }
+
     #[test]
     fn shaping_properties_map_wght_axis_to_font_weight() {
         let base = TextStyle {
@@ -1443,6 +1679,58 @@ mod tests {
             layout.descent,
             min
         );
+    }
+
+    #[test]
+    fn normalizes_descent_to_positive_magnitude() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let input = TextInputRef::plain("Hello", &style);
+
+        let layout = shaper.shape_single_line_metrics(input, 1.0);
+        assert!(
+            layout.descent >= -0.001,
+            "expected descent to be non-negative; descent={}",
+            layout.descent
+        );
+        assert!(
+            layout.line_height + 0.001 >= layout.ascent + layout.descent,
+            "expected line_height >= ascent+descent; line_height={} ascent={} descent={}",
+            layout.line_height,
+            layout.ascent,
+            layout.descent
+        );
+    }
+
+    #[test]
+    fn fixed_line_box_policy_keeps_line_height_stable_across_fallback_fonts() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            line_height: Some(Px(18.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            ..Default::default()
+        };
+
+        let latin = shaper.shape_single_line_metrics(TextInputRef::plain("Hello", &style), 1.0);
+        let emoji = shaper.shape_single_line_metrics(TextInputRef::plain("😀", &style), 1.0);
+        let cjk = shaper.shape_single_line_metrics(TextInputRef::plain("你好", &style), 1.0);
+
+        for (name, line) in [("latin", latin), ("emoji", emoji), ("cjk", cjk)] {
+            assert!(
+                (line.line_height - 18.0).abs() < 0.01,
+                "expected fixed line_height=18px; {name} line_height={}",
+                line.line_height
+            );
+        }
     }
 
     #[test]

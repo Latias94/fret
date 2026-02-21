@@ -220,6 +220,7 @@ impl AgentHeader {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let model_badge = model.map(|m| {
@@ -374,6 +375,7 @@ impl AgentInstructions {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let body_text = cx.text_props(TextProps {
@@ -384,6 +386,7 @@ impl AgentInstructions {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
@@ -457,6 +460,7 @@ impl AgentTools {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let accordion = self.accordion.into_element(cx);
@@ -619,6 +623,7 @@ impl AgentOutput {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let code = CodeBlock::new(self.schema)

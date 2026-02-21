@@ -2477,6 +2477,7 @@ fn web_vs_fret_input_group_demo_focus_ring_matches() {
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })];
 
             let group = fret_ui_shadcn::InputGroup::new(model)
@@ -2562,6 +2563,7 @@ fn web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches() {
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             })];
 
             let group = fret_ui_shadcn::InputGroup::new(model)

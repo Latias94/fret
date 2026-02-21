@@ -295,6 +295,7 @@ impl ContextContent {
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
         });
 
         let header_row = stack::hstack(
@@ -352,6 +353,7 @@ impl ContextContent {
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
                 .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Text)),
             );
@@ -381,6 +383,7 @@ impl ContextContent {
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
             }));
         }
 

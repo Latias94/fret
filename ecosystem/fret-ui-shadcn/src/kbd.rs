@@ -100,6 +100,7 @@ fn kbd_with_patch<H: UiHost>(
                     ui::label(cx, text.clone())
                         .text_size_px(px)
                         .line_height_px(line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(ColorRef::Color(fg))
                         .h_px(line_height)

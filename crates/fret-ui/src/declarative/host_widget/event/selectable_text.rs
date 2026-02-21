@@ -71,6 +71,24 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 return element_local;
             };
 
+            let (pad_top, pad_bottom) =
+                crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
+                    metrics.size.height,
+                    cx.bounds.size.height,
+                    this.text_cache.ink_pad_top,
+                    this.text_cache.ink_pad_bottom,
+                );
+            let bounds = fret_core::Rect::new(
+                fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    fret_core::Px(cx.bounds.origin.y.0 + pad_top.0),
+                ),
+                fret_core::Size::new(
+                    cx.bounds.size.width,
+                    fret_core::Px((cx.bounds.size.height.0 - pad_top.0 - pad_bottom.0).max(0.0)),
+                ),
+            );
+
             let vertical_placement = props
                 .resolved_text_style(cx.theme().snapshot())
                 .vertical_placement;
@@ -78,7 +96,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 crate::text::coords::compute_text_box_mapping_for_vertical_placement(
                     cx.services.text(),
                     blob,
-                    cx.bounds,
+                    bounds,
                     metrics,
                     vertical_placement,
                 );

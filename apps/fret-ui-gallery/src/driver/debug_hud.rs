@@ -59,19 +59,20 @@ pub(super) fn maybe_push_debug_hud(
                 |cx| {
                     debug_hud_lines
                         .iter()
-                        .map(|line| {
-                            cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: line.clone(),
-                                style: None,
-                                color: Some(theme.color_token("foreground")),
-                                wrap: TextWrap::Word,
-                                overflow: TextOverflow::Clip,
-                                align: fret_core::TextAlign::Start,
-                            })
-                        })
-                        .collect::<Vec<_>>()
-                },
+	                        .map(|line| {
+	                            cx.text_props(TextProps {
+	                                layout: Default::default(),
+	                                text: line.clone(),
+	                                style: None,
+	                                color: Some(theme.color_token("foreground")),
+	                                wrap: TextWrap::Word,
+	                                overflow: TextOverflow::Clip,
+	                                align: fret_core::TextAlign::Start,
+	                                ink_overflow: fret_ui::element::TextInkOverflow::None,
+	                            })
+	                        })
+	                        .collect::<Vec<_>>()
+	                },
             );
 
             [cx.container(container_props, |cx| {

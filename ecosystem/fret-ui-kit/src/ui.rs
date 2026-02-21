@@ -870,6 +870,25 @@ pub enum TextPreset {
     Label,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TextLineHeightPreset {
+    Compact,
+    Standard,
+    Comfortable,
+    Custom(f32),
+}
+
+impl TextLineHeightPreset {
+    pub fn em(self) -> f32 {
+        match self {
+            Self::Compact => 1.2,
+            Self::Standard => 1.3,
+            Self::Comfortable => 1.618,
+            Self::Custom(v) => v,
+        }
+    }
+}
+
 /// A patchable text constructor for authoring ergonomics.
 ///
 /// This is intentionally small: it supports layout patching and a minimal text refinement surface
@@ -881,6 +900,9 @@ pub struct TextBox {
     pub(crate) preset: TextPreset,
     pub(crate) size_override: Option<Px>,
     pub(crate) line_height_override: Option<Px>,
+    pub(crate) line_height_em_override: Option<f32>,
+    pub(crate) line_height_policy_override: Option<fret_core::TextLineHeightPolicy>,
+    pub(crate) ink_overflow_override: Option<fret_ui::element::TextInkOverflow>,
     pub(crate) weight_override: Option<FontWeight>,
     pub(crate) letter_spacing_em_override: Option<f32>,
     pub(crate) color_override: Option<crate::ColorRef>,
@@ -905,6 +927,9 @@ impl TextBox {
             preset,
             size_override: None,
             line_height_override: None,
+            line_height_em_override: None,
+            line_height_policy_override: None,
+            ink_overflow_override: None,
             weight_override: None,
             letter_spacing_em_override: None,
             color_override: None,
@@ -933,6 +958,9 @@ impl UiIntoElement for TextBox {
             preset,
             size_override,
             line_height_override,
+            line_height_em_override,
+            line_height_policy_override,
+            ink_overflow_override,
             weight_override,
             letter_spacing_em_override,
             color_override,
@@ -978,11 +1006,17 @@ impl UiIntoElement for TextBox {
         if let Some(height) = line_height_override {
             style.line_height = Some(height);
         }
+        if let Some(line_height_em) = line_height_em_override {
+            style.line_height_em = Some(line_height_em);
+        }
         if let Some(weight) = weight_override {
             style.weight = weight;
         }
         if let Some(letter_spacing_em) = letter_spacing_em_override {
             style.letter_spacing_em = Some(letter_spacing_em);
+        }
+        if let Some(line_height_policy) = line_height_policy_override {
+            style.line_height_policy = line_height_policy;
         }
         if let Some(vertical_placement) = vertical_placement_override {
             style.vertical_placement = vertical_placement;
@@ -1009,6 +1043,7 @@ impl UiIntoElement for TextBox {
             wrap,
             overflow,
             align,
+            ink_overflow: ink_overflow_override.unwrap_or_default(),
         })
     }
 }
@@ -1052,6 +1087,7 @@ pub struct RawTextBox {
     pub(crate) wrap: TextWrap,
     pub(crate) overflow: TextOverflow,
     pub(crate) align: TextAlign,
+    pub(crate) ink_overflow_override: Option<fret_ui::element::TextInkOverflow>,
 }
 
 impl RawTextBox {
@@ -1063,6 +1099,7 @@ impl RawTextBox {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow_override: None,
         }
     }
 }
@@ -1085,6 +1122,7 @@ impl UiIntoElement for RawTextBox {
             wrap,
             overflow,
             align,
+            ink_overflow_override,
         } = self;
 
         let (layout, color) = {
@@ -1102,6 +1140,7 @@ impl UiIntoElement for RawTextBox {
             wrap,
             overflow,
             align,
+            ink_overflow: ink_overflow_override.unwrap_or_default(),
         })
     }
 }

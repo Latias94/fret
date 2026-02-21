@@ -575,6 +575,8 @@ pub(crate) fn inject_sys_typescale(
                 weight: FontWeight(role.weight),
                 slant: TextSlant::Normal,
                 line_height: Some(line_height_px),
+                line_height_em: None,
+                line_height_policy: Default::default(),
                 letter_spacing_em: Some(tracking_em),
                 vertical_placement: TextVerticalPlacement::CenterMetricsBox,
             },

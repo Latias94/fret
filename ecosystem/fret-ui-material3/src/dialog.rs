@@ -279,6 +279,7 @@ impl DialogAction {
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
                         align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
                     });
 
                     let mut chrome = cx.container(
@@ -701,27 +702,29 @@ impl Dialog {
                                                 let mut body = Vec::new();
                                                 if let Some(headline) = self.headline.clone() {
                                                     let style = headline_style.clone();
-                                                    body.push(cx.text_props(TextProps {
-                                                        layout: LayoutStyle::default(),
-                                                        text: headline,
-                                                        style: Some(style),
-                                                        color: Some(headline_color),
-                                                        wrap: TextWrap::Word,
-                                                        overflow: TextOverflow::Clip,
-                                                        align: fret_core::TextAlign::Start,
-                                                    }));
+	                                                    body.push(cx.text_props(TextProps {
+	                                                        layout: LayoutStyle::default(),
+	                                                        text: headline,
+	                                                        style: Some(style),
+	                                                        color: Some(headline_color),
+	                                                        wrap: TextWrap::Word,
+	                                                        overflow: TextOverflow::Clip,
+	                                                        align: fret_core::TextAlign::Start,
+	                                                        ink_overflow: Default::default(),
+	                                                    }));
                                                 }
                                                 if let Some(text) = self.supporting_text.clone() {
                                                     let style = supporting_style.clone();
-                                                    body.push(cx.text_props(TextProps {
-                                                        layout: LayoutStyle::default(),
-                                                        text,
-                                                        style: Some(style),
-                                                        color: Some(supporting_color),
-                                                        wrap: TextWrap::Word,
-                                                        overflow: TextOverflow::Clip,
-                                                        align: fret_core::TextAlign::Start,
-                                                    }));
+	                                                    body.push(cx.text_props(TextProps {
+	                                                        layout: LayoutStyle::default(),
+	                                                        text,
+	                                                        style: Some(style),
+	                                                        color: Some(supporting_color),
+	                                                        wrap: TextWrap::Word,
+	                                                        overflow: TextOverflow::Clip,
+	                                                        align: fret_core::TextAlign::Start,
+	                                                        ink_overflow: Default::default(),
+	                                                    }));
                                                 }
 
                                                 body.extend(content(cx));

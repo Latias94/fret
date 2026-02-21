@@ -177,6 +177,7 @@ fn lens_panel<H: UiHost>(
                 align: fret_core::TextAlign::Start,
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
             });
 
             let pill = cx.container(
@@ -623,6 +624,7 @@ fn view(
                                             align: fret_core::TextAlign::Start,
                                             wrap: fret_core::TextWrap::None,
                                             overflow: fret_core::TextOverflow::Clip,
+                                            ink_overflow: Default::default(),
                                         });
 
                                         cx.container(

@@ -6,7 +6,8 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, TextProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps,
+    TextInkOverflow, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -166,6 +167,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: TextInkOverflow::None,
             })]
         })
     })

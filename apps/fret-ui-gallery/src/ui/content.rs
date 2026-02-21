@@ -43,6 +43,7 @@ pub(crate) fn content_view(
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         }),
                         cx.text_props(TextProps {
                             layout: {
@@ -56,6 +57,7 @@ pub(crate) fn content_view(
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                             align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         }),
                     ]
                 },

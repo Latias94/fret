@@ -299,6 +299,7 @@ where
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                             align: TextAlign::Start,
+                            ink_overflow: Default::default(),
                         });
                         let value =
                             editor_input_group_inset(cx, frame_chrome.padding, value_text_el);

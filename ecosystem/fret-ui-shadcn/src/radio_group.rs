@@ -62,10 +62,8 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::NORMAL,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -581,6 +579,7 @@ impl RadioGroup {
                                             wrap: TextWrap::Word,
                                             overflow: TextOverflow::Clip,
                                             align: fret_core::TextAlign::Start,
+                                            ink_overflow: Default::default(),
                                         };
 
                                         let icon_element =

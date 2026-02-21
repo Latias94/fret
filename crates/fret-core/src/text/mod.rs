@@ -138,6 +138,29 @@ impl TextVerticalPlacement {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextLineHeightPolicy {
+    /// Expand the line box to fit font extents (never reduce below ascent+descent).
+    ///
+    /// This avoids clipping but can cause line height to vary when fallback fonts or emoji
+    /// participate in shaping.
+    #[default]
+    ExpandToFit,
+    /// Keep a fixed line box derived from style (px or ratio) and compute baseline placement via
+    /// a CSS/GPUI-like "half-leading" model.
+    ///
+    /// This favors stable layout for UI surfaces (forms, lists, buttons). Glyphs whose ink
+    /// extends beyond the line box may be clipped by the caller's bounds.
+    FixedFromStyle,
+}
+
+impl TextLineHeightPolicy {
+    fn is_expand_to_fit(v: &TextLineHeightPolicy) -> bool {
+        *v == TextLineHeightPolicy::ExpandToFit
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConstraints {
     pub max_width: Option<Px>,
@@ -173,6 +196,15 @@ pub struct TextStyle {
     /// Optional line height override, in logical px.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_height: Option<Px>,
+    /// Optional line height override, expressed as a multiple of `size` (CSS-like).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height_em: Option<f32>,
+    /// Controls whether the line box can expand beyond the style-provided line height.
+    #[serde(
+        default,
+        skip_serializing_if = "TextLineHeightPolicy::is_expand_to_fit"
+    )]
+    pub line_height_policy: TextLineHeightPolicy,
     /// Optional tracking (letter spacing) override, in EM.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
@@ -204,6 +236,8 @@ impl Default for TextStyle {
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: None,
+            line_height_em: None,
+            line_height_policy: TextLineHeightPolicy::ExpandToFit,
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         }
@@ -221,6 +255,12 @@ pub struct TextLineMetrics {
     pub ascent: Px,
     pub descent: Px,
     pub line_height: Px,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextInkMetrics {
+    pub ascent: Px,
+    pub descent: Px,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -655,6 +695,33 @@ pub trait TextService {
     /// controls. Implementations should return `None` if the data is unavailable or expensive to
     /// compute.
     fn first_line_metrics(&mut self, _blob: TextBlobId) -> Option<TextLineMetrics> {
+        None
+    }
+
+    /// Best-effort first-line ink extents (ascent/descent) for a prepared text blob.
+    ///
+    /// This differs from `first_line_metrics` when the line box is fixed (e.g.
+    /// `TextLineHeightPolicy::FixedFromStyle`) but the shaped content includes taller fallback
+    /// glyphs (emoji/CJK/etc). Callers may use this to detect potential clipping and apply
+    /// padding or a different line-height preset.
+    fn first_line_ink_metrics(&mut self, _blob: TextBlobId) -> Option<TextInkMetrics> {
+        None
+    }
+
+    /// Best-effort last-line font extents for a prepared multi-line text blob.
+    ///
+    /// This is primarily intended for mechanism-level vertical placement and overflow handling
+    /// policies. Implementations should return `None` if the data is unavailable or expensive to
+    /// compute.
+    fn last_line_metrics(&mut self, _blob: TextBlobId) -> Option<TextLineMetrics> {
+        None
+    }
+
+    /// Best-effort last-line ink extents (ascent/descent) for a prepared multi-line text blob.
+    ///
+    /// This is intended for avoiding bottom-edge clipping in fixed line-box layouts when the last
+    /// line contains tall fallback glyphs (emoji/CJK/etc).
+    fn last_line_ink_metrics(&mut self, _blob: TextBlobId) -> Option<TextInkMetrics> {
         None
     }
 

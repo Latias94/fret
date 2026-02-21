@@ -34,6 +34,7 @@ fn text_props(
         wrap,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: Default::default(),
     }
 }
 
@@ -44,10 +45,8 @@ fn base_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::NORMAL,
-        slant: TextSlant::Normal,
         line_height,
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 

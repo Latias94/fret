@@ -474,7 +474,9 @@ impl Toggle {
                                 .text_color(fg.clone())
                                 .nowrap();
                             if let Some(line_height) = text_style.line_height {
-                                text = text.line_height_px(line_height);
+                                text = text.line_height_px(line_height).line_height_policy(
+                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                );
                             }
                             if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                 text = text.letter_spacing_em(letter_spacing_em);

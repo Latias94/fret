@@ -80,10 +80,8 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
-        slant: Default::default(),
         line_height: Some(line_height),
-        letter_spacing_em: None,
-        vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+        ..Default::default()
     }
 }
 
@@ -1156,7 +1154,11 @@ impl NavigationMenu {
                                                 .text_color(ColorRef::Color(fg))
                                                 .nowrap();
                                             if let Some(line_height) = style.line_height {
-                                                label = label.line_height_px(line_height);
+                                                label = label
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
                                             }
                                             if let Some(letter_spacing_em) = style.letter_spacing_em
                                             {
@@ -1244,7 +1246,11 @@ impl NavigationMenu {
                                                     .text_color(fg_ref.clone())
                                                     .nowrap();
                                                 if let Some(line_height) = style.line_height {
-                                                    label = label.line_height_px(line_height);
+                                                    label = label
+                                                        .line_height_px(line_height)
+                                                        .line_height_policy(
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                        );
                                                 }
                                                 if let Some(letter_spacing_em) =
                                                     style.letter_spacing_em

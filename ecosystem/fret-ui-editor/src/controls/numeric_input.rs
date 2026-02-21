@@ -443,6 +443,7 @@ where
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
                     align: TextAlign::Start,
+                    ink_overflow: Default::default(),
                 })
             })
         });

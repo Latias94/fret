@@ -183,6 +183,8 @@ impl ViewGizmoLabelCache {
             weight: FontWeight::BOLD,
             slant: fret_core::text::TextSlant::Normal,
             line_height: Some(Px(14.0)),
+            line_height_em: None,
+            line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
         };
@@ -4245,6 +4247,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     weight: FontWeight::MEDIUM,
                     slant: fret_core::text::TextSlant::Normal,
                     line_height: Some(Px(16.0)),
+                    line_height_em: None,
+                    line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                 };
@@ -4436,6 +4440,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     weight: FontWeight::MEDIUM,
                     slant: fret_core::text::TextSlant::Normal,
                     line_height: Some(Px(14.0)),
+                    line_height_em: None,
+                    line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                 };

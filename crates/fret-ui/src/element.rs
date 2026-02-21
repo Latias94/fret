@@ -1269,6 +1269,25 @@ pub struct TextProps {
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
     pub align: TextAlign,
+    /// Policy for handling ink overflow when the line box is fixed (e.g. emoji/CJK fallback).
+    ///
+    /// This is a mechanism-level escape hatch to avoid visual clipping when parents clip to
+    /// rounded corners or other shapes. Callers that want typography-driven layout should prefer
+    /// `TextLineHeightPolicy::ExpandToFit` instead.
+    pub ink_overflow: TextInkOverflow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextInkOverflow {
+    /// Do not apply any extra padding; tall glyph ink may be clipped if an ancestor clips.
+    #[default]
+    None,
+    /// Adds top/bottom padding to accommodate first/last-line ink extents when available.
+    ///
+    /// Notes:
+    /// - This is best-effort: if ink metrics are unavailable, no padding is applied.
+    /// - If the widget is height-constrained, padding may be partially applied (or ignored).
+    AutoPad,
 }
 
 #[derive(Debug, Clone)]
@@ -1281,6 +1300,7 @@ pub struct StyledTextProps {
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
     pub align: TextAlign,
+    pub ink_overflow: TextInkOverflow,
 }
 
 #[derive(Debug, Clone)]
@@ -1293,6 +1313,7 @@ pub struct SelectableTextProps {
     pub wrap: TextWrap,
     pub overflow: TextOverflow,
     pub align: TextAlign,
+    pub ink_overflow: TextInkOverflow,
     /// Optional interactive span ranges (e.g. link spans).
     ///
     /// The runtime owns hit-testing and event routing; component/ecosystem code decides what
@@ -1730,6 +1751,7 @@ impl TextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
         }
     }
 
@@ -1756,6 +1778,7 @@ impl StyledTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
         }
     }
 
@@ -1782,6 +1805,7 @@ impl SelectableTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
             interactive_spans: std::sync::Arc::from([]),
         }
     }

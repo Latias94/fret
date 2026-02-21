@@ -115,6 +115,8 @@ mod tests {
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: None,
+            line_height_em: None,
+            line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
         };

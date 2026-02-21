@@ -276,6 +276,7 @@ impl EnumSelect {
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
                             align: TextAlign::Start,
+                            ink_overflow: Default::default(),
                         });
                         let text = editor_input_group_inset(cx, frame_chrome.padding, text_el);
 
@@ -731,6 +732,7 @@ fn enum_select_row<H: UiHost>(
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,
+                        ink_overflow: Default::default(),
                     })]
                 },
             )]

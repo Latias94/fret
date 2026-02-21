@@ -78,6 +78,27 @@ impl fret_core::TextService for Renderer {
         self.text_system.first_line_metrics(blob)
     }
 
+    fn first_line_ink_metrics(
+        &mut self,
+        blob: fret_core::TextBlobId,
+    ) -> Option<fret_core::TextInkMetrics> {
+        self.text_system.first_line_ink_metrics(blob)
+    }
+
+    fn last_line_metrics(
+        &mut self,
+        blob: fret_core::TextBlobId,
+    ) -> Option<fret_core::TextLineMetrics> {
+        self.text_system.last_line_metrics(blob)
+    }
+
+    fn last_line_ink_metrics(
+        &mut self,
+        blob: fret_core::TextBlobId,
+    ) -> Option<fret_core::TextInkMetrics> {
+        self.text_system.last_line_ink_metrics(blob)
+    }
+
     fn selection_rects_clipped(
         &mut self,
         blob: fret_core::TextBlobId,
