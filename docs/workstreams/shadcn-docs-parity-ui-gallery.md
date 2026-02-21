@@ -42,17 +42,23 @@ Status legend:
 
 | Page | Status | Notes / gaps | Evidence |
 |------|--------|--------------|----------|
-| Button | Aligned (with gaps) | Added RTL; “Link (render)” is a TODO because `Button::render/asChild` is not implemented in `fret-ui-shadcn` yet. | `apps/fret-ui-gallery/src/ui.rs` |
-| Menubar | Aligned | Added examples: Checkbox, Radio, Submenu, With Icons, RTL. | `apps/fret-ui-gallery/src/ui.rs` |
-| Navigation Menu | Aligned (with gaps) | Demo + RTL match docs. Doc-site `render` link composition is not modeled; use `NavigationMenuLink` + commands instead. | `apps/fret-ui-gallery/src/ui.rs` |
-| Slider | Aligned (with known gaps) | Core Radix contracts are covered (`vertical`, `dir`, `inverted`, `onValueCommit`, `minStepsBetweenThumbs`); continue parity checks with scripted gallery sweeps to catch visual drift in app-level composition. | `ecosystem/fret-ui-shadcn/src/slider.rs` |
-| Avatar | Aligned (with known gaps) | Added retry for transient image registration failures during early runner initialization (`renderer/wgpu not initialized`) to prevent a blank first avatar in UI Gallery. | `apps/fret-ui-gallery/src/driver.rs` |
+| Accordion | Aligned (with extras) | Demo matches upstream `accordion-demo.tsx`; retains Fret-specific variants (multiple/disabled/borders/card/RTL) under **Extras**. | `apps/fret-ui-gallery/src/ui/previews/gallery/nav/accordion.rs` |
+| Button | Aligned (with gaps) | Added RTL; “Link (render)” is a TODO because `Button::render/asChild` is not implemented in `fret-ui-shadcn` yet. | `apps/fret-ui-gallery/src/ui/pages/button.rs` |
+| Button Group | Aligned | All sections use `DocSection::code` so Preview and Code stay coupled. | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` |
+| Menubar | Aligned | Checkbox/Radio/Submenu/Icons/RTL examples mirror upstream intent. | `apps/fret-ui-gallery/src/ui/pages/menubar.rs` |
+| Navigation Menu | Aligned (with gaps) | Demo + RTL match docs; doc-site `render` link composition is not modeled; use `NavigationMenuLink` + commands instead. | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` |
+| Resizable | Aligned (with extras) | Matches upstream `resizable-demo.tsx` order; includes RTL section for direction-sensitive hit-testing. | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/resizable.rs` |
+| Slider | Aligned (with known gaps) | Core Radix contracts are covered (`vertical`, `dir`, `inverted`, `onValueCommit`, `minStepsBetweenThumbs`). | `apps/fret-ui-gallery/src/ui/pages/slider.rs` |
+| Sonner | Aligned (with extras) | Demo mirrors upstream “type buttons”; extra sections cover global position + pinned/swipe-dismiss toasts. | `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/sonner.rs` |
+| Spinner | Aligned (with extras) | Sections mirror upstream structure; RTL + Extras include code tabs for parity review. | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/spinner.rs` |
+| Table | Aligned (with extras) | Demo/footer/actions/RTL each include code tabs; actions column uses `DropdownMenu`. | `apps/fret-ui-gallery/src/ui/previews/gallery/table.rs` |
+| Tabs | Aligned (with gaps) | Matches upstream `tabs-demo.tsx` ordering; password inputs are plain text (no masked input yet). | `apps/fret-ui-gallery/src/ui/previews/gallery/nav/tabs.rs` |
+| Avatar | Aligned (with known gaps) | Demo order matches upstream; badge/group-count are tracked as explicit gap cards. | `apps/fret-ui-gallery/src/ui/pages/avatar.rs` |
 
 ## Next
 
 Priority order (highest first):
 
-1. **Sidebar**: align examples and verify hover/active chrome across all items (repro + hit-test diagnostics if needed).
-2. **Native Select**: upgrade from “smoke stubs” to doc-shaped previews.
-3. **Pagination**: mirror docs ordering (and add RTL if applicable).
-4. **Gallery sweep gate**: keep a lightweight scripted sweep for Slider + Avatar (`tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`) and run it when semantics/layout wrappers change.
+1. **Charts**: upstream splits `chart-area`/`chart-bar`/`chart-line`; decide whether to add dedicated pages or keep a single `Chart` page with clearly labeled sections.
+2. **Command + Form naming parity**: upstream uses `CommandDemo`/`FormDemo`; UI Gallery currently exposes `Command Palette` + `Forms` pages—consider adding lightweight aliases so “docs parity” scans are 1:1.
+3. **Code coverage sweep**: keep “Preview ↔ Code” coupling strong by ensuring every non-Notes section uses `DocSection::code` (or is an explicit gap card).
