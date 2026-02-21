@@ -56,7 +56,21 @@ pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
         .unwrap_or_else(|| Px(font_size(theme).0 + 1.0));
     let line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT)
-        .unwrap_or_else(|| font_line_height(theme));
+        .unwrap_or_else(|| {
+            let base_size_px = font_size(theme).0;
+            let base_line_height_px = font_line_height(theme).0;
+            let ratio = if base_size_px.is_finite()
+                && base_line_height_px.is_finite()
+                && base_size_px > 0.0
+                && base_line_height_px > 0.0
+            {
+                base_line_height_px / base_size_px
+            } else {
+                1.25
+            };
+
+            Px((size.0 * ratio).max(size.0))
+        });
 
     TextStyle {
         font: FontId::default(),
