@@ -4,6 +4,8 @@ pub(in crate::ui) fn preview_sheet(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
 ) -> Vec<AnyElement> {
+    use crate::ui::doc_layout::{self, DocSection};
+
     #[derive(Default, Clone)]
     struct SheetModels {
         demo_name: Option<Model<String>>,
@@ -17,38 +19,6 @@ pub(in crate::ui) fn preview_sheet(
         rtl_name: Option<Model<String>>,
         rtl_username: Option<Model<String>>,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default().border_1().rounded(Radius::Md),
-                layout,
-            )
-        });
-        cx.container(props, move |_cx| [body])
-    };
 
     let state = cx.with_state(SheetModels::default, |st| st.clone());
 
@@ -228,9 +198,7 @@ pub(in crate::ui) fn preview_sheet(
                     .test_id("ui-gallery-sheet-demo"),
             );
 
-        let card = shell(cx, LayoutRefinement::default(), demo_sheet);
-        let body = centered(cx, card);
-        section(cx, "Demo", body)
+        demo_sheet
     };
 
     let side = {
@@ -351,9 +319,7 @@ pub(in crate::ui) fn preview_sheet(
                 .test_id("ui-gallery-sheet-side"),
         );
 
-        let card = shell(cx, LayoutRefinement::default(), row);
-        let body = centered(cx, card);
-        section(cx, "Side", body)
+        row
     };
 
     let no_close_button = {
@@ -387,75 +353,116 @@ pub(in crate::ui) fn preview_sheet(
                 .test_id("ui-gallery-sheet-no-close-button"),
         );
 
-        let card = shell(cx, LayoutRefinement::default(), sheet);
-        let body = centered(cx, card);
-        section(cx, "No Close Button", body)
+        sheet
     };
 
     let rtl = {
-        let rtl_demo = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let trigger_open = rtl_open.clone();
-                let save_open = rtl_open.clone();
-                let close_open = rtl_open.clone();
-                let name_model = rtl_name.clone();
-                let username_model = rtl_username.clone();
+        let rtl_demo = doc_layout::rtl(cx, |cx| {
+            let trigger_open = rtl_open.clone();
+            let save_open = rtl_open.clone();
+            let close_open = rtl_open.clone();
+            let name_model = rtl_name.clone();
+            let username_model = rtl_username.clone();
 
-                shadcn::Sheet::new(rtl_open.clone())
-                    .side(shadcn::SheetSide::Left)
-                    .size(Px(420.0))
-                    .into_element(
-                        cx,
-                        |cx| {
-                            shadcn::Button::new("Open")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(trigger_open.clone())
-                                .into_element(cx)
-                        },
-                        |cx| {
-                            shadcn::SheetContent::new([
-                                shadcn::SheetHeader::new([
-                                    shadcn::SheetTitle::new("Edit profile").into_element(cx),
-                                    shadcn::SheetDescription::new(
-                                        "RTL layout keeps spacing and focus flow aligned.",
-                                    )
-                                    .into_element(cx),
-                                ])
-                                .into_element(cx),
-                                profile_fields(cx, name_model.clone(), username_model.clone()),
-                                shadcn::SheetFooter::new([
-                                    shadcn::Button::new("Save changes")
-                                        .toggle_model(save_open.clone())
-                                        .into_element(cx),
-                                    shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .toggle_model(close_open.clone())
-                                        .into_element(cx),
-                                ])
+            shadcn::Sheet::new(rtl_open.clone())
+                .side(shadcn::SheetSide::Left)
+                .size(Px(420.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("Open")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(trigger_open.clone())
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        shadcn::SheetContent::new([
+                            shadcn::SheetHeader::new([
+                                shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                                shadcn::SheetDescription::new(
+                                    "RTL layout keeps spacing and focus flow aligned.",
+                                )
                                 .into_element(cx),
                             ])
-                            .into_element(cx)
-                        },
-                    )
-            },
-        )
+                            .into_element(cx),
+                            profile_fields(cx, name_model.clone(), username_model.clone()),
+                            shadcn::SheetFooter::new([
+                                shadcn::Button::new("Save changes")
+                                    .toggle_model(save_open.clone())
+                                    .into_element(cx),
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .toggle_model(close_open.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)
+                    },
+                )
+        })
         .attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-sheet-rtl"),
         );
 
-        let card = shell(cx, LayoutRefinement::default(), rtl_demo);
-        let body = centered(cx, card);
-        section(cx, "RTL", body)
+        rtl_demo
     };
 
-    vec![
-        cx.text("Extends dialog to display side-aligned panels for supplementary tasks."),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
-            vec![demo, side, no_close_button, rtl]
-        }),
-    ]
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows shadcn Sheet demo (new-york-v4).",
+            "Upstream exposes `SheetClose` and a default close button; Fret currently relies on Escape/outside press + explicit `open` toggles in actions.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Extends dialog to display side-aligned panels for supplementary tasks."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-demo")
+                .code(
+                    "rust",
+                    r#"shadcn::Sheet::new(open)
+    .side(shadcn::SheetSide::Right)
+    .size(Px(420.0))
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("Side", side)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-side")
+                .code(
+                    "rust",
+                    r#"shadcn::Sheet::new(open)
+    .side(shadcn::SheetSide::Top)
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("No Close Button", no_close_button)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-no-close")
+                .code(
+                    "rust",
+                    r#"shadcn::Sheet::new(open)
+    .into_element(cx, trigger, content);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Sheet::new(open).into_element(cx, trigger, content)
+});"#,
+                ),
+            DocSection::new("Notes", notes)
+                .no_shell()
+                .test_id_prefix("ui-gallery-sheet-notes"),
+        ],
+    );
+
+    vec![body]
 }
