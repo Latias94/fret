@@ -15,7 +15,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 - [x] Extract “bundle writer” responsibilities (schema selection, semantics-mode application, JSON writing) into a module:
   - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`
-- [ ] Extract “script runner” responsibilities (step state machine + evidence capture) into a module.
+- [ ] Extract “script runner” responsibilities (step state machine + evidence capture) into a module:
+  - [x] Extract pending-script start/bootstrap helper:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
