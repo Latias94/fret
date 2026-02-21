@@ -92,7 +92,7 @@ What ships now (Phase 1 subset):
 
 Known gaps (still planned):
 
-- `diag query` does not yet prefer `bundle.index.json` for fast-path selection (it still parses `bundle.json` when computing new outputs).
+- `diag query` still has large surface area that does not yet use `bundle.index.json` (only `query snapshots` is index-first today).
 - `diag slice` uses `bundle.index.json` for validation and as a default snapshot hint, but it still falls back to parsing `bundle.json`
   when it needs to find a better snapshot that contains the requested test-id (since per-snapshot test-id presence is not indexed yet).
 - “Test-id presence per snapshot” is not yet indexed; finding “first snapshot that contains X” still requires semantics reads.

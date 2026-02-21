@@ -32,6 +32,7 @@ Last updated: 2026-02-21
 ## M2: Slice hardening
 
 - [ ] Ensure `diag slice` works consistently on v1/v2 bundles (inline semantics vs table-resolved).
+- [x] Add streaming bounded-parse support for v1 inline + v2 table semantics (still falls back to full parse for "find a better snapshot").
 - [ ] Add targeted slice regression tests (golden-ish fixtures for indexes + slice output shape).
 - [ ] Add a stable “reason_code → slice recipe” mapping for common failures.
 
