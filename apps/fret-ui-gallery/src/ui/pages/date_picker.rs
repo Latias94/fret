@@ -2,6 +2,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+use fret_ui_kit::declarative::style as decl_style;
 
 pub(super) fn preview_date_picker(
     cx: &mut ElementContext<'_, App>,
@@ -37,6 +38,8 @@ pub(super) fn preview_date_picker(
 
     let diag_calendar_roving =
         std::env::var_os("FRET_UI_GALLERY_DIAG_CALENDAR_ROVING").is_some_and(|v| !v.is_empty());
+
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
         .ok()
@@ -170,41 +173,11 @@ pub(super) fn preview_date_picker(
         }
     };
 
-    let basic_selected = cx
-        .app
-        .models()
-        .read(&selected, |v| v.map(|d| Arc::<str>::from(d.to_string())))
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    let basic_picker = shadcn::DatePicker::new(open, month, selected.clone())
+    let simple = shadcn::DatePicker::new(open, month, selected.clone())
         .placeholder("Pick a date")
+        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
         .into_element(cx)
-        .test_id("ui-gallery-date-picker-basic");
-
-    let basic_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| vec![basic_picker, cx.text(format!("selected: {basic_selected}"))],
-    );
-
-    let range_value = cx
-        .app
-        .models()
-        .get_cloned(&range_selected)
-        .unwrap_or_default();
-    let range_from = range_value
-        .from
-        .map(|d| d.to_string())
-        .unwrap_or_else(|| "<none>".to_string());
-    let range_to = range_value
-        .to
-        .map(|d| d.to_string())
-        .unwrap_or_else(|| "<none>".to_string());
+        .test_id("ui-gallery-date-picker-simple");
 
     let mut range_picker = shadcn::DateRangePicker::new(
         range_open.clone(),
@@ -220,84 +193,90 @@ pub(super) fn preview_date_picker(
     }
 
     let range_picker = range_picker
+        .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
         .into_element(cx)
         .test_id("ui-gallery-date-picker-range");
+    let range = range_picker;
 
-    let range_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                range_picker,
-                cx.text(format!("from: {range_from}")),
-                cx.text(format!("to: {range_to}")),
-            ]
-        },
-    );
-
-    let dob_text = cx
+    let dropdown_text = cx
         .app
         .models()
         .read(&dob_selected, |v| v.map(|d| d.to_string()))
         .ok()
         .flatten()
-        .unwrap_or_else(|| "Pick date of birth".to_string());
+        .unwrap_or_else(|| "Pick a date".to_string());
 
-    let dob = {
-        shadcn::Popover::new(dob_open.clone())
+    let dropdowns = {
+        let theme = theme.clone();
+        let open = dob_open.clone();
+
+        shadcn::Popover::new(open.clone())
             .side(shadcn::PopoverSide::Bottom)
             .align(shadcn::PopoverAlign::Start)
             .into_element(
                 cx,
                 |cx| {
-                    shadcn::Button::new(dob_text)
+                    shadcn::Button::new(dropdown_text)
                         .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(dob_open.clone())
-                        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
+                        .toggle_model(open.clone())
+                        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::PopoverContent::new([shadcn::Calendar::new(
-                        dob_month.clone(),
-                        dob_selected.clone(),
-                    )
-                    .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-                    .close_on_select(dob_open.clone())
-                    .into_element(cx)])
-                    .refine_style(ChromeRefinement::default().p(Space::N0))
-                    .into_element(cx)
+                    let calendar = shadcn::Calendar::new(dob_month.clone(), dob_selected.clone())
+                        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                        .into_element(cx)
+                        .test_id("ui-gallery-date-picker-dropdowns-calendar");
+
+                    let done = shadcn::Button::new("Done")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .toggle_model(open.clone())
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)
+                        .test_id("ui-gallery-date-picker-dropdowns-done");
+
+                    let footer_props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default().p(Space::N2),
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    );
+                    let footer = cx.container(footer_props, move |_cx| vec![done]);
+
+                    let separator = shadcn::Separator::new()
+                        .into_element(cx)
+                        .test_id("ui-gallery-date-picker-dropdowns-separator");
+
+                    let body = stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N0)
+                            .items_stretch()
+                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+                        move |_cx| vec![calendar, separator, footer],
+                    );
+
+                    shadcn::PopoverContent::new([body])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .into_element(cx)
                 },
             )
-            .test_id("ui-gallery-date-picker-dob")
+            .test_id("ui-gallery-date-picker-dropdowns")
     };
 
-    let (input_title, input) = doc_layout::gap_card(
+    let demo = doc_layout::wrap_row_snapshot(
         cx,
-        "Input",
-        "Input-driven parsing is not yet exposed by current Fret DatePicker API. This section remains explicit to keep docs parity auditable.",
-        "ui-gallery-date-picker-input-gap",
-    );
-
-    let (time_title, time_picker) = doc_layout::gap_card(
-        cx,
-        "Time Picker",
-        "Time selection widgets are currently implemented in Calendar recipes, but not yet unified into DatePicker API.",
-        "ui-gallery-date-picker-time-gap",
-    );
-
-    let (nl_title, natural_language) = doc_layout::gap_card(
-        cx,
-        "Natural Language Picker",
-        "Natural-language parsing (e.g. chrono-node style) is not available in this runtime surface yet.",
-        "ui-gallery-date-picker-natural-gap",
-    );
+        &theme,
+        Space::N4,
+        fret_ui::element::CrossAlign::Start,
+        |_cx| vec![simple, dropdowns, range],
+    )
+    .test_id("ui-gallery-date-picker-demo");
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
             .placeholder("Pick a date")
+            .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
             .into_element(cx)
     })
     .test_id("ui-gallery-date-picker-rtl");
@@ -305,77 +284,44 @@ pub(super) fn preview_date_picker(
     let notes_stack = doc_layout::notes(
         cx,
         [
-            "Date picker parity should follow docs sequence even when some recipe surfaces are not yet available in the API.",
-            "Keep unsupported examples visible as explicit gap cards to avoid hidden regressions in future alignment passes.",
-            "For date-of-birth flows, dropdown month/year caption improves large-jump navigation compared with arrow-only controls.",
-            "Add deterministic test IDs on every scenario so diag scripts can capture state transitions and layout snapshots.",
+            "Demo aligns to shadcn `DatePickerDemo` (Simple, With Dropdowns, With Range).",
+            "The upstream dropdowns demo uses a Drawer on mobile; this gallery currently renders the Popover-only desktop recipe.",
+            "Calendar dropdown caption improves large-jump navigation compared with arrow-only controls.",
+            "For diag runs, some dates are intentionally disabled (via env flag) to validate skip behavior.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Date Picker docs order: Basic, Range Picker, Date of Birth, Input, Time Picker, Natural Language Picker, RTL.",
+            "Preview follows shadcn DatePickerDemo flow (Simple + With Dropdowns + With Range). Extras: RTL.",
         ),
         vec![
-            DocSection::new("Basic", basic_content)
-                .description("Single date selection with a popover calendar.")
+            DocSection::new("Demo", demo)
+                .description("shadcn demo: simple, dropdown caption, and range (2-month) pickers.")
                 .code(
                     "rust",
-                    r#"let single = shadcn::DatePicker::new(open, month, selected)
+                    r#"// Simple
+shadcn::DatePicker::new(open, month, selected)
     .placeholder("Pick a date")
-    .into_element(cx);"#,
-                )
-                .max_w(Px(780.0)),
-            DocSection::new("Range Picker", range_content)
-                .descriptions([
-                    "Date range selection with roving focus regression gates.",
-                    "For diag runs, some dates are intentionally disabled to validate skip behavior.",
-                ])
-                .code(
-                    "rust",
-                    r#"let range = shadcn::DateRangePicker::new(open, month, range_selected)
-    .placeholder("Pick a date range")
-    .into_element(cx);"#,
-                )
-                .max_w(Px(780.0)),
-            DocSection::new("Date of Birth", dob)
-                .description("Popover + Calendar with dropdown month/year caption.")
-                .code(
-                    "rust",
-                    r#"shadcn::Popover::new(open).into_element(cx, |cx| trigger, |cx| {
+    .into_element(cx);
+
+// With dropdown caption + Done footer (Popover-only approximation)
+shadcn::Popover::new(open).into_element(cx, |cx| trigger, |cx| {
     shadcn::PopoverContent::new([
         shadcn::Calendar::new(month, selected)
             .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-            .close_on_select(open)
             .into_element(cx),
     ])
     .into_element(cx)
-});"#,
+});
+
+// With range (2 months)
+shadcn::DateRangePicker::new(open, month, range_selected).into_element(cx);"#,
                 )
-                .max_w(Px(780.0)),
-            DocSection::new(input_title, input)
-                .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0))
-                .code(
-                    "rust",
-                    r#"// Not yet implemented: Input-driven parsing is not exposed by current DatePicker API yet."#,
-                ),
-            DocSection::new(time_title, time_picker)
-                .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0))
-                .code(
-                    "rust",
-                    r#"// Not yet implemented: Time selection widgets are not yet unified into DatePicker API."#,
-                ),
-            DocSection::new(nl_title, natural_language)
-                .description("Not yet implemented; kept as an explicit parity gap marker.")
-                .max_w(Px(780.0))
-                .code(
-                    "rust",
-                    r#"// Not yet implemented: Natural-language parsing is not available in this runtime surface yet."#,
-                ),
-            DocSection::new("RTL", rtl)
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::new("Extras: RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(
                     "rust",
@@ -383,7 +329,8 @@ pub(super) fn preview_date_picker(
     shadcn::DatePicker::new(open, month, selected).into_element(cx)
 });"#,
                 )
-                .max_w(Px(780.0)),
+                .max_w(Px(780.0))
+                .no_shell(),
             DocSection::new("Notes", notes_stack)
                 .description("Guidelines and parity notes for date picker recipes.")
                 .max_w(Px(780.0)),
