@@ -475,86 +475,6 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         },
     );
 
-    let options_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Upstream exposes Embla `opts` (align/loop/etc). Fret currently does not expose Embla-style options.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Use `item_basis_main_px` + spacing refinements to get the core layouts from the docs.",
-                ),
-            ]
-        },
-    );
-
-    let api_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Upstream exposes `setApi` for Embla events/options. Current Fret API focuses on deterministic swipe + buttons.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Follow-up can expose controlled index/event hooks once API contracts are stabilized.",
-                ),
-            ]
-        },
-    );
-
-    let events_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Upstream can listen to Embla events (e.g. `select`) via the API instance from `setApi`.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Fret currently does not expose an event surface. Follow-up can add controlled index + callbacks once contracts are stabilized.",
-                ),
-            ]
-        },
-    );
-
-    let plugins_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Upstream supports Embla plugins (e.g. autoplay). Fret currently does not expose plugin injection.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Keep this section as an explicit gap marker to avoid silent parity drift.",
-                ),
-            ]
-        },
-    );
-
     let rtl = doc_layout::rtl(cx, |cx| {
         carousel(
             cx,
@@ -575,17 +495,18 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let notes_stack = doc_layout::notes(
         cx,
         [
+            "Gallery layout references shadcn/ui docs, but the API is a Fret-native builder (not Embla).",
             "`item_basis_main_px` defines the visible density contract; keep it explicit per page width.",
-            "Spacing parity with web examples depends on pairing negative track margin with item start padding.",
-            "Vertical orientation should always set viewport height explicitly to prevent clipping ambiguity.",
-            "API/plugins gaps are tracked here intentionally so future Embla parity work remains discoverable.",
+            "Spacing parity with shadcn examples depends on pairing negative track margin with item start padding.",
+            "Vertical orientation should set viewport height explicitly (content tracks don't auto-size deterministically).",
+            "Embla-only surfaces (`opts`, `setApi`, plugins/events) are intentionally not exposed by Fret Carousel yet.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Carousel docs flow: Demo -> Sizes -> Spacing -> Orientation -> Options -> API -> Events -> Plugins.",
+            "Gallery sections are inspired by shadcn Carousel docs (Demo, Sizes, Spacing, Orientation) and adapted to Fret's builder API.",
         ),
         vec![
             DocSection::new("Demo", demo_body)
@@ -593,9 +514,14 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .test_id_prefix("ui-gallery-carousel-demo")
                 .code(
                     "rust",
-                    r#"let carousel = shadcn::Carousel::new(items)
-    .item_basis_main_px(Px(260.0))
-    .refine_layout(LayoutRefinement::default().max_w(Px(360.0)))
+                    r#"let items = vec![/* slides */];
+
+shadcn::Carousel::new(items)
+    .orientation(shadcn::CarouselOrientation::Horizontal)
+    .item_basis_main_px(Px(320.0))
+    .track_start_neg_margin(Space::N4)
+    .item_padding_start(Space::N4)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
     .into_element(cx);"#,
                 ),
             DocSection::new("Animata: Expandable", animata_expandable)
@@ -630,6 +556,7 @@ shadcn::Card::new([/* content */])
     .item_basis_main_px(Px(133.328))
     .track_start_neg_margin(Space::N4)
     .item_padding_start(Space::N4)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
                 ),
             DocSection::new("Spacing", spacing_content)
@@ -638,10 +565,12 @@ shadcn::Card::new([/* content */])
                 .code(
                     "rust",
                     r#"shadcn::Carousel::new(items)
-    .track_start_neg_margin(Space::N4)
-    .item_padding_start(Space::N4)
-    .orientation(shadcn::CarouselOrientation::Vertical)
-    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(300.0)))"#,
+    .orientation(shadcn::CarouselOrientation::Horizontal)
+    .item_basis_main_px(Px(129.328))
+    .track_start_neg_margin(Space::N1)
+    .item_padding_start(Space::N1)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
+    .into_element(cx);"#,
                 ),
             DocSection::new("Orientation", orientation_content)
                 .max_w(Px(760.0))
@@ -652,55 +581,25 @@ shadcn::Card::new([/* content */])
     .item_basis_main_px(Px(100.0))
     .track_start_neg_margin(Space::N1)
     .item_padding_start(Space::N1)
+    // Controls sit outside the viewport bounds (shadcn `-top-12` / `-bottom-12`).
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto().my(Space::N12))
     .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
     .into_element(cx);"#,
-                ),
-            DocSection::new("Options", options_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream exposes Embla opts (align/loop/etc). Current Fret Carousel does not expose Embla-style options yet.",
-);"#,
-                ),
-            DocSection::new("API", api_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream exposes setApi for Embla events/options. Follow-up can add a controlled index/event surface once contracts stabilize.",
-);"#,
-                ),
-            DocSection::new("Events", events_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream listens to Embla events like select via the API handle. Fret Carousel currently keeps event surface internal.",
-);"#,
-                ),
-            DocSection::new("Plugins", plugins_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream supports Embla plugins (e.g. autoplay). Fret Carousel does not expose plugin injection yet.",
-);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-rtl")
                 .code(
                     "rust",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Carousel::new(items)
-        .orientation(shadcn::CarouselOrientation::Horizontal)
-        .into_element(cx)
-})"#,
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Carousel::new(items)
+            .orientation(shadcn::CarouselOrientation::Horizontal)
+            .into_element(cx)
+    },
+);"#,
                 ),
             DocSection::new("Notes", notes_stack).max_w(Px(760.0)),
         ],
