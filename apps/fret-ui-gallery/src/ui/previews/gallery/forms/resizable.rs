@@ -1,5 +1,7 @@
 use super::super::super::super::*;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(in crate::ui) fn preview_resizable(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -13,27 +15,6 @@ pub(in crate::ui) fn preview_resizable(
         rtl_h_fractions: Option<Model<Vec<f32>>>,
         rtl_v_fractions: Option<Model<Vec<f32>>>,
     }
-
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
 
     let box_group =
         |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
@@ -59,7 +40,7 @@ pub(in crate::ui) fn preview_resizable(
                 .layout(LayoutRefinement::default().w_full().h_full())
                 .items_center()
                 .justify_center(),
-            move |cx| vec![cx.text(label)],
+            move |cx| vec![shadcn::typography::small(cx, label)],
         );
 
         cx.container(
@@ -137,38 +118,14 @@ pub(in crate::ui) fn preview_resizable(
                     .test_id("ui-gallery-resizable-panels"),
             );
 
-        let group = box_group(
+        box_group(
             cx,
             max_w_sm
                 .clone()
                 .merge(LayoutRefinement::default().h_px(Px(320.0))),
             group,
-        );
-
-        let body = centered(cx, group);
-        section(cx, "Demo", body)
-    };
-
-    let vertical = {
-        let group = shadcn::ResizablePanelGroup::new(vertical_fractions)
-            .axis(fret_core::Axis::Vertical)
-            .entries([
-                shadcn::ResizablePanel::new([panel(cx, "Header", None)]).into(),
-                shadcn::ResizableHandle::new().into(),
-                shadcn::ResizablePanel::new([panel(cx, "Content", None)]).into(),
-            ])
-            .into_element(cx);
-
-        let group = box_group(
-            cx,
-            max_w_sm
-                .clone()
-                .merge(LayoutRefinement::default().h_px(Px(200.0))),
-            group,
-        );
-
-        let body = centered(cx, group);
-        section(cx, "Vertical", body)
+        )
+        .test_id("ui-gallery-resizable-demo")
     };
 
     let handle = {
@@ -181,59 +138,121 @@ pub(in crate::ui) fn preview_resizable(
             ])
             .into_element(cx);
 
-        let group = box_group(
+        box_group(
             cx,
             max_w_md
                 .clone()
                 .merge(LayoutRefinement::default().h_px(Px(200.0))),
             group,
-        );
+        )
+        .test_id("ui-gallery-resizable-handle")
+    };
 
-        let body = centered(cx, group);
-        section(cx, "Handle", body)
+    let vertical = {
+        let group = shadcn::ResizablePanelGroup::new(vertical_fractions)
+            .axis(fret_core::Axis::Vertical)
+            .entries([
+                shadcn::ResizablePanel::new([panel(cx, "Header", None)]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new([panel(cx, "Content", None)]).into(),
+            ])
+            .into_element(cx);
+
+        box_group(
+            cx,
+            max_w_sm
+                .clone()
+                .merge(LayoutRefinement::default().h_px(Px(200.0))),
+            group,
+        )
+        .test_id("ui-gallery-resizable-vertical")
     };
 
     let rtl = {
-        let group = fret_ui_kit::primitives::direction::with_direction_provider(
-            cx,
-            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-            |cx| {
-                let nested_vertical = shadcn::ResizablePanelGroup::new(rtl_v_fractions.clone())
-                    .axis(fret_core::Axis::Vertical)
-                    .entries([
-                        shadcn::ResizablePanel::new([panel(cx, "اثنان", None)]).into(),
-                        shadcn::ResizableHandle::new().with_handle(true).into(),
-                        shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None)]).into(),
-                    ])
-                    .into_element(cx);
+        let group = doc_layout::rtl(cx, |cx| {
+            let nested_vertical = shadcn::ResizablePanelGroup::new(rtl_v_fractions.clone())
+                .axis(fret_core::Axis::Vertical)
+                .entries([
+                    shadcn::ResizablePanel::new([panel(cx, "اثنان", None)]).into(),
+                    shadcn::ResizableHandle::new().with_handle(true).into(),
+                    shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None)]).into(),
+                ])
+                .into_element(cx);
 
-                shadcn::ResizablePanelGroup::new(rtl_h_fractions.clone())
-                    .axis(fret_core::Axis::Horizontal)
-                    .entries([
-                        shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0)))]).into(),
-                        shadcn::ResizableHandle::new().with_handle(true).into(),
-                        shadcn::ResizablePanel::new([nested_vertical]).into(),
-                    ])
-                    .into_element(cx)
-            },
-        );
+            shadcn::ResizablePanelGroup::new(rtl_h_fractions.clone())
+                .axis(fret_core::Axis::Horizontal)
+                .entries([
+                    shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0)))]).into(),
+                    shadcn::ResizableHandle::new().with_handle(true).into(),
+                    shadcn::ResizablePanel::new([nested_vertical]).into(),
+                ])
+                .into_element(cx)
+        });
 
-        let group = box_group(
+        box_group(
             cx,
             max_w_sm
                 .clone()
                 .merge(LayoutRefinement::default().h_px(Px(320.0))),
             group,
-        );
-
-        let body = centered(cx, group);
-        section(cx, "RTL", body)
+        )
+        .test_id("ui-gallery-resizable-rtl")
     };
 
-    vec![
-        cx.text("Drag the handles to resize panels."),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
-            vec![demo, vertical, handle, rtl]
-        }),
-    ]
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows `resizable-demo.tsx` (new-york-v4): nested panels, with-handle, and vertical orientation.",
+            "Resizable groups expose their own semantics; keep an eye on focus order and hit-testing near handles.",
+            "API reference: `ecosystem/fret-ui-shadcn/src/resizable.rs`.",
+        ],
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Drag the handles to resize panels."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Nested vertical panels inside a horizontal group.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ResizablePanelGroup::new(h_fractions)
+    .axis(Axis::Horizontal)
+    .entries([
+        ResizablePanel::new([panel_one]).into(),
+        ResizableHandle::new().into(),
+        ResizablePanel::new([nested_vertical]).into(),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Handle", handle)
+                .description("A handle with a visual grabber (`withHandle`).")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ResizableHandle::new().with_handle(true)"#,
+                ),
+            DocSection::new("Vertical", vertical)
+                .description("Vertical orientation.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ResizablePanelGroup::new(fractions)
+    .axis(Axis::Vertical)"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("Direction provider coverage for hit-testing and handle affordances.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::ResizablePanelGroup::new(fractions).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Notes", notes).description("Parity notes and references."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-resizable")]
 }

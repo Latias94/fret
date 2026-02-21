@@ -1,133 +1,138 @@
 use super::super::super::super::*;
 use super::command_palette::sonner_position_key;
 
+use crate::ui::doc_layout::{self, DocSection};
+
 pub(in crate::ui) fn preview_sonner(
     cx: &mut ElementContext<'_, App>,
     last_action: Model<Arc<str>>,
     sonner_position: Model<shadcn::ToastPosition>,
 ) -> Vec<AnyElement> {
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     struct SonnerModels {
         pending_promise: Option<Model<Option<shadcn::ToastId>>>,
+        active_type: Option<Model<Arc<str>>>,
     }
 
-    let pending_promise = cx.with_state(SonnerModels::default, |st| st.pending_promise.clone());
     let sonner = shadcn::Sonner::global(&mut *cx.app);
 
-    let pending_promise = match pending_promise {
+    let pending_promise =
+        match cx.with_state(SonnerModels::default, |st| st.pending_promise.clone()) {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(None::<shadcn::ToastId>);
+                cx.with_state(SonnerModels::default, |st| {
+                    st.pending_promise = Some(model.clone())
+                });
+                model
+            }
+        };
+
+    let active_type = match cx.with_state(SonnerModels::default, |st| st.active_type.clone()) {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(None::<shadcn::ToastId>);
+            let model = cx.app.models_mut().insert(Arc::<str>::from("Default"));
             cx.with_state(SonnerModels::default, |st| {
-                st.pending_promise = Some(model.clone())
+                st.active_type = Some(model.clone())
             });
             model
         }
     };
 
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
+    let current_active = cx
+        .get_model_cloned(&active_type, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("Default"));
+    let theme = Theme::global(&*cx.app).clone();
 
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
-    };
-
-    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| children,
-        )
-    };
-
-    let button = |cx: &mut ElementContext<'_, App>,
-                  label: &'static str,
-                  test_id: &'static str,
-                  on_activate: fret_ui::action::OnActivate| {
+    let action_button = |cx: &mut ElementContext<'_, App>,
+                         label: &'static str,
+                         variant: shadcn::ButtonVariant,
+                         test_id: &'static str,
+                         on_activate: fret_ui::action::OnActivate| {
         shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline)
+            .variant(variant)
             .on_activate(on_activate)
             .test_id(test_id)
             .into_element(cx)
     };
 
+    let type_button = |cx: &mut ElementContext<'_, App>,
+                       label: &'static str,
+                       test_id: &'static str,
+                       on_activate: fret_ui::action::OnActivate| {
+        let variant = if current_active.as_ref() == label {
+            shadcn::ButtonVariant::Secondary
+        } else {
+            shadcn::ButtonVariant::Ghost
+        };
+        action_button(cx, label, variant, test_id, on_activate)
+    };
+
     let demo = {
-        let sonner_for_show = sonner.clone();
-        let last_action_model_for_show = last_action.clone();
-        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner_for_show.toast_message(
-                host,
-                action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new()
-                    .description("Sunday, December 03, 2023 at 9:00 AM")
-                    .action("Undo", CMD_TOAST_ACTION),
-            );
-            let _ = host.models_mut().update(&last_action_model_for_show, |v| {
-                *v = Arc::<str>::from("sonner.demo");
-            });
-            host.request_redraw(action_cx.window);
-        });
-
-        let show = button(cx, "Show Toast", "ui-gallery-sonner-demo-show", on_activate);
-
-        let show_swipe_dismiss = {
-            let sonner_for_swipe = sonner.clone();
-            let last_action_model_for_swipe = last_action.clone();
+        let give_me = {
+            let sonner = sonner.clone();
+            let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
-                    sonner_for_swipe.toast(
+                    sonner.toast_message(
                         host,
                         action_cx.window,
-                        shadcn::ToastRequest::new("Swipe to dismiss")
-                            .description("Drag up to dismiss (pinned)")
-                            .duration(None)
-                            .dismissible(true)
-                            .test_id("ui-gallery-sonner-demo-toast-swipe"),
+                        "My first toast",
+                        shadcn::ToastMessageOptions::new(),
                     );
-                    let _ = host.models_mut().update(&last_action_model_for_swipe, |v| {
-                        *v = Arc::<str>::from("sonner.demo.swipe_dismiss");
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Default");
+                    });
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.demo.give_me");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(
+            action_button(
                 cx,
-                "Swipe Dismiss Toast",
-                "ui-gallery-sonner-demo-show-swipe",
+                "Give me a toast",
+                shadcn::ButtonVariant::Outline,
+                "ui-gallery-sonner-demo-give-me",
                 on_activate,
             )
         };
 
-        let buttons = row(cx, vec![show, show_swipe_dismiss]);
-        let body = centered(cx, buttons).attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sonner-demo"),
-        );
-        section(cx, "Demo", body)
-    };
+        let show = {
+            let sonner = sonner.clone();
+            let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Sunday, December 03, 2023 at 9:00 AM")
+                            .action("Undo", CMD_TOAST_ACTION),
+                    );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Action");
+                    });
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.demo.show");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            action_button(
+                cx,
+                "Show Toast",
+                shadcn::ButtonVariant::Outline,
+                "ui-gallery-sonner-demo-show",
+                on_activate,
+            )
+        };
 
-    let types = {
         let default_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     sonner.toast_message(
@@ -136,12 +141,15 @@ pub(in crate::ui) fn preview_sonner(
                         "Event has been created",
                         shadcn::ToastMessageOptions::new(),
                     );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Default");
+                    });
                     let _ = host.models_mut().update(&last_action_model, |v| {
                         *v = Arc::<str>::from("sonner.types.default");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(
+            type_button(
                 cx,
                 "Default",
                 "ui-gallery-sonner-types-default",
@@ -149,9 +157,39 @@ pub(in crate::ui) fn preview_sonner(
             )
         };
 
+        let description_button = {
+            let sonner = sonner.clone();
+            let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Monday, January 3rd at 6:00pm"),
+                    );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Description");
+                    });
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.description");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            type_button(
+                cx,
+                "Description",
+                "ui-gallery-sonner-types-description",
+                on_activate,
+            )
+        };
+
         let success_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     sonner.toast_success_message(
@@ -160,12 +198,15 @@ pub(in crate::ui) fn preview_sonner(
                         "Event has been created",
                         shadcn::ToastMessageOptions::new(),
                     );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Success");
+                    });
                     let _ = host.models_mut().update(&last_action_model, |v| {
                         *v = Arc::<str>::from("sonner.types.success");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(
+            type_button(
                 cx,
                 "Success",
                 "ui-gallery-sonner-types-success",
@@ -176,6 +217,7 @@ pub(in crate::ui) fn preview_sonner(
         let info_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     sonner.toast_info_message(
@@ -184,17 +226,21 @@ pub(in crate::ui) fn preview_sonner(
                         "Be at the area 10 minutes before the event time",
                         shadcn::ToastMessageOptions::new(),
                     );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Info");
+                    });
                     let _ = host.models_mut().update(&last_action_model, |v| {
                         *v = Arc::<str>::from("sonner.types.info");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(cx, "Info", "ui-gallery-sonner-types-info", on_activate)
+            type_button(cx, "Info", "ui-gallery-sonner-types-info", on_activate)
         };
 
         let warning_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     sonner.toast_warning_message(
@@ -203,12 +249,15 @@ pub(in crate::ui) fn preview_sonner(
                         "Event start time cannot be earlier than 8am",
                         shadcn::ToastMessageOptions::new(),
                     );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Warning");
+                    });
                     let _ = host.models_mut().update(&last_action_model, |v| {
                         *v = Arc::<str>::from("sonner.types.warning");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(
+            type_button(
                 cx,
                 "Warning",
                 "ui-gallery-sonner-types-warning",
@@ -219,6 +268,7 @@ pub(in crate::ui) fn preview_sonner(
         let error_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     sonner.toast_error_message(
@@ -227,18 +277,68 @@ pub(in crate::ui) fn preview_sonner(
                         "Event has not been created",
                         shadcn::ToastMessageOptions::new(),
                     );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Error");
+                    });
                     let _ = host.models_mut().update(&last_action_model, |v| {
                         *v = Arc::<str>::from("sonner.types.error");
                     });
                     host.request_redraw(action_cx.window);
                 });
-            button(cx, "Error", "ui-gallery-sonner-types-error", on_activate)
+            type_button(cx, "Error", "ui-gallery-sonner-types-error", on_activate)
         };
 
-        let promise_button = {
+        let action = {
+            let sonner = sonner.clone();
+            let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION),
+                    );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Action");
+                    });
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.action");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            type_button(cx, "Action", "ui-gallery-sonner-types-action", on_activate)
+        };
+
+        let cancel = {
+            let sonner = sonner.clone();
+            let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new().cancel("Cancel", CMD_TOAST_ACTION),
+                    );
+                    let _ = host.models_mut().update(&active_type_model, |v| {
+                        *v = Arc::<str>::from("Cancel");
+                    });
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.cancel");
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            type_button(cx, "Cancel", "ui-gallery-sonner-types-cancel", on_activate)
+        };
+
+        let promise = {
             let sonner = sonner.clone();
             let pending_model = pending_promise.clone();
             let last_action_model = last_action.clone();
+            let active_type_model = active_type.clone();
             let on_activate: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
                     let pending = host.models_mut().get_copied(&pending_model).flatten();
@@ -252,6 +352,9 @@ pub(in crate::ui) fn preview_sonner(
                         let _ = host
                             .models_mut()
                             .update(&pending_model, |slot| *slot = None);
+                        let _ = host.models_mut().update(&active_type_model, |v| {
+                            *v = Arc::<str>::from("Promise");
+                        });
                         let _ = host.models_mut().update(&last_action_model, |v| {
                             *v = Arc::<str>::from("sonner.types.promise.resolve");
                         });
@@ -260,13 +363,16 @@ pub(in crate::ui) fn preview_sonner(
                         let _ = host
                             .models_mut()
                             .update(&pending_model, |slot| *slot = Some(promise.id()));
+                        let _ = host.models_mut().update(&active_type_model, |v| {
+                            *v = Arc::<str>::from("Promise");
+                        });
                         let _ = host.models_mut().update(&last_action_model, |v| {
                             *v = Arc::<str>::from("sonner.types.promise.start");
                         });
                     }
                     host.request_redraw(action_cx.window);
                 });
-            button(
+            type_button(
                 cx,
                 "Promise",
                 "ui-gallery-sonner-types-promise",
@@ -274,31 +380,47 @@ pub(in crate::ui) fn preview_sonner(
             )
         };
 
-        let buttons_row = row(
-            cx,
-            vec![
-                default_button,
-                success_button,
-                info_button,
-                warning_button,
-                error_button,
-                promise_button,
-            ],
-        );
-
         let pending = cx
             .get_model_copied(&pending_promise, Invalidation::Layout)
             .flatten()
             .is_some();
 
-        let content = stack::vstack(
+        let buttons = doc_layout::wrap_row(
+            cx,
+            &theme,
+            Space::N2,
+            fret_ui::element::CrossAlign::Center,
+            |_cx| {
+                vec![
+                    give_me,
+                    show,
+                    default_button,
+                    description_button,
+                    success_button,
+                    info_button,
+                    warning_button,
+                    error_button,
+                    action,
+                    cancel,
+                    promise,
+                ]
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-sonner-demo"),
+        );
+
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full()),
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
             move |cx| {
                 vec![
-                    buttons_row,
+                    buttons,
                     shadcn::typography::muted(
                         cx,
                         if pending {
@@ -310,44 +432,7 @@ pub(in crate::ui) fn preview_sonner(
                 ]
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sonner-types"),
-        );
-
-        section(cx, "Types", content)
-    };
-
-    let description = {
-        let sonner = sonner.clone();
-        let last_action_model = last_action.clone();
-        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
-                host,
-                action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
-            );
-            let _ = host.models_mut().update(&last_action_model, |v| {
-                *v = Arc::<str>::from("sonner.description");
-            });
-            host.request_redraw(action_cx.window);
-        });
-
-        let show = button(
-            cx,
-            "Show Toast",
-            "ui-gallery-sonner-description-show",
-            on_activate,
-        );
-        let content = centered(cx, show).attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sonner-description"),
-        );
-
-        section(cx, "Description", content)
+        .test_id("ui-gallery-sonner-demo-root")
     };
 
     let position = {
@@ -381,65 +466,71 @@ pub(in crate::ui) fn preview_sonner(
                         });
                         host.request_redraw(action_cx.window);
                     });
-                button(cx, label, test_id, on_activate)
+                action_button(
+                    cx,
+                    label,
+                    shadcn::ButtonVariant::Outline,
+                    test_id,
+                    on_activate,
+                )
             };
 
-        let make_position_button = make_position_button;
-        let top_left = make_position_button(
-            cx,
-            "Top Left",
-            "ui-gallery-sonner-position-top-left",
-            shadcn::ToastPosition::TopLeft,
-        );
-        let top_center = make_position_button(
-            cx,
-            "Top Center",
-            "ui-gallery-sonner-position-top-center",
-            shadcn::ToastPosition::TopCenter,
-        );
-        let top_right = make_position_button(
-            cx,
-            "Top Right",
-            "ui-gallery-sonner-position-top-right",
-            shadcn::ToastPosition::TopRight,
-        );
-        let bottom_left = make_position_button(
-            cx,
-            "Bottom Left",
-            "ui-gallery-sonner-position-bottom-left",
-            shadcn::ToastPosition::BottomLeft,
-        );
-        let bottom_center = make_position_button(
-            cx,
-            "Bottom Center",
-            "ui-gallery-sonner-position-bottom-center",
-            shadcn::ToastPosition::BottomCenter,
-        );
-        let bottom_right = make_position_button(
-            cx,
-            "Bottom Right",
-            "ui-gallery-sonner-position-bottom-right",
-            shadcn::ToastPosition::BottomRight,
-        );
+        let top_row = doc_layout::wrap_controls_row(cx, &theme, Space::N2, |cx| {
+            vec![
+                make_position_button(
+                    cx,
+                    "Top Left",
+                    "ui-gallery-sonner-position-top-left",
+                    shadcn::ToastPosition::TopLeft,
+                ),
+                make_position_button(
+                    cx,
+                    "Top Center",
+                    "ui-gallery-sonner-position-top-center",
+                    shadcn::ToastPosition::TopCenter,
+                ),
+                make_position_button(
+                    cx,
+                    "Top Right",
+                    "ui-gallery-sonner-position-top-right",
+                    shadcn::ToastPosition::TopRight,
+                ),
+            ]
+        });
 
-        let top_row = row(cx, vec![top_left, top_center, top_right]);
-        let bottom_row = row(cx, vec![bottom_left, bottom_center, bottom_right]);
-        let rows = stack::vstack(
+        let bottom_row = doc_layout::wrap_controls_row(cx, &theme, Space::N2, |cx| {
+            vec![
+                make_position_button(
+                    cx,
+                    "Bottom Left",
+                    "ui-gallery-sonner-position-bottom-left",
+                    shadcn::ToastPosition::BottomLeft,
+                ),
+                make_position_button(
+                    cx,
+                    "Bottom Center",
+                    "ui-gallery-sonner-position-bottom-center",
+                    shadcn::ToastPosition::BottomCenter,
+                ),
+                make_position_button(
+                    cx,
+                    "Bottom Right",
+                    "ui-gallery-sonner-position-bottom-right",
+                    shadcn::ToastPosition::BottomRight,
+                ),
+            ]
+        });
+
+        stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .layout(LayoutRefinement::default()),
-            move |_cx| vec![top_row, bottom_row],
-        );
-
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full()),
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
             move |cx| {
                 vec![
-                    centered(cx, rows),
+                    top_row,
+                    bottom_row,
                     shadcn::typography::muted(
                         cx,
                         format!("Current toaster position: {}", sonner_position_key(current)),
@@ -451,9 +542,42 @@ pub(in crate::ui) fn preview_sonner(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-sonner-position"),
+        )
+        .test_id("ui-gallery-sonner-position-root")
+    };
+
+    let extras = {
+        let sonner = sonner.clone();
+        let last_action_model = last_action.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            sonner.toast(
+                host,
+                action_cx.window,
+                shadcn::ToastRequest::new("Swipe to dismiss")
+                    .description("Drag up to dismiss (pinned)")
+                    .duration(None)
+                    .dismissible(true)
+                    .test_id("ui-gallery-sonner-demo-toast-swipe"),
+            );
+            let _ = host.models_mut().update(&last_action_model, |v| {
+                *v = Arc::<str>::from("sonner.extras.swipe_dismiss");
+            });
+            host.request_redraw(action_cx.window);
+        });
+
+        let swipe = action_button(
+            cx,
+            "Swipe Dismiss Toast",
+            shadcn::ButtonVariant::Outline,
+            "ui-gallery-sonner-demo-show-swipe",
+            on_activate,
         );
 
-        section(cx, "Position", content)
+        doc_layout::wrap_controls_row(cx, &theme, Space::N2, |_cx| vec![swipe]).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-sonner-extras"),
+        )
     };
 
     let last = cx
@@ -462,11 +586,71 @@ pub(in crate::ui) fn preview_sonner(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    vec![
-        cx.text("An opinionated toast component for React."),
-        cx.text(format!("last action: {last}")),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
-            vec![demo, types, description, position]
-        }),
-    ]
+    let notes = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            vec![
+                doc_layout::muted_full_width(cx, format!("Last action: {last}")),
+                doc_layout::muted_full_width(
+                    cx,
+                    "Preview follows `sonner-demo.tsx` (new-york-v4): buttons that trigger different toast types.",
+                ),
+                doc_layout::muted_full_width(
+                    cx,
+                    "Fret exposes extra knobs (position, pinned + swipe dismiss) for testing overlay behavior.",
+                ),
+                doc_layout::muted_full_width(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
+                ),
+            ]
+        },
+    );
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("An opinionated toast component (Sonner)."),
+        vec![
+            DocSection::new("Demo", demo)
+                .description("Buttons that fire different toast styles and actions.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"let sonner = shadcn::Sonner::global(&mut *cx.app);
+
+sonner.toast_message(host, window, "Event has been created", ToastMessageOptions::new());
+sonner.toast_success_message(host, window, "Event has been created", ToastMessageOptions::new());
+sonner.toast_message(host, window, "Event has been created", ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION));"#,
+                ),
+            DocSection::new("Position", position)
+                .description("Fret-specific: mutate global toaster position for overlay regression tests.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"let _ = host.models_mut().update(&sonner_position, |v| {
+    *v = shadcn::ToastPosition::BottomRight
+});"#,
+                ),
+            DocSection::new("Extras", extras)
+                .description("Pinned + swipe-dismiss toasts.")
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"sonner.toast(
+    host,
+    window,
+    ToastRequest::new("Swipe to dismiss")
+        .duration(None)
+        .dismissible(true),
+);"#,
+                ),
+            DocSection::new("Notes", notes).description("Status + parity notes."),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-sonner")]
 }
