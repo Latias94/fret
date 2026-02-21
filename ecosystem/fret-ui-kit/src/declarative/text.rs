@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
+use fret_core::{FontId, Px, TextAlign, TextLineHeightPolicy, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, LayoutStyle, TextInkOverflow, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::theme_tokens;
@@ -30,6 +30,7 @@ pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }
@@ -46,6 +47,7 @@ pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }
@@ -76,6 +78,7 @@ pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }
@@ -92,6 +95,7 @@ pub(crate) fn text_prose_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }
@@ -113,6 +117,7 @@ pub fn text_truncate<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -129,6 +134,7 @@ pub fn text_nowrap<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -152,6 +158,7 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -174,6 +181,7 @@ pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -198,6 +206,7 @@ pub fn text_base<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -230,6 +239,7 @@ pub fn text_prose<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -251,6 +261,7 @@ pub fn text_prose_break_words<H: UiHost>(
         wrap: TextWrap::WordBreak,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -273,6 +284,7 @@ pub fn text_prose_bold<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -292,10 +304,9 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
             font: FontId::default(),
             size: px,
             weight: fret_core::FontWeight::MEDIUM,
-            slant: Default::default(),
             line_height: Some(line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            ..Default::default()
         },
         line_height,
     )
@@ -316,6 +327,7 @@ pub fn text_code_wrap<H: UiHost>(
             font: FontId::monospace(),
             size: theme.metric_token("metric.font.mono_size"),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
         }
     };
@@ -328,6 +340,7 @@ pub fn text_code_wrap<H: UiHost>(
         wrap: TextWrap::Grapheme,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -348,6 +361,7 @@ pub fn text_prose_nowrap<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -370,5 +384,6 @@ pub fn text_prose_bold_nowrap<H: UiHost>(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }

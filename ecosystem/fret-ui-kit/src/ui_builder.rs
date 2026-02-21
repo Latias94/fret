@@ -3,8 +3,8 @@ use crate::{
     ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
-use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, ScrollAxis};
+use fret_core::{FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextWrap};
+use fret_ui::element::{AnyElement, ScrollAxis, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
@@ -207,12 +207,29 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn line_height_em(mut self, line_height_em: f32) -> Self {
+        self.inner.line_height_em_override = Some(line_height_em);
+        self
+    }
+
+    pub fn line_height_preset(mut self, preset: crate::ui::TextLineHeightPreset) -> Self {
+        self.inner.line_height_em_override = Some(preset.em());
+        self.inner.line_height_policy_override = Some(TextLineHeightPolicy::FixedFromStyle);
+        self
+    }
+
+    pub fn line_height_policy(mut self, policy: TextLineHeightPolicy) -> Self {
+        self.inner.line_height_policy_override = Some(policy);
+        self
+    }
+
     /// Configures a fixed line box by setting both `line_height_px(height)` and `h_px(height)`.
     ///
     /// This is a pragmatic escape hatch for fixed-height controls (tabs, pills, buttons) where
     /// centering by glyph bounds can read as slightly bottom-heavy. A fixed line box allows the
     /// text widget to apply CSS/GPUI-like "half-leading" baseline placement.
-    pub fn fixed_line_box_px(self, height: Px) -> Self {
+    pub fn fixed_line_box_px(mut self, height: Px) -> Self {
+        self.inner.line_height_policy_override = Some(TextLineHeightPolicy::FixedFromStyle);
         self.line_height_px(height).h_px(height)
     }
 
@@ -229,6 +246,15 @@ impl UiBuilder<crate::ui::TextBox> {
     pub fn overflow(mut self, overflow: TextOverflow) -> Self {
         self.inner.overflow = overflow;
         self
+    }
+
+    pub fn ink_overflow(mut self, ink_overflow: TextInkOverflow) -> Self {
+        self.inner.ink_overflow_override = Some(ink_overflow);
+        self
+    }
+
+    pub fn auto_pad_ink_overflow(self) -> Self {
+        self.ink_overflow(TextInkOverflow::AutoPad)
     }
 
     pub fn text_align(mut self, align: fret_core::TextAlign) -> Self {
@@ -277,6 +303,15 @@ impl UiBuilder<crate::ui::RawTextBox> {
     pub fn overflow(mut self, overflow: TextOverflow) -> Self {
         self.inner.overflow = overflow;
         self
+    }
+
+    pub fn ink_overflow(mut self, ink_overflow: TextInkOverflow) -> Self {
+        self.inner.ink_overflow_override = Some(ink_overflow);
+        self
+    }
+
+    pub fn auto_pad_ink_overflow(self) -> Self {
+        self.ink_overflow(TextInkOverflow::AutoPad)
     }
 
     pub fn text_align(mut self, align: fret_core::TextAlign) -> Self {

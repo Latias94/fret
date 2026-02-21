@@ -3,7 +3,9 @@ use std::sync::Arc;
 use fret_core::{
     AttributedText, FontId, FontWeight, TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
-use fret_ui::element::{AnyElement, Length, SelectableTextProps, SizeStyle, TextProps};
+use fret_ui::element::{
+    AnyElement, Length, SelectableTextProps, SizeStyle, TextInkOverflow, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone)]
@@ -56,15 +58,14 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
             font: FontId::default(),
             size: px,
             weight: FontWeight::MEDIUM,
-            slant: Default::default(),
             line_height: Some(line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         }),
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
     })
 }
 
@@ -130,15 +131,14 @@ pub fn selectable_label<H: UiHost>(
             font: FontId::default(),
             size: px,
             weight: FontWeight::MEDIUM,
-            slant: Default::default(),
             line_height: Some(line_height),
-            letter_spacing_em: None,
-            vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
+            ..Default::default()
         }),
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
         align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
         interactive_spans: Arc::from([]),
     })
 }

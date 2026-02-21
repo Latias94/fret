@@ -54,6 +54,7 @@ fn toast_icon_from_override<H: UiHost>(
                 wrap: fret_core::TextWrap::None,
                 overflow: fret_core::TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
+                ink_overflow: fret_ui::element::TextInkOverflow::None,
             }))
         }
         #[cfg(feature = "icons")]
@@ -635,6 +636,7 @@ pub fn render<H: UiHost + 'static>(
         let on_close_auto_focus = req.on_close_auto_focus.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
         let children = req.children;
+        let open_now_for_hooks = open_now;
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -644,15 +646,20 @@ pub fn render<H: UiHost + 'static>(
             bounds,
             &root_name,
             move |cx| {
-                cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
-                    Arc::new(
-                        move |host: &mut dyn UiActionHost,
-                              _cx: ActionCx,
-                              _req: &mut DismissRequestCx| {
-                            let _ = host.models_mut().update(&open, |v| *v = false);
-                        },
-                    )
-                }));
+                // Overlays can remain mounted while `open=false` during exit motion. Once closed,
+                // the layer should be click-through and should not participate in Escape routing
+                // or dismissal observer passes.
+                if open_now_for_hooks {
+                    cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                        Arc::new(
+                            move |host: &mut dyn UiActionHost,
+                                  _cx: ActionCx,
+                                  _req: &mut DismissRequestCx| {
+                                let _ = host.models_mut().update(&open, |v| *v = false);
+                            },
+                        )
+                    }));
+                }
                 children
             },
         );
@@ -888,6 +895,7 @@ pub fn render<H: UiHost + 'static>(
         let on_close_auto_focus = req.on_close_auto_focus.clone();
         let on_dismiss_request_for_root = on_dismiss_request.clone();
         let children = req.children;
+        let open_now_for_hooks = open_now;
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -897,19 +905,24 @@ pub fn render<H: UiHost + 'static>(
             bounds,
             &root_name,
             move |cx| {
-                if let Some(on_pointer_move) = on_pointer_move {
-                    cx.dismissible_on_pointer_move(on_pointer_move);
+                // Overlays can remain mounted while `open=false` during exit motion. Once closed,
+                // the layer should be click-through and should not participate in Escape routing
+                // or dismissal observer passes.
+                if open_now_for_hooks {
+                    if let Some(on_pointer_move) = on_pointer_move {
+                        cx.dismissible_on_pointer_move(on_pointer_move);
+                    }
+                    let on_dismiss_request = on_dismiss_request_for_root.clone();
+                    cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                        Arc::new(
+                            move |host: &mut dyn UiActionHost,
+                                  _cx: ActionCx,
+                                  _req: &mut DismissRequestCx| {
+                                let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                            },
+                        )
+                    }));
                 }
-                let on_dismiss_request = on_dismiss_request_for_root.clone();
-                cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
-                    Arc::new(
-                        move |host: &mut dyn UiActionHost,
-                              _cx: ActionCx,
-                              _req: &mut DismissRequestCx| {
-                            let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                        },
-                    )
-                }));
                 children
             },
         );
@@ -1374,8 +1387,7 @@ pub fn render<H: UiHost + 'static>(
 
         if !close_auto_focus_prevented {
             let focus_now = ui.focus();
-            let focus_in_layer =
-                focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+            let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
             if (focus_now.is_none() || focus_in_layer)
                 && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                     ui,
@@ -2251,16 +2263,15 @@ pub fn render<H: UiHost + 'static>(
                                                                     } else {
                                                                         vec![cx.text_props(
                                                                             fret_ui::element::TextProps {
-                                                                                layout:
-                                                                                    fret_ui::element::LayoutStyle::default(),
-                                                                                text: "\u{00D7}"
-                                                                                    .into(),
+                                                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                                                text: "\u{00D7}".into(),
                                                                                 style: None,
                                                                                 color: Some(fg),
                                                                                 wrap: fret_core::TextWrap::None,
-                                                                                overflow:
-                                                                                    fret_core::TextOverflow::Clip,
+                                                                                overflow: fret_core::TextOverflow::Clip,
                                                                                 align: fret_core::TextAlign::Start,
+                                                                                ink_overflow:
+                                                                                    fret_ui::element::TextInkOverflow::None,
                                                                             },
                                                                         )]
                                                                     }
@@ -2346,6 +2357,8 @@ pub fn render<H: UiHost + 'static>(
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
                                                                             align: fret_core::TextAlign::Start,
+                                                                            ink_overflow:
+                                                                                fret_ui::element::TextInkOverflow::None,
                                                                         })]
                                                                     },
                                                                 )]
@@ -2426,6 +2439,8 @@ pub fn render<H: UiHost + 'static>(
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
                                                                             align: fret_core::TextAlign::Start,
+                                                                            ink_overflow:
+                                                                                fret_ui::element::TextInkOverflow::None,
                                                                         })]
                                                                     },
                                                                 )]
@@ -2504,10 +2519,12 @@ pub fn render<H: UiHost + 'static>(
                                                                             wrap: fret_core::TextWrap::None,
                                                                             overflow: fret_core::TextOverflow::Clip,
                                                                             align: fret_core::TextAlign::Start,
+                                                                            ink_overflow:
+                                                                                fret_ui::element::TextInkOverflow::None,
                                                                         })
                                                                     })
                                                                 })
-                                                        }
+                                                            }
                                                     }
                                                 };
 
@@ -2520,45 +2537,41 @@ pub fn render<H: UiHost + 'static>(
                                                         font: FontId::default(),
                                                         size: Px(13.0),
                                                         weight: FontWeight(500),
-                                                        slant: Default::default(),
                                                         line_height: Some(Px(13.0 * 1.5)),
-                                                        letter_spacing_em: None,
-                                                        vertical_placement:
-                                                            fret_core::TextVerticalPlacement::CenterMetricsBox,
+                                                        ..Default::default()
                                                     };
                                                     let desc_style = TextStyle {
                                                         font: FontId::default(),
                                                         size: Px(13.0),
                                                         weight: FontWeight(400),
-                                                        slant: Default::default(),
                                                         line_height: Some(Px(13.0 * 1.4)),
-                                                        letter_spacing_em: None,
-                                                        vertical_placement:
-                                                            fret_core::TextVerticalPlacement::CenterMetricsBox,
+                                                        ..Default::default()
                                                     };
 
-                                                    let title = cx.text_props(fret_ui::element::TextProps {
-                                                        layout: fret_ui::element::LayoutStyle::default(),
-                                                        text: toast.title.clone(),
-                                                        style: Some(title_style),
-                                                        color: Some(fg),
-                                                        wrap: fret_core::TextWrap::None,
-                                                        overflow: fret_core::TextOverflow::Clip,
-                                                        align: fret_core::TextAlign::Start,
-                                                    });
-
-                                                    let mut content_children: Vec<AnyElement> = vec![title];
-                                                    if let Some(desc) = toast.description.clone() {
-                                                        content_children.push(cx.text_props(fret_ui::element::TextProps {
+                                                        let title = cx.text_props(fret_ui::element::TextProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
-                                                            text: desc,
-                                                            style: Some(desc_style),
-                                                            color: Some(fg_muted),
-                                                            wrap: fret_core::TextWrap::Word,
+                                                            text: toast.title.clone(),
+                                                            style: Some(title_style),
+                                                            color: Some(fg),
+                                                            wrap: fret_core::TextWrap::None,
                                                             overflow: fret_core::TextOverflow::Clip,
                                                             align: fret_core::TextAlign::Start,
-                                                        }));
-                                                    }
+                                                            ink_overflow: fret_ui::element::TextInkOverflow::None,
+                                                        });
+
+                                                    let mut content_children: Vec<AnyElement> = vec![title];
+                                                        if let Some(desc) = toast.description.clone() {
+                                                            content_children.push(cx.text_props(fret_ui::element::TextProps {
+                                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                                text: desc,
+                                                                style: Some(desc_style),
+                                                                color: Some(fg_muted),
+                                                                wrap: fret_core::TextWrap::Word,
+                                                                overflow: fret_core::TextOverflow::Clip,
+                                                                align: fret_core::TextAlign::Start,
+                                                                ink_overflow: fret_ui::element::TextInkOverflow::None,
+                                                            }));
+                                                        }
 
                                                     let content = cx.column(
                                                         fret_ui::element::ColumnProps {
