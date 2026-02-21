@@ -10,6 +10,11 @@ Exit criteria:
 - Size budgets are agreed (AI packet default + max).
 - A minimal packet contract draft exists (filenames + required fields).
 
+Current status (2026-02-21):
+
+- Hot spots measured for local `schema_version=1` bundles (see `docs/workstreams/diag-ai-agent-debugging-v1.md`).
+- Still pending: v2 bundle hot spots + explicit AI packet budgets.
+
 ## M1: Index shipping
 
 Exit criteria:

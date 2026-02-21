@@ -94,8 +94,11 @@ Known gaps (still planned):
 
 - `diag query` still has large surface area that does not yet use `bundle.index.json` (only `query snapshots` is index-first today).
 - `diag slice` uses `bundle.index.json` for validation and as a default snapshot hint, but it still falls back to parsing `bundle.json`
-  when it needs to find a better snapshot that contains the requested test-id (since per-snapshot test-id presence is not indexed yet).
-- “Test-id presence per snapshot” is not yet indexed; finding “first snapshot that contains X” still requires semantics reads.
+  when it needs to find a better snapshot that contains the requested test-id.
+  - `bundle.index.json` v1 includes a small per-snapshot Bloom filter hint (`test_id_bloom_hex`) for some tail snapshots, which helps
+    reduce full-bundle fallbacks, but it is not a complete per-snapshot membership index yet.
+- “Test-id presence per snapshot” is not yet comprehensively indexed; finding “first snapshot that contains X” can still require
+  streaming semantics reads and occasionally falls back to parsing the full bundle JSON.
 
 ### Phase 2: on-disk layout (manifest + chunked payloads)
 
@@ -128,3 +131,45 @@ To measure where bytes go in representative bundles, use:
 
 This produces an approximate, whitespace-free JSON size estimate per aggregated path (arrays use `[]` wildcards), which is good
 enough to identify the biggest subtrees (snapshots, semantics tables, logs, etc.) and to drive budget decisions.
+
+### Hot spot inventory (local samples, 2026-02-21)
+
+These runs were measured on local `schema_version=1` bundles under `.fret/diag/`:
+
+- `fretboard diag hotspots .fret/diag/1770260419048-ui-gallery-avatar/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
+- `fretboard diag hotspots .fret/diag/1770260415986-script-step-0027-click/bundle.json --hotspots-top 40 --max-depth 7 --min-bytes 4096`
+
+Top contributors (approx minified bytes; sums are aggregated across all snapshots):
+
+- `ui-gallery-avatar` (~87.3 MiB file; ~38.0 MiB estimated minified):
+  - `$.windows[].snapshots[].debug.semantics.nodes`: ~26.6 MiB
+  - `$.windows[].snapshots[].debug.command_gating_trace`: ~6.1 MiB
+  - `$.windows[].snapshots[].debug.removed_subtrees`: ~1.9 MiB
+- `script-step-0027-click` (~38.5 MiB file; ~17.0 MiB estimated minified):
+  - `$.windows[].snapshots[].debug.semantics.nodes`: ~11.8 MiB
+  - `$.windows[].snapshots[].debug.command_gating_trace`: ~2.1 MiB
+  - `$.windows[].snapshots[].debug.removed_subtrees`: ~1.7 MiB
+
+Implication for AI packets:
+
+- Raw per-snapshot `debug.semantics.nodes` dominates bundle size, so default agent workflows should avoid shipping full semantics for
+  many snapshots. Prefer index-first selection + small targeted slices, and rely on bounded membership hints for test-id search.
+
+### AI packet budgets (draft; not enforced yet)
+
+The intent is to keep the common case “small by default”, while allowing opt-in escalation.
+
+- Default AI packet total: <= 2 MiB
+- Max AI packet total (before clipping/escalation): <= 20 MiB
+- Per-file (guidelines):
+  - `bundle.meta.json`: <= 128 KiB
+  - `bundle.index.json`: <= 4 MiB (depends on snapshot count; should remain bounded)
+  - `test_ids.index.json`: <= 2 MiB (bounded by `--max-test-ids`)
+  - each `slice.*.json`: <= 2 MiB (bounded by `--max-matches`, `--max-ancestors`, and string clipping)
+
+Measured sizes (local samples; 2026-02-21):
+
+- `script-step-0027-click` packet (test-id `ui-gallery-command-palette`): ~46 KiB total
+- `ui-gallery-avatar` packet (test-id `ui-gallery-nav-search`): ~83 KiB total
+
+Next: enforce these budgets in `diag ai-packet` (clip with explicit “clipped” markers + a stable `reason_code` when hard limits are hit).
