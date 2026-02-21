@@ -3348,13 +3348,13 @@ fn caret_stops_for_slice(
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextDecorationKind, TextShapeKey, paint_span_for_text_range,
-        spans_paint_fingerprint, subpixel_mask_to_alpha,
+        TextBlobKey, TextShapeKey, paint_span_for_text_range, spans_paint_fingerprint,
+        subpixel_mask_to_alpha,
     };
     use fret_core::{
         AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
-        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextPaintStyle,
-        TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
+        Size, TextConstraints, TextInputRef, TextOverflow, TextPaintStyle, TextShapingStyle,
+        TextSpan, TextStyle, TextWrap, UnderlineStyle,
     };
     use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
     use fret_render_text::spans::ResolvedSpan;
@@ -4442,119 +4442,6 @@ mod tests {
             measured,
             prepared
         );
-    }
-
-    #[test]
-    fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
-        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
-        let mut text = super::TextSystem::new(&ctx.device);
-
-        // Keep this test deterministic: simulate a bundled-font-only environment (no system fonts).
-        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
-        text.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
-        let _ = text.parley_shaper.set_common_fallback_stack_suffix(
-            text.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-        text.generic_injections.clear();
-        text.font_db_revision = 0;
-        text.font_stack_key = 0;
-
-        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
-            .iter()
-            .map(|b| b.to_vec())
-            .collect();
-        let added = text.add_fonts(fonts);
-        assert!(added > 0, "expected bundled fonts to load");
-
-        let content = {
-            let mut out = String::new();
-            for _ in 0..60 {
-                out.push_str("The quick brown fox jumps over the lazy dog. ");
-            }
-            out
-        };
-
-        let scale_factor = 1.25_f32;
-        let constraints = TextConstraints {
-            max_width: Some(Px(180.0)),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            scale_factor,
-        };
-        let style = TextStyle {
-            font: fret_core::FontId::family("Inter"),
-            size: Px(13.0),
-            ..Default::default()
-        };
-
-        let mut span = TextSpan::new(content.len());
-        span.paint.underline = Some(UnderlineStyle {
-            color: None,
-            style: DecorationLineStyle::Solid,
-        });
-        span.paint.strikethrough = Some(StrikethroughStyle {
-            color: None,
-            style: DecorationLineStyle::Solid,
-        });
-        let rich = AttributedText::new(Arc::<str>::from(content.as_str()), Arc::from([span]));
-
-        let (blob_id, metrics) = text.prepare_attributed(&rich, &style, constraints);
-        let blob = text.blob(blob_id).expect("prepared blob");
-
-        let underlines: Vec<_> = blob
-            .decorations
-            .iter()
-            .filter(|d| d.kind == TextDecorationKind::Underline)
-            .collect();
-        let strikes: Vec<_> = blob
-            .decorations
-            .iter()
-            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
-            .collect();
-        assert!(
-            !underlines.is_empty(),
-            "expected underline decorations to be generated"
-        );
-        assert!(
-            !strikes.is_empty(),
-            "expected strikethrough decorations to be generated"
-        );
-
-        let is_pixel_aligned = |logical: Px| {
-            let px = logical.0 * scale_factor;
-            (px - px.round()).abs() < 1e-3
-        };
-
-        for d in underlines.iter().chain(strikes.iter()) {
-            assert!(
-                is_pixel_aligned(d.rect.origin.y),
-                "expected decoration y to be pixel-aligned"
-            );
-            assert!(
-                is_pixel_aligned(d.rect.size.height),
-                "expected decoration height to be pixel-aligned"
-            );
-
-            let h_px = d.rect.size.height.0 * scale_factor;
-            assert!(
-                h_px >= 1.0 - 1e-3,
-                "expected a visible decoration thickness (>= 1px), got {h_px}"
-            );
-            assert!(
-                h_px <= 4.0 + 1e-3,
-                "expected decoration thickness to remain bounded, got {h_px}"
-            );
-
-            assert!(
-                d.rect.origin.y.0 >= -1e-3,
-                "expected decoration to stay within the text box (top)"
-            );
-            assert!(
-                d.rect.origin.y.0 + d.rect.size.height.0 <= metrics.size.height.0 + 1e-3,
-                "expected decoration to stay within the text box (bottom)"
-            );
-        }
     }
 
     #[test]

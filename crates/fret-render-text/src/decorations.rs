@@ -189,3 +189,160 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
 
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parley_shaper::ParleyShaper, prepare_layout, spans, wrapper};
+    use fret_core::{
+        DecorationLineStyle, FontId, Px, StrikethroughStyle, TextConstraints, TextInputRef,
+        TextOverflow, TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap,
+        UnderlineStyle,
+    };
+
+    fn shaper_with_bundled_fonts() -> ParleyShaper {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let added = shaper.add_fonts(
+            fret_fonts::bootstrap_fonts()
+                .iter()
+                .chain(fret_fonts::emoji_fonts().iter())
+                .chain(fret_fonts::cjk_lite_fonts().iter())
+                .map(|b| b.to_vec()),
+        );
+        assert!(added > 0, "expected bundled fonts to load");
+        shaper
+    }
+
+    #[test]
+    fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = {
+            let mut out = String::new();
+            for _ in 0..60 {
+                out.push_str("The quick brown fox jumps over the lazy dog. ");
+            }
+            out
+        };
+
+        let scale_factor = 1.25_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(180.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let mut span = TextSpan {
+            len: content.len(),
+            shaping: TextShapingStyle::default(),
+            paint: TextPaintStyle::default(),
+        };
+        span.paint.underline = Some(UnderlineStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        span.paint.strikethrough = Some(StrikethroughStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+
+        let spans = [span];
+        let resolved = spans::resolve_spans_for_text(content.as_str(), spans.as_slice())
+            .expect("resolve spans");
+        assert_eq!(resolved.len(), 1);
+
+        let scale = crate::effective_text_scale_factor(scale_factor);
+        let snap_vertical = scale.fract().abs() > 1e-4;
+        assert!(
+            snap_vertical,
+            "expected fractional scale to enable snapping"
+        );
+
+        let wrapped = wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::attributed(content.as_str(), &style, spans.as_slice()),
+            constraints,
+        );
+        let prepared = prepare_layout::prepare_layout_from_wrapped(
+            content.as_str(),
+            wrapped,
+            constraints,
+            scale,
+            snap_vertical,
+        );
+        let lines: Vec<_> = prepared.lines.iter().map(|l| l.layout.clone()).collect();
+
+        let ppem = style.size.0 * scale;
+        let metrics_px = decoration_metrics_px_for_font_bytes(
+            fret_fonts::bootstrap_fonts()
+                .first()
+                .copied()
+                .expect("bootstrap font bytes"),
+            0,
+            &[],
+            ppem,
+        )
+        .expect("decoration metrics");
+
+        let decorations = decorations_for_lines(
+            lines.as_slice(),
+            resolved.as_slice(),
+            Some(metrics_px),
+            scale,
+            snap_vertical,
+        );
+
+        let underlines: Vec<_> = decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .collect();
+        let strikes: Vec<_> = decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .collect();
+        assert!(!underlines.is_empty(), "expected underline decorations");
+        assert!(!strikes.is_empty(), "expected strikethrough decorations");
+
+        let is_pixel_aligned = |logical: Px| {
+            let px = logical.0 * scale_factor;
+            (px - px.round()).abs() < 1e-3
+        };
+
+        for d in underlines.iter().chain(strikes.iter()) {
+            assert!(
+                is_pixel_aligned(d.rect.origin.y),
+                "expected decoration y to be pixel-aligned"
+            );
+            assert!(
+                is_pixel_aligned(d.rect.size.height),
+                "expected decoration height to be pixel-aligned"
+            );
+
+            let h_px = d.rect.size.height.0 * scale_factor;
+            assert!(
+                h_px >= 1.0 - 1e-3,
+                "expected a visible decoration thickness (>= 1px), got {h_px}"
+            );
+            assert!(
+                h_px <= 4.0 + 1e-3,
+                "expected decoration thickness to remain bounded, got {h_px}"
+            );
+
+            assert!(
+                d.rect.origin.y.0 >= -1e-3,
+                "expected decoration to stay within the text box (top)"
+            );
+            assert!(
+                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics.size.height.0 + 1e-3,
+                "expected decoration to stay within the text box (bottom)"
+            );
+        }
+    }
+}
