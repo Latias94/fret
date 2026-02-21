@@ -1000,6 +1000,201 @@ mod tests {
     }
 
     #[test]
+    fn mixed_direction_word_wrap_selection_rects_for_rtl_range_are_nonempty() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "abc אבג (123) def ghi jkl mno pqr";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+
+        let rtl_start = content.find('א').expect("hebrew start");
+        let rtl_end = content.find('ג').expect("hebrew end") + 'ג'.len_utf8();
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&lines, (rtl_start, rtl_end), &mut rects);
+        assert!(
+            rects.iter().any(|r| r.size.width.0 > 0.1),
+            "expected a non-empty selection rect for wrapped RTL range: rects={rects:?}"
+        );
+    }
+
+    #[test]
+    fn mixed_direction_word_wrap_caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line()
+     {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "abc אבג def ghi jkl";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        // Pick a width between "…def" and "…ghi" so the first line includes mixed-direction text.
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let single_lines = prepare_lines(&mut shaper, content, &style, single_line_constraints);
+        let def_end = content.find("def").expect("def") + "def".len();
+        let ghi_end = content.find("ghi").expect("ghi") + "ghi".len();
+        let x_def_end = caret_x_for_index_from_single_line(&single_lines, def_end);
+        let x_ghi_end = caret_x_for_index_from_single_line(&single_lines, ghi_end);
+        assert!(
+            x_ghi_end.0 > x_def_end.0 + 0.1,
+            "expected ghi to advance beyond def in single-line layout"
+        );
+
+        let constraints = TextConstraints {
+            max_width: Some(Px((x_def_end.0 + x_ghi_end.0) * 0.5)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+        assert!(lines.len() >= 2, "expected the text to wrap");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+        assert_eq!(
+            line0.end, line1.start,
+            "expected a shared soft-wrap boundary index"
+        );
+        let break_index = line1.start;
+
+        let upstream = caret_rect_from_lines(&lines, break_index, CaretAffinity::Upstream)
+            .expect("caret rect upstream");
+        let downstream = caret_rect_from_lines(&lines, break_index, CaretAffinity::Downstream)
+            .expect("caret rect downstream");
+
+        assert!(
+            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected upstream caret to be on the previous line at wrap boundary"
+        );
+        assert!(
+            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected downstream caret to be on the next line at wrap boundary"
+        );
+    }
+
+    #[test]
+    fn mixed_direction_word_wrap_hit_test_reports_expected_affinity_at_soft_wrap_boundary() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "abc אבג def ghi jkl";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+        assert!(lines.len() >= 2, "expected wrapped lines");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+        assert_eq!(line0.end, line1.start, "expected shared boundary");
+        let break_index = line1.start;
+
+        let x0 = caret_x_from_stops(line0.caret_stops.as_slice(), break_index);
+        let x1 = caret_x_from_stops(line1.caret_stops.as_slice(), break_index);
+
+        let y0 = Px(line0.y_top.0 + line0.height.0 * 0.5);
+        let y1 = Px(line1.y_top.0 + line1.height.0 * 0.5);
+
+        let ht0 = hit_test_point_from_lines(&lines, Point::new(x0, y0)).expect("hit test (line0)");
+        assert_eq!(ht0.index, break_index);
+        assert_eq!(
+            ht0.affinity,
+            CaretAffinity::Upstream,
+            "expected wrap-boundary hit on line0 to report upstream affinity"
+        );
+
+        let ht1 = hit_test_point_from_lines(&lines, Point::new(x1, y1)).expect("hit test (line1)");
+        assert_eq!(ht1.index, break_index);
+        assert_eq!(
+            ht1.affinity,
+            CaretAffinity::Downstream,
+            "expected wrap-boundary hit on line1 to report downstream affinity"
+        );
+    }
+
+    #[test]
+    fn mixed_direction_word_wrap_selection_rects_are_coalesced_per_visual_line() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "abc אבג def ghi jkl mno pqr";
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(70.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&lines, (0, content.len()), &mut rects);
+        assert!(
+            !rects.is_empty(),
+            "expected selection rects for full-range selection"
+        );
+
+        rects.sort_by(|a, b| {
+            a.origin
+                .y
+                .0
+                .total_cmp(&b.origin.y.0)
+                .then_with(|| a.size.height.0.total_cmp(&b.size.height.0))
+                .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
+        });
+
+        let mut prev: Option<Rect> = None;
+        for r in rects.iter() {
+            assert!(
+                r.size.width.0 > 0.0 && r.size.height.0 > 0.0,
+                "expected non-degenerate selection rects, got {r:?}"
+            );
+            if let Some(p) = prev {
+                if (p.origin.y.0 - r.origin.y.0).abs() < 1e-3
+                    && (p.size.height.0 - r.size.height.0).abs() < 1e-3
+                {
+                    let p_end = p.origin.x.0 + p.size.width.0;
+                    assert!(
+                        r.origin.x.0 + 1e-3 >= p_end,
+                        "expected coalesced selection rects to be non-overlapping on the same line: prev={p:?} next={r:?}"
+                    );
+                }
+            }
+            prev = Some(*r);
+        }
+    }
+
+    #[test]
     fn caret_rects_are_non_degenerate_at_grapheme_boundaries_for_zwj_emoji() {
         let content = "👩‍👩‍👧‍👦 hello";
         let style = TextStyle {
