@@ -533,7 +533,9 @@ pub(super) fn preview_card(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions."),
+        Some(
+            "Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions (plus a Fret-only size extra).",
+        ),
         vec![
             DocSection::new("Login", login)
                 .no_shell()
@@ -569,16 +571,6 @@ pub(super) fn preview_card(
 ])
 .into_element(cx);"#,
                 ),
-            DocSection::new("Size", size)
-                .no_shell()
-                .max_w(Px(980.0))
-                .description("Fret-only extra: compact card via `CardSize::Sm`.")
-                .code(
-                    "rust",
-                    r#"shadcn::Card::new(vec![/* ... */])
-    .size(shadcn::CardSize::Sm)
-    .into_element(cx);"#,
-                ),
             DocSection::new("Image", image)
                 .no_shell()
                 .max_w(Px(980.0))
@@ -606,6 +598,16 @@ pub(super) fn preview_card(
     shadcn::CardFooter::new(vec![/* ... */]).into_element(cx),
 ])
 .into_element(cx);"#,
+                ),
+            DocSection::new("Size", size)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("Fret-only extra: compact card via `CardSize::Sm`.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![/* ... */])
+    .size(shadcn::CardSize::Sm)
+    .into_element(cx);"#,
                 ),
             DocSection::new("Notes", notes).description("Implementation notes and pointers."),
         ],
