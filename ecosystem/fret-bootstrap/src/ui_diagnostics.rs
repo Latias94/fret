@@ -892,93 +892,7 @@ impl UiDiagnosticsService {
 
         self.maybe_write_running_heartbeat_for_active_window(window, &mut active);
 
-        if let Some(mut pending) = active.pending_cancel_cross_window_drag.take() {
-            let pointer_id = pending.pointer_id;
-            let step_index = active.next_step.min(u32::MAX as usize) as u32;
-            let mut canceled_any = false;
-
-            if let Some(drag) = app.drag(pointer_id) {
-                if drag.cross_window_hover
-                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    || drag.kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                {
-                    push_script_event_log(
-                        &mut active,
-                        &self.cfg,
-                        UiScriptEventLogEntryV1 {
-                            unix_ms: unix_ms_now(),
-                            kind: "diag.cancel_drag".to_string(),
-                            step_index: Some(step_index),
-                            note: Some(format!(
-                                "pointer_id={} kind={:?} cross_window_hover={}",
-                                pointer_id.0, drag.kind, drag.cross_window_hover
-                            )),
-                            bundle_dir: None,
-                            window: Some(window.data().as_ffi()),
-                            tick_id: Some(app.tick_id().0),
-                            frame_id: Some(app.frame_id().0),
-                            window_snapshot_seq: None,
-                        },
-                    );
-                    app.cancel_drag(pointer_id);
-                    canceled_any = true;
-                }
-            }
-
-            if !canceled_any {
-                // Fallback: cancel any active dock drags. Some scripted sequences migrate across
-                // windows while a captured-pointer gesture is active; if the release is delivered
-                // to a different window, the original drag session can remain stuck. Prefer
-                // deterministically clearing dock drag state over hanging the suite.
-                let mut canceled: Vec<PointerId> = Vec::new();
-                while let Some(id) = app.find_drag_pointer_id(|d| {
-                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                        || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
-                }) {
-                    app.cancel_drag(id);
-                    canceled.push(id);
-                }
-
-                push_script_event_log(
-                    &mut active,
-                    &self.cfg,
-                    UiScriptEventLogEntryV1 {
-                        unix_ms: unix_ms_now(),
-                        kind: if canceled.is_empty() {
-                            "diag.cancel_drag.skip".to_string()
-                        } else {
-                            "diag.cancel_drag.fallback".to_string()
-                        },
-                        step_index: Some(step_index),
-                        note: Some(format!(
-                            "pointer_id={} drag_present={} canceled={:?}",
-                            pointer_id.0,
-                            app.drag(pointer_id).is_some(),
-                            canceled.iter().map(|id| id.0).collect::<Vec<_>>(),
-                        )),
-                        bundle_dir: None,
-                        window: Some(window.data().as_ffi()),
-                        tick_id: Some(app.tick_id().0),
-                        frame_id: Some(app.frame_id().0),
-                        window_snapshot_seq: None,
-                    },
-                );
-
-                canceled_any = !canceled.is_empty();
-            }
-
-            // Retry cancellation for a bounded number of frames. Some runners update drag session
-            // state after input dispatch; a one-shot cancel can miss the window where the drag
-            // becomes visible.
-            if canceled_any {
-                // Keep cleared.
-            } else {
-                pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
-                if pending.remaining_frames > 0 {
-                    active.pending_cancel_cross_window_drag = Some(pending);
-                }
-            }
-        }
+        self.maybe_cancel_pending_cross_window_drag(app, window, &mut active);
 
         let element_runtime = app.global::<ElementRuntime>();
 
@@ -1021,30 +935,7 @@ impl UiDiagnosticsService {
             };
         }
 
-        let now_unix_ms = unix_ms_now();
-        let should_report_progress = active.last_reported_step != Some(active.next_step)
-            || active.last_reported_unix_ms == 0
-            || now_unix_ms.saturating_sub(active.last_reported_unix_ms) >= 1_000;
-        if should_report_progress {
-            self.write_script_result(UiScriptResultV1 {
-                schema_version: 1,
-                run_id: active.run_id,
-                updated_unix_ms: now_unix_ms,
-                window: Some(window.data().as_ffi()),
-                stage: UiScriptStageV1::Running,
-                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
-                reason_code: None,
-                reason: None,
-                evidence: None,
-                last_bundle_dir: self
-                    .last_dump_dir
-                    .as_ref()
-                    .map(|p| display_path(&self.cfg.out_dir, p)),
-                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-            });
-            active.last_reported_step = Some(active.next_step);
-            active.last_reported_unix_ms = now_unix_ms;
-        }
+        self.maybe_write_running_progress_for_active_window(window, &mut active);
 
         if active.wait_frames_remaining > 0 {
             active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
