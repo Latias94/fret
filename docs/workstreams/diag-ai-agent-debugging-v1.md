@@ -132,6 +132,11 @@ To measure where bytes go in representative bundles, use:
 This produces an approximate, whitespace-free JSON size estimate per aggregated path (arrays use `[]` wildcards), which is good
 enough to identify the biggest subtrees (snapshots, semantics tables, logs, etc.) and to drive budget decisions.
 
+To generate a local schema-v2 baseline from an existing v1 bundle (for measurement and comparison), use:
+
+- `fretboard diag bundle-v2 <bundle_dir|bundle.json> --mode last --out <bundle.schema2.last.json>`
+- `fretboard diag bundle-v2 <bundle_dir|bundle.json> --mode changed --out <bundle.schema2.changed.json>`
+
 ### Hot spot inventory (local samples, 2026-02-21)
 
 These runs were measured on local `schema_version=1` bundles under `.fret/diag/`:
@@ -154,6 +159,29 @@ Implication for AI packets:
 
 - Raw per-snapshot `debug.semantics.nodes` dominates bundle size, so default agent workflows should avoid shipping full semantics for
   many snapshots. Prefer index-first selection + small targeted slices, and rely on bounded membership hints for test-id search.
+
+### Hot spot inventory (schema v2, converted samples, 2026-02-21)
+
+Converted the same v1 bundles with `fretboard diag bundle-v2` and re-ran hotspots.
+
+Key observation: v2 moves the semantics payload to `tables.semantics.entries[].semantics.nodes` (dedup by `(window, semantics_fingerprint)`),
+so “table semantics” becomes the dominant hot spot when inline semantics are stripped.
+
+- `ui-gallery-avatar`:
+  - v1 estimated minified: ~38.0 MiB (inline semantics repeated across snapshots)
+  - v2 `--mode last` estimated minified: ~20.9 MiB
+    - `$.tables.semantics.entries[].semantics.nodes`: ~9.3 MiB
+    - `$.windows[].snapshots[].debug`: ~11.2 MiB (mostly non-semantics debug)
+- `script-step-0027-click`:
+  - v1 estimated minified: ~17.0 MiB
+  - v2 `--mode last` estimated minified: ~13.5 MiB
+    - `$.tables.semantics.entries[].semantics.nodes`: ~8.1 MiB
+    - `$.windows[].snapshots[].debug`: ~5.2 MiB
+
+Implication for schema v2:
+
+- v2 helps reduce repeated per-snapshot semantics, but the semantics payload still exists (now as a table).
+- AI packets should continue to avoid shipping raw semantics tables by default; ship `bundle.index.json` + targeted `slice.*.json` instead.
 
 ### AI packet budgets (draft; not enforced yet)
 

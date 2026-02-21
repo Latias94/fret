@@ -1,5 +1,6 @@
 pub(crate) mod ai_packet;
 pub(crate) mod artifacts;
+pub(crate) mod bundle_v2;
 pub(crate) mod hotspots;
 pub(crate) mod index;
 pub(crate) mod inspect;

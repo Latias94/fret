@@ -6,7 +6,7 @@ Last updated: 2026-02-21
 
 - [ ] Inventory current bundle hot spots (largest fields by bytes) for v1/v2.
   - [x] v1 baseline measured (local samples; see `docs/workstreams/diag-ai-agent-debugging-v1.md`).
-  - [ ] v2 baseline measured (table semantics + inline `last|changed`), and compared to v1.
+  - [x] v2 baseline measured (tooling-side conversion via `fretboard diag bundle-v2`), and compared to v1.
 - [x] Add `fretboard diag hotspots` tooling to report approximate per-path JSON sizes.
 - [ ] Define size budgets for “AI packet” outputs (default + max).
   - Draft budgets are documented (not enforced yet): `docs/workstreams/diag-ai-agent-debugging-v1.md`.

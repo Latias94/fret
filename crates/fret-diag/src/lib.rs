@@ -179,6 +179,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut index_out: Option<PathBuf> = None;
     let mut test_ids_out: Option<PathBuf> = None;
     let mut hotspots_out: Option<PathBuf> = None;
+    let mut bundle_v2_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
@@ -654,6 +655,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 meta_out = Some(p.clone());
                 index_out = Some(p.clone());
                 hotspots_out = Some(p.clone());
+                bundle_v2_out = Some(p.clone());
                 query_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
@@ -2186,6 +2188,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &workspace_root,
             &resolved_out_dir,
             hotspots_out,
+            stats_json,
+        ),
+        "bundle-v2" => commands::bundle_v2::cmd_bundle_v2(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            bundle_v2_out,
             stats_json,
         ),
         "ai-packet" => commands::ai_packet::cmd_ai_packet(
