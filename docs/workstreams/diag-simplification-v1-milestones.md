@@ -59,3 +59,13 @@ Exit criteria:
 
 - A canonical config file exists and tooling can launch with it.
 - Ambiguous env vars have explicit replacements (old names still supported).
+
+## M7: Implementation split (reduce monolith risk)
+
+Exit criteria:
+
+- [x] Stale bundle checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+  - Evidence: `crates/fret-diag/src/stats/stale.rs`
+- [ ] `crates/fret-diag/src/stats.rs` is decomposed into domain-focused modules (reduce merge conflicts; improve reviewability).
+- [ ] `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` is split into a `ui_diagnostics/` module tree (service/export/script/inspect),
+  while keeping existing public API and `use` paths stable for downstream crates.
