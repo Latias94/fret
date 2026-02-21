@@ -154,7 +154,6 @@ fn build_keyed_rows(
 }
 
 #[track_caller]
-#[allow(dead_code)]
 fn render_root_for_frame(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -171,7 +170,6 @@ fn render_root_for_frame(
     root
 }
 
-#[allow(dead_code)]
 fn layout_frame(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -181,7 +179,6 @@ fn layout_frame(
     ui.layout_all(app, services, bounds, 1.0);
 }
 
-#[allow(dead_code)]
 fn paint_frame(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,

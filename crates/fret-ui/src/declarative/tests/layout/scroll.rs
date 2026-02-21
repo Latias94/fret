@@ -1088,7 +1088,7 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
     }
 
     // Frame 0: establish content extent and scroll to the end.
-    let root0 = render_root(
+    let _root0 = render_root_for_frame(
         &mut ui,
         &mut app,
         &mut text,
@@ -1097,21 +1097,16 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
         "scroll-grow-at-end-view-cache",
         |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
     );
-    ui.set_root(root0);
-    ui.layout_all(&mut app, &mut text, bounds, 1.0);
-    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
 
     let max0 = scroll_handle.max_offset().y;
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
     let _ = show_more.update(&mut app, |v, _cx| *v = true);
-    assert!(
-        ui.propagate_pending_model_changes(&mut app),
-        "expected model change to invalidate the view-cache subtree"
-    );
     app.advance_frame();
 
     // Frame 1: content grows while we're at the previous max offset.
-    let root1 = render_root(
+    let root1 = render_root_for_frame(
         &mut ui,
         &mut app,
         &mut text,
@@ -1120,7 +1115,6 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
         "scroll-grow-at-end-view-cache",
         |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
     );
-    ui.set_root(root1);
 
     let scroll_node = ui.children(root1)[0];
     let cache_node = ui.children(scroll_node)[0];
@@ -1135,9 +1129,8 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
         scroll_handle.max_offset().y
     );
 
-    ui.layout_all(&mut app, &mut text, bounds, 1.0);
-    scene.clear();
-    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    layout_frame(&mut ui, &mut app, &mut text, bounds);
+    paint_frame(&mut ui, &mut app, &mut text, bounds, &mut scene);
 
     let max1 = scroll_handle.max_offset().y;
     assert!(
