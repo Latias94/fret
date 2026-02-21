@@ -100,6 +100,17 @@ Workflow tip:
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
+## AI-first sharing (recommended)
+
+Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in AI loops):
+
+- Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --packet-out <dir>`
+- Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+- If you only need a semantics-focused subset, slice directly:
+  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id> --out <path>`
+
 ## DevTools GUI (preview)
 
 This repo includes a WIP DevTools GUI app at `apps/fret-devtools` that wraps the same inspect/pick/scripts/bundles
