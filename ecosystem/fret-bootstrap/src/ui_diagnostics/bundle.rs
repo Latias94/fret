@@ -200,11 +200,12 @@ fn apply_semantics_mode_to_windows(
         BundleSemanticsModeV1::Changed => {
             for w in windows {
                 let mut last_kept_fingerprint: Option<u64> = None;
+                let snapshots_len = w.snapshots.len();
                 for (idx, s) in w.snapshots.iter_mut().enumerate() {
                     if s.debug.semantics.is_none() {
                         continue;
                     }
-                    let is_last = idx + 1 == w.snapshots.len();
+                    let is_last = idx + 1 == snapshots_len;
                     if is_last {
                         last_kept_fingerprint = s.semantics_fingerprint;
                         continue;

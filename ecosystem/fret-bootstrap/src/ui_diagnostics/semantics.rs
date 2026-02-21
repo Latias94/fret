@@ -147,7 +147,7 @@ impl UiSemanticsSnapshotV1 {
 }
 
 impl UiSemanticsNodeV1 {
-    fn from_node(
+    pub(super) fn from_node(
         node: &fret_core::SemanticsNode,
         redact_text: bool,
         max_string_bytes: usize,
