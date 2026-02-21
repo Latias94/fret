@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui::scroll::ScrollHandle;
 
 fn matches_query(query: &str, item: &PageSpec) -> bool {
     let q = query.trim();
@@ -48,6 +49,21 @@ pub(crate) fn sidebar_view(
     workspace_tabs: Model<Vec<Arc<str>>>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
+
+    let nav_scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let nav_query_changed = cx.with_state(String::new, |last_query| {
+        if last_query.as_str() == query {
+            false
+        } else {
+            *last_query = query.to_owned();
+            true
+        }
+    });
+    if nav_query_changed {
+        // Keep search results discoverable: when the filter changes, reset the nav scroll position
+        // so matches near the top of the list are visible immediately.
+        nav_scroll_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
+    }
 
     let title_row = stack::hstack(
         cx,
@@ -190,6 +206,7 @@ pub(crate) fn sidebar_view(
         } else {
             shadcn::ScrollArea::new([nav_body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .scroll_handle(nav_scroll_handle.clone())
                 .into_element(cx)
         };
         nav_scroll.test_id("ui-gallery-nav-scroll")
