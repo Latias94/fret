@@ -210,28 +210,33 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let column_basic = {
+        let button_outline = outline_button(cx, "Button");
         let item_title_button = item_basic(
             cx,
             shadcn::ItemVariant::Default,
             "Item Title",
             None,
-            vec![outline_button(cx, "Button")],
+            vec![button_outline],
             "ui-gallery-item-basic-default",
         );
+
+        let button_outline = outline_button(cx, "Button");
         let item_title_button_outline = item_basic(
             cx,
             shadcn::ItemVariant::Outline,
             "Item Title",
             None,
-            vec![outline_button(cx, "Button")],
+            vec![button_outline],
             "ui-gallery-item-basic-outline",
         );
+
+        let button_outline = outline_button(cx, "Button");
         let item_desc_button = item_basic(
             cx,
             shadcn::ItemVariant::Default,
             "Item Title",
             Some("Item Description"),
-            vec![outline_button(cx, "Button")],
+            vec![button_outline],
             "ui-gallery-item-basic-default-desc",
         );
         let item_desc_outline = item_basic(
@@ -250,38 +255,40 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             Vec::new(),
             "ui-gallery-item-basic-muted-desc",
         );
+        let button_a = outline_button(cx, "Button");
+        let button_b = outline_button(cx, "Button");
         let item_desc_muted_actions = item_basic(
             cx,
             shadcn::ItemVariant::Muted,
             "Item Title",
             Some("Item Description"),
-            vec![outline_button(cx, "Button"), outline_button(cx, "Button")],
+            vec![button_a, button_b],
             "ui-gallery-item-basic-muted-actions",
         );
+
+        let purchase = shadcn::Button::new("Purchase")
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx);
         let item_ticket = item_icon(
             cx,
             shadcn::ItemVariant::Outline,
             "lucide.ticket",
             "Item Title",
             None,
-            vec![
-                shadcn::Button::new("Purchase")
-                    .size(shadcn::ButtonSize::Sm)
-                    .into_element(cx),
-            ],
+            vec![purchase],
             "ui-gallery-item-basic-ticket-outline",
         );
+
+        let upgrade = shadcn::Button::new("Upgrade")
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx);
         let item_ticket_muted = item_icon(
             cx,
             shadcn::ItemVariant::Muted,
             "lucide.ticket",
             "Item Title",
             Some("Item Description"),
-            vec![
-                shadcn::Button::new("Upgrade")
-                    .size(shadcn::ButtonSize::Sm)
-                    .into_element(cx),
-            ],
+            vec![upgrade],
             "ui-gallery-item-basic-ticket-muted",
         );
 
@@ -570,12 +577,13 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     .test_id("ui-gallery-item-demo");
 
     let rtl = doc_layout::rtl(cx, |cx| {
+        let action = outline_button_sm(cx, "فتح");
         item_basic(
             cx,
             shadcn::ItemVariant::Outline,
             "لوحة التحكم",
             Some("نظرة عامة على حسابك ونشاطك."),
-            vec![outline_button_sm(cx, "فتح")],
+            vec![action],
             "ui-gallery-item-rtl",
         )
     })
