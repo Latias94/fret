@@ -226,7 +226,20 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ),
             DocSection::new("Flex-1 items", stretch)
                 .description("Regression gate for hit/visual alignment under `flex-1` sizing.")
-                .max_w(Px(560.0)),
+                .max_w(Px(560.0))
+                .code(
+                    "rust",
+                    r#"shadcn::ToggleGroup::single_uncontrolled(Some("left"))
+    .variant(shadcn::ToggleVariant::Outline)
+    .items_flex_1(true)
+    .refine_layout(LayoutRefinement::default().w_full())
+    .items([
+        shadcn::ToggleGroupItem::new("left", [cx.text("Left")]).a11y_label("Toggle Left"),
+        shadcn::ToggleGroupItem::new("center", [cx.text("Center")]).a11y_label("Toggle Center"),
+        shadcn::ToggleGroupItem::new("right", [cx.text("Right")]).a11y_label("Toggle Right"),
+    ])
+    .into_element(cx);"#,
+                ),
             DocSection::new("Size", size)
                 .description("Size presets for toolbar density.")
                 .max_w(Px(560.0))
