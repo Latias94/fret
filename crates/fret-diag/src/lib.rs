@@ -178,6 +178,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut meta_report: bool = false;
     let mut index_out: Option<PathBuf> = None;
     let mut test_ids_out: Option<PathBuf> = None;
+    let mut hotspots_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
@@ -652,6 +653,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 lint_out = Some(p.clone());
                 meta_out = Some(p.clone());
                 index_out = Some(p.clone());
+                hotspots_out = Some(p.clone());
                 query_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
@@ -2176,6 +2178,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             test_ids_out,
             warmup_frames,
             max_test_ids,
+            stats_json,
+        ),
+        "hotspots" => commands::hotspots::cmd_hotspots(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            hotspots_out,
             stats_json,
         ),
         "ai-packet" => commands::ai_packet::cmd_ai_packet(

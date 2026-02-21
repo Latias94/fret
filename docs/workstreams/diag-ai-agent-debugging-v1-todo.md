@@ -5,6 +5,7 @@ Last updated: 2026-02-21
 ## M0: Docs + inventory
 
 - [ ] Inventory current bundle hot spots (largest fields by bytes) for v1/v2.
+- [x] Add `fretboard diag hotspots` tooling to report approximate per-path JSON sizes.
 - [ ] Define size budgets for “AI packet” outputs (default + max).
 - [ ] Enumerate the minimum fields needed for common triage loops (focus, input, selection, viewport, overlays).
 

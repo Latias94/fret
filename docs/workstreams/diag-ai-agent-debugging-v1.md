@@ -119,3 +119,12 @@ See:
 
 - `docs/workstreams/diag-ai-agent-debugging-v1-todo.md`
 - `docs/workstreams/diag-ai-agent-debugging-v1-milestones.md`
+
+## Inventory tooling (M0)
+
+To measure where bytes go in representative bundles, use:
+
+- `fretboard diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
+
+This produces an approximate, whitespace-free JSON size estimate per aggregated path (arrays use `[]` wildcards), which is good
+enough to identify the biggest subtrees (snapshots, semantics tables, logs, etc.) and to drive budget decisions.
