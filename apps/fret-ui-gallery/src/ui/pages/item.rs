@@ -1,620 +1,622 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use fret_ui_kit::declarative::style as decl_style;
 
 pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let icon_media = |cx: &mut ElementContext<'_, App>, icon: &'static str| {
-        shadcn::ItemMedia::new([shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon))])
-            .variant(shadcn::ItemMediaVariant::Icon)
+    #[derive(Default)]
+    struct ItemPageModels {
+        download_progress: Option<Model<f32>>,
+    }
+
+    let download_progress =
+        cx.with_state(ItemPageModels::default, |st| st.download_progress.clone());
+    let download_progress = match download_progress {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(50.0);
+            cx.with_state(ItemPageModels::default, |st| {
+                st.download_progress = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).snapshot();
+
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(MetricRef::Px(Px(384.0)));
+    let max_w_lg = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(MetricRef::Px(Px(520.0)));
+
+    let icon = doc_layout::icon;
+
+    let icon_button = |cx: &mut ElementContext<'_, App>,
+                       icon_id: &'static str,
+                       variant: shadcn::ButtonVariant,
+                       test_id: Arc<str>| {
+        shadcn::Button::new("")
+            .variant(variant)
+            .size(shadcn::ButtonSize::Icon)
+            .children([icon(cx, icon_id)])
+            .into_element(cx)
+            .test_id(test_id)
+    };
+
+    let outline_button = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+        shadcn::Button::new(label)
+            .variant(shadcn::ButtonVariant::Outline)
             .into_element(cx)
     };
 
-    let avatar_media = |cx: &mut ElementContext<'_, App>, initials: &'static str| {
-        shadcn::ItemMedia::new([shadcn::Avatar::new([
-            shadcn::AvatarFallback::new(initials).into_element(cx)
-        ])
-        .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(28.0)))
-        .into_element(cx)])
-        .into_element(cx)
+    let outline_button_sm = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+        shadcn::Button::new(label)
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx)
     };
 
-    let image_media = |cx: &mut ElementContext<'_, App>, label: &'static str| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_token("muted")))
-                    .rounded(Radius::Sm),
-                LayoutRefinement::default().size_full(),
-            )
-        });
-        shadcn::ItemMedia::new([
-            cx.container(props, move |cx| vec![shadcn::typography::muted(cx, label)])
-        ])
-        .variant(shadcn::ItemMediaVariant::Image)
-        .into_element(cx)
-    };
+    let item_basic = |cx: &mut ElementContext<'_, App>,
+                      variant: shadcn::ItemVariant,
+                      title: &'static str,
+                      description: Option<&'static str>,
+                      actions: Vec<AnyElement>,
+                      test_id: &'static str| {
+        let mut content_children = vec![shadcn::ItemTitle::new(title).into_element(cx)];
+        if let Some(description) = description {
+            content_children.push(shadcn::ItemDescription::new(description).into_element(cx));
+        }
 
-    let item_row = |cx: &mut ElementContext<'_, App>,
-                    title: &'static str,
-                    description: &'static str,
-                    media: AnyElement,
-                    variant: shadcn::ItemVariant,
-                    size: shadcn::ItemSize,
-                    with_action: bool,
-                    test_id: &'static str| {
-        let mut children = vec![
-            media,
-            shadcn::ItemContent::new([
-                shadcn::ItemTitle::new(title).into_element(cx),
-                shadcn::ItemDescription::new(description).into_element(cx),
-            ])
-            .into_element(cx),
-        ];
-
-        if with_action {
-            children.push(
-                shadcn::ItemActions::new([shadcn::Button::new("Open")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CMD_APP_OPEN)
-                    .into_element(cx)])
-                .into_element(cx),
-            );
+        let mut children = vec![shadcn::ItemContent::new(content_children).into_element(cx)];
+        if !actions.is_empty() {
+            children.push(shadcn::ItemActions::new(actions).into_element(cx));
         }
 
         shadcn::Item::new(children)
             .variant(variant)
-            .size(size)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id(test_id)
+    };
+
+    let item_icon = |cx: &mut ElementContext<'_, App>,
+                     variant: shadcn::ItemVariant,
+                     icon_id: &'static str,
+                     title: &'static str,
+                     description: Option<&'static str>,
+                     actions: Vec<AnyElement>,
+                     test_id: &'static str| {
+        let media = shadcn::ItemMedia::new([icon(cx, icon_id)])
+            .variant(shadcn::ItemMediaVariant::Icon)
+            .into_element(cx);
+
+        let mut content_children = vec![shadcn::ItemTitle::new(title).into_element(cx)];
+        if let Some(description) = description {
+            content_children.push(shadcn::ItemDescription::new(description).into_element(cx));
+        }
+
+        let mut children = vec![
+            media,
+            shadcn::ItemContent::new(content_children).into_element(cx),
+        ];
+        if !actions.is_empty() {
+            children.push(shadcn::ItemActions::new(actions).into_element(cx));
+        }
+
+        shadcn::Item::new(children)
+            .variant(variant)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id(test_id)
+    };
+
+    let item_avatar = |cx: &mut ElementContext<'_, App>,
+                       username: &'static str,
+                       message: &'static str,
+                       initials: &'static str,
+                       test_id: Arc<str>,
+                       add_action_test_id: Arc<str>| {
+        let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new(initials).into_element(cx)])
+            .into_element(cx);
+        let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
+        let content = shadcn::ItemContent::new([
+            shadcn::ItemTitle::new(username).into_element(cx),
+            shadcn::ItemDescription::new(message).into_element(cx),
+        ])
+        .into_element(cx);
+
+        let add = icon_button(
+            cx,
+            "lucide.plus",
+            shadcn::ButtonVariant::Outline,
+            add_action_test_id,
+        );
+        let actions = shadcn::ItemActions::new([add]).into_element(cx);
+
+        shadcn::Item::new([media, content, actions])
             .on_click(CMD_APP_OPEN)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
             .test_id(test_id)
     };
 
-    let item_row_icon = |cx: &mut ElementContext<'_, App>,
-                         title: &'static str,
-                         description: &'static str,
-                         icon: &'static str,
-                         variant: shadcn::ItemVariant,
-                         size: shadcn::ItemSize,
-                         with_action: bool,
-                         test_id: &'static str| {
-        let media = icon_media(cx, icon);
-        item_row(
+    let item_team = {
+        let avatars = stack::hstack(
             cx,
-            title,
-            description,
-            media,
-            variant,
-            size,
-            with_action,
-            test_id,
-        )
-    };
-
-    let item_row_avatar = |cx: &mut ElementContext<'_, App>,
-                           title: &'static str,
-                           description: &'static str,
-                           initials: &'static str,
-                           variant: shadcn::ItemVariant,
-                           size: shadcn::ItemSize,
-                           with_action: bool,
-                           test_id: &'static str| {
-        let media = avatar_media(cx, initials);
-        item_row(
-            cx,
-            title,
-            description,
-            media,
-            variant,
-            size,
-            with_action,
-            test_id,
-        )
-    };
-
-    let item_row_image = |cx: &mut ElementContext<'_, App>,
-                          title: &'static str,
-                          description: &'static str,
-                          label: &'static str,
-                          variant: shadcn::ItemVariant,
-                          size: shadcn::ItemSize,
-                          with_action: bool,
-                          test_id: &'static str| {
-        let media = image_media(cx, label);
-        item_row(
-            cx,
-            title,
-            description,
-            media,
-            variant,
-            size,
-            with_action,
-            test_id,
-        )
-    };
-
-    let demo = {
-        let content = item_row_icon(
-            cx,
-            "Invoice.pdf",
-            "Updated 2 days ago",
-            "lucide.file-text",
-            shadcn::ItemVariant::Default,
-            shadcn::ItemSize::Default,
-            true,
-            "ui-gallery-item-demo",
+            stack::HStackProps::default().gap(Space::N1).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
+                        .into_element(cx),
+                ]
+            },
         );
-        content
-    };
-
-    let variant = {
-        let content = shadcn::ItemGroup::new([
-            item_row_icon(
-                cx,
-                "Default",
-                "Neutral style with hover/press states.",
-                "lucide.layout-dashboard",
-                shadcn::ItemVariant::Default,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-variant-default",
-            ),
-            item_row_icon(
-                cx,
-                "Outline",
-                "Visible border emphasis for dense lists.",
-                "lucide.panel-top",
-                shadcn::ItemVariant::Outline,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-variant-outline",
-            ),
-            item_row_icon(
-                cx,
-                "Muted",
-                "Low-contrast background for secondary groups.",
-                "lucide.inbox",
-                shadcn::ItemVariant::Muted,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-variant-muted",
-            ),
+        let media = shadcn::ItemMedia::new([avatars]).into_element(cx);
+        let content = shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("Design Department").into_element(cx),
+            shadcn::ItemDescription::new("Meet our team of designers, engineers, and researchers.")
+                .into_element(cx),
         ])
-        .gap(Px(8.0))
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx);
-        content
-    };
 
-    let size = {
-        let content = stack::vstack(
+        let chevron = icon_button(
             cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(720.0))),
-            |cx| {
-                vec![
-                    item_row_icon(
-                        cx,
-                        "Default Size",
-                        "Use for regular settings and list rows.",
-                        "lucide.settings",
-                        shadcn::ItemVariant::Default,
-                        shadcn::ItemSize::Default,
-                        false,
-                        "ui-gallery-item-size-default",
-                    ),
-                    item_row_icon(
-                        cx,
-                        "Small Size",
-                        "Compact row density.",
-                        "lucide.layers",
-                        shadcn::ItemVariant::Default,
-                        shadcn::ItemSize::Sm,
-                        false,
-                        "ui-gallery-item-size-sm",
-                    ),
-                    shadcn::typography::muted(
-                        cx,
-                        "Current Fret API supports default/sm; docs `xs` is not exposed yet.",
-                    ),
-                ]
-            },
+            "lucide.chevron-right",
+            shadcn::ButtonVariant::Outline,
+            Arc::<str>::from("ui-gallery-item-team-action"),
         );
-        content
+        let actions = shadcn::ItemActions::new([chevron])
+            .refine_layout(LayoutRefinement::default().mt(Space::N1))
+            .into_element(cx);
+
+        shadcn::Item::new([media, content, actions])
+            .on_click(CMD_APP_OPEN)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-team")
     };
 
-    let icon = {
-        let content = item_row_icon(
-            cx,
-            "Analytics",
-            "Open dashboard metrics and trends.",
-            "lucide.chart-column-big",
-            shadcn::ItemVariant::Default,
-            shadcn::ItemSize::Default,
-            true,
-            "ui-gallery-item-icon",
-        );
-        content
-    };
-
-    let avatar = {
-        let content = item_row_avatar(
-            cx,
-            "Dana Chen",
-            "Design review owner",
-            "DC",
-            shadcn::ItemVariant::Default,
-            shadcn::ItemSize::Default,
-            true,
-            "ui-gallery-item-avatar",
-        );
-        content
-    };
-
-    let image = {
-        let content = item_row_image(
-            cx,
-            "Cover Image",
-            "Media-style item with image slot",
-            "IMG",
-            shadcn::ItemVariant::Default,
-            shadcn::ItemSize::Default,
-            true,
-            "ui-gallery-item-image",
-        );
-        content
-    };
-
-    let group = {
-        let content = shadcn::ItemGroup::new([
-            item_row_icon(
-                cx,
-                "README.md",
-                "Updated now",
-                "lucide.file-text",
-                shadcn::ItemVariant::Default,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-group-readme",
-            ),
-            shadcn::ItemSeparator::new().into_element(cx),
-            item_row_icon(
-                cx,
-                "Roadmap.md",
-                "Updated yesterday",
-                "lucide.map",
-                shadcn::ItemVariant::Default,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-group-roadmap",
-            ),
-            shadcn::ItemSeparator::new().into_element(cx),
-            item_row_icon(
-                cx,
-                "Changelog.md",
-                "Updated 3 days ago",
-                "lucide.history",
-                shadcn::ItemVariant::Default,
-                shadcn::ItemSize::Default,
-                false,
-                "ui-gallery-item-group-changelog",
-            ),
+    let item_download = {
+        let header =
+            shadcn::ItemHeader::new([ui::text(cx, "Your download has started.").into_element(cx)])
+                .into_element(cx);
+        let media = shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)])
+            .variant(shadcn::ItemMediaVariant::Icon)
+            .into_element(cx);
+        let content = shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("Downloading...").into_element(cx),
+            shadcn::ItemDescription::new("129 MB / 1000 MB").into_element(cx),
         ])
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-item-group");
-        content
+        .into_element(cx);
+        let actions = shadcn::ItemActions::new([outline_button_sm(cx, "Cancel")]).into_element(cx);
+        let footer = shadcn::ItemFooter::new([shadcn::Progress::new(download_progress)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)])
+        .into_element(cx);
+
+        shadcn::Item::new([header, media, content, actions, footer])
+            .variant(shadcn::ItemVariant::Outline)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-download")
     };
 
-    let header = {
-        let content = stack::vstack(
+    let column_basic = {
+        let item_title_button = item_basic(
+            cx,
+            shadcn::ItemVariant::Default,
+            "Item Title",
+            None,
+            vec![outline_button(cx, "Button")],
+            "ui-gallery-item-basic-default",
+        );
+        let item_title_button_outline = item_basic(
+            cx,
+            shadcn::ItemVariant::Outline,
+            "Item Title",
+            None,
+            vec![outline_button(cx, "Button")],
+            "ui-gallery-item-basic-outline",
+        );
+        let item_desc_button = item_basic(
+            cx,
+            shadcn::ItemVariant::Default,
+            "Item Title",
+            Some("Item Description"),
+            vec![outline_button(cx, "Button")],
+            "ui-gallery-item-basic-default-desc",
+        );
+        let item_desc_outline = item_basic(
+            cx,
+            shadcn::ItemVariant::Outline,
+            "Item Title",
+            Some("Item Description"),
+            Vec::new(),
+            "ui-gallery-item-basic-outline-desc",
+        );
+        let item_desc_muted = item_basic(
+            cx,
+            shadcn::ItemVariant::Muted,
+            "Item Title",
+            Some("Item Description"),
+            Vec::new(),
+            "ui-gallery-item-basic-muted-desc",
+        );
+        let item_desc_muted_actions = item_basic(
+            cx,
+            shadcn::ItemVariant::Muted,
+            "Item Title",
+            Some("Item Description"),
+            vec![outline_button(cx, "Button"), outline_button(cx, "Button")],
+            "ui-gallery-item-basic-muted-actions",
+        );
+        let item_ticket = item_icon(
+            cx,
+            shadcn::ItemVariant::Outline,
+            "lucide.ticket",
+            "Item Title",
+            None,
+            vec![
+                shadcn::Button::new("Purchase")
+                    .size(shadcn::ButtonSize::Sm)
+                    .into_element(cx),
+            ],
+            "ui-gallery-item-basic-ticket-outline",
+        );
+        let item_ticket_muted = item_icon(
+            cx,
+            shadcn::ItemVariant::Muted,
+            "lucide.ticket",
+            "Item Title",
+            Some("Item Description"),
+            vec![
+                shadcn::Button::new("Upgrade")
+                    .size(shadcn::ButtonSize::Sm)
+                    .into_element(cx),
+            ],
+            "ui-gallery-item-basic-ticket-muted",
+        );
+
+        let field = {
+            let field = shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldTitle::new("Field Title").into_element(cx),
+                    shadcn::FieldDescription::new("Field Description").into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Button::new("Button")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .into_element(cx);
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                |cx| {
+                    vec![
+                        shadcn::FieldLabel::new("Field Label").into_element(cx),
+                        field,
+                    ]
+                },
+            )
+            .test_id("ui-gallery-item-field")
+        };
+
+        stack::vstack(
             cx,
             stack::VStackProps::default()
-                .gap(Space::N2)
+                .gap(Space::N6)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(720.0))),
-            |cx| {
+                .layout(max_w_sm.clone()),
+            |_cx| {
                 vec![
-                    shadcn::ItemHeader::new([
-                        shadcn::ItemTitle::new("Recent Files").into_element(cx),
-                        shadcn::Button::new("View all")
-                            .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_APP_OPEN)
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    item_row_icon(
-                        cx,
-                        "Draft proposal",
-                        "Edited by Alex",
-                        "lucide.file-pen-line",
-                        shadcn::ItemVariant::Outline,
-                        shadcn::ItemSize::Default,
-                        false,
-                        "ui-gallery-item-header-row",
-                    ),
+                    item_title_button,
+                    item_title_button_outline,
+                    item_desc_button,
+                    item_desc_outline,
+                    item_desc_muted,
+                    item_desc_muted_actions,
+                    item_ticket,
+                    item_ticket_muted,
+                    field,
                 ]
             },
         )
-        .test_id("ui-gallery-item-header");
-        content
+        .test_id("ui-gallery-item-column-basic")
     };
 
-    let link = {
-        let content = item_row_icon(
+    let column_people = {
+        let people = [
+            ("shadcn", "Just shipped a component that fixes itself", "S"),
+            (
+                "pranathip",
+                "My code is so clean, it does its own laundry",
+                "P",
+            ),
+            (
+                "evilrabbit",
+                "Debugging is like being a detective in a crime movie where you're also the murderer",
+                "E",
+            ),
+            (
+                "maxleiter",
+                "I don't always test my code, but when I do, I test it in production",
+                "M",
+            ),
+        ];
+
+        let mut group_children: Vec<AnyElement> = Vec::new();
+        for (idx, (username, message, initials)) in people.iter().copied().enumerate() {
+            group_children.push(item_avatar(
+                cx,
+                username,
+                message,
+                initials,
+                Arc::<str>::from(format!("ui-gallery-item-people-{idx}")),
+                Arc::<str>::from(format!("ui-gallery-item-people-{idx}-action-add")),
+            ));
+            if idx + 1 < people.len() {
+                group_children.push(shadcn::ItemSeparator::new().into_element(cx));
+            }
+        }
+
+        let group = shadcn::ItemGroup::new(group_children)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-people-group");
+
+        stack::vstack(
             cx,
-            "Dashboard",
-            "Overview of your account and activity.",
-            "lucide.house",
-            shadcn::ItemVariant::Outline,
-            shadcn::ItemSize::Default,
-            false,
-            "ui-gallery-item-link",
-        );
-        content
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_sm.clone()),
+            |_cx| vec![group, item_team, item_download],
+        )
+        .test_id("ui-gallery-item-column-people")
     };
 
-    let dropdown = {
-        let dropdown_media = icon_media(cx, "lucide.folder");
-        let content = shadcn::Item::new([
-            dropdown_media,
-            shadcn::ItemContent::new([
-                shadcn::ItemTitle::new("Team Drive").into_element(cx),
-                shadcn::ItemDescription::new("Shared files and permissions").into_element(cx),
+    let column_music = {
+        let gap_4 = MetricRef::space(Space::N4).resolve(&theme);
+        let music = [
+            (
+                "Midnight City Lights",
+                "Neon Dreams",
+                "Electric Nights",
+                "3:45",
+            ),
+            (
+                "Coffee Shop Conversations",
+                "The Morning Brew",
+                "Urban Stories",
+                "4:05",
+            ),
+            ("Digital Rain", "Cyber Symphony", "Binary Beats", "3:30"),
+            (
+                "Sunset Boulevard",
+                "Golden Hour",
+                "California Dreams",
+                "3:55",
+            ),
+            ("Neon Sign Romance", "Retro Wave", "80s Forever", "4:10"),
+            ("Ocean Depths", "Deep Blue", "Underwater Symphony", "3:40"),
+            (
+                "Space Station Alpha",
+                "Cosmic Explorers",
+                "Galactic Journey",
+                "3:50",
+            ),
+            (
+                "Forest Whispers",
+                "Nature's Choir",
+                "Woodland Tales",
+                "3:35",
+            ),
+        ];
+
+        let mut rows: Vec<AnyElement> = Vec::new();
+        for (idx, (title, artist, album, duration)) in music.iter().copied().enumerate() {
+            let props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(theme.color_token("muted")))
+                    .rounded(Radius::Sm),
+                LayoutRefinement::default().size_full(),
+            );
+            let image = cx
+                .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+                .test_id(format!("ui-gallery-item-music-image-{idx}"));
+            let media = shadcn::ItemMedia::new([image])
+                .variant(shadcn::ItemMediaVariant::Image)
+                .into_element(cx);
+
+            let title_text: Arc<str> = Arc::from(format!("{title} - {album}"));
+            let content = shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(title_text).into_element(cx),
+                shadcn::ItemDescription::new(artist).into_element(cx),
             ])
-            .into_element(cx),
-            shadcn::ItemActions::new([shadcn::Button::new("Actions")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_APP_OPEN)
-                .into_element(cx)])
-            .into_element(cx),
-        ])
-        .variant(shadcn::ItemVariant::Default)
-        .on_click(CMD_APP_OPEN)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-item-dropdown");
-        content
+            .into_element(cx);
+
+            let duration =
+                shadcn::ItemContent::new([shadcn::ItemDescription::new(duration).into_element(cx)])
+                    .refine_layout(LayoutRefinement::default().flex_none())
+                    .into_element(cx);
+
+            let download = icon_button(
+                cx,
+                "lucide.download",
+                shadcn::ButtonVariant::Ghost,
+                Arc::<str>::from(format!("ui-gallery-item-music-{idx}-download")),
+            );
+            let actions = shadcn::ItemActions::new([download]).into_element(cx);
+
+            rows.push(
+                shadcn::Item::new([media, content, duration, actions])
+                    .variant(shadcn::ItemVariant::Outline)
+                    .on_click(CMD_APP_OPEN)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id(format!("ui-gallery-item-music-{idx}")),
+            );
+        }
+
+        let group = shadcn::ItemGroup::new(rows)
+            .gap(gap_4)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-music-group");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_lg.clone()),
+            |_cx| vec![group],
+        )
+        .test_id("ui-gallery-item-column-music")
     };
+
+    let column_issues = {
+        let issues = [
+            (
+                1247,
+                "Button component doesn't respect disabled state when using custom variants",
+                "When applying custom variants to the Button component, the disabled prop is ignored and the button remains clickable.",
+            ),
+            (
+                892,
+                "Dialog component causes scroll lock on mobile devices",
+                "The Dialog component prevents scrolling on the background content but doesn't restore scroll position properly.",
+            ),
+            (
+                1156,
+                "TypeScript errors with Select component in strict mode",
+                "Using the Select component with TypeScript strict mode enabled throws type errors related to value typing.",
+            ),
+            (
+                734,
+                "Dark mode toggle causes flash of unstyled content",
+                "When switching between light and dark themes, there's a brief moment where components render with incorrect styling.",
+            ),
+            (
+                1389,
+                "Form validation messages overlap with floating labels",
+                "Error messages in Form components with floating labels appear underneath the label text, making them difficult to read.",
+            ),
+        ];
+
+        let mut children: Vec<AnyElement> = Vec::new();
+        for (idx, (number, title, description)) in issues.iter().copied().enumerate() {
+            let content = shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(title).into_element(cx),
+                shadcn::ItemDescription::new(description).into_element(cx),
+            ])
+            .into_element(cx);
+
+            let number_text: Arc<str> = Arc::from(format!("#{number}"));
+            let number_col = shadcn::ItemContent::new([ui::text(cx, number_text).into_element(cx)])
+                .refine_layout(LayoutRefinement::default().flex_none())
+                .into_element(cx);
+
+            children.push(
+                shadcn::Item::new([content, number_col])
+                    .on_click(CMD_APP_OPEN)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id(format!("ui-gallery-item-issue-{idx}")),
+            );
+            if idx + 1 < issues.len() {
+                children.push(shadcn::ItemSeparator::new().into_element(cx));
+            }
+        }
+
+        let group = shadcn::ItemGroup::new(children)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-issues-group");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_lg.clone()),
+            |_cx| vec![group],
+        )
+        .test_id("ui-gallery-item-column-issues")
+    };
+
+    let demo = doc_layout::wrap_row_snapshot(
+        cx,
+        &theme,
+        Space::N6,
+        fret_ui::element::CrossAlign::Start,
+        |_cx| vec![column_basic, column_people, column_music, column_issues],
+    )
+    .test_id("ui-gallery-item-demo");
 
     let rtl = doc_layout::rtl(cx, |cx| {
-        let props = cx.with_theme(|theme| {
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default(),
-                LayoutRefinement::default().w_full().max_w(Px(720.0)),
-            )
-        });
-        cx.container(props, |cx| {
-            vec![item_row_icon(
-                cx,
-                "لوحة التحكم",
-                "نظرة عامة على حسابك ونشاطك",
-                "lucide.layout-dashboard",
-                shadcn::ItemVariant::Default,
-                shadcn::ItemSize::Default,
-                true,
-                "ui-gallery-item-rtl-row",
-            )]
-        })
+        item_basic(
+            cx,
+            shadcn::ItemVariant::Outline,
+            "لوحة التحكم",
+            Some("نظرة عامة على حسابك ونشاطك."),
+            vec![outline_button_sm(cx, "فتح")],
+            "ui-gallery-item-rtl",
+        )
     })
-    .test_id("ui-gallery-item-rtl");
+    .test_id("ui-gallery-item-rtl-wrapper");
 
     let notes = doc_layout::notes(
         cx,
         [
+            "Preview aligns to shadcn Item demo layout (4 columns).",
+            "Upstream uses `asChild` anchors and DOM images; Fret uses `on_click` + placeholder media in this gallery.",
             "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
-            "Current API variants: default/outline/muted; sizes: default/sm.",
-            "Docs `asChild` link and avatar-specific media variant are approximated with `on_click` and composed `Avatar`.",
-            "Prefer stable `test_id`s on list rows and actions so diag scripts survive layout refactors.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Item docs order: Demo, Variant, Size, Icon, Avatar, Image, Group, Header, Link, Dropdown, RTL.",
+            "Preview follows shadcn Item demo: basic rows, people list, download row, music list, issue list.",
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("A file row with media, content, and a trailing action.")
-                .max_w(Px(920.0))
+                .no_shell()
+                .max_w(Px(1100.0))
                 .code(
                     "rust",
-                    r#"shadcn::Item::new([
-    shadcn::ItemMedia::new([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.file-text"))]).into_element(cx),
-    shadcn::ItemContent::new([
-        shadcn::ItemTitle::new("Invoice.pdf").into_element(cx),
-        shadcn::ItemDescription::new("Updated 2 days ago").into_element(cx),
-    ]).into_element(cx),
-    shadcn::ItemActions::new([shadcn::Button::new("Open").into_element(cx)]).into_element(cx),
-])
-.on_click(CMD_APP_OPEN)
-.into_element(cx);"#,
+                    r#"// Item columns are laid out with a wrap row.
+doc_layout::wrap_row_snapshot(cx, &theme, Space::N6, CrossAlign::Start, |cx| {
+    vec![/* col 1 */, /* col 2 */, /* col 3 */, /* col 4 */]
+});"#,
                 ),
-            DocSection::new("Variant", variant)
-                .description("Default / Outline / Muted variants.")
-                .max_w(Px(920.0))
+            DocSection::new("Extras", rtl)
+                .description("RTL smoke check (not present in upstream demo).")
+                .no_shell()
+                .max_w(Px(980.0))
                 .code(
                     "rust",
-                    r#"let base = shadcn::Item::new([
-    shadcn::ItemContent::new([
-        shadcn::ItemTitle::new("Default").into_element(cx),
-        shadcn::ItemDescription::new("Neutral style").into_element(cx),
-    ])
-    .into_element(cx),
-])
-.on_click(CMD_APP_OPEN);
-
-let outline = base.clone().variant(shadcn::ItemVariant::Outline).into_element(cx);
-let muted = base.variant(shadcn::ItemVariant::Muted).into_element(cx);"#,
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Item::new([/* ... */]).variant(shadcn::ItemVariant::Outline).into_element(cx)
+});"#,
                 ),
-            DocSection::new("Size", size)
-                .description("Row density presets (default + small).")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"let default_row = shadcn::Item::new([shadcn::ItemContent::new([
-    shadcn::ItemTitle::new("Default Size").into_element(cx),
-    shadcn::ItemDescription::new("Regular density").into_element(cx),
-])
-.into_element(cx)])
-.size(shadcn::ItemSize::Default)
-.into_element(cx);
-
-let compact_row = shadcn::Item::new([shadcn::ItemContent::new([
-    shadcn::ItemTitle::new("Small Size").into_element(cx),
-    shadcn::ItemDescription::new("Compact density").into_element(cx),
-])
-.into_element(cx)])
-.size(shadcn::ItemSize::Sm)
-.into_element(cx);"#,
-                ),
-            DocSection::new("Icon", icon)
-                .description("Icon media variant for app navigation rows.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"let media = shadcn::ItemMedia::new([
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.chart-column-big")),
-])
-.variant(shadcn::ItemMediaVariant::Icon)
-.into_element(cx);
-
-shadcn::Item::new([
-    media,
-    shadcn::ItemContent::new([
-        shadcn::ItemTitle::new("Analytics").into_element(cx),
-        shadcn::ItemDescription::new("Open dashboard metrics and trends.").into_element(cx),
-    ])
-    .into_element(cx),
-])
-.on_click(CMD_APP_OPEN)
-.into_element(cx);"#,
-                ),
-            DocSection::new("Avatar", avatar)
-                .description("Compose Avatar inside ItemMedia for people lists.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("DC").into_element(cx)])
-    .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(28.0)))
-    .into_element(cx);
-
-let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
-
-shadcn::Item::new([
-    media,
-    shadcn::ItemContent::new([
-        shadcn::ItemTitle::new("Dana Chen").into_element(cx),
-        shadcn::ItemDescription::new("Design review owner").into_element(cx),
-    ])
-    .into_element(cx),
-])
-.on_click(CMD_APP_OPEN)
-.into_element(cx);"#,
-                ),
-            DocSection::new("Image", image)
-                .description("Media slot can be styled as an image placeholder.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"let props = cx.with_theme(|theme| {
-    decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .bg(ColorRef::Color(theme.color_token("muted")))
-            .rounded(Radius::Sm),
-        LayoutRefinement::default().size_full(),
-    )
-});
-let placeholder = cx.container(props, |cx| vec![shadcn::typography::muted(cx, "IMG")]);
-
-let media = shadcn::ItemMedia::new([placeholder])
-    .variant(shadcn::ItemMediaVariant::Image)
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Group", group)
-                .description("Group rows with separators and consistent spacing.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"shadcn::ItemGroup::new([
-    shadcn::Item::new([/* row */]).into_element(cx),
-    shadcn::ItemSeparator::new().into_element(cx),
-    shadcn::Item::new([/* row */]).into_element(cx),
-])
-.gap(Px(8.0))
-.into_element(cx);"#,
-                ),
-            DocSection::new("Header", header)
-                .description("Header row pairs a title with a trailing action.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"shadcn::ItemHeader::new([
-    shadcn::ItemTitle::new("Recent Files").into_element(cx),
-    shadcn::Button::new("View all")
-        .variant(shadcn::ButtonVariant::Ghost)
-        .size(shadcn::ButtonSize::Sm)
-        .on_click(CMD_APP_OPEN)
-        .into_element(cx),
-])
-.into_element(cx);"#,
-                ),
-            DocSection::new("Link", link)
-                .description("Clickable list row (approximates docs link usage).")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Item::new([shadcn::ItemContent::new([
-    shadcn::ItemTitle::new("Dashboard").into_element(cx),
-    shadcn::ItemDescription::new("Overview of your account and activity.").into_element(cx),
-])
-.into_element(cx)])
-.variant(shadcn::ItemVariant::Outline)
-.on_click(CMD_APP_OPEN)
-.into_element(cx);"#,
-                ),
-            DocSection::new("Dropdown", dropdown)
-                .description("Trailing ghost action button (menu placeholder).")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"shadcn::ItemActions::new([shadcn::Button::new("Actions")
-    .variant(shadcn::ButtonVariant::Ghost)
-    .size(shadcn::ButtonSize::Sm)
-    .on_click(CMD_APP_OPEN)
-    .into_element(cx)])
-.into_element(cx);"#,
-                ),
-            DocSection::new("RTL", rtl)
-                .description("Validate text alignment and action placement under RTL.")
-                .max_w(Px(920.0))
-                .code(
-                    "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-     |cx| {
-         shadcn::Item::new([shadcn::ItemContent::new([
-            shadcn::ItemTitle::new("لوحة التحكم").into_element(cx),
-            shadcn::ItemDescription::new("...").into_element(cx),
-        ])
-        .into_element(cx)])
-        .into_element(cx)
-     },
-);"#,
-                 ),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and implementation notes.")
-                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );
 
