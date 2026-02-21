@@ -6,29 +6,21 @@ pub(super) fn demo(
     open: Model<bool>,
     query: Model<String>,
 ) -> AnyElement {
-    let demo_combo = shadcn::Combobox::new(value.clone(), open.clone())
-        .a11y_label("Combobox demo")
+    shadcn::Combobox::new(value.clone(), open.clone())
+        .a11y_label("Combobox basic")
         .width(Px(260.0))
-        .placeholder("Pick a fruit")
+        .placeholder("Select a framework")
         .query_model(query.clone())
-        .test_id_prefix("ui-gallery-combobox-demo")
-        .items(helpers::base_items())
+        .test_id_prefix("ui-gallery-combobox-basic")
+        .items([
+            shadcn::ComboboxItem::new("next", "Next.js"),
+            shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+            shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+            shadcn::ComboboxItem::new("remix", "Remix"),
+            shadcn::ComboboxItem::new("astro", "Astro"),
+        ])
         .into_element(cx)
-        .test_id("ui-gallery-combobox-demo-trigger");
-    let demo_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        move |cx| {
-            vec![
-                demo_combo,
-                helpers::state_rows(cx, &value, &query, "ui-gallery-combobox-demo"),
-            ]
-        },
-    );
-    demo_content
+        .test_id("ui-gallery-combobox-basic-trigger")
 }
 
 pub(super) fn custom_items_top(
@@ -63,51 +55,6 @@ pub(super) fn custom_items_top(
                     &models.custom_value,
                     &models.custom_query,
                     "ui-gallery-combobox-custom-items",
-                ),
-            ]
-        },
-    );
-    content
-}
-
-pub(super) fn multiple_selection(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let content = shadcn::typography::muted(
-        cx,
-        "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select; keep this as an explicit parity gap marker.",
-    );
-    content
-}
-
-pub(super) fn basic(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
-    let basic_combo = shadcn::Combobox::new(models.basic_value.clone(), models.basic_open.clone())
-        .a11y_label("Combobox basic")
-        .width(Px(260.0))
-        .placeholder("Select a framework")
-        .query_model(models.basic_query.clone())
-        .test_id_prefix("ui-gallery-combobox-basic")
-        .items([
-            shadcn::ComboboxItem::new("next", "Next.js"),
-            shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-            shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-            shadcn::ComboboxItem::new("remix", "Remix"),
-            shadcn::ComboboxItem::new("astro", "Astro"),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-combobox-basic-trigger");
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        move |cx| {
-            vec![
-                basic_combo,
-                helpers::state_rows(
-                    cx,
-                    &models.basic_value,
-                    &models.basic_query,
-                    "ui-gallery-combobox-basic",
                 ),
             ]
         },
@@ -158,35 +105,23 @@ pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModel
     content
 }
 
-pub(super) fn multiple(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let content = shadcn::typography::muted(
-        cx,
-        "`multiple` + chips behavior is not exposed in current Fret `Combobox`; tracked as a follow-up API expansion.",
-    );
-    content
-}
-
-pub(super) fn clear_button(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let content = shadcn::typography::muted(
-        cx,
-        "Upstream has `showClear`. Current Fret API can be cleared by external state reset, but does not provide built-in clear trigger yet.",
-    );
-    content
-}
-
 pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
     let groups_combo =
         shadcn::Combobox::new(models.groups_value.clone(), models.groups_open.clone())
             .a11y_label("Combobox groups")
             .width(Px(300.0))
-            .placeholder("Filter commands")
+            .placeholder("Select a timezone")
             .query_model(models.groups_query.clone())
             .items([
-                shadcn::ComboboxItem::new("framework-next", "Frameworks / Next.js"),
-                shadcn::ComboboxItem::new("framework-nuxt", "Frameworks / Nuxt.js"),
-                shadcn::ComboboxItem::new("language-rust", "Languages / Rust"),
-                shadcn::ComboboxItem::new("language-typescript", "Languages / TypeScript"),
-                shadcn::ComboboxItem::new("tool-cargo", "Tools / Cargo"),
+                shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
+                shadcn::ComboboxItem::new("americas-la", "Americas / (GMT-8) Los Angeles"),
+                shadcn::ComboboxItem::new("americas-chi", "Americas / (GMT-6) Chicago"),
+                shadcn::ComboboxItem::new("europe-lon", "Europe / (GMT+0) London"),
+                shadcn::ComboboxItem::new("europe-paris", "Europe / (GMT+1) Paris"),
+                shadcn::ComboboxItem::new("europe-berlin", "Europe / (GMT+1) Berlin"),
+                shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
+                shadcn::ComboboxItem::new("asia-shanghai", "Asia/Pacific / (GMT+8) Shanghai"),
+                shadcn::ComboboxItem::new("asia-singapore", "Asia/Pacific / (GMT+8) Singapore"),
             ])
             .into_element(cx)
             .test_id("ui-gallery-combobox-groups-trigger");
@@ -207,14 +142,6 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
                 ),
             ]
         },
-    );
-    content
-}
-
-pub(super) fn custom_items_example(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let content = shadcn::typography::muted(
-        cx,
-        "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
     );
     content
 }
@@ -287,40 +214,6 @@ pub(super) fn disabled(cx: &mut ElementContext<'_, App>, models: &ComboboxModels
                 ),
             ]
         },
-    );
-    content
-}
-
-pub(super) fn auto_highlight(
-    cx: &mut ElementContext<'_, App>,
-    models: &ComboboxModels,
-) -> AnyElement {
-    let auto_highlight_combo = shadcn::Combobox::new(
-        models.input_group_value.clone(),
-        models.input_group_open.clone(),
-    )
-    .a11y_label("Combobox auto highlight")
-    .width(Px(260.0))
-    .placeholder("Type to filter")
-    .query_model(models.input_group_query.clone())
-    .items(helpers::base_items())
-    .into_element(cx)
-    .test_id("ui-gallery-combobox-auto-highlight-trigger");
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        move |_cx| vec![auto_highlight_combo],
-    );
-    content
-}
-
-pub(super) fn popup(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let content = shadcn::typography::muted(
-        cx,
-        "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
     );
     content
 }

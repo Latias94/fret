@@ -20,25 +20,39 @@ pub(super) fn preview_combobox(
 
     let demo = sections::demo(cx, value, open, query);
     let custom_items_top = sections::custom_items_top(cx, &models);
-    let multiple_selection = sections::multiple_selection(cx);
-    let basic = sections::basic(cx, &models);
     let long_list = sections::long_list(cx, &models);
-    let multiple = sections::multiple(cx);
-    let clear_button = sections::clear_button(cx);
     let groups = sections::groups(cx, &models);
-    let custom_items_example = sections::custom_items_example(cx);
     let invalid = sections::invalid(cx, &models, destructive);
     let disabled = sections::disabled(cx, &models);
-    let auto_highlight = sections::auto_highlight(cx, &models);
-    let popup = sections::popup(cx);
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
+
+    let (clear_title, clear) = doc_layout::gap_card(
+        cx,
+        "Clear Button",
+        "Upstream combobox supports `showClear` on the input. Current Fret `Combobox` does not expose a built-in clear affordance yet; clear by resetting the value model in your app state.",
+        "ui-gallery-combobox-clear-gap",
+    );
+
+    let (trigger_title, trigger) = doc_layout::gap_card(
+        cx,
+        "Trigger Button",
+        "Upstream shows a trigger-as-button recipe (`ComboboxTrigger` + `ComboboxValue`). Current Fret `Combobox` is a Popover+Command recipe with an integrated trigger; trigger-as-child composition is not exposed yet.",
+        "ui-gallery-combobox-trigger-gap",
+    );
+
+    let (multiple_title, multiple) = doc_layout::gap_card(
+        cx,
+        "Multiple Selection",
+        "Upstream supports `multiple` + chips (`ComboboxChips`) with `autoHighlight`. Current Fret `Combobox` is single-select; multi-select + chips is tracked as an API expansion.",
+        "ui-gallery-combobox-multiple-gap",
+    );
 
     let notes = doc_layout::notes(
         cx,
         [
-            "Current Fret `Combobox` focuses on single-select + query filtering; several Base UI recipes are tracked as explicit gaps here.",
-            "Keep unsupported sections visible (multiple/clear/popup) to make parity progress auditable instead of implicit.",
+            "Combobox is a Popover + Command recipe. Keep shadcn demo order stable so parity gaps are explicit and testable.",
+            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select, clear, and trigger composition are tracked as explicit gaps.",
             "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
             "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
         ],
@@ -47,23 +61,63 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Combobox docs flow; unsupported recipes are kept as explicit gap markers.",
+            "Preview follows shadcn ComboboxDemo order: Basic, Clear Button, Groups, Trigger Button, Multiple Selection. Extras are Fret-specific gates.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Basic single-select combobox with query filtering.")
+            DocSection::new("Basic", demo)
+                .description("Upstream shadcn demo: basic framework combobox with search.")
                 .code(
                     "rust",
-                    r#"let combo = shadcn::Combobox::new(value, open)
-    .placeholder("Pick a fruit")
+                    r#"shadcn::Combobox::new(value, open)
+    .a11y_label("Combobox basic")
+    .width(Px(260.0))
+    .placeholder("Select a framework")
     .query_model(query)
     .items([
-        shadcn::ComboboxItem::new("apple", "Apple"),
-        shadcn::ComboboxItem::new("banana", "Banana"),
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+        shadcn::ComboboxItem::new("remix", "Remix"),
+        shadcn::ComboboxItem::new("astro", "Astro"),
     ])
     .into_element(cx);"#,
                 ),
-            DocSection::new("Custom Items", custom_items_top)
+            DocSection::new(clear_title, clear)
+                .description("Upstream has `showClear`; Fret keeps this as an explicit gap marker.")
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: upstream supports `showClear` on the combobox input.
+// In Fret today, clear selection by resetting the value model to `None`."#,
+                ),
+            DocSection::new("Groups", groups)
+                .description("Upstream groups items; current Fret demo approximates groups via prefixed labels.")
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a timezone")
+    .query_model(query)
+    .items([
+        shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
+        shadcn::ComboboxItem::new("europe-lon", "Europe / (GMT+0) London"),
+        shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
+    ])
+    .into_element(cx);"#,
+                ),
+            DocSection::new(trigger_title, trigger)
+                .description("Upstream trigger-as-button recipe; kept as an explicit parity gap marker.")
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: trigger-as-child / trigger-as-button composition is not exposed yet.
+// Track this as a dedicated API surface before mirroring Base UI's `ComboboxTrigger`/`ComboboxValue`."#,
+                ),
+            DocSection::new(multiple_title, multiple)
+                .description("Upstream multi-select chips recipe; kept as an explicit parity gap marker.")
+                .code(
+                    "rust",
+                    r#"// Not yet implemented: upstream supports `multiple` + chips (`ComboboxChips`) + `autoHighlight`.
+// Current Fret `Combobox` is single-select."#,
+                ),
+            DocSection::new("Extras: Custom Items", custom_items_top)
                 .description(
                     "Fret currently uses string value/label pairs; object-item mapping is approximated by richer labels.",
                 )
@@ -78,33 +132,7 @@ pub(super) fn preview_combobox(
     ])
     .into_element(cx);"#,
                 ),
-            DocSection::new("Multiple Selection", multiple_selection)
-                .description("Parity gap marker: upstream supports chips + multiple values.")
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select.",
-);"#,
-                ),
-            DocSection::new("Basic", basic)
-                .description("Small list of items with stable test IDs for diag scripts.")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox basic")
-    .width(Px(260.0))
-    .placeholder("Select a framework")
-    .query_model(query)
-    .test_id_prefix("ui-gallery-combobox-basic")
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-    ])
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Long List", long_list)
+            DocSection::new("Extras: Long List", long_list)
                 .description(
                     "Supports long-list scroll regression gates (and future virtualization invariants).",
                 )
@@ -123,54 +151,7 @@ shadcn::Combobox::new(value, open)
     .items(items)
     .into_element(cx);"#,
                 ),
-            DocSection::new("Multiple", multiple)
-                .description("Parity gap marker: `multiple` + chips behavior is not exposed yet.")
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "`multiple` + chips behavior is not exposed in current Fret `Combobox`.",
-);"#,
-                ),
-            DocSection::new("Clear Button", clear_button)
-                .description("Parity gap marker: upstream `showClear` is not exposed yet.")
-                .code(
-                    "rust",
-                    r#"shadcn::typography::muted(
-    cx,
-    "Upstream has `showClear`. Current Fret API can be cleared by resetting the value model.",
-);"#,
-                ),
-            DocSection::new("Groups", groups)
-                .description(
-                    "Grouped rows are approximated with prefix labels until group/separator APIs exist.",
-                )
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox groups")
-    .width(Px(300.0))
-    .placeholder("Filter commands")
-    .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("framework-next", "Frameworks / Next.js"),
-        shadcn::ComboboxItem::new("framework-nuxt", "Frameworks / Nuxt.js"),
-        shadcn::ComboboxItem::new("language-rust", "Languages / Rust"),
-        shadcn::ComboboxItem::new("tool-cargo", "Tools / Cargo"),
-    ])
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Custom Items (Rich)", custom_items_example).description(
-                "Parity gap marker: render-rich item surfaces are currently approximated at label level.",
-            )
-            .code(
-                "rust",
-                r#"shadcn::typography::muted(
-    cx,
-    "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
-);"#,
-            ),
-            DocSection::new("Invalid", invalid).description(
+            DocSection::new("Extras: Invalid", invalid).description(
                 "Invalid visual is currently approximated via destructive border style on trigger.",
             )
             .code(
@@ -193,7 +174,7 @@ shadcn::Combobox::new(value, open)
     )
     .into_element(cx);"#,
             ),
-            DocSection::new("Disabled", disabled)
+            DocSection::new("Extras: Disabled", disabled)
                 .description("Disabled state should block open/selection and use muted styling.")
                 .code(
                     "rust",
@@ -205,32 +186,7 @@ shadcn::Combobox::new(value, open)
     .disabled(true)
     .into_element(cx);"#,
                 ),
-            DocSection::new("Auto Highlight", auto_highlight).description(
-                "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not surfaced yet.",
-            )
-            .code(
-                "rust",
-                r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox auto highlight")
-    .placeholder("Type to filter")
-    .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("apple", "Apple"),
-        shadcn::ComboboxItem::new("banana", "Banana"),
-    ])
-    .into_element(cx);"#,
-            ),
-            DocSection::new("Popup", popup).description(
-                "Parity gap marker: trigger-as-button popup recipe is not exposed yet.",
-            )
-            .code(
-                "rust",
-                r#"shadcn::typography::muted(
-    cx,
-    "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
-);"#,
-            ),
-            DocSection::new("Input Group", input_group)
+            DocSection::new("Extras: Input Group", input_group)
                 .description("Inline keybinding + input grouping example.")
                 .code(
                     "rust",
@@ -251,7 +207,7 @@ stack::hstack(
     |cx| vec![shadcn::typography::muted(cx, "Cmd"), combo],
 );"#,
                 ),
-            DocSection::new("RTL", rtl)
+            DocSection::new("Extras: RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code(
                      "rust",
