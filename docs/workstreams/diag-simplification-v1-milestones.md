@@ -68,7 +68,7 @@ Exit criteria:
   - Evidence: `crates/fret-diag/src/stats/stale.rs`
 - [x] Wheel scroll checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
   - Evidence: `crates/fret-diag/src/stats/wheel_scroll.rs`
-- [x] Vlist refresh + policy checks are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
+- [x] Vlist checks (refresh/policy/window shifts) are isolated from `crates/fret-diag/src/stats.rs` to reduce churn risk.
   - Evidence: `crates/fret-diag/src/stats/vlist.rs`
 - [x] Runtime diagnostics config resolution is isolated from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` to reduce churn risk.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`
