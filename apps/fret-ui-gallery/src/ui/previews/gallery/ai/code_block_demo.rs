@@ -15,6 +15,10 @@ pub(in crate::ui) fn preview_ai_code_block_demo(
         .language("rust")
         .show_header(true)
         .show_language(true)
+        .header_right([ui_ai::CodeBlockCopyButton::new(code.clone())
+            .test_id("ui-ai-code-block-copy")
+            .copied_marker_test_id("ui-ai-code-block-copied-marker")
+            .into_element(cx)])
         .test_id("ui-ai-code-block-root")
         .into_element(cx);
 
@@ -38,7 +42,9 @@ pub(in crate::ui) fn preview_ai_code_block_demo(
         move |cx| {
             vec![
                 cx.text("CodeBlock + Snippet (AI Elements)"),
-                cx.text("CodeBlock is backed by `fret-code-view`."),
+                cx.text(
+                    "CodeBlock is backed by `fret-code-view` and exposes explicit copy surfaces.",
+                ),
                 code_block,
                 snippet,
             ]
