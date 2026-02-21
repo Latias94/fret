@@ -232,6 +232,7 @@ fn cmd_query_snapshots(
     let mut has_semantics_only: bool = true;
     let mut semantics_source: Option<String> = None; // inline|table|any (None => any)
     let mut test_id: Option<String> = None;
+    let mut step_index: Option<u32> = None;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -291,6 +292,17 @@ fn cmd_query_snapshots(
                 test_id = Some(v);
                 i += 1;
             }
+            "--step-index" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --step-index".to_string());
+                };
+                step_index = Some(
+                    v.parse::<u32>()
+                        .map_err(|_| "invalid value for --step-index (expected u32)".to_string())?,
+                );
+                i += 1;
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag for query snapshots: {other}"));
             }
@@ -338,12 +350,46 @@ fn cmd_query_snapshots(
         .and_then(|v| v.as_array())
         .unwrap_or(&empty);
 
+    let step_selector: Option<(u64, Option<u64>, Option<u64>)> = if let Some(step_index) =
+        step_index
+    {
+        let steps = index
+            .get("script")
+            .and_then(|v| v.get("steps"))
+            .and_then(|v| v.as_array())
+            .unwrap_or(&empty);
+        let step = steps.iter().find(|s| {
+            s.get("step_index")
+                .and_then(|v| v.as_u64())
+                .is_some_and(|v| v == step_index as u64)
+        });
+        let Some(step) = step else {
+            return Err(format!(
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
+            ));
+        };
+        let window = step
+            .get("window")
+            .and_then(|v| v.as_u64())
+            .ok_or_else(|| "invalid bundle.index.json: script step marker missing window".to_string())?;
+        let frame_id = step.get("frame_id").and_then(|v| v.as_u64());
+        let window_snapshot_seq = step.get("window_snapshot_seq").and_then(|v| v.as_u64());
+        Some((window, frame_id, window_snapshot_seq))
+    } else {
+        None
+    };
+
     let mut rows: Vec<SnapRow> = Vec::new();
     let target = test_id.as_deref().unwrap_or_default().trim();
     let semantics_blooms =
         crate::bundle_index::semantics_bloom_index_from_bundle_index_json(&index);
     for w in windows {
         let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some((req_window, _, _)) = step_selector
+            && req_window != w_id
+        {
+            continue;
+        }
         if let Some(req) = window_id
             && req != w_id
         {
@@ -361,6 +407,21 @@ fn cmd_query_snapshots(
                 .unwrap_or(false);
             if non_warmup_only && is_warmup {
                 continue;
+            }
+
+            if let Some((_, req_frame_id, req_seq)) = step_selector {
+                let got_frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+                let got_seq = s.get("window_snapshot_seq").and_then(|v| v.as_u64());
+                let matches = if let Some(req_seq) = req_seq {
+                    got_seq == Some(req_seq)
+                } else if let Some(req_frame_id) = req_frame_id {
+                    got_frame_id == Some(req_frame_id)
+                } else {
+                    false
+                };
+                if !matches {
+                    continue;
+                }
             }
 
             let has_semantics = s

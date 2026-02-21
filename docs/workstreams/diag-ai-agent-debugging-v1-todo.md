@@ -36,6 +36,8 @@ Last updated: 2026-02-21
   - stable slice outputs for a given `--test-id` or script failure anchor
 - [ ] Add “jump to snapshot” affordances in `diag slice` using index (avoid scanning full semantics when possible).
   - [x] When the default snapshot does not contain the requested test-id, try a small set of index-derived candidates via streaming slice before falling back to full bundle parsing.
+  - [x] When `script.result.json` is present, attach `script.steps[]` markers to `bundle.index.json` and allow `diag query snapshots` /
+    `diag slice` to select by `--step-index` (step → snapshot selector).
 
 ## M2: Slice hardening
 

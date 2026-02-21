@@ -75,6 +75,10 @@ What ships now (Phase 1 subset):
 - `bundle.index.json` schema v1 also includes an optional per-semantics-key bloom index:
   - `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to provide broader test-id membership hints
     without storing a bloom per snapshot.
+- When `bundle.index.json` is generated next to a `script.result.json` (run-id artifact layout), it may include an optional `script`
+  section (schema v1):
+  - `script.steps[]` maps `step_index` to a concrete snapshot selector (`window`, `frame_id`/`window_snapshot_seq`), allowing tools/agents
+    to jump directly to the relevant snapshot without scanning the full bundle.
 - `diag pack --include-root-artifacts` and `diag pack --include-triage` include sidecars under `_root/`:
   - `bundle.meta.json`
   - `bundle.index.json`
@@ -84,7 +88,9 @@ What ships now (Phase 1 subset):
   - `fretboard diag meta <packet_dir|bundle.meta.json> --meta-report`
   - `fretboard diag query test-id <packet_dir|test_ids.index.json> <pattern>`
   - `fretboard diag query snapshots <packet_dir|bundle.index.json> [--test-id <id>]`
+  - `fretboard diag query snapshots <packet_dir|bundle.index.json> --step-index <n>`
   - `fretboard diag slice <packet_dir> --test-id <id>` (uses precomputed slice if present)
+  - `fretboard diag slice <packet_dir|bundle.json> --step-index <n> --test-id <id>` (selects the snapshot nearest step `n`)
 - For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
   - Supports both v1 inline semantics (`debug.semantics.nodes`) and v2 table semantics (`tables.semantics.entries`).

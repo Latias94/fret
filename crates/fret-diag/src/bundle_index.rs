@@ -14,6 +14,9 @@ use crate::test_id_bloom::{
 const TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW: usize = 64;
 const TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW: usize = 512;
 
+const SCRIPT_STEP_INDEX_SCHEMA_VERSION: u32 = 1;
+const SCRIPT_STEP_INDEX_MAX_TIMESTAMP_DELTA_MS: u64 = 2_000;
+
 pub(crate) fn semantics_bloom_index_from_bundle_index_json(
     idx: &Value,
 ) -> HashMap<(u64, u64, u8), TestIdBloomV1> {
@@ -68,6 +71,230 @@ fn write_pretty_json(path: &Path, payload: &Value) -> Result<(), String> {
     }
     let bytes = serde_json::to_vec_pretty(payload).map_err(|e| e.to_string())?;
     std::fs::write(path, bytes).map_err(|e| e.to_string())
+}
+
+fn try_read_script_result_json(bundle_path: &Path) -> Option<Value> {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let path = dir.join("script.result.json");
+    if !path.is_file() {
+        return None;
+    }
+    let v = read_json_value(&path)?;
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return None;
+    }
+    // Best-effort sanity check: a script result should have at least a stage.
+    if v.get("stage").is_none() {
+        return None;
+    }
+    Some(v)
+}
+
+#[derive(Debug, Clone)]
+struct IndexSnapshotInfo {
+    window_snapshot_seq: Option<u64>,
+    timestamp_unix_ms: Option<u64>,
+    semantics_source: Option<String>,
+    semantics_fingerprint: Option<u64>,
+}
+
+fn build_index_snapshot_maps(
+    idx: &Value,
+) -> (
+    HashMap<(u64, u64), IndexSnapshotInfo>,
+    HashMap<u64, Vec<(u64, u64, IndexSnapshotInfo)>>,
+) {
+    let mut by_window_frame: HashMap<(u64, u64), IndexSnapshotInfo> = HashMap::new();
+    let mut by_window_ts: HashMap<u64, Vec<(u64, u64, IndexSnapshotInfo)>> = HashMap::new();
+
+    let empty = Vec::new();
+    let windows = idx
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
+    for w in windows {
+        let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps_empty = Vec::new();
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&snaps_empty);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64());
+            let timestamp_unix_ms = s.get("timestamp_unix_ms").and_then(|v| v.as_u64());
+            let info = IndexSnapshotInfo {
+                window_snapshot_seq: s.get("window_snapshot_seq").and_then(|v| v.as_u64()),
+                timestamp_unix_ms,
+                semantics_source: s
+                    .get("semantics_source")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                semantics_fingerprint: s.get("semantics_fingerprint").and_then(|v| v.as_u64()),
+            };
+            if let Some(frame_id) = frame_id {
+                by_window_frame.insert((window, frame_id), info.clone());
+            }
+            if let Some(ts) = timestamp_unix_ms {
+                by_window_ts
+                    .entry(window)
+                    .or_default()
+                    .push((ts, frame_id.unwrap_or(0), info));
+            }
+        }
+    }
+
+    (by_window_frame, by_window_ts)
+}
+
+fn resolve_snapshot_for_event(
+    by_window_frame: &HashMap<(u64, u64), IndexSnapshotInfo>,
+    by_window_ts: &HashMap<u64, Vec<(u64, u64, IndexSnapshotInfo)>>,
+    window: u64,
+    frame_id: Option<u64>,
+    unix_ms: Option<u64>,
+) -> (
+    Option<u64>,
+    Option<u64>,
+    Option<String>,
+    Option<u64>,
+    Option<&'static str>,
+) {
+    if let Some(frame_id) = frame_id {
+        if let Some(info) = by_window_frame.get(&(window, frame_id)) {
+            return (
+                info.window_snapshot_seq,
+                info.timestamp_unix_ms,
+                info.semantics_source.clone(),
+                info.semantics_fingerprint,
+                Some("frame_id"),
+            );
+        }
+    }
+
+    let Some(unix_ms) = unix_ms else {
+        return (None, None, None, None, None);
+    };
+    let Some(items) = by_window_ts.get(&window) else {
+        return (None, None, None, None, None);
+    };
+
+    let mut best: Option<(u64, &IndexSnapshotInfo)> = None;
+    for (ts, _frame, info) in items {
+        let delta = ts.abs_diff(unix_ms);
+        match best {
+            Some((best_delta, _)) if best_delta <= delta => {}
+            _ => best = Some((delta, info)),
+        }
+    }
+    let Some((delta, info)) = best else {
+        return (None, None, None, None, None);
+    };
+    if delta > SCRIPT_STEP_INDEX_MAX_TIMESTAMP_DELTA_MS {
+        return (None, None, None, None, None);
+    }
+    (
+        info.window_snapshot_seq,
+        info.timestamp_unix_ms,
+        info.semantics_source.clone(),
+        info.semantics_fingerprint,
+        Some("timestamp"),
+    )
+}
+
+fn build_script_step_index_payload(idx: &Value, script_result: &Value) -> Option<Value> {
+    let (by_window_frame, by_window_ts) = build_index_snapshot_maps(idx);
+
+    let default_window = script_result.get("window").and_then(|v| v.as_u64());
+    let run_id = script_result.get("run_id").and_then(|v| v.as_u64());
+    let updated_unix_ms = script_result
+        .get("updated_unix_ms")
+        .and_then(|v| v.as_u64());
+
+    let evidence = script_result.get("evidence");
+    let events = evidence
+        .and_then(|v| v.get("event_log"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    if events.is_empty() {
+        return None;
+    }
+
+    let event_log_dropped = evidence
+        .and_then(|v| v.get("event_log_dropped"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    let mut unresolved_events: u64 = 0;
+    let mut steps: HashMap<u32, Value> = HashMap::new();
+
+    for e in events {
+        let Some(step_index) = e.get("step_index").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        let step_index_u32 = step_index.min(u32::MAX as u64) as u32;
+        let kind = e
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let note = e
+            .get("note")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let window = e.get("window").and_then(|v| v.as_u64()).or(default_window);
+        let frame_id = e.get("frame_id").and_then(|v| v.as_u64());
+        let unix_ms = e.get("unix_ms").and_then(|v| v.as_u64());
+
+        let Some(window) = window else {
+            unresolved_events = unresolved_events.saturating_add(1);
+            continue;
+        };
+
+        let (window_snapshot_seq, timestamp_unix_ms, semantics_source, semantics_fingerprint, mode) =
+            resolve_snapshot_for_event(&by_window_frame, &by_window_ts, window, frame_id, unix_ms);
+
+        if window_snapshot_seq.is_none() && timestamp_unix_ms.is_none() {
+            unresolved_events = unresolved_events.saturating_add(1);
+            continue;
+        }
+
+        steps.insert(
+            step_index_u32,
+            json!({
+                "step_index": step_index_u32,
+                "kind": kind,
+                "note": note,
+                "window": window,
+                "frame_id": frame_id,
+                "window_snapshot_seq": window_snapshot_seq,
+                "timestamp_unix_ms": timestamp_unix_ms,
+                "semantics_source": semantics_source,
+                "semantics_fingerprint": semantics_fingerprint,
+                "resolve_mode": mode,
+            }),
+        );
+    }
+
+    if steps.is_empty() {
+        return None;
+    }
+
+    let mut steps_out: Vec<Value> = steps.into_values().collect();
+    steps_out.sort_by_key(|v| v.get("step_index").and_then(|v| v.as_u64()).unwrap_or(0));
+
+    Some(json!({
+        "schema_version": SCRIPT_STEP_INDEX_SCHEMA_VERSION,
+        "source": "script.result.json",
+        "run_id": run_id,
+        "window": default_window,
+        "updated_unix_ms": updated_unix_ms,
+        "events_total": events.len(),
+        "event_log_dropped": event_log_dropped,
+        "unresolved_events_total": unresolved_events,
+        "steps": steps_out,
+    }))
 }
 
 pub(crate) fn default_bundle_meta_path(bundle_path: &Path) -> PathBuf {
@@ -135,8 +362,23 @@ pub(crate) fn ensure_bundle_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_bundle_index_path(bundle_path);
-    if out.is_file() && read_json_value(&out).is_some() {
-        return Ok(out);
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            // Best-effort upgrade: older indexes may be missing the additive `script` markers.
+            // If we can compute them (script.result.json adjacent), regenerate once.
+            let missing_script_markers =
+                existing.get("script").and_then(|v| v.get("steps")).is_none();
+            if missing_script_markers
+                && let Some(script_result) = try_read_script_result_json(bundle_path)
+                && build_script_step_index_payload(&existing, &script_result).is_some()
+            {
+                // Fall through and regenerate.
+            } else {
+                return Ok(out);
+            }
+        } else {
+            // Fall through and regenerate.
+        }
     }
     let payload = build_bundle_index_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
@@ -152,7 +394,20 @@ fn build_bundle_meta_payload(bundle_path: &Path, warmup_frames: u64) -> Result<V
 fn build_bundle_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    build_bundle_index_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+    let mut payload = build_bundle_index_payload_from_json(
+        &bundle,
+        &bundle_path.display().to_string(),
+        warmup_frames,
+    )?;
+
+    if let Some(script_result) = try_read_script_result_json(bundle_path)
+        && let Some(script_steps) = build_script_step_index_payload(&payload, &script_result)
+        && let Some(obj) = payload.as_object_mut()
+    {
+        obj.insert("script".to_string(), script_steps);
+    }
+
+    Ok(payload)
 }
 
 fn build_bundle_meta_payload_from_json(
@@ -932,5 +1187,52 @@ mod tests {
             .collect();
         got.sort();
         assert_eq!(got, vec![("a".to_string(), 1), ("b".to_string(), 1)]);
+    }
+
+    #[test]
+    fn script_step_index_resolves_step_to_snapshot_selector() {
+        let idx = json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "window_snapshot_seq": 7,
+                    "timestamp_unix_ms": 1000,
+                    "semantics_source": "inline",
+                    "semantics_fingerprint": 42,
+                    "has_semantics": true,
+                }]
+            }]
+        });
+
+        let script = json!({
+            "schema_version": 1,
+            "run_id": 123,
+            "updated_unix_ms": 1005,
+            "window": 1,
+            "stage": "running",
+            "evidence": {
+                "event_log": [{
+                    "unix_ms": 1000,
+                    "kind": "step_end",
+                    "step_index": 3,
+                    "note": "click",
+                    "window": 1,
+                    "frame_id": 10
+                }]
+            }
+        });
+
+        let out = build_script_step_index_payload(&idx, &script).expect("script markers");
+        let steps = out["steps"].as_array().expect("steps");
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0]["step_index"].as_u64(), Some(3));
+        assert_eq!(steps[0]["window"].as_u64(), Some(1));
+        assert_eq!(steps[0]["frame_id"].as_u64(), Some(10));
+        assert_eq!(steps[0]["window_snapshot_seq"].as_u64(), Some(7));
+        assert_eq!(steps[0]["semantics_fingerprint"].as_u64(), Some(42));
+        assert_eq!(steps[0]["resolve_mode"].as_str(), Some("frame_id"));
     }
 }

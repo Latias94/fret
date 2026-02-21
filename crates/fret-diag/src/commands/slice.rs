@@ -728,6 +728,7 @@ pub(crate) fn cmd_slice(
     let mut frame_id: Option<u64> = None;
     let mut window_snapshot_seq: Option<u64> = None;
     let mut window_id: Option<u64> = None;
+    let mut step_index: Option<u32> = None;
     let mut max_matches: usize = 20;
     let mut max_ancestors: usize = 64;
 
@@ -772,6 +773,17 @@ pub(crate) fn cmd_slice(
                 window_id = Some(
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --window (expected u64)".to_string())?,
+                );
+                i += 1;
+            }
+            "--step-index" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --step-index".to_string());
+                };
+                step_index = Some(
+                    v.parse::<u32>()
+                        .map_err(|_| "invalid value for --step-index (expected u32)".to_string())?,
                 );
                 i += 1;
             }
@@ -824,6 +836,73 @@ pub(crate) fn cmd_slice(
     let test_id = test_id.ok_or_else(|| {
         "missing --test-id (try: fretboard diag slice --test-id <test_id>)".to_string()
     })?;
+
+    if step_index.is_some() && (frame_id.is_some() || window_snapshot_seq.is_some()) {
+        return Err("--step-index cannot be combined with --frame-id/--snapshot-seq".to_string());
+    }
+
+    fn try_read_bundle_index_from_dir(dir: &Path) -> Option<serde_json::Value> {
+        let direct = dir.join("bundle.index.json");
+        if direct.is_file() {
+            let bytes = std::fs::read(direct).ok()?;
+            let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index") {
+                return Some(v);
+            }
+        }
+        let root = dir.join("_root").join("bundle.index.json");
+        if root.is_file() {
+            let bytes = std::fs::read(root).ok()?;
+            let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index") {
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    fn resolve_step_selector_from_bundle_index(
+        idx: &serde_json::Value,
+        step_index: u32,
+    ) -> Option<(u64, Option<u64>, Option<u64>)> {
+        let steps = idx
+            .get("script")
+            .and_then(|v| v.get("steps"))
+            .and_then(|v| v.as_array())?;
+        let step = steps.iter().find(|s| {
+            s.get("step_index")
+                .and_then(|v| v.as_u64())
+                .is_some_and(|v| v == step_index as u64)
+        })?;
+        let window = step.get("window")?.as_u64()?;
+        let frame_id = step.get("frame_id").and_then(|v| v.as_u64());
+        let window_snapshot_seq = step.get("window_snapshot_seq").and_then(|v| v.as_u64());
+        Some((window, frame_id, window_snapshot_seq))
+    }
+
+    // Resolve `--step-index` as early as possible so it can validate / select precomputed slices.
+    if let (Some(step_index), Some(bundle_arg)) = (step_index, bundle_arg.as_deref()) {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
+        if src.is_dir()
+            && let Some(idx) = try_read_bundle_index_from_dir(&src)
+            && let Some((step_window, step_frame_id, step_seq)) =
+                resolve_step_selector_from_bundle_index(&idx, step_index)
+        {
+            if let Some(req) = window_id
+                && req != step_window
+            {
+                return Err(format!(
+                    "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
+                ));
+            }
+            window_id = Some(step_window);
+            if step_seq.is_some() {
+                window_snapshot_seq = step_seq;
+            } else {
+                frame_id = step_frame_id;
+            }
+        }
+    }
 
     if let Some(bundle_arg) = bundle_arg.as_deref() {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
@@ -887,6 +966,43 @@ pub(crate) fn cmd_slice(
 
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+
+    if let Some(step_index) = step_index {
+        let bundle_index = try_read_bundle_index(&bundle_path)
+            .or_else(|| {
+                // Best-effort: generate the index so it can also attach script markers when
+                // `script.result.json` is adjacent (run-id layout).
+                crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)
+                    .ok()
+                    .and_then(|p| std::fs::read(&p).ok())
+                    .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+            });
+        let Some(idx) = bundle_index else {
+            return Err(format!(
+                "unable to resolve --step-index {step_index}: missing bundle.index.json"
+            ));
+        };
+        let Some((step_window, step_frame_id, step_seq)) =
+            resolve_step_selector_from_bundle_index(&idx, step_index)
+        else {
+            return Err(format!(
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
+            ));
+        };
+        if let Some(req) = window_id
+            && req != step_window
+        {
+            return Err(format!(
+                "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
+            ));
+        }
+        window_id = Some(step_window);
+        if step_seq.is_some() {
+            window_snapshot_seq = step_seq;
+        } else {
+            frame_id = step_frame_id;
+        }
+    }
 
     let payload = build_test_id_slice_payload_from_bundle_path(
         &bundle_path,
