@@ -3,6 +3,388 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum DemoChartKind {
+        Area,
+        BarMultiple,
+        BarMixed,
+        LineMultiple,
+    }
+
+    let chart_canvas =
+        |cx: &mut ElementContext<'_, App>, kind: DemoChartKind, test_id: Arc<str>| {
+            use delinea::data::{Column, DataTable};
+            use delinea::{
+                AxisKind, AxisScale, CategoryAxisScale, ChartSpec, DatasetSpec, FieldSpec,
+                GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+            };
+            use fret_chart::ChartCanvas;
+            use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+            use fret_ui::retained_bridge::RetainedSubtreeProps;
+
+            cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+
+                let dataset_id = delinea::ids::DatasetId::new(1);
+                let grid_id = delinea::ids::GridId::new(1);
+                let x_axis = delinea::AxisId::new(1);
+                let y_axis = delinea::AxisId::new(2);
+                let x_field = delinea::FieldId::new(1);
+                let y_field_1 = delinea::FieldId::new(2);
+                let y_field_2 = delinea::FieldId::new(3);
+
+                let (categories, x, y1, y2, series) = match kind {
+                    DemoChartKind::Area => {
+                        let categories = vec![
+                            "January".to_string(),
+                            "February".to_string(),
+                            "March".to_string(),
+                            "April".to_string(),
+                            "May".to_string(),
+                            "June".to_string(),
+                        ];
+                        let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+                        let y1 = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
+                        let series = vec![SeriesSpec {
+                            id: delinea::ids::SeriesId::new(1),
+                            name: Some("Desktop".to_string()),
+                            kind: SeriesKind::Area,
+                            dataset: dataset_id,
+                            encode: SeriesEncode {
+                                x: x_field,
+                                y: y_field_1,
+                                y2: None,
+                            },
+                            x_axis,
+                            y_axis,
+                            stack: None,
+                            stack_strategy: Default::default(),
+                            bar_layout: Default::default(),
+                            area_baseline: None,
+                            lod: None,
+                        }];
+                        (categories, x, y1, None, series)
+                    }
+                    DemoChartKind::BarMultiple => {
+                        let categories = vec![
+                            "January".to_string(),
+                            "February".to_string(),
+                            "March".to_string(),
+                            "April".to_string(),
+                            "May".to_string(),
+                            "June".to_string(),
+                        ];
+                        let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+                        let desktop = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
+                        let mobile = vec![80.0, 200.0, 120.0, 190.0, 130.0, 140.0];
+                        let series = vec![
+                            SeriesSpec {
+                                id: delinea::ids::SeriesId::new(1),
+                                name: Some("Desktop".to_string()),
+                                kind: SeriesKind::Bar,
+                                dataset: dataset_id,
+                                encode: SeriesEncode {
+                                    x: x_field,
+                                    y: y_field_1,
+                                    y2: None,
+                                },
+                                x_axis,
+                                y_axis,
+                                stack: None,
+                                stack_strategy: Default::default(),
+                                bar_layout: Default::default(),
+                                area_baseline: None,
+                                lod: None,
+                            },
+                            SeriesSpec {
+                                id: delinea::ids::SeriesId::new(2),
+                                name: Some("Mobile".to_string()),
+                                kind: SeriesKind::Bar,
+                                dataset: dataset_id,
+                                encode: SeriesEncode {
+                                    x: x_field,
+                                    y: y_field_2,
+                                    y2: None,
+                                },
+                                x_axis,
+                                y_axis,
+                                stack: None,
+                                stack_strategy: Default::default(),
+                                bar_layout: Default::default(),
+                                area_baseline: None,
+                                lod: None,
+                            },
+                        ];
+                        (categories, x, desktop, Some(mobile), series)
+                    }
+                    DemoChartKind::BarMixed => {
+                        let categories = vec![
+                            "chrome".to_string(),
+                            "safari".to_string(),
+                            "firefox".to_string(),
+                            "edge".to_string(),
+                            "other".to_string(),
+                        ];
+                        let x = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+                        let y1 = vec![275.0, 200.0, 187.0, 173.0, 90.0];
+                        let series = vec![SeriesSpec {
+                            id: delinea::ids::SeriesId::new(1),
+                            name: Some("Visitors".to_string()),
+                            kind: SeriesKind::Bar,
+                            dataset: dataset_id,
+                            encode: SeriesEncode {
+                                x: x_field,
+                                y: y_field_1,
+                                y2: None,
+                            },
+                            x_axis,
+                            y_axis,
+                            stack: None,
+                            stack_strategy: Default::default(),
+                            bar_layout: Default::default(),
+                            area_baseline: None,
+                            lod: None,
+                        }];
+                        (categories, x, y1, None, series)
+                    }
+                    DemoChartKind::LineMultiple => {
+                        let categories = vec![
+                            "January".to_string(),
+                            "February".to_string(),
+                            "March".to_string(),
+                            "April".to_string(),
+                            "May".to_string(),
+                            "June".to_string(),
+                        ];
+                        let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+                        let desktop = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
+                        let mobile = vec![80.0, 200.0, 120.0, 190.0, 130.0, 140.0];
+                        let series = vec![
+                            SeriesSpec {
+                                id: delinea::ids::SeriesId::new(1),
+                                name: Some("Desktop".to_string()),
+                                kind: SeriesKind::Line,
+                                dataset: dataset_id,
+                                encode: SeriesEncode {
+                                    x: x_field,
+                                    y: y_field_1,
+                                    y2: None,
+                                },
+                                x_axis,
+                                y_axis,
+                                stack: None,
+                                stack_strategy: Default::default(),
+                                bar_layout: Default::default(),
+                                area_baseline: None,
+                                lod: None,
+                            },
+                            SeriesSpec {
+                                id: delinea::ids::SeriesId::new(2),
+                                name: Some("Mobile".to_string()),
+                                kind: SeriesKind::Line,
+                                dataset: dataset_id,
+                                encode: SeriesEncode {
+                                    x: x_field,
+                                    y: y_field_2,
+                                    y2: None,
+                                },
+                                x_axis,
+                                y_axis,
+                                stack: None,
+                                stack_strategy: Default::default(),
+                                bar_layout: Default::default(),
+                                area_baseline: None,
+                                lod: None,
+                            },
+                        ];
+                        (categories, x, desktop, Some(mobile), series)
+                    }
+                };
+                let y2 = y2.unwrap_or_else(|| vec![0.0; x.len()]);
+
+                let spec = ChartSpec {
+                    id: delinea::ids::ChartId::new(1),
+                    viewport: None,
+                    datasets: vec![DatasetSpec {
+                        id: dataset_id,
+                        fields: vec![
+                            FieldSpec {
+                                id: x_field,
+                                column: 0,
+                            },
+                            FieldSpec {
+                                id: y_field_1,
+                                column: 1,
+                            },
+                            FieldSpec {
+                                id: y_field_2,
+                                column: 2,
+                            },
+                        ],
+                        ..Default::default()
+                    }],
+                    grids: vec![GridSpec { id: grid_id }],
+                    axes: vec![
+                        delinea::AxisSpec {
+                            id: x_axis,
+                            name: Some("X".to_string()),
+                            kind: AxisKind::X,
+                            grid: grid_id,
+                            position: None,
+                            scale: AxisScale::Category(CategoryAxisScale { categories }),
+                            range: Default::default(),
+                        },
+                        delinea::AxisSpec {
+                            id: y_axis,
+                            name: Some("Y".to_string()),
+                            kind: AxisKind::Y,
+                            grid: grid_id,
+                            position: None,
+                            scale: Default::default(),
+                            range: Default::default(),
+                        },
+                    ],
+                    data_zoom_x: vec![],
+                    data_zoom_y: vec![],
+                    tooltip: None,
+                    axis_pointer: None,
+                    visual_maps: vec![],
+                    series,
+                };
+
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Px(Px(220.0));
+
+                let props = RetainedSubtreeProps::new::<App>(move |ui| {
+                    let mut canvas =
+                        ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
+                    canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+
+                    let mut table = DataTable::default();
+                    table.push_column(Column::F64(x.clone()));
+                    table.push_column(Column::F64(y1.clone()));
+                    table.push_column(Column::F64(y2.clone()));
+                    canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+
+                    let node = ui.create_node_retained(canvas);
+                    ui.set_node_view_cache_flags(node, true, true, false);
+                    node
+                })
+                .with_layout(layout);
+
+                let subtree = cx.retained_subtree(props);
+                vec![cx.semantics(
+                    SemanticsProps {
+                        role: fret_core::SemanticsRole::Group,
+                        test_id: Some(test_id),
+                        ..Default::default()
+                    },
+                    |_cx| vec![subtree],
+                )]
+            })
+        };
+
+    let trending_footer = |cx: &mut ElementContext<'_, App>, secondary: &'static str| {
+        let icon = doc_layout::icon(cx, "lucide.trending-up");
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |cx| {
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                ui::text(cx, "Trending up by 5.2% this month")
+                                    .font_medium()
+                                    .into_element(cx),
+                                icon,
+                            ]
+                        },
+                    ),
+                    shadcn::typography::muted(cx, secondary),
+                ]
+            },
+        )
+        .test_id("ui-gallery-chart-demo-footer")
+    };
+
+    let chart_card = |cx: &mut ElementContext<'_, App>,
+                      title: &'static str,
+                      description: &'static str,
+                      kind: DemoChartKind,
+                      footer_secondary: &'static str,
+                      test_id: &'static str| {
+        let canvas = chart_canvas(cx, kind, Arc::<str>::from(format!("{test_id}-canvas")));
+
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new(title).into_element(cx),
+                shadcn::CardDescription::new(description).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![canvas]).into_element(cx),
+            shadcn::CardFooter::new(vec![trending_footer(cx, footer_secondary)]).into_element(cx),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(Px(520.0)),
+        )
+        .into_element(cx)
+        .test_id(test_id)
+    };
+
+    let demo_cards = {
+        let area = chart_card(
+            cx,
+            "Area Chart",
+            "Showing total visitors for the last 6 months",
+            DemoChartKind::Area,
+            "January - June 2024",
+            "ui-gallery-chart-demo-area",
+        );
+        let bar = chart_card(
+            cx,
+            "Bar Chart - Multiple",
+            "January - June 2024",
+            DemoChartKind::BarMultiple,
+            "Showing total visitors for the last 6 months",
+            "ui-gallery-chart-demo-bar",
+        );
+        let mixed = chart_card(
+            cx,
+            "Bar Chart - Mixed",
+            "January - June 2024",
+            DemoChartKind::BarMixed,
+            "Showing total visitors for the last 6 months",
+            "ui-gallery-chart-demo-mixed",
+        );
+        let line = chart_card(
+            cx,
+            "Line Chart - Multiple",
+            "January - June 2024",
+            DemoChartKind::LineMultiple,
+            "Showing total visitors for the last 6 months",
+            "ui-gallery-chart-demo-line",
+        );
+
+        doc_layout::wrap_row_snapshot(
+            cx,
+            &Theme::global(&*cx.app).snapshot(),
+            Space::N4,
+            fret_ui::element::CrossAlign::Start,
+            |_cx| vec![area, bar, mixed, line],
+        )
+        .test_id("ui-gallery-chart-demo")
+    };
+
     let (chart_1, chart_2, chart_3) = cx.with_theme(|theme| {
         (
             theme.color_token("chart-1"),
@@ -50,7 +432,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .test_id(test_id)
     };
 
-    let demo_content = stack::vstack(
+    let contracts_overview = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N3)
@@ -60,7 +442,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             vec![
                 shadcn::typography::muted(
                     cx,
-                    "shadcn Chart is Recharts composition. Fret page focuses on chart tooltip/legend contracts.",
+                    "Chart UI contracts: Tooltip + Legend content recipes.",
                 ),
                 tooltip(
                     cx,
@@ -76,26 +458,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     true,
                     false,
                     "ui-gallery-chart-demo-legend",
-                ),
-            ]
-        },
-    );
-
-    let component_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Map series to `chart-*` tokens so tooltip and legend stay color-consistent across light/dark themes.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Current Fret abstraction intentionally stays lightweight and does not wrap Recharts runtime APIs.",
                 ),
             ]
         },
@@ -163,26 +525,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         },
     );
 
-    let accessibility_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Upstream Recharts supports `accessibilityLayer` for keyboard and screen-reader navigation.",
-                ),
-                shadcn::typography::muted(
-                    cx,
-                    "Fret gallery keeps this as a documented parity gap until chart runtime integration is introduced.",
-                ),
-            ]
-        },
-    );
-
     let rtl = doc_layout::rtl(cx, |cx| {
         stack::vstack(
             cx,
@@ -215,42 +557,36 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let notes_stack = doc_layout::notes(
         cx,
         [
-            "This page validates tooltip/legend composition parity, not full chart drawing parity.",
+            "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
+            "The shadcn `ChartTooltipContent` / `ChartLegendContent` recipes are validated independently (no runtime wire-up yet).",
             "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-            "Accessibility and full Recharts API integration are intentionally tracked as follow-up work.",
-            "When adding chart runtime later, keep this page order unchanged for quick docs side-by-side checks.",
+            "Upstream Recharts `accessibilityLayer` parity remains a follow-up workstream.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Chart docs flow: Demo -> Component -> Tooltip -> Legend -> Accessibility -> RTL.",
+            "Preview follows shadcn Chart demo: Area, Bar (Multiple), Bar (Mixed), Line (Multiple).",
         ),
         vec![
-            DocSection::new("Demo", demo_content).max_w(Px(760.0)).code(
-                "rust",
-                r#"let (chart_1, chart_2) =
-    cx.with_theme(|theme| (theme.color_token("chart-1"), theme.color_token("chart-2")));
-
-shadcn::ChartTooltipContent::new()
-    .label("January")
-    .items([
-        shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
-        shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
-    ])
-    .indicator(shadcn::ChartTooltipIndicator::Dot)
-    .into_element(cx);"#,
-            ),
-            DocSection::new("Component", component_content)
+            DocSection::new("Demo", demo_cards)
+                .no_shell()
+                .max_w(Px(1100.0))
+                .code(
+                    "rust",
+                    r#"// Each chart card hosts a small `fret-chart::ChartCanvas` subtree.
+// The layout mirrors shadcn's ChartDemo grid at a high level."#,
+                ),
+            DocSection::new("Contracts", contracts_overview)
                 .max_w(Px(760.0))
                 .code(
                     "rust",
-                    r#"// Validate tooltip/legend contracts first, then add renderer bindings later.
-shadcn::typography::muted(
-    cx,
-    "This page focuses on tooltip/legend composition, not full chart rendering.",
-);"#,
+                    r#"shadcn::ChartTooltipContent::new()
+    .label("January")
+    .items([shadcn::ChartTooltipItem::new("Desktop", "186")])
+    .indicator(shadcn::ChartTooltipIndicator::Dot)
+    .into_element(cx);"#,
                 ),
             DocSection::new("Tooltip", tooltip_content)
                 .max_w(Px(760.0))
@@ -280,27 +616,14 @@ shadcn::typography::muted(
     .wrap(true)
     .into_element(cx);"#,
                 ),
-            DocSection::new("Accessibility", accessibility_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"// Parity gap marker: upstream Recharts supports `accessibilityLayer`.
-shadcn::Alert::new([
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
-    shadcn::AlertTitle::new("Not yet implemented").into_element(cx),
-    shadcn::AlertDescription::new("Chart accessibility layer is tracked as follow-up work.")
-        .into_element(cx),
-])
-.into_element(cx);"#,
-                ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-rtl")
                 .code(
                     "rust",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
+                    r#"doc_layout::rtl(cx, |cx| {
     shadcn::ChartTooltipContent::new().label("يناير").into_element(cx)
-})"#,
+});"#,
                 ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
