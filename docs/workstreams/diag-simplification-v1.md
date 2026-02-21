@@ -10,6 +10,7 @@ Current state (as of 2026-02-21):
 - Tooling failures now produce a deterministic `script.result.json` with stable `reason_code` (e.g. `tooling.*`, `timeout.tooling.*`) instead of degrading to "no artifact + timeout".
 - Tooling-side "failure artifact" helpers are now isolated into focused modules (`crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/run_artifacts.rs`) to reduce monolith churn risk.
 - Bundle stale-check logic is now isolated under `crates/fret-diag/src/stats/stale.rs` (reduce `stats.rs` churn surface).
+- Runtime diagnostics config resolution is now isolated under `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (reduce `ui_diagnostics.rs` churn surface).
 - Tooling now writes a minimal per-run `manifest.json` next to `script.result.json`/`bundle.json` (v2 direction; still v1-compatible).
 - Tooling can now maintain a v2-ish chunked bundle payload under `<run_id>/chunks/bundle_json/*` and records chunk list + sizes + hashes in `manifest.json` (and can materialize `bundle.json` on-demand for compatibility).
 - Tooling validates chunked bundle integrity (per-chunk + total hash) and marks `script.result.json` with a stable `reason_code` when corruption is detected (`tooling.artifact.integrity.failed`).

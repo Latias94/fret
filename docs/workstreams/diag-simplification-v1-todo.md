@@ -104,6 +104,7 @@ Evidence pointers:
 
 ## Phase 7: Implementation split (reduce monolith risk)
 
+- [x] Extract diagnostics config resolution from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`.
 - [x] Extract script/pick runtime helpers from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/script_runtime.rs`.
 - [x] Move `json_pointer_set` helper out of `crates/fret-diag/src/stats.rs` (share via `crates/fret-diag/src/util.rs`).
 - [x] Extract stale bundle checks from `crates/fret-diag/src/stats.rs` into `crates/fret-diag/src/stats/stale.rs`.
