@@ -50,12 +50,6 @@ pub(super) fn preview_card(
                 shadcn::CardDescription::new("Enter your email below to login to your account")
                     .into_element(cx)
                     .test_id("ui-gallery-card-demo-description"),
-                shadcn::CardAction::new(vec![
-                    shadcn::Button::new("Sign Up")
-                        .variant(shadcn::ButtonVariant::Link)
-                        .into_element(cx),
-                ])
-                .into_element(cx),
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![stack::vstack(
@@ -111,6 +105,25 @@ pub(super) fn preview_card(
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
+                    let sign_up = stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().mt(Space::N4))
+                            .items_center()
+                            .justify_center()
+                            .gap(Space::N1),
+                        |cx| {
+                            vec![
+                                ui::text(cx, "Don't have an account?")
+                                    .text_sm()
+                                    .into_element(cx),
+                                shadcn::Button::new("Sign up")
+                                    .variant(shadcn::ButtonVariant::Link)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
                     vec![
                         shadcn::Button::new("Login")
                             .refine_layout(LayoutRefinement::default().w_full())
@@ -119,7 +132,7 @@ pub(super) fn preview_card(
                             .variant(shadcn::ButtonVariant::Outline)
                             .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
-                        shadcn::typography::muted(cx, "Don't have an account? Sign up."),
+                        sign_up,
                     ]
                 },
             )])
@@ -151,16 +164,51 @@ pub(super) fn preview_card(
             cx,
             stack::VStackProps::default().gap(Space::N2).items_start(),
             |cx| {
-                vec![
-                    cx.text(
-                        "Client requested dashboard redesign with focus on mobile responsiveness.",
-                    ),
-                    cx.text("1. New analytics widgets for daily/weekly metrics"),
-                    cx.text("2. Simplified navigation menu"),
-                    cx.text("3. Dark mode support"),
-                    cx.text("4. Timeline: 6 weeks"),
-                    cx.text("5. Follow-up meeting scheduled for next Tuesday"),
-                ]
+                let paragraph = ui::text(
+                    cx,
+                    "Client requested dashboard redesign with focus on mobile responsiveness.",
+                )
+                .text_sm()
+                .into_element(cx);
+
+                let ordered_list = {
+                    let props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default().pl(Space::N6).pt(Space::N4),
+                        LayoutRefinement::default().w_full(),
+                    );
+
+                    cx.container(props, |cx| {
+                        vec![stack::vstack(
+                            cx,
+                            stack::VStackProps::default().gap(Space::N2).items_start(),
+                            |cx| {
+                                vec![
+                                    ui::text(
+                                        cx,
+                                        "1. New analytics widgets for daily/weekly metrics",
+                                    )
+                                    .text_sm()
+                                    .into_element(cx),
+                                    ui::text(cx, "2. Simplified navigation menu")
+                                        .text_sm()
+                                        .into_element(cx),
+                                    ui::text(cx, "3. Dark mode support")
+                                        .text_sm()
+                                        .into_element(cx),
+                                    ui::text(cx, "4. Timeline: 6 weeks")
+                                        .text_sm()
+                                        .into_element(cx),
+                                    ui::text(cx, "5. Follow-up meeting scheduled for next Tuesday")
+                                        .text_sm()
+                                        .into_element(cx),
+                                ]
+                            },
+                        )]
+                    })
+                };
+
+                vec![paragraph, ordered_list]
             },
         )
         .test_id("ui-gallery-card-notes-list");
@@ -178,31 +226,6 @@ pub(super) fn preview_card(
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-card-meeting-notes")
-    };
-
-    let size = {
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Small Card").into_element(cx),
-                shadcn::CardDescription::new("This card uses the small size variant.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![cx.text(
-                "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
-            )])
-            .into_element(cx),
-            shadcn::CardFooter::new(vec![shadcn::Button::new("Action")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .refine_layout(LayoutRefinement::default().flex_1().w_full())
-                .into_element(cx)])
-            .into_element(cx),
-        ])
-        .size(shadcn::CardSize::Sm)
-        .refine_layout(max_w_sm.clone())
-        .into_element(cx)
-        .test_id("ui-gallery-card-size")
     };
 
     let image = {
@@ -380,24 +403,16 @@ pub(super) fn preview_card(
         .test_id("ui-gallery-card-image-footer");
 
         shadcn::Card::new(vec![
-            cover,
             shadcn::CardHeader::new(vec![
-                shadcn::CardAction::new(vec![
-                    shadcn::Badge::new("Featured")
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardTitle::new("Design systems meetup").into_element(cx),
-                shadcn::CardDescription::new(
-                    "A practical talk on component APIs, accessibility, and shipping faster.",
-                )
-                .into_element(cx),
+                shadcn::CardTitle::new("Is this an image?").into_element(cx),
+                shadcn::CardDescription::new("This is a card with an image.").into_element(cx),
             ])
             .into_element(cx),
+            shadcn::CardContent::new(vec![cover])
+                .refine_style(ChromeRefinement::default().px(Space::N0))
+                .into_element(cx),
             shadcn::CardFooter::new(vec![footer]).into_element(cx),
         ])
-        .refine_style(ChromeRefinement::default().pt(Space::N0))
         .refine_layout(max_w_sm.clone().relative())
         .into_element(cx)
         .test_id("ui-gallery-card-image")
@@ -417,10 +432,9 @@ pub(super) fn preview_card(
             |cx| {
                 let content_only = {
                     let card = shadcn::Card::new(vec![
-                        shadcn::CardContent::new(vec![shadcn::typography::muted(
-                            cx,
-                            "Content Only",
-                        )])
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content Only").text_sm().into_element(cx),
+                        ])
                         .into_element(cx),
                     ]);
                     cell(cx, card)
@@ -450,16 +464,20 @@ pub(super) fn preview_card(
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        shadcn::CardContent::new(vec![shadcn::typography::muted(cx, "Content")])
-                            .into_element(cx),
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
                     ]);
                     cell(cx, card)
                 };
 
                 let footer_only = {
                     let card = shadcn::Card::new(vec![
-                        shadcn::CardFooter::new(vec![shadcn::typography::muted(cx, "Footer Only")])
-                            .into_element(cx),
+                        shadcn::CardFooter::new(vec![
+                            ui::text(cx, "Footer Only").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
                     ]);
                     cell(cx, card)
                 };
@@ -474,18 +492,24 @@ pub(super) fn preview_card(
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        shadcn::CardFooter::new(vec![shadcn::typography::muted(cx, "Footer")])
-                            .into_element(cx),
+                        shadcn::CardFooter::new(vec![
+                            ui::text(cx, "Footer").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
                     ]);
                     cell(cx, card)
                 };
 
                 let content_and_footer = {
                     let card = shadcn::Card::new(vec![
-                        shadcn::CardContent::new(vec![shadcn::typography::muted(cx, "Content")])
-                            .into_element(cx),
-                        shadcn::CardFooter::new(vec![shadcn::typography::muted(cx, "Footer")])
-                            .into_element(cx),
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardFooter::new(vec![
+                            ui::text(cx, "Footer").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
                     ]);
                     cell(cx, card)
                 };
@@ -500,10 +524,50 @@ pub(super) fn preview_card(
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        shadcn::CardContent::new(vec![shadcn::typography::muted(cx, "Content")])
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardFooter::new(vec![
+                            ui::text(cx, "Footer").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ]);
+                    cell(cx, card)
+                };
+
+                let header_with_border = {
+                    let card = shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Header with Border").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "This is a card with a header that has a bottom border.",
+                            )
                             .into_element(cx),
-                        shadcn::CardFooter::new(vec![shadcn::typography::muted(cx, "Footer")])
-                            .into_element(cx),
+                        ])
+                        .border_bottom(true)
+                        .into_element(cx),
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ]);
+                    cell(cx, card)
+                };
+
+                let footer_with_border = {
+                    let card = shadcn::Card::new(vec![
+                        shadcn::CardContent::new(vec![
+                            ui::text(cx, "Content").text_sm().into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::CardFooter::new(vec![
+                            ui::text(cx, "Footer with Border")
+                                .text_sm()
+                                .into_element(cx),
+                        ])
+                        .border_top(true)
+                        .into_element(cx),
                     ]);
                     cell(cx, card)
                 };
@@ -516,6 +580,8 @@ pub(super) fn preview_card(
                     header_and_footer,
                     content_and_footer,
                     header_content_footer,
+                    header_with_border,
+                    footer_with_border,
                 ]
             },
         )
@@ -533,9 +599,7 @@ pub(super) fn preview_card(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some(
-            "Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions (plus a Fret-only size extra).",
-        ),
+        Some("Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions."),
         vec![
             DocSection::new("Login", login)
                 .no_shell()
@@ -598,16 +662,6 @@ pub(super) fn preview_card(
     shadcn::CardFooter::new(vec![/* ... */]).into_element(cx),
 ])
 .into_element(cx);"#,
-                ),
-            DocSection::new("Size", size)
-                .no_shell()
-                .max_w(Px(980.0))
-                .description("Fret-only extra: compact card via `CardSize::Sm`.")
-                .code(
-                    "rust",
-                    r#"shadcn::Card::new(vec![/* ... */])
-    .size(shadcn::CardSize::Sm)
-    .into_element(cx);"#,
                 ),
             DocSection::new("Notes", notes).description("Implementation notes and pointers."),
         ],

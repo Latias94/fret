@@ -188,6 +188,7 @@ where
 pub struct CardHeader {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
+    border_bottom: bool,
 }
 
 impl CardHeader {
@@ -196,11 +197,17 @@ impl CardHeader {
         Self {
             children,
             chrome: ChromeRefinement::default(),
+            border_bottom: false,
         }
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn border_bottom(mut self, value: bool) -> Self {
+        self.border_bottom = value;
         self
     }
 
@@ -233,7 +240,7 @@ impl CardHeader {
             }
         }
 
-        if let Some(action) = action {
+        let content = if let Some(action) = action {
             let left_col = stack::vstack(
                 cx,
                 stack::VStackProps::default()
@@ -261,6 +268,28 @@ impl CardHeader {
                     .layout(LayoutRefinement::default().w_full()),
                 left,
             )
+        };
+
+        if self.border_bottom {
+            let outer_props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default().w_full(),
+                )
+            };
+            let separator = crate::Separator::new().into_element(cx);
+            shadcn_layout::container_vstack(
+                cx,
+                outer_props,
+                stack::VStackProps::default()
+                    .gap(Space::N0)
+                    .layout(LayoutRefinement::default().w_full()),
+                vec![content, separator],
+            )
+        } else {
+            content
         }
     }
 }
@@ -416,12 +445,28 @@ mod tests {
 #[derive(Debug, Clone)]
 pub struct CardContent {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl CardContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     #[track_caller]
@@ -436,8 +481,8 @@ impl CardContent {
             decl_style::container_props(
                 theme,
                 // shadcn/ui v4: `px-6` (horizontal padding only; vertical padding lives on Card).
-                ChromeRefinement::default().px(p),
-                LayoutRefinement::default().w_full(),
+                ChromeRefinement::default().px(p).merge(self.chrome),
+                LayoutRefinement::default().w_full().merge(self.layout),
             )
         };
         let children = self.children;
