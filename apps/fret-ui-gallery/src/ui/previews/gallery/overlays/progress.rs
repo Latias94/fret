@@ -6,11 +6,11 @@ pub(in crate::ui) fn preview_progress(
 ) -> Vec<AnyElement> {
     use std::time::Duration;
 
+    use crate::ui::doc_layout::{self, DocSection};
     use fret_core::{SemanticsRole, TimerToken};
     use fret_runtime::Effect;
     use fret_ui::Invalidation;
     use fret_ui::element::SemanticsProps;
-    use fret_ui_kit::primitives::direction as direction_prim;
 
     #[derive(Default, Clone)]
     struct ProgressModels {
@@ -27,17 +27,6 @@ pub(in crate::ui) fn preview_progress(
                 .layout(LayoutRefinement::default().w_full())
                 .justify_center(),
             move |_cx| [body],
-        )
-    };
-
-    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
         )
     };
 
@@ -145,7 +134,7 @@ pub(in crate::ui) fn preview_progress(
             },
         );
 
-        section(cx, "Demo", body)
+        body.test_id("ui-gallery-progress-demo")
     });
 
     let label = cx.keyed("ui_gallery.progress.label", |cx| {
@@ -171,8 +160,7 @@ pub(in crate::ui) fn preview_progress(
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx);
 
-        let body = centered(cx, field);
-        section(cx, "Label", body)
+        centered(cx, field).test_id("ui-gallery-progress-label")
     });
 
     let controlled = cx.keyed("ui_gallery.progress.controlled", |cx| {
@@ -195,53 +183,116 @@ pub(in crate::ui) fn preview_progress(
         );
 
         let centered_body = centered(cx, body);
-        section(cx, "Controlled", centered_body)
+        centered_body.test_id("ui-gallery-progress-controlled")
     });
 
     let rtl = cx.keyed("ui_gallery.progress.rtl", |cx| {
-        let body = direction_prim::with_direction_provider(
-            cx,
-            direction_prim::LayoutDirection::Rtl,
-            |cx| {
-                let label_row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::FieldLabel::new("٦٦%").into_element(cx),
-                            shadcn::FieldLabel::new("تقدم الرفع")
-                                .refine_layout(LayoutRefinement::default().ml_auto())
-                                .into_element(cx),
-                        ]
-                    },
-                );
+        doc_layout::rtl(cx, |cx| {
+            let label_row = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_center(),
+                |cx| {
+                    vec![
+                        shadcn::FieldLabel::new("٦٦%").into_element(cx),
+                        shadcn::FieldLabel::new("تقدم الرفع")
+                            .refine_layout(LayoutRefinement::default().ml_auto())
+                            .into_element(cx),
+                    ]
+                },
+            );
 
-                let field = shadcn::Field::new(vec![
-                    label_row,
-                    shadcn::Progress::new(label_value.clone())
-                        .mirror_in_rtl(true)
-                        .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
-                .into_element(cx);
+            let field = shadcn::Field::new(vec![
+                label_row,
+                shadcn::Progress::new(label_value.clone())
+                    .mirror_in_rtl(true)
+                    .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+            .into_element(cx);
 
-                centered(cx, field)
-            },
-        );
-
-        section(cx, "RTL", body)
+            centered(cx, field)
+        })
+        .test_id("ui-gallery-progress-rtl")
     });
 
-    let examples = stack::vstack(
+    let extras = stack::vstack(
         cx,
         stack::VStackProps::default()
-            .gap(Space::N6)
+            .gap(Space::N4)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![label, controlled, rtl],
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        |cx| {
+            vec![
+                shadcn::typography::muted(
+                    cx,
+                    "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn ProgressDemo).",
+                ),
+                label,
+                controlled,
+            ]
+        },
+    )
+    .test_id("ui-gallery-progress-extras");
+
+    let notes = doc_layout::notes(
+        cx,
+        [
+            "Preview follows shadcn Progress demo (new-york-v4).",
+            "The demo uses a one-shot timer (500ms) to update the progress value from 13 → 66.",
+            "For labeled progress, prefer composing `FieldLabel` + `Progress` instead of adding one-off widget APIs.",
+        ],
     );
 
-    vec![demo, examples]
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some("Preview follows shadcn Progress demo: value update after 500ms."),
+        vec![
+            DocSection::new("Demo", demo)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-progress-demo")
+                .code(
+                    "rust",
+                    r#"let progress = cx.app.models_mut().insert(13.0);
+
+// After 500ms, update progress to 66.
+cx.app.push_effect(Effect::SetTimer {
+    window: Some(cx.window),
+    token,
+    after: Duration::from_millis(500),
+    repeat: None,
+});
+
+shadcn::Progress::new(progress)
+    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+    .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-progress-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Progress::new(value).mirror_in_rtl(true).into_element(cx)
+});"#,
+                ),
+            DocSection::new("Extras", extras)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-progress-extras")
+                .code(
+                    "rust",
+                    r#"// Label
+let field = shadcn::Field::new([label_row, shadcn::Progress::new(value).into_element(cx)])
+    .into_element(cx);
+
+// Controlled
+let values = cx.app.models_mut().insert(vec![50.0]);
+shadcn::Progress::new_values_first(values.clone()).into_element(cx);"#,
+                ),
+            DocSection::new("Notes", notes).max_w(Px(820.0)),
+        ],
+    );
+
+    vec![body.test_id("ui-gallery-progress")]
 }
