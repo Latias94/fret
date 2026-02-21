@@ -583,3 +583,210 @@ fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
     }
     *rects = out;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parley_shaper::ParleyShaper, prepare_layout, wrapper};
+    use fret_core::{FontId, Px, TextConstraints, TextInputRef, TextOverflow, TextStyle, TextWrap};
+
+    fn shaper_with_bundled_fonts() -> ParleyShaper {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let added = shaper.add_fonts(
+            fret_fonts::bootstrap_fonts()
+                .iter()
+                .chain(fret_fonts::emoji_fonts().iter())
+                .chain(fret_fonts::cjk_lite_fonts().iter())
+                .map(|b| b.to_vec()),
+        );
+        assert!(added > 0, "expected bundled fonts to load");
+        shaper
+    }
+
+    fn prepare_lines(
+        shaper: &mut ParleyShaper,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> Vec<crate::line_layout::TextLineLayout> {
+        let scale = crate::effective_text_scale_factor(constraints.scale_factor);
+        let snap_vertical = scale.fract().abs() > 1e-4;
+
+        let wrapped =
+            wrapper::wrap_with_constraints(shaper, TextInputRef::plain(text, style), constraints);
+        let prepared = prepare_layout::prepare_layout_from_wrapped(
+            text,
+            wrapped,
+            constraints,
+            scale,
+            snap_vertical,
+        );
+        prepared.lines.into_iter().map(|l| l.layout).collect()
+    }
+
+    fn caret_x_for_index_from_single_line(
+        lines: &[crate::line_layout::TextLineLayout],
+        index: usize,
+    ) -> Px {
+        assert_eq!(lines.len(), 1, "expected a single-line layout");
+        caret_x_from_stops(lines[0].caret_stops.as_slice(), index)
+    }
+
+    #[test]
+    fn caret_affinity_at_soft_wrap_boundary_selects_previous_or_next_line() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let single_lines = prepare_lines(&mut shaper, content, &style, single_line_constraints);
+        let x_space_end = caret_x_for_index_from_single_line(&single_lines, 6);
+        let x_w_start = caret_x_for_index_from_single_line(&single_lines, 6 + "w".len());
+
+        // Force a soft wrap between the space and the next word.
+        let max_width = Px((x_space_end.0 + x_w_start.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, content, &style, wrapped_constraints);
+        assert!(lines.len() >= 2, "expected the text to wrap");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+
+        let wrap_index = line1.start;
+        assert_eq!(
+            line0.end, wrap_index,
+            "expected wrapped lines to share the boundary index"
+        );
+
+        let upstream =
+            caret_rect_from_lines(&lines, wrap_index, CaretAffinity::Upstream).expect("caret rect");
+        let downstream = caret_rect_from_lines(&lines, wrap_index, CaretAffinity::Downstream)
+            .expect("caret rect");
+
+        assert!(
+            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected upstream caret to be on the previous line; upstream={upstream:?} line0={line0:?}"
+        );
+        assert!(
+            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected downstream caret to be on the next line; downstream={downstream:?} line1={line1:?}"
+        );
+    }
+
+    #[test]
+    fn hit_test_point_reports_upstream_affinity_at_visual_line_end() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+        assert!(lines.len() >= 2, "expected wrapped lines");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+        assert_eq!(line0.end, line1.start, "expected a shared break index");
+
+        let p0 = fret_core::Point::new(Px(10_000.0), Px(line0.y_top.0 + (line0.height.0 * 0.5)));
+        let ht0 = hit_test_point_from_lines(&lines, p0).expect("hit test point");
+        assert_eq!(ht0.index, line0.end);
+        assert_eq!(ht0.affinity, CaretAffinity::Upstream);
+
+        let p1 = fret_core::Point::new(Px(0.0), Px(line1.y_top.0 + (line1.height.0 * 0.5)));
+        let ht1 = hit_test_point_from_lines(&lines, p1).expect("hit test point");
+        assert_eq!(ht1.index, line1.start);
+        assert_eq!(ht1.affinity, CaretAffinity::Downstream);
+    }
+
+    #[test]
+    fn explicit_newline_boundary_is_not_ambiguous_for_caret_affinity() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "hello\nworld";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let lines = prepare_lines(&mut shaper, content, &style, constraints);
+        assert!(lines.len() >= 2, "expected multiple lines");
+        let line0 = &lines[0];
+        let line1 = &lines[1];
+
+        let newline_index = content.find('\n').expect("expected newline");
+        let after_newline = newline_index + "\n".len();
+
+        assert_eq!(
+            line0.end, newline_index,
+            "expected line0 to end at newline index"
+        );
+        assert_eq!(
+            line1.start, after_newline,
+            "expected line1 to start after newline index"
+        );
+
+        let end_line0_upstream =
+            caret_rect_from_lines(&lines, newline_index, CaretAffinity::Upstream).expect("caret");
+        let end_line0_downstream =
+            caret_rect_from_lines(&lines, newline_index, CaretAffinity::Downstream).expect("caret");
+        assert!(
+            (end_line0_upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected newline_index caret to be on line0 regardless of affinity"
+        );
+        assert!(
+            (end_line0_downstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            "expected newline_index caret to be on line0 regardless of affinity"
+        );
+
+        let start_line1_upstream =
+            caret_rect_from_lines(&lines, after_newline, CaretAffinity::Upstream).expect("caret");
+        let start_line1_downstream =
+            caret_rect_from_lines(&lines, after_newline, CaretAffinity::Downstream).expect("caret");
+        assert!(
+            (start_line1_upstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected after_newline caret to be on line1 regardless of affinity"
+        );
+        assert!(
+            (start_line1_downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            "expected after_newline caret to be on line1 regardless of affinity"
+        );
+    }
+}
