@@ -20,6 +20,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
   - [x] Extract single-active-script migration helper:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract keepalive/heartbeat helper (when current window has no active script):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
