@@ -589,9 +589,10 @@ mod tests {
     use super::*;
     use crate::{parley_shaper::ParleyShaper, prepare_layout, wrapper};
     use fret_core::{
-        FontId, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow, TextStyle,
-        TextWrap,
+        FontId, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow,
+        TextShapingStyle, TextSpan, TextStyle, TextWrap,
     };
+    use std::sync::Arc;
 
     fn shaper_with_bundled_fonts() -> ParleyShaper {
         let mut shaper = ParleyShaper::new_without_system_fonts();
@@ -637,6 +638,91 @@ mod tests {
             .into_iter()
             .map(|l| l.layout)
             .collect()
+    }
+
+    fn prepare_layout_for_attributed_test(
+        shaper: &mut ParleyShaper,
+        text: &str,
+        base: &TextStyle,
+        spans: &[TextSpan],
+        constraints: TextConstraints,
+    ) -> prepare_layout::PreparedLayout {
+        let scale = crate::effective_text_scale_factor(constraints.scale_factor);
+        let snap_vertical = scale.fract().abs() > 1e-4;
+
+        let wrapped = wrapper::wrap_with_constraints(
+            shaper,
+            TextInputRef::attributed(text, base, spans),
+            constraints,
+        );
+        prepare_layout::prepare_layout_from_wrapped(
+            text,
+            wrapped,
+            constraints,
+            scale,
+            snap_vertical,
+        )
+    }
+
+    fn prepare_lines_attributed(
+        shaper: &mut ParleyShaper,
+        text: &str,
+        base: &TextStyle,
+        spans: &[TextSpan],
+        constraints: TextConstraints,
+    ) -> Vec<crate::line_layout::TextLineLayout> {
+        prepare_layout_for_attributed_test(shaper, text, base, spans, constraints)
+            .lines
+            .into_iter()
+            .map(|l| l.layout)
+            .collect()
+    }
+
+    fn is_synthetic_rtl_char(ch: char) -> bool {
+        // A minimal heuristic for test inputs; the production shaper determines RTL runs via
+        // Unicode properties.
+        matches!(
+            ch,
+            '\u{0590}'..='\u{05FF}' // Hebrew
+                | '\u{0600}'..='\u{06FF}' // Arabic
+                | '\u{0750}'..='\u{077F}' // Arabic Supplement
+                | '\u{08A0}'..='\u{08FF}' // Arabic Extended-A
+        )
+    }
+
+    fn synthetic_clusters_for_text(
+        text: &str,
+        advance: f32,
+    ) -> Vec<crate::parley_shaper::ShapedCluster> {
+        let mut out = Vec::new();
+        let mut x = 0.0_f32;
+        for (start, ch) in text.char_indices() {
+            let end = start + ch.len_utf8();
+            out.push(crate::parley_shaper::ShapedCluster {
+                text_range: start..end,
+                x0: x,
+                x1: x + advance,
+                is_rtl: is_synthetic_rtl_char(ch),
+            });
+            x += advance;
+        }
+        out
+    }
+
+    fn line_clusters_from_shaped(
+        base_offset: usize,
+        clusters: &[crate::parley_shaper::ShapedCluster],
+    ) -> Arc<[TextLineCluster]> {
+        let mut out: Vec<TextLineCluster> = Vec::with_capacity(clusters.len());
+        for c in clusters {
+            out.push(TextLineCluster {
+                text_range: (base_offset + c.text_range.start)..(base_offset + c.text_range.end),
+                x0: Px(c.x0.max(0.0)),
+                x1: Px(c.x1.max(0.0)),
+                is_rtl: c.is_rtl,
+            });
+        }
+        Arc::from(out)
     }
 
     fn caret_x_for_index_from_single_line(
@@ -742,6 +828,163 @@ mod tests {
         assert_eq!(x_at(2), 20.0);
         assert_eq!(x_at(3), 10.0);
         assert_eq!(x_at(4), 0.0);
+    }
+
+    #[test]
+    fn selection_rects_for_rtl_line_has_positive_width() {
+        let clusters = vec![crate::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            4,
+            Px(40.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&[line], (0, 4), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
+        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
+        let clusters = vec![crate::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            4,
+            Px(40.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
+
+        let left =
+            hit_test_point_from_lines(std::slice::from_ref(&line), Point::new(Px(0.0), Px(5.0)))
+                .expect("hit test");
+        assert_eq!(left.index, 4);
+
+        let right =
+            hit_test_point_from_lines(std::slice::from_ref(&line), Point::new(Px(40.0), Px(5.0)))
+                .expect("hit test");
+        assert_eq!(right.index, 0);
+    }
+
+    #[test]
+    fn mixed_direction_selection_rects_are_nonempty() {
+        // Mixed LTR + RTL + numbers + punctuation.
+        let text = "abc אבג (123)";
+        let clusters = synthetic_clusters_for_text(text, 10.0);
+        let stops = super::caret_stops_for_slice(
+            text,
+            0,
+            &clusters,
+            10.0 * clusters.len() as f32,
+            1.0,
+            text.len(),
+        );
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            text.len(),
+            Px(10.0 * clusters.len() as f32),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
+
+        let rtl_start = text.find('א').expect("hebrew start");
+        let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&[line], (rtl_start, rtl_end), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect"
+        );
+    }
+
+    #[test]
+    fn mixed_direction_selection_rects_split_across_visual_runs() {
+        // Simulate bidi reordering by assigning cluster x positions that do not correspond to the
+        // logical order of the text ranges.
+        let text = "aaa אבג def";
+        let clusters = vec![
+            crate::parley_shaper::ShapedCluster {
+                text_range: 0..4, // "aaa "
+                x0: 0.0,
+                x1: 40.0,
+                is_rtl: false,
+            },
+            crate::parley_shaper::ShapedCluster {
+                text_range: 4..11, // "אבג "
+                x0: 70.0,
+                x1: 110.0,
+                is_rtl: true,
+            },
+            crate::parley_shaper::ShapedCluster {
+                text_range: 11..14, // "def"
+                x0: 40.0,
+                x1: 70.0,
+                is_rtl: false,
+            },
+        ];
+
+        let stops = super::caret_stops_for_slice(text, 0, &clusters, 110.0, 1.0, text.len());
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            text.len(),
+            Px(110.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops,
+            line_clusters_from_shaped(0, &clusters),
+        );
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&[line], (0, 11), &mut rects);
+
+        assert_eq!(
+            rects.len(),
+            2,
+            "expected two disjoint visual spans, got {rects:?}"
+        );
+        rects.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
+
+        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
+        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
+
+        assert!((rects[1].origin.x.0 - 70.0).abs() < 0.001);
+        assert!((rects[1].size.width.0 - 40.0).abs() < 0.001);
     }
 
     #[test]
@@ -1394,5 +1637,395 @@ mod tests {
             (start_line1_downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
             "expected after_newline caret to be on line1 regardless of affinity"
         );
+    }
+
+    #[test]
+    fn selection_rects_clipped_culls_offscreen_lines() {
+        let mut lines = Vec::new();
+        for i in 0..1000usize {
+            let start = i * 4;
+            let end = start + 4;
+            lines.push(crate::line_layout::TextLineLayout::new(
+                start,
+                end,
+                Px(100.0),
+                Px((i as f32) * 10.0),
+                Px(0.0),
+                Px(10.0),
+                Px(0.0),
+                Px(0.0),
+                vec![(start, Px(0.0)), (end, Px(100.0))],
+                Arc::from([]),
+            ));
+        }
+
+        let clip = Rect::new(
+            Point::new(Px(0.0), Px(1000.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut rects = Vec::new();
+        selection_rects_from_lines_clipped(&lines, (0, 4000), clip, &mut rects);
+
+        assert_eq!(rects.len(), 10);
+        for r in &rects {
+            assert!(r.origin.y.0 >= 1000.0 && r.origin.y.0 < 1100.0);
+            assert!(r.size.height.0 > 0.0);
+        }
+    }
+
+    #[test]
+    fn selection_rects_clipped_trims_partially_visible_line() {
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            4,
+            Px(100.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            vec![(0, Px(0.0)), (4, Px(100.0))],
+            Arc::from([]),
+        );
+        let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
+        let mut rects = Vec::new();
+        selection_rects_from_lines_clipped(&[line], (0, 4), clip, &mut rects);
+
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.y.0 - 5.0).abs() < 0.001);
+        assert!((rects[0].size.height.0 - 5.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn trailing_space_at_soft_wrap_is_selectable() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let single_lines = prepare_lines(&mut shaper, content, &style, single_line_constraints);
+        let x_space_end = caret_x_for_index_from_single_line(&single_lines, 6);
+        let x_w_end = caret_x_for_index_from_single_line(&single_lines, 7);
+        assert!(
+            x_w_end.0 > x_space_end.0 + 0.1,
+            "expected the 'w' to advance beyond the trailing space"
+        );
+
+        let max_width = Px((x_space_end.0 + x_w_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, wrapped_constraints);
+        assert!(lines.len() >= 2, "expected the text to wrap");
+
+        let first = &lines[0];
+        assert!(
+            first.end >= 6,
+            "expected the first visual line to include the trailing space (end={})",
+            first.end
+        );
+
+        let caret_after_o =
+            caret_rect_from_lines(&lines, 5, CaretAffinity::Downstream).expect("caret rect");
+        let caret_after_space =
+            caret_rect_from_lines(&lines, 6, CaretAffinity::Upstream).expect("caret rect");
+        assert!(
+            caret_after_space.origin.x.0 > caret_after_o.origin.x.0 + 0.1,
+            "expected the trailing space to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&lines, (5, 6), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing space"
+        );
+    }
+
+    #[test]
+    fn trailing_whitespace_run_at_soft_wrap_is_selectable() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "foo   bar";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let single_lines = prepare_lines(&mut shaper, content, &style, single_line_constraints);
+
+        let space_run_end = 6;
+        let b_end = 7;
+
+        let x_space_end = caret_x_for_index_from_single_line(&single_lines, space_run_end);
+        let x_b_end = caret_x_for_index_from_single_line(&single_lines, b_end);
+        assert!(
+            x_b_end.0 > x_space_end.0 + 0.1,
+            "expected 'b' to advance beyond the trailing whitespace"
+        );
+
+        let max_width = Px((x_space_end.0 + x_b_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines = prepare_lines(&mut shaper, content, &style, wrapped_constraints);
+        assert!(lines.len() >= 2, "expected the text to wrap");
+
+        let first = &lines[0];
+        assert!(
+            first.end >= space_run_end,
+            "expected the first visual line to include the trailing whitespace run (end={})",
+            first.end
+        );
+
+        let caret_after_second_space =
+            caret_rect_from_lines(&lines, 5, CaretAffinity::Downstream).expect("caret rect");
+        let caret_after_space_run =
+            caret_rect_from_lines(&lines, space_run_end, CaretAffinity::Upstream)
+                .expect("caret rect");
+        assert!(
+            caret_after_space_run.origin.x.0 > caret_after_second_space.origin.x.0 + 0.1,
+            "expected the trailing whitespace run to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&lines, (5, 6), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing whitespace"
+        );
+    }
+
+    #[test]
+    fn trailing_whitespace_run_at_soft_wrap_is_selectable_for_attributed_text() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let content = "foo   bar";
+        let style = TextStyle {
+            font: FontId::family("Fira Mono"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let spans = vec![
+            TextSpan {
+                len: 4,
+                shaping: TextShapingStyle::default(),
+                paint: Default::default(),
+            },
+            TextSpan {
+                len: content.len() - 4,
+                shaping: TextShapingStyle::default(),
+                paint: Default::default(),
+            },
+        ];
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let single_lines = prepare_lines_attributed(
+            &mut shaper,
+            content,
+            &style,
+            &spans,
+            single_line_constraints,
+        );
+
+        let space_run_end = 6;
+        let b_end = 7;
+
+        let x_space_end = caret_x_for_index_from_single_line(&single_lines, space_run_end);
+        let x_b_end = caret_x_for_index_from_single_line(&single_lines, b_end);
+        assert!(
+            x_b_end.0 > x_space_end.0 + 0.1,
+            "expected 'b' to advance beyond the trailing whitespace"
+        );
+
+        let max_width = Px((x_space_end.0 + x_b_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+        let lines =
+            prepare_lines_attributed(&mut shaper, content, &style, &spans, wrapped_constraints);
+        assert!(lines.len() >= 2, "expected the text to wrap");
+
+        let first = &lines[0];
+        assert!(
+            first.end >= space_run_end,
+            "expected the first visual line to include the trailing whitespace run (end={})",
+            first.end
+        );
+
+        let caret_after_second_space =
+            caret_rect_from_lines(&lines, 5, CaretAffinity::Downstream).expect("caret rect");
+        let caret_after_space_run =
+            caret_rect_from_lines(&lines, space_run_end, CaretAffinity::Upstream)
+                .expect("caret rect");
+        assert!(
+            caret_after_space_run.origin.x.0 > caret_after_second_space.origin.x.0 + 0.1,
+            "expected the trailing whitespace run to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        selection_rects_from_lines(&lines, (5, 6), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing whitespace"
+        );
+    }
+
+    #[test]
+    fn rtl_multiline_hit_test_maps_line_edges_to_logical_ends() {
+        let clusters = vec![crate::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+
+        let stops0 = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line0 = crate::line_layout::TextLineLayout::new(
+            0,
+            4,
+            Px(40.0),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops0,
+            line_clusters_from_shaped(0, &clusters),
+        );
+
+        let stops1 = super::caret_stops_for_slice("efgh", 4, &clusters, 40.0, 1.0, 8);
+        let line1 = crate::line_layout::TextLineLayout::new(
+            4,
+            8,
+            Px(40.0),
+            Px(10.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            stops1,
+            line_clusters_from_shaped(4, &clusters),
+        );
+
+        let lines = [line0, line1];
+
+        let left0 = hit_test_point_from_lines(&lines, Point::new(Px(0.0), Px(5.0)))
+            .expect("hit test line0");
+        let right0 = hit_test_point_from_lines(&lines, Point::new(Px(40.0), Px(5.0)))
+            .expect("hit test line0");
+        assert_eq!(left0.index, 4);
+        assert_eq!(right0.index, 0);
+
+        let left1 = hit_test_point_from_lines(&lines, Point::new(Px(0.0), Px(15.0)))
+            .expect("hit test line1");
+        let right1 = hit_test_point_from_lines(&lines, Point::new(Px(40.0), Px(15.0)))
+            .expect("hit test line1");
+        assert_eq!(left1.index, 8);
+        assert_eq!(right1.index, 4);
+    }
+
+    #[test]
+    fn ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end() {
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+        let wrapped = wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        let kept_end = wrapped.kept_end;
+        assert!(kept_end < text.len());
+
+        let line_layout = &wrapped.lines[0];
+        assert!(
+            line_layout
+                .clusters
+                .iter()
+                .any(|c| c.text_range == (kept_end..kept_end)),
+            "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
+        );
+
+        let slice = &text[..kept_end];
+        let caret_stops = super::caret_stops_for_slice(
+            slice,
+            0,
+            &line_layout.clusters,
+            line_layout.width,
+            1.0,
+            kept_end,
+        );
+        let line = crate::line_layout::TextLineLayout::new(
+            0,
+            kept_end,
+            Px(line_layout.width),
+            Px(0.0),
+            Px(0.0),
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+            caret_stops,
+            line_clusters_from_shaped(0, &line_layout.clusters),
+        );
+
+        let x = Px((line_layout.width - 1.0).max(0.0));
+        let hit = hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
+        assert_eq!(hit.index, kept_end);
     }
 }
