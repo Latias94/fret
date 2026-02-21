@@ -103,6 +103,7 @@ fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_required("component.text.sm_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }

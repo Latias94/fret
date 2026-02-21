@@ -765,6 +765,7 @@ fn render_menu_from_runtime<H: UiHost>(
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
             line_height: Some(font_line_height),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         };
@@ -937,6 +938,7 @@ fn request_menu_overlay<H: UiHost>(
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(item_line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };

@@ -94,6 +94,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }
@@ -702,6 +703,7 @@ impl PackageInfoDescription {
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.sm_line_height")),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -810,6 +812,7 @@ impl PackageInfoDependencies {
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.xs_line_height")),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: Some(0.08),
                 ..Default::default()
             }),

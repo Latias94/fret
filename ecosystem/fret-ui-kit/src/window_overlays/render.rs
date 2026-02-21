@@ -2538,6 +2538,8 @@ pub fn render<H: UiHost + 'static>(
                                                         size: Px(13.0),
                                                         weight: FontWeight(500),
                                                         line_height: Some(Px(13.0 * 1.5)),
+                                                        line_height_policy:
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
                                                         ..Default::default()
                                                     };
                                                     let desc_style = TextStyle {
@@ -2545,6 +2547,8 @@ pub fn render<H: UiHost + 'static>(
                                                         size: Px(13.0),
                                                         weight: FontWeight(400),
                                                         line_height: Some(Px(13.0 * 1.4)),
+                                                        line_height_policy:
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
                                                         ..Default::default()
                                                     };
 

@@ -270,6 +270,7 @@ impl EnumSelect {
                             style: Some(TextStyle {
                                 size: Px(12.0),
                                 line_height: Some(density.row_height),
+                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 ..Default::default()
                             }),
                             color: Some(visuals.fg),
@@ -726,6 +727,7 @@ fn enum_select_row<H: UiHost>(
                         style: Some(TextStyle {
                             size: Px(12.0),
                             line_height: Some(density.row_height),
+                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
                         }),
                         color: Some(text_color),

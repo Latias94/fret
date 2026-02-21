@@ -120,6 +120,7 @@ pub(crate) fn resolve_editor_text_input_style(
     let text_style = TextStyle {
         size: resolved.text_px,
         line_height: Some(font_line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     };
 
@@ -177,6 +178,7 @@ pub(crate) fn resolve_editor_text_area_style(
     let text_style = TextStyle {
         size: resolved.text_px,
         line_height: Some(font_line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     };
 

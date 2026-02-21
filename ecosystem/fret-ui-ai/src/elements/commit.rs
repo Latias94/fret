@@ -89,6 +89,7 @@ fn monospace_text_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyl
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }
@@ -391,6 +392,7 @@ impl CommitMessage {
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -465,6 +467,7 @@ impl CommitSeparator {
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(Px(16.0)),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -575,6 +578,7 @@ impl CommitTimestamp {
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(Px(16.0)),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),

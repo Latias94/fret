@@ -204,11 +204,17 @@ impl UiBuilder<crate::ui::TextBox> {
 
     pub fn line_height_px(mut self, height: Px) -> Self {
         self.inner.line_height_override = Some(height);
+        if self.inner.line_height_policy_override.is_none() {
+            self.inner.line_height_policy_override = Some(TextLineHeightPolicy::FixedFromStyle);
+        }
         self
     }
 
     pub fn line_height_em(mut self, line_height_em: f32) -> Self {
         self.inner.line_height_em_override = Some(line_height_em);
+        if self.inner.line_height_policy_override.is_none() {
+            self.inner.line_height_policy_override = Some(TextLineHeightPolicy::FixedFromStyle);
+        }
         self
     }
 

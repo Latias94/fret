@@ -271,6 +271,8 @@ impl PropertyRow {
                                     // Keep this conservative: allow the theme's defaults to dominate.
                                     size: Px(12.0),
                                     line_height: Some(density.hit_thickness),
+                                    line_height_policy:
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     ..Default::default()
                                 }),
                                 color: Some(reset_fg),

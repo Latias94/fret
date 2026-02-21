@@ -185,7 +185,9 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
                         weight: FontWeight::SEMIBOLD,
                         slant: TextSlant::Normal,
                         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
+                        ..Default::default()
                     }),
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,

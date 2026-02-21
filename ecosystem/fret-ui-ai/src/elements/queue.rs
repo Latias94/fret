@@ -478,6 +478,7 @@ impl QueueSectionLabel {
                 line_height: Some(
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -879,6 +880,7 @@ impl QueueItemContent {
             line_height: Some(
                 theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
             ),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         };
@@ -983,6 +985,7 @@ impl QueueItemDescription {
             line_height: Some(
                 theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
             ),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         };
@@ -1383,6 +1386,7 @@ impl QueueItemFile {
                 line_height: Some(
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                 ),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),

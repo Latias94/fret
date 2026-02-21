@@ -249,6 +249,8 @@ impl PropertyGroup {
                                     let header_text_style = TextStyle {
                                         size: Px(12.0),
                                         line_height: Some(header_height),
+                                        line_height_policy:
+                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
                                         ..Default::default()
                                     };
                                     if let Some(icon) = disclosure_icon.clone() {

@@ -534,6 +534,7 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
                     size: Px(11.0),
                     weight: fret_core::FontWeight::SEMIBOLD,
                     line_height: Some(density.row_height),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     ..Default::default()
                 }),
                 color: Some(fg),

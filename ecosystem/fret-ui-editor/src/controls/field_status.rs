@@ -102,6 +102,7 @@ impl FieldStatusBadge {
         let text_style = TextStyle {
             size: Px(10.0),
             line_height: Some(badge_h),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
         };
 

@@ -136,6 +136,7 @@ impl MessageParts {
                                 weight: FontWeight::NORMAL,
                                 slant: Default::default(),
                                 line_height: Some(theme.metric_token("font.line_height")),
+                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 letter_spacing_em: None,
                                 ..Default::default()
                             };

@@ -87,7 +87,9 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
@@ -104,7 +106,9 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
+                    ..Default::default()
                 }),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
@@ -198,7 +202,9 @@ fn render_inline_math_source<H: UiHost>(
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
+                ..Default::default()
             }),
             color: Some(markdown_theme.inline_math_fg),
             wrap: TextWrap::None,
