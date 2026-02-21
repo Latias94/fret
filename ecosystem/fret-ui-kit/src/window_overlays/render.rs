@@ -1367,21 +1367,26 @@ pub fn render<H: UiHost + 'static>(
             close_auto_focus_prevented = req_cx.default_prevented();
         }
 
-        // Modals should restore focus deterministically on close (Radix-style): underlay focus
-        // changes cannot happen while the barrier is installed, so it's safe to always restore on
-        // unmount.
+        // Modals often remain `present` during exit motion while `open=false` (non-interactive).
+        // Underlay focus can legitimately move during that window, so avoid restoring focus on
+        // unmount unless focus is still unset or still within the modal layer.
         apply_modal_layer(ui, layer, false);
 
-        if !close_auto_focus_prevented
-            && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                ui,
-                app,
-                window,
-                trigger,
-                restore_focus,
-            )
-        {
-            ui.set_focus(Some(node));
+        if !close_auto_focus_prevented {
+            let focus_now = ui.focus();
+            let focus_in_layer =
+                focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
+            if (focus_now.is_none() || focus_in_layer)
+                && let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                    ui,
+                    app,
+                    window,
+                    trigger,
+                    restore_focus,
+                )
+            {
+                ui.set_focus(Some(node));
+            }
         }
     }
 
