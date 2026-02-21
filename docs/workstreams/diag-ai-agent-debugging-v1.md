@@ -216,6 +216,8 @@ Implication for schema v2:
 The intent is to keep the common case “small by default”, while allowing opt-in escalation.
 Tooling enforces these budgets during `fretboard diag ai-packet` by clipping or dropping optional files when necessary, and writes
 an `ai.packet.json` report into the output directory (for auditability).
+When `script.result.json.stage=failed`, the report may also include a `failed_step_slices` section that summarizes which anchored
+`slice.failed_step.*.json` files were written (or why they were skipped).
 
 - Default AI packet total: <= 2 MiB
 - Max AI packet total (before clipping/escalation): <= 20 MiB

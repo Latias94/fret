@@ -40,6 +40,7 @@ struct AiPacketBudgetReport {
     reason_code: Option<String>,
     dropped_files: Vec<String>,
     clipped_files: Vec<String>,
+    failed_step_slices: Option<AiPacketFailedStepSlicesReportV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,27 @@ struct AiPacketAnchorsV1 {
     failed_window: Option<u64>,
     failed_frame_id: Option<u64>,
     failed_window_snapshot_seq: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct AiPacketFailedStepSlicesReportV1 {
+    schema_version: u32,
+    status: String,
+    reason_code: Option<String>,
+    failed_step_index: Option<u32>,
+    window: Option<u64>,
+    frame_id: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    candidate_test_ids: Vec<String>,
+    attempted_test_ids: Vec<String>,
+    written: Vec<AiPacketWrittenSliceV1>,
+}
+
+#[derive(Debug, Clone)]
+struct AiPacketWrittenSliceV1 {
+    file: String,
+    test_id: String,
+    matches: u32,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -153,8 +175,9 @@ pub(crate) fn cmd_ai_packet(
 
     write_packet_anchors_if_possible(&packet_dir)?;
 
+    let mut failed_step_slices_report: Option<AiPacketFailedStepSlicesReportV1> = None;
     if test_id.is_none() {
-        write_anchor_slices_if_possible(
+        failed_step_slices_report = write_anchor_slices_if_possible(
             &bundle_path,
             warmup_frames,
             &packet_dir,
@@ -194,6 +217,7 @@ pub(crate) fn cmd_ai_packet(
         kind: "ai_packet",
         schema_version: 1,
         budget: AiPacketBudgetConfig::default(),
+        failed_step_slices: failed_step_slices_report,
         ..Default::default()
     };
     let enforce_res = enforce_ai_packet_budgets(&packet_dir, &mut report);
@@ -205,7 +229,7 @@ pub(crate) fn cmd_ai_packet(
 }
 
 fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Result<(), String> {
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "kind": report.kind,
         "schema_version": report.schema_version,
         "reason_code": report.reason_code,
@@ -223,6 +247,40 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
         "dropped_files": report.dropped_files,
         "clipped_files": report.clipped_files,
     });
+
+    if let Some(v) = report.failed_step_slices.as_ref() {
+        if let Some(obj) = payload.as_object_mut() {
+            let written = v
+                .written
+                .iter()
+                .map(|w| {
+                    serde_json::json!({
+                        "file": &w.file,
+                        "test_id": &w.test_id,
+                        "matches": w.matches,
+                    })
+                })
+                .collect::<Vec<_>>();
+            obj.insert(
+                "failed_step_slices".to_string(),
+                serde_json::json!({
+                    "schema_version": v.schema_version,
+                    "status": &v.status,
+                    "reason_code": &v.reason_code,
+                    "failed_step_index": v.failed_step_index,
+                    "failed_snapshot": {
+                        "window": v.window,
+                        "frame_id": v.frame_id,
+                        "window_snapshot_seq": v.window_snapshot_seq,
+                    },
+                    "candidate_test_ids": &v.candidate_test_ids,
+                    "attempted_test_ids": &v.attempted_test_ids,
+                    "written": written,
+                }),
+            );
+        }
+    }
+
     let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());
     std::fs::write(dir.join("ai.packet.json"), bytes).map_err(|e| e.to_string())?;
     Ok(())
@@ -364,30 +422,53 @@ fn write_anchor_slices_if_possible(
     warmup_frames: u64,
     packet_dir: &Path,
     max_slice_bytes: u64,
-) -> Result<(), String> {
+) -> Result<Option<AiPacketFailedStepSlicesReportV1>, String> {
     let Some(script) = try_read_script_result_v1(packet_dir) else {
-        return Ok(());
+        return Ok(None);
     };
+
+    let mut report = AiPacketFailedStepSlicesReportV1 {
+        schema_version: 1,
+        status: "skipped".to_string(),
+        ..Default::default()
+    };
+
+    report.failed_step_index = script.step_index;
+
     if !matches!(script.stage, UiScriptStageV1::Failed) {
-        return Ok(());
+        report.reason_code =
+            Some("tooling.ai_packet.failed_step_slices.skipped.not_failed".to_string());
+        return Ok(Some(report));
     }
 
     let Some((step_index, window, frame_id, window_snapshot_seq)) =
         try_read_failed_snapshot_selector_from_anchors(packet_dir)
     else {
-        return Ok(());
+        report.reason_code = Some(
+            "tooling.ai_packet.failed_step_slices.skipped.missing_failed_snapshot_selector"
+                .to_string(),
+        );
+        return Ok(Some(report));
     };
 
     let candidates = pick_candidate_test_ids_for_failed_step(&script);
     if candidates.is_empty() {
-        return Ok(());
+        report.reason_code =
+            Some("tooling.ai_packet.failed_step_slices.skipped.no_candidate_test_id".to_string());
+        return Ok(Some(report));
     }
 
-    let mut written: usize = 0;
+    report.failed_step_index = Some(step_index);
+    report.window = Some(window);
+    report.frame_id = frame_id;
+    report.window_snapshot_seq = window_snapshot_seq;
+    report.candidate_test_ids = candidates.clone();
+
     for test_id in candidates {
-        if written >= 2 {
+        if report.written.len() >= 2 {
             break;
         }
+        report.attempted_test_ids.push(test_id.clone());
 
         let (frame_id, window_snapshot_seq) = if window_snapshot_seq.is_some() {
             (None, window_snapshot_seq)
@@ -408,25 +489,33 @@ fn write_anchor_slices_if_possible(
             Err(_) => continue,
         };
 
-        let has_matches = payload
+        let matches = payload
             .get("matches")
             .and_then(|v| v.as_array())
-            .is_some_and(|v| !v.is_empty());
-        if !has_matches && written > 0 {
+            .map(|v| v.len() as u32)
+            .unwrap_or(0);
+        if matches == 0 {
             continue;
         }
 
         let stem = crate::util::sanitize_for_filename(&test_id, 80, "test_id");
-        crate::util::write_json_value(
-            &packet_dir.join(format!(
-                "slice.failed_step.{step_index}.test_id.{stem}.json"
-            )),
-            &payload,
-        )?;
-        written += 1;
+        let file = format!("slice.failed_step.{step_index}.test_id.{stem}.json");
+        crate::util::write_json_value(&packet_dir.join(&file), &payload)?;
+        report.written.push(AiPacketWrittenSliceV1 {
+            file,
+            test_id,
+            matches,
+        });
     }
 
-    Ok(())
+    if report.written.is_empty() {
+        report.reason_code =
+            Some("tooling.ai_packet.failed_step_slices.skipped.no_slices_written".to_string());
+        return Ok(Some(report));
+    }
+
+    report.status = "written".to_string();
+    Ok(Some(report))
 }
 
 fn write_packet_anchors_if_possible(dir: &Path) -> Result<(), String> {
