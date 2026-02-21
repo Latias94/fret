@@ -12,6 +12,50 @@ use crate::test_id_bloom::{
 };
 
 const TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW: usize = 64;
+const TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW: usize = 512;
+
+pub(crate) fn semantics_bloom_index_from_bundle_index_json(
+    idx: &Value,
+) -> HashMap<(u64, u64, u8), TestIdBloomV1> {
+    let mut out: HashMap<(u64, u64, u8), TestIdBloomV1> = HashMap::new();
+    let Some(blooms) = idx.get("semantics_blooms") else {
+        return out;
+    };
+    let windows = blooms
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v.as_slice());
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let items = w
+            .get("items")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v.as_slice());
+        for it in items {
+            let Some(fp) = it.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+            let source = it
+                .get("semantics_source")
+                .and_then(|v| v.as_str())
+                .unwrap_or("none");
+            let source_tag = match source {
+                "inline" => 0u8,
+                "table" => 1u8,
+                _ => continue,
+            };
+            let Some(hex) = it.get("test_id_bloom_hex").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let Some(bloom) = TestIdBloomV1::from_hex(hex) else {
+                continue;
+            };
+            out.insert((window_id, fp, source_tag), bloom);
+        }
+    }
+    out
+}
 
 fn read_json_value(path: &Path) -> Option<Value> {
     let bytes = std::fs::read(path).ok()?;
@@ -282,6 +326,8 @@ fn build_bundle_index_payload_from_json(
     let mut total_snapshots: u64 = 0;
 
     let mut bloom_cache: HashMap<(u64, u64, u8), String> = HashMap::new();
+    let mut semantics_blooms_windows: Vec<Value> = Vec::new();
+    let mut semantics_blooms_keys_total: u64 = 0;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -379,6 +425,65 @@ fn build_bundle_index_payload_from_json(
             }));
         }
 
+        let mut keys_seen: HashSet<(u64, u8)> = HashSet::new();
+        let mut items: Vec<Value> = Vec::new();
+        for s in snaps.iter().rev() {
+            if items.len() >= TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW {
+                break;
+            }
+            let Some(fp) = snapshot_semantics_fingerprint(s) else {
+                continue;
+            };
+            let has_inline_semantics = snapshot_semantics_nodes(s).is_some();
+            let has_resolved_semantics = semantics.nodes(s).is_some();
+            if !has_resolved_semantics {
+                continue;
+            }
+            let semantics_source = if has_inline_semantics {
+                "inline"
+            } else {
+                "table"
+            };
+            let source_tag = if semantics_source == "inline" {
+                0u8
+            } else {
+                1u8
+            };
+            if !keys_seen.insert((fp, source_tag)) {
+                continue;
+            }
+
+            let key = (window_id, fp, source_tag);
+            let hex = if let Some(hex) = bloom_cache.get(&key) {
+                hex.clone()
+            } else {
+                let nodes = semantics.nodes(s).unwrap_or(&[]);
+                let mut bloom = TestIdBloomV1::new();
+                for n in nodes {
+                    if let Some(tid) = n.get("test_id").and_then(|v| v.as_str()) {
+                        bloom.add(tid);
+                    }
+                }
+                let hex = bloom.to_hex();
+                bloom_cache.insert(key, hex.clone());
+                hex
+            };
+
+            items.push(json!({
+                "semantics_fingerprint": fp,
+                "semantics_source": semantics_source,
+                "test_id_bloom_hex": hex,
+            }));
+        }
+        if !items.is_empty() {
+            semantics_blooms_keys_total =
+                semantics_blooms_keys_total.saturating_add(items.len() as u64);
+            semantics_blooms_windows.push(json!({
+                "window": window_id,
+                "items": items,
+            }));
+        }
+
         windows_out.push(json!({
             "window": window_id,
             "snapshots_total": snaps.len(),
@@ -405,6 +510,15 @@ fn build_bundle_index_payload_from_json(
             "computed_from": "resolved_semantics_nodes",
             "semantics_source": "resolved",
             "covers_semantics_sources": ["inline", "table"],
+        },
+        "semantics_blooms": {
+            "schema_version": 1,
+            "m_bits": TEST_ID_BLOOM_V1_M_BITS,
+            "k": TEST_ID_BLOOM_V1_K,
+            "computed_from": "resolved_semantics_nodes",
+            "max_keys_per_window": TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW,
+            "keys_total": semantics_blooms_keys_total,
+            "windows": semantics_blooms_windows,
         },
         "windows": windows_out,
     }))
@@ -782,6 +896,18 @@ mod tests {
         let bloom = crate::test_id_bloom::TestIdBloomV1::from_hex(hex).expect("decode bloom");
         assert!(bloom.might_contain("a"));
         assert!(bloom.might_contain("b"));
+
+        let blooms = idx["semantics_blooms"]
+            .as_object()
+            .expect("semantics_blooms");
+        assert_eq!(blooms["schema_version"].as_u64(), Some(1));
+        let b_windows = blooms["windows"].as_array().expect("windows");
+        assert_eq!(b_windows.len(), 1);
+        let items = b_windows[0]["items"].as_array().expect("items");
+        assert!(!items.is_empty());
+        let any_hex = items[0]["test_id_bloom_hex"].as_str().expect("hex");
+        let any = crate::test_id_bloom::TestIdBloomV1::from_hex(any_hex).expect("decode");
+        assert!(any.might_contain("a"));
     }
 
     #[test]

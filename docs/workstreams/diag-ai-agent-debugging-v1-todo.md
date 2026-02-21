@@ -27,7 +27,9 @@ Last updated: 2026-02-21
   - [x] `bundle.index.json`: add optional per-snapshot test-id bloom hints (tail snapshots; resolved semantics).
   - [x] `diag query snapshots`: use `bundle.index.json` to suggest snapshot selectors (optionally filtered by test-id bloom).
   - [x] `diag query test-id`: read `_root/test_ids.index.json` when given extracted packs.
-  - [ ] Add per-snapshot test-id presence indexes (bloom/hashed sets) to avoid full semantics scans.
+  - [x] Add a per-semantics-key test-id bloom index to avoid full semantics scans:
+    - `bundle.index.json.semantics_blooms` stores bloom hints keyed by `(window, semantics_fingerprint, semantics_source)`.
+    - `diag slice` and `diag query snapshots` use it when per-snapshot `test_id_bloom_hex` is absent.
 - [x] Add `fretboard diag ai-packet ...` that exports:
   - `bundle.meta.json`
   - `bundle.index.json`

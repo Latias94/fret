@@ -340,6 +340,8 @@ fn cmd_query_snapshots(
 
     let mut rows: Vec<SnapRow> = Vec::new();
     let target = test_id.as_deref().unwrap_or_default().trim();
+    let semantics_blooms =
+        crate::bundle_index::semantics_bloom_index_from_bundle_index_json(&index);
     for w in windows {
         let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         if let Some(req) = window_id
@@ -380,10 +382,19 @@ fn cmd_query_snapshots(
             }
 
             let bloom_might_contain = if !target.is_empty() {
-                s.get("test_id_bloom_hex")
-                    .and_then(|v| v.as_str())
-                    .and_then(TestIdBloomV1::from_hex)
-                    .map(|b| b.might_contain(target))
+                if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {
+                    TestIdBloomV1::from_hex(hex).map(|b| b.might_contain(target))
+                } else {
+                    let fp = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
+                    if let (Some(fp), Some(src)) = (fp, src.as_deref()) {
+                        let source_tag = if src == "inline" { 0u8 } else { 1u8 };
+                        semantics_blooms
+                            .get(&(w_id, fp, source_tag))
+                            .map(|b| b.might_contain(target))
+                    } else {
+                        None
+                    }
+                }
             } else {
                 None
             };

@@ -407,6 +407,7 @@ fn pick_default_snapshot_in_bundle_index(
     window_id: Option<u64>,
     test_id: Option<&str>,
 ) -> Option<BundleIndexSnapshotSelection> {
+    let semantics_blooms = crate::bundle_index::semantics_bloom_index_from_bundle_index_json(idx);
     let windows = idx.get("windows")?.as_array()?;
     for w in windows {
         let w_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -470,12 +471,22 @@ fn pick_default_snapshot_in_bundle_index(
             best_any.get_or_insert(sel.clone());
 
             if !target.is_empty() && !is_warmup {
+                let mut might_contain: Option<bool> = None;
                 if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {
-                    if let Some(b) = TestIdBloomV1::from_hex(hex) {
-                        if b.might_contain(target.as_str()) {
-                            return Some(sel);
+                    might_contain = TestIdBloomV1::from_hex(hex).map(|b| b.might_contain(&target));
+                }
+                if might_contain.is_none() {
+                    if let (Some(fp), Some(src)) =
+                        (semantics_fingerprint, sel.semantics_source.as_deref())
+                    {
+                        let source_tag = if src == "inline" { 0u8 } else { 1u8 };
+                        if let Some(b) = semantics_blooms.get(&(w_id, fp, source_tag)) {
+                            might_contain = Some(b.might_contain(&target));
                         }
                     }
+                }
+                if might_contain == Some(true) {
+                    return Some(sel);
                 }
             }
         }
@@ -502,6 +513,7 @@ fn slice_candidates_from_bundle_index(
     test_id: &str,
     max_candidates: usize,
 ) -> Vec<BundleIndexSliceCandidate> {
+    let semantics_blooms = crate::bundle_index::semantics_bloom_index_from_bundle_index_json(idx);
     let target = test_id.trim();
 
     let empty = Vec::new();
@@ -556,10 +568,18 @@ fn slice_candidates_from_bundle_index(
             let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
 
             let bloom_might_contain = if !target.is_empty() {
-                s.get("test_id_bloom_hex")
-                    .and_then(|v| v.as_str())
-                    .and_then(TestIdBloomV1::from_hex)
-                    .map(|b| b.might_contain(target))
+                if let Some(hex) = s.get("test_id_bloom_hex").and_then(|v| v.as_str()) {
+                    TestIdBloomV1::from_hex(hex).map(|b| b.might_contain(target))
+                } else if let (Some(fp), Some(src)) =
+                    (semantics_fingerprint, semantics_source.as_deref())
+                {
+                    let source_tag = if src == "inline" { 0u8 } else { 1u8 };
+                    semantics_blooms
+                        .get(&(w_id, fp, source_tag))
+                        .map(|b| b.might_contain(target))
+                } else {
+                    None
+                }
             } else {
                 None
             };
@@ -980,6 +1000,43 @@ mod tests {
 
         let sel = pick_default_snapshot_in_bundle_index(&idx, None, Some("target")).expect("sel");
         assert_eq!(sel.frame_id, Some(1));
+    }
+
+    #[test]
+    fn pick_default_snapshot_uses_semantics_blooms_when_snapshot_bloom_missing() {
+        let mut hit = TestIdBloomV1::new();
+        hit.add("target");
+        let hit_hex = hit.to_hex();
+
+        let idx = serde_json::json!({
+            "kind": "bundle_index",
+            "schema_version": 1,
+            "semantics_blooms": {
+                "schema_version": 1,
+                "m_bits": 1024,
+                "k": 4,
+                "computed_from": "resolved_semantics_nodes",
+                "max_keys_per_window": 2048,
+                "keys_total": 1,
+                "windows": [
+                    { "window": 1, "items": [
+                        { "semantics_fingerprint": 42, "semantics_source": "inline", "test_id_bloom_hex": hit_hex }
+                    ]}
+                ]
+            },
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 1, "window_snapshot_seq": 1, "is_warmup": false, "has_semantics": true, "semantics_source": "inline", "semantics_fingerprint": 7, "test_id_bloom_hex": null },
+                        { "frame_id": 2, "window_snapshot_seq": 2, "is_warmup": false, "has_semantics": true, "semantics_source": "inline", "semantics_fingerprint": 42, "test_id_bloom_hex": null }
+                    ]
+                }
+            ]
+        });
+
+        let sel = pick_default_snapshot_in_bundle_index(&idx, None, Some("target")).expect("sel");
+        assert_eq!(sel.frame_id, Some(2));
     }
 
     #[test]

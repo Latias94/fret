@@ -72,6 +72,9 @@ What ships now (Phase 1 subset):
   - `semantics_source` = `inline|table|none` (inline semantics vs v2 table-resolved vs missing)
   - `has_semantics` (resolved)
   - optional `test_id_bloom_hex` (tail snapshots only; resolved semantics only): a small Bloom filter hint for test-id membership
+- `bundle.index.json` schema v1 also includes an optional per-semantics-key bloom index:
+  - `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to provide broader test-id membership hints
+    without storing a bloom per snapshot.
 - `diag pack --include-root-artifacts` and `diag pack --include-triage` include sidecars under `_root/`:
   - `bundle.meta.json`
   - `bundle.index.json`
@@ -85,20 +88,23 @@ What ships now (Phase 1 subset):
 - For large bundles, `diag slice` attempts a bounded parse first when an explicit snapshot selector is provided
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
   - Supports both v1 inline semantics (`debug.semantics.nodes`) and v2 table semantics (`tables.semantics.entries`).
-- When no explicit selector is provided, `diag slice` uses `bundle.index.json` (when present) to pick a reasonable default
-  snapshot for the bounded-parse attempt (last non-warmup snapshot with resolved semantics in the first window, or the best fallback).
-  - If `test_id_bloom_hex` exists, `diag slice --test-id X` prefers a snapshot whose bloom filter may contain `X`.
-    This is a hint (false positives are allowed); it is used to reduce the frequency of falling back to full bundle parsing.
+  - When no explicit selector is provided, `diag slice` uses `bundle.index.json` (when present) to pick a reasonable default
+    snapshot for the bounded-parse attempt (last non-warmup snapshot with resolved semantics in the first window, or the best fallback).
+    - If `test_id_bloom_hex` (snapshot) or `semantics_blooms` (per-semantics key) exists, `diag slice --test-id X` prefers a snapshot
+      whose bloom filter may contain `X`.
+      This is a hint (false positives are allowed); it is used to reduce the frequency of falling back to full bundle parsing.
 
 Known gaps (still planned):
 
 - `diag query` still has large surface area that does not yet use `bundle.index.json` (only `query snapshots` is index-first today).
 - `diag slice` uses `bundle.index.json` for validation and as a default snapshot hint, but it still falls back to parsing `bundle.json`
   when it needs to find a better snapshot that contains the requested test-id.
-  - `bundle.index.json` v1 includes a small per-snapshot Bloom filter hint (`test_id_bloom_hex`) for some tail snapshots, which helps
-    reduce full-bundle fallbacks, but it is not a complete per-snapshot membership index yet.
-- “Test-id presence per snapshot” is not yet comprehensively indexed; finding “first snapshot that contains X” can still require
-  streaming semantics reads and occasionally falls back to parsing the full bundle JSON.
+  - `bundle.index.json` v1 includes:
+    - `test_id_bloom_hex` for some tail snapshots, and
+    - `semantics_blooms` for a bounded set of recent `(window, semantics_fingerprint, semantics_source)` keys.
+  These help reduce full-bundle fallbacks, but are still hints and remain bounded.
+- “Test-id presence per snapshot” is still not guaranteed to be indexed for every snapshot in very large bundles; finding “first snapshot
+  that contains X” can still require streaming semantics reads and may occasionally fall back to parsing the full bundle JSON.
 
 ### Phase 2: on-disk layout (manifest + chunked payloads)
 
