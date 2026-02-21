@@ -4,39 +4,77 @@ use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = {
-        let versions: Vec<Arc<str>> = (1..=50)
-            .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{:02}", 51 - idx)))
+        let tags: Vec<Arc<str>> = (1..=50)
+            .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{}", 51 - idx)))
             .collect();
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                let mut rows: Vec<AnyElement> = Vec::with_capacity(versions.len() * 2 + 1);
-                rows.push(shadcn::typography::small(cx, "Tags"));
-                for tag in versions {
-                    rows.push(cx.text(tag));
-                    rows.push(
-                        shadcn::Separator::new()
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                    );
-                }
-                rows
-            },
-        );
+        let content = {
+            let content = ui::container(cx, move |cx| {
+                let heading = ui::text(cx, "Tags")
+                    .text_size_px(Px(12.0))
+                    .line_height_px(Px(12.0))
+                    .font_medium()
+                    .into_element(cx);
 
-        shadcn::ScrollArea::new([content])
+                let tags_list = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N0)
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |cx| {
+                        let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len() * 2);
+                        for tag in tags {
+                            out.push(
+                                ui::text(cx, tag)
+                                    .text_size_px(Px(12.0))
+                                    .line_height_px(Px(16.0))
+                                    .into_element(cx),
+                            );
+                            out.push(
+                                shadcn::Separator::new()
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_full().my(Space::N2),
+                                    )
+                                    .into_element(cx),
+                            );
+                        }
+                        out
+                    },
+                );
+
+                vec![stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N4)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| vec![heading, tags_list],
+                )]
+            })
+            .p_4()
+            .into_element(cx);
+
+            content
+        };
+
+        let area = shadcn::ScrollArea::new([content])
             .axis(fret_ui::element::ScrollAxis::Y)
-            .refine_layout(LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)))
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
             .into_element(cx)
             .attach_semantics(
                 SemanticsDecoration::default()
                     .role(fret_core::SemanticsRole::Group)
                     .test_id("ui-gallery-scroll-area-demo"),
+            );
+
+        let props = cx.with_theme(|theme| {
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default().border_1().rounded(Radius::Md),
+                LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)),
             )
+        });
+        cx.container(props, move |_cx| [area])
     };
 
     let horizontal = {
@@ -47,43 +85,53 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .items_start()
                 .layout(LayoutRefinement::default().w_px(Px(760.0))),
             |cx| {
-                let artists = [
-                    "Ornella Binni",
-                    "Tom Byrom",
-                    "Vladimir Malyavko",
-                    "Silvia Serra",
-                ];
+                let artists = ["Ornella Binni", "Tom Byrom", "Vladimir Malyavko"];
                 artists
                     .iter()
                     .map(|artist| {
-                        shadcn::Card::new(vec![
-                            shadcn::CardContent::new(vec![
-                                shadcn::Skeleton::new()
-                                    .refine_style(ChromeRefinement::default().rounded(Radius::Md))
-                                    .refine_layout(
-                                        LayoutRefinement::default().w_px(Px(140.0)).h_px(Px(180.0)),
-                                    )
-                                    .into_element(cx),
-                                shadcn::typography::muted(cx, format!("Photo by {artist}")),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
-                        .into_element(cx)
+                        let art = shadcn::Skeleton::new()
+                            .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(150.0)).h_px(Px(200.0)),
+                            )
+                            .into_element(cx);
+
+                        let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
+
+                        stack::vstack(
+                            cx,
+                            stack::VStackProps::default()
+                                .gap(Space::N2)
+                                .items_start()
+                                .layout(LayoutRefinement::default().flex_none()),
+                            |_cx| vec![art, caption],
+                        )
                     })
                     .collect::<Vec<_>>()
             },
         );
 
-        shadcn::ScrollArea::new([rail])
+        let area = shadcn::ScrollArea::new([rail])
             .axis(fret_ui::element::ScrollAxis::X)
-            .refine_layout(LayoutRefinement::default().w_px(Px(384.0)).h_px(Px(280.0)))
+            .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
             .attach_semantics(
                 SemanticsDecoration::default()
                     .role(fret_core::SemanticsRole::Group)
                     .test_id("ui-gallery-scroll-area-horizontal"),
+            );
+
+        let props = cx.with_theme(|theme| {
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .p(Space::N4),
+                LayoutRefinement::default().w_full().max_w(Px(384.0)),
             )
+        });
+        cx.container(props, move |_cx| [area])
     };
 
     let rtl = doc_layout::rtl(cx, |cx| {
@@ -108,7 +156,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
         shadcn::ScrollArea::new([content])
             .axis(fret_ui::element::ScrollAxis::Y)
-            .refine_layout(LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)))
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
             .into_element(cx)
     })
     .attach_semantics(
@@ -116,6 +164,17 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             .role(fret_core::SemanticsRole::Group)
             .test_id("ui-gallery-scroll-area-rtl"),
     );
+
+    let rtl = {
+        let props = cx.with_theme(|theme| {
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default().border_1().rounded(Radius::Md),
+                LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)),
+            )
+        });
+        cx.container(props, move |_cx| [rtl])
+    };
 
     let notes = doc_layout::notes(
         cx,
@@ -128,19 +187,19 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Scrollable region with custom scrollbars and nested content."),
+        Some("Preview follows shadcn ScrollArea demo: Vertical + Horizontal."),
         vec![
             DocSection::new("Demo", demo)
-                .description("Vertical scroll region with separators.")
+                .description("Vertical scroll region with tags and separators.")
                 .code(
                     "rust",
                     r#"shadcn::ScrollArea::new([content])
     .axis(fret_ui::element::ScrollAxis::Y)
-    .refine_layout(LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)))
+    .refine_layout(LayoutRefinement::default().w_full().h_full())
     .into_element(cx);"#,
                 ),
             DocSection::new("Horizontal", horizontal)
-                .description("Horizontal rail inside a scroll area.")
+                .description("Horizontal rail (fixed-size items) inside a scroll area.")
                 .code(
                     "rust",
                     r#"shadcn::ScrollArea::new([rail])
