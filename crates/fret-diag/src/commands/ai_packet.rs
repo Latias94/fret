@@ -229,6 +229,25 @@ pub(crate) fn cmd_ai_packet(
 }
 
 fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Result<(), String> {
+    let mut files_present: Vec<(String, u64)> = Vec::new();
+    for entry in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let p = entry.path();
+        if !p.is_file() {
+            continue;
+        }
+        let Some(name) = p
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string())
+        else {
+            continue;
+        };
+        let bytes = file_bytes(&p)?;
+        files_present.push((name, bytes));
+    }
+    files_present.sort_by(|(a, _), (b, _)| a.cmp(b));
+
     let mut payload = serde_json::json!({
         "kind": report.kind,
         "schema_version": report.schema_version,
@@ -242,6 +261,10 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
             "max_slice_bytes": report.budget.max_slice_bytes,
         },
         "bytes_total": report.bytes_total,
+        "files_present": files_present.iter().map(|(name, bytes)| serde_json::json!({
+            "name": name,
+            "bytes": bytes,
+        })).collect::<Vec<_>>(),
         "soft_budget_exceeded": report.soft_budget_exceeded,
         "hard_budget_exceeded": report.hard_budget_exceeded,
         "dropped_files": report.dropped_files,
