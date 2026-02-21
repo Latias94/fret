@@ -17,6 +17,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let number = ui::text(cx, format!("{idx}"))
             .text_size_px(visual.text_px)
             .line_height_px(visual.line_height_px)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_semibold()
             .into_element(cx);
 

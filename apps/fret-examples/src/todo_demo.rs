@@ -665,6 +665,7 @@ fn view(
                 ui::text(cx, today)
                     .text_size_px(desc_px)
                     .line_height_px(desc_line_height)
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                     .font_normal()
                     .nowrap()
                     .overflow(TextOverflow::Ellipsis)
