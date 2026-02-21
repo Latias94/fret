@@ -147,7 +147,15 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .track_start_neg_margin(spacing)
             .item_padding_start(spacing)
             .test_id(test_id)
-            .refine_layout(LayoutRefinement::default().w_full().max_w(max_w));
+            .refine_layout({
+                let mut layout = LayoutRefinement::default().w_full().max_w(max_w).mx_auto();
+                if orientation == shadcn::CarouselOrientation::Vertical {
+                    // Vertical controls sit outside the carousel bounds (`-top-12` / `-bottom-12`).
+                    // Reserve vertical margin so the buttons don't overlap neighboring doc text.
+                    layout = layout.my(Space::N12);
+                }
+                layout
+            });
 
         if let Some(viewport_h) = viewport_h {
             base = base.refine_viewport_layout(LayoutRefinement::default().h_px(viewport_h));
