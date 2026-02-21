@@ -227,6 +227,9 @@ pub struct UiTree<H: UiHost> {
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
 
+    #[cfg(debug_assertions)]
+    debug_last_declarative_render_root_frame_id: Option<FrameId>,
+
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,

@@ -1,6 +1,26 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
+    #[cfg(debug_assertions)]
+    pub(crate) fn debug_note_declarative_render_root_called(&mut self, frame_id: FrameId) {
+        self.debug_last_declarative_render_root_frame_id = Some(frame_id);
+    }
+
+    #[cfg(debug_assertions)]
+    pub(crate) fn debug_forbid_propagate_after_declarative_render_root(&self, frame_id: FrameId) {
+        if !crate::runtime_config::ui_runtime_config().debug_forbid_propagate_after_render_root {
+            return;
+        }
+
+        if self.debug_last_declarative_render_root_frame_id == Some(frame_id) {
+            panic!(
+                "ui.propagate_*_changes() was called after declarative::render_root() in the same frame (frame_id={:?}). \
+                 Call frame_pipeline::propagate_changes() (or UiTree::propagate_*_changes()) before mounting the declarative root.",
+                frame_id
+            );
+        }
+    }
+
     pub(crate) fn begin_debug_frame_if_needed(&mut self, frame_id: FrameId) {
         if !self.debug_enabled {
             return;

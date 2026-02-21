@@ -47,6 +47,8 @@ impl<H: UiHost> Default for UiTree<H> {
             interactive_resize_last_bounds_delta: None,
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
+            #[cfg(debug_assertions)]
+            debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             debug_view_cache_roots: Vec::new(),

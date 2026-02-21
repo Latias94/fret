@@ -162,6 +162,8 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let frame_id = app.frame_id();
+    #[cfg(debug_assertions)]
+    ui.debug_note_declarative_render_root_called(frame_id);
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
 
@@ -727,6 +729,8 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let frame_id = app.frame_id();
+    #[cfg(debug_assertions)]
+    ui.debug_note_declarative_render_root_called(frame_id);
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
 
