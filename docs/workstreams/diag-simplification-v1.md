@@ -2,7 +2,7 @@
 
 Status: Active (workstream tracker)
 
-Current state (as of 2026-02-14):
+Current state (as of 2026-02-21):
 
 - WS artifact materialization + `--pack` parity landed (tooling materializes `bundle.dumped` to a local `bundle.json` directory).
 - Artifact size stats are reported in `script.result.json` for locally materialized bundles (bytes + bounded counts).
@@ -22,6 +22,13 @@ Current state (as of 2026-02-14):
 - Default deterministic exit in `--launch` mode landed and `--keep-open` preserves long-running/manual workflows.
 - `FRET_DIAG_CONFIG_PATH` landed: tooling writes a per-run `diag.config.json` when launching and the runtime consumes it (compat-first config consolidation).
 - Per-run `manifest.json` v2 layout is now explicit and typed (files index + chunk layout), reducing churn risk and clarifying the v2 artifact surface.
+- Tooling now produces bounded, indexable sidecars to reduce full-bundle reads in common workflows:
+  - `bundle.meta.json` (bounded summary)
+  - `bundle.index.json` (per-snapshot jump table; schema v1)
+  - `test_ids.index.json` (bounded test-id search index)
+- Tooling can export a bounded directory for AI-assisted triage via `fretboard diag ai-packet ...` (meta/index/test-ids + slices).
+- `diag slice` has an index-assisted bounded-parse fast path for large bundles (streaming reads avoid building the full `serde_json::Value`).
+- `fretboard diag hotspots` can estimate approximate JSON byte hot spots per path to guide retention and packaging budgets.
 
 ## Context
 
@@ -41,6 +48,7 @@ Related docs:
 - ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Existing workstream: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - M0 baseline: `docs/workstreams/diag-simplification-v1-m0-baseline.md`
+- AI agent packets + indexing: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 
 ## Goals
 

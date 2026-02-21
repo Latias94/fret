@@ -9,11 +9,14 @@ small, fearless refactors.
 - [x] Define a stable registry policy for:
   - [x] `reason_code` naming and backward-compat rules
   - [x] `capabilities` naming (namespaced strings) and ownership
+- [ ] Measure representative bundle size hot spots (approx bytes per JSON path) to guide retention and packaging budgets.
+  - Use: `fretboard diag hotspots <bundle_dir|bundle.json> --hotspots-top 30 --max-depth 7 --min-bytes 4096`
+  - See also: `docs/workstreams/diag-ai-agent-debugging-v1.md` (M0 budgets)
 - [x] Add/confirm a small nextest gate set for diag tooling:
   - [x] `cargo nextest run -p fret-diag-protocol`
   - [x] `cargo nextest run -p fret-diag-ws --no-tests=pass` (currently no tests; compile gate only)
   - [x] `cargo nextest run -p fret-diag` (tooling unit tests)
-- [x] Add a minimal "WS export materialization" smoke test (tooling only; no browser required):
+  - [x] Add a minimal "WS export materialization" smoke test (tooling only; no browser required):
   - feed a `bundle.dumped` message containing embedded bundle JSON
   - assert a local `bundle.json` directory is produced
 
