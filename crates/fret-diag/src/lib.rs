@@ -39,6 +39,7 @@ mod script_tooling;
 mod shrink;
 mod stats;
 mod suite_summary;
+mod test_id_bloom;
 mod tooling_failures;
 mod trace;
 pub mod transport;

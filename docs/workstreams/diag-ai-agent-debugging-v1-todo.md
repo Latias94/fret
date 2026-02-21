@@ -19,6 +19,7 @@ Last updated: 2026-02-21
 - [x] Allow `diag meta/index/query/slice` to operate on sidecar-only packet dirs (no `bundle.json`) when possible.
 - [ ] Prefer index when present (readers + fast-paths in `diag slice/query`).
   - [x] `diag slice`: use index to pick a default snapshot for bounded parse (when no selector is provided).
+  - [x] `bundle.index.json`: add optional per-snapshot test-id bloom hints (tail snapshots; inline semantics only).
   - [ ] `diag query`: use index for snapshot selection / filtering when possible.
   - [ ] Add per-snapshot test-id presence indexes (bloom/hashed sets) to avoid full semantics scans.
 - [x] Add `fretboard diag ai-packet ...` that exports:

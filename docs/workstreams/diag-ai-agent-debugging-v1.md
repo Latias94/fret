@@ -71,6 +71,7 @@ What ships now (Phase 1 subset):
   - `semantics_fingerprint`
   - `semantics_source` = `inline|table|none` (inline semantics vs v2 table-resolved vs missing)
   - `has_semantics` (resolved)
+  - optional `test_id_bloom_hex` (tail snapshots only; inline semantics only): a small Bloom filter hint for test-id membership
 - `diag pack --include-root-artifacts` and `diag pack --include-triage` include sidecars under `_root/`:
   - `bundle.meta.json`
   - `bundle.index.json`
@@ -84,6 +85,8 @@ What ships now (Phase 1 subset):
   (`--frame-id`/`--snapshot-seq`), so it can avoid building the full in-memory `serde_json::Value` for `bundle.json`.
 - When no explicit selector is provided, `diag slice` uses `bundle.index.json` (when present) to pick a reasonable default
   snapshot for the bounded-parse attempt (last non-warmup snapshot with resolved semantics in the first window, or the best fallback).
+  - If `test_id_bloom_hex` exists, `diag slice --test-id X` prefers a snapshot whose bloom filter may contain `X`.
+    This is a hint (false positives are allowed); it is used to reduce the frequency of falling back to full bundle parsing.
 
 Known gaps (still planned):
 

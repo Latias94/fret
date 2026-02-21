@@ -7,6 +7,11 @@ use crate::json_bundle::{
     SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
     snapshot_semantics_fingerprint, snapshot_semantics_nodes, snapshot_window_snapshot_seq,
 };
+use crate::test_id_bloom::{
+    TEST_ID_BLOOM_V1_K, TEST_ID_BLOOM_V1_M_BITS, TEST_ID_BLOOM_V1_SCHEMA_VERSION, TestIdBloomV1,
+};
+
+const TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW: usize = 64;
 
 fn read_json_value(path: &Path) -> Option<Value> {
     let bytes = std::fs::read(path).ok()?;
@@ -291,6 +296,10 @@ fn build_bundle_index_payload_from_json(
         let mut first_timestamp_unix_ms: Option<u64> = None;
         let mut last_timestamp_unix_ms: Option<u64> = None;
 
+        let bloom_start_idx = snaps
+            .len()
+            .saturating_sub(TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW);
+
         for (idx, s) in snaps.iter().enumerate() {
             let frame_id = snapshot_frame_id(s);
             let window_snapshot_seq = snapshot_window_snapshot_seq(s);
@@ -317,6 +326,21 @@ fn build_bundle_index_payload_from_json(
                 "none"
             };
 
+            let test_id_bloom_hex =
+                if idx >= bloom_start_idx && semantics_source == "inline" && has_resolved_semantics
+                {
+                    let nodes = semantics.nodes(s).unwrap_or(&[]);
+                    let mut bloom = TestIdBloomV1::new();
+                    for n in nodes {
+                        if let Some(tid) = n.get("test_id").and_then(|v| v.as_str()) {
+                            bloom.add(tid);
+                        }
+                    }
+                    Some(bloom.to_hex())
+                } else {
+                    None
+                };
+
             snapshots_out.push(json!({
                 "window_snapshot_seq": window_snapshot_seq,
                 "frame_id": frame_id,
@@ -325,6 +349,7 @@ fn build_bundle_index_payload_from_json(
                 "semantics_fingerprint": semantics_fingerprint,
                 "semantics_source": semantics_source,
                 "has_semantics": has_resolved_semantics,
+                "test_id_bloom_hex": test_id_bloom_hex,
             }));
         }
 
@@ -346,6 +371,13 @@ fn build_bundle_index_payload_from_json(
         "warmup_frames": warmup_frames,
         "windows_total": windows.len(),
         "snapshots_total": total_snapshots,
+        "test_id_bloom": {
+            "schema_version": TEST_ID_BLOOM_V1_SCHEMA_VERSION,
+            "m_bits": TEST_ID_BLOOM_V1_M_BITS,
+            "k": TEST_ID_BLOOM_V1_K,
+            "tail_snapshots_per_window": TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW,
+            "semantics_source": "inline",
+        },
         "windows": windows_out,
     }))
 }
@@ -685,6 +717,22 @@ mod tests {
 
         assert_eq!(idx["kind"].as_str(), Some("bundle_index"));
         assert_eq!(idx["snapshots_total"].as_u64(), Some(2));
+        assert_eq!(
+            idx["test_id_bloom"]["schema_version"].as_u64(),
+            Some(crate::test_id_bloom::TEST_ID_BLOOM_V1_SCHEMA_VERSION)
+        );
+        assert_eq!(
+            idx["test_id_bloom"]["m_bits"].as_u64(),
+            Some(crate::test_id_bloom::TEST_ID_BLOOM_V1_M_BITS as u64)
+        );
+        assert_eq!(
+            idx["test_id_bloom"]["k"].as_u64(),
+            Some(crate::test_id_bloom::TEST_ID_BLOOM_V1_K as u64)
+        );
+        assert_eq!(
+            idx["test_id_bloom"]["semantics_source"].as_str(),
+            Some("inline")
+        );
 
         let windows = idx["windows"].as_array().unwrap();
         assert_eq!(windows.len(), 1);
@@ -694,10 +742,16 @@ mod tests {
         assert_eq!(snaps[0]["window_snapshot_seq"].as_u64(), Some(100));
         assert_eq!(snaps[0]["is_warmup"].as_bool(), Some(true));
         assert_eq!(snaps[0]["semantics_source"].as_str(), Some("inline"));
+        let hex = snaps[0]["test_id_bloom_hex"].as_str().expect("bloom hex");
+        let bloom = crate::test_id_bloom::TestIdBloomV1::from_hex(hex).expect("decode bloom");
+        assert!(bloom.might_contain("a"));
+        assert!(!bloom.might_contain("zzzz-not-present"));
 
         assert_eq!(snaps[1]["window_snapshot_seq"].as_u64(), Some(101));
         assert_eq!(snaps[1]["is_warmup"].as_bool(), Some(false));
         assert_eq!(snaps[1]["semantics_source"].as_str(), Some("table"));
+        assert!(snaps[1].get("test_id_bloom_hex").is_some());
+        assert!(snaps[1]["test_id_bloom_hex"].is_null());
     }
 
     #[test]
