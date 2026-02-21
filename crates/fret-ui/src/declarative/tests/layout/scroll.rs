@@ -1026,6 +1026,128 @@ fn scroll_axis_both_updates_extent_for_axis_growing_at_end() {
 }
 
 #[test]
+fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
+    let mut app = TestHost::new();
+    let show_more = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let mut scene = Scene::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+        show_more: fret_runtime::Model<bool>,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Auto;
+        cache.cache_key = 1;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                probe_unbounded: true,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.view_cache(cache, move |cx| {
+                    cx.observe_model(&show_more, Invalidation::Layout);
+                    let expanded = cx.app.models().get_copied(&show_more).unwrap_or(false);
+                    let rows = if expanded { 24 } else { 6 };
+
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            (0..rows)
+                                .map(|i| cx.text(format!("row {i}")))
+                                .collect::<Vec<_>>()
+                        },
+                    )]
+                })]
+            },
+        )]
+    }
+
+    // Frame 0: establish content extent and scroll to the end.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end-view-cache",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let max0 = scroll_handle.max_offset().y;
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), max0));
+    let _ = show_more.update(&mut app, |v, _cx| *v = true);
+    let changed = app.take_changed_models();
+    assert!(
+        ui.propagate_model_changes(&mut app, &changed),
+        "expected model change to invalidate the view-cache subtree"
+    );
+    app.advance_frame();
+
+    // Frame 1: content grows while we're at the previous max offset.
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-grow-at-end-view-cache",
+        |cx| build_root(cx, scroll_handle.clone(), show_more.clone()),
+    );
+    ui.set_root(root1);
+
+    let scroll_node = ui.children(root1)[0];
+    let cache_node = ui.children(scroll_node)[0];
+    assert!(
+        ui.node_needs_layout(cache_node),
+        "expected view-cache scroll content node to be dirty when its children change"
+    );
+    assert!(
+        scroll_handle.offset().y.0 + 0.5 >= scroll_handle.max_offset().y.0,
+        "expected scroll handle to remain at the previous max offset before relayout: offset={:?} max={:?}",
+        scroll_handle.offset().y,
+        scroll_handle.max_offset().y
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let max1 = scroll_handle.max_offset().y;
+    assert!(
+        max1.0 > max0.0 + 0.5,
+        "expected scroll extent to grow immediately under view-cache reconciliation: before={max0:?} after={max1:?}"
+    );
+}
+
+#[test]
 fn scroll_thumb_drag_updates_offset_horizontal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
