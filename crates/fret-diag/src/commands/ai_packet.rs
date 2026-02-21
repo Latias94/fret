@@ -116,14 +116,8 @@ pub(crate) fn cmd_ai_packet(
     }
 
     if let Some(test_id) = &test_id {
-        let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
-        let bundle: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        let semantics = crate::json_bundle::SemanticsResolver::new(&bundle);
-        let payload = super::slice::build_test_id_slice_payload_from_bundle(
+        let payload = super::slice::build_test_id_slice_payload_from_bundle_path(
             &bundle_path,
-            &bundle,
-            &semantics,
             warmup_frames,
             test_id.as_str(),
             None,

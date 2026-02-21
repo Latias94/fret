@@ -113,6 +113,182 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
     )
 }
 
+pub(crate) fn build_test_id_slice_payload_from_bundle_path(
+    bundle_path: &Path,
+    warmup_frames: u64,
+    test_id: &str,
+    frame_id: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    window_id: Option<u64>,
+    max_matches: usize,
+    max_ancestors: usize,
+) -> Result<serde_json::Value, String> {
+    let bundle_index = try_read_bundle_index(bundle_path);
+
+    let index_default = if frame_id.is_none() && window_snapshot_seq.is_none() {
+        bundle_index
+            .as_ref()
+            .and_then(|idx| pick_default_snapshot_in_bundle_index(idx, window_id, Some(test_id)))
+    } else {
+        None
+    };
+
+    let explicit_selector = frame_id.is_some() || window_snapshot_seq.is_some();
+    let (
+        stream_frame_id,
+        stream_window_snapshot_seq,
+        stream_window_id,
+        mut stream_semantics_source,
+        mut stream_semantics_fingerprint,
+    ) = if let Some(sel) = &index_default {
+        let (frame_id, window_snapshot_seq) = if sel.window_snapshot_seq.is_some() {
+            (None, sel.window_snapshot_seq)
+        } else {
+            (sel.frame_id, None)
+        };
+
+        (
+            frame_id,
+            window_snapshot_seq,
+            Some(sel.window),
+            sel.semantics_source.clone(),
+            sel.semantics_fingerprint,
+        )
+    } else {
+        (frame_id, window_snapshot_seq, window_id, None, None)
+    };
+
+    let mut allow_streaming = explicit_selector || index_default.is_some();
+    if allow_streaming && explicit_selector {
+        if let Some(idx) = bundle_index.as_ref() {
+            let m = find_snapshot_in_bundle_index(idx, window_id, frame_id, window_snapshot_seq)
+                .ok_or_else(|| {
+                    let mut hint = String::new();
+                    if let Some(w) = window_id {
+                        hint.push_str(&format!(" --window {w}"));
+                    }
+                    if let Some(f) = frame_id {
+                        hint.push_str(&format!(" --frame-id {f}"));
+                    }
+                    if let Some(s) = window_snapshot_seq {
+                        hint.push_str(&format!(" --snapshot-seq {s}"));
+                    }
+                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle.json>`), args:{hint}")
+                })?;
+            if !m.has_semantics {
+                let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
+                return Err(format!(
+                    "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
+                ));
+            }
+            let source = m.semantics_source.as_deref().unwrap_or("none");
+            if source != "inline" && source != "table" {
+                allow_streaming = false;
+            }
+            if stream_semantics_source.is_none() {
+                stream_semantics_source = m.semantics_source;
+            }
+            if stream_semantics_fingerprint.is_none() {
+                stream_semantics_fingerprint = m.semantics_fingerprint;
+            }
+        }
+    }
+
+    if allow_streaming && !explicit_selector {
+        if let Some(source) = stream_semantics_source.as_deref() {
+            if source != "inline" && source != "table" {
+                allow_streaming = false;
+            }
+        }
+    }
+
+    let build_from_bundle = || -> Result<serde_json::Value, String> {
+        let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+        let bundle: serde_json::Value =
+            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        let semantics = SemanticsResolver::new(&bundle);
+        Ok(build_test_id_slice_payload_from_bundle(
+            bundle_path,
+            &bundle,
+            &semantics,
+            warmup_frames,
+            test_id,
+            frame_id,
+            window_snapshot_seq,
+            window_id,
+            max_matches,
+            max_ancestors,
+        )?)
+    };
+
+    if allow_streaming {
+        let streaming_res = if stream_semantics_source.as_deref() == Some("table") {
+            try_build_test_id_slice_payload_streaming_table(
+                bundle_path,
+                warmup_frames,
+                test_id,
+                stream_frame_id,
+                stream_window_snapshot_seq,
+                stream_window_id,
+                stream_semantics_fingerprint,
+                max_matches,
+                max_ancestors,
+            )?
+        } else {
+            try_build_test_id_slice_payload_streaming_inline(
+                bundle_path,
+                warmup_frames,
+                test_id,
+                stream_frame_id,
+                stream_window_snapshot_seq,
+                stream_window_id,
+                max_matches,
+                max_ancestors,
+            )?
+        };
+
+        if let Some(payload) = streaming_res {
+            let should_fallback_to_find_match = !explicit_selector
+                && index_default.is_some()
+                && payload
+                    .get("matches")
+                    .and_then(|v| v.as_array())
+                    .is_some_and(|v| v.is_empty());
+
+            if should_fallback_to_find_match {
+                if let Some(idx) = bundle_index.as_ref() {
+                    const MAX_CANDIDATES: usize = 6;
+                    let skip =
+                        stream_window_id.map(|w| (w, stream_frame_id, stream_window_snapshot_seq));
+                    if let Some(hit) = try_find_hit_payload_by_streaming_candidates(
+                        bundle_path,
+                        idx,
+                        warmup_frames,
+                        test_id,
+                        window_id,
+                        MAX_CANDIDATES,
+                        max_matches,
+                        max_ancestors,
+                        skip,
+                    )? {
+                        Ok(hit)
+                    } else {
+                        build_from_bundle()
+                    }
+                } else {
+                    build_from_bundle()
+                }
+            } else {
+                Ok(payload)
+            }
+        } else {
+            build_from_bundle()
+        }
+    } else {
+        build_from_bundle()
+    }
+}
+
 fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }
@@ -692,170 +868,16 @@ pub(crate) fn cmd_slice(
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
-    let bundle_index = try_read_bundle_index(&bundle_path);
-
-    let index_default = if frame_id.is_none() && window_snapshot_seq.is_none() {
-        bundle_index.as_ref().and_then(|idx| {
-            pick_default_snapshot_in_bundle_index(idx, window_id, Some(test_id.as_str()))
-        })
-    } else {
-        None
-    };
-
-    let explicit_selector = frame_id.is_some() || window_snapshot_seq.is_some();
-    let (
-        stream_frame_id,
-        stream_window_snapshot_seq,
-        stream_window_id,
-        mut stream_semantics_source,
-        mut stream_semantics_fingerprint,
-    ) = if let Some(sel) = &index_default {
-        let (frame_id, window_snapshot_seq) = if sel.window_snapshot_seq.is_some() {
-            (None, sel.window_snapshot_seq)
-        } else {
-            (sel.frame_id, None)
-        };
-
-        (
-            frame_id,
-            window_snapshot_seq,
-            Some(sel.window),
-            sel.semantics_source.clone(),
-            sel.semantics_fingerprint,
-        )
-    } else {
-        (frame_id, window_snapshot_seq, window_id, None, None)
-    };
-
-    let mut allow_streaming = explicit_selector || index_default.is_some();
-    if allow_streaming && explicit_selector {
-        if let Some(idx) = bundle_index.as_ref() {
-            let m = find_snapshot_in_bundle_index(&idx, window_id, frame_id, window_snapshot_seq)
-                .ok_or_else(|| {
-                    let mut hint = String::new();
-                    if let Some(w) = window_id {
-                        hint.push_str(&format!(" --window {w}"));
-                    }
-                    if let Some(f) = frame_id {
-                        hint.push_str(&format!(" --frame-id {f}"));
-                    }
-                    if let Some(s) = window_snapshot_seq {
-                        hint.push_str(&format!(" --snapshot-seq {s}"));
-                    }
-                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle.json>`), args:{hint}")
-                })?;
-            if !m.has_semantics {
-                let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
-                return Err(format!(
-                    "selected snapshot has no exported semantics (bundle.index.json semantics_source={source}; try a different --frame-id/--snapshot-seq, or ensure semantics export is enabled)"
-                ));
-            }
-            let source = m.semantics_source.as_deref().unwrap_or("none");
-            if source != "inline" && source != "table" {
-                allow_streaming = false;
-            }
-            if stream_semantics_source.is_none() {
-                stream_semantics_source = m.semantics_source;
-            }
-            if stream_semantics_fingerprint.is_none() {
-                stream_semantics_fingerprint = m.semantics_fingerprint;
-            }
-        }
-    }
-
-    if allow_streaming && !explicit_selector {
-        if let Some(source) = stream_semantics_source.as_deref() {
-            if source != "inline" && source != "table" {
-                allow_streaming = false;
-            }
-        }
-    }
-
-    let build_from_bundle = || -> Result<serde_json::Value, String> {
-        let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
-        let bundle: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        let semantics = SemanticsResolver::new(&bundle);
-        Ok(build_test_id_slice_payload_from_bundle(
-            &bundle_path,
-            &bundle,
-            &semantics,
-            warmup_frames,
-            &test_id,
-            frame_id,
-            window_snapshot_seq,
-            window_id,
-            max_matches,
-            max_ancestors,
-        )?)
-    };
-
-    let payload = if allow_streaming {
-        let streaming_res = if stream_semantics_source.as_deref() == Some("table") {
-            try_build_test_id_slice_payload_streaming_table(
-                &bundle_path,
-                warmup_frames,
-                test_id.as_str(),
-                stream_frame_id,
-                stream_window_snapshot_seq,
-                stream_window_id,
-                stream_semantics_fingerprint,
-                max_matches,
-                max_ancestors,
-            )?
-        } else {
-            try_build_test_id_slice_payload_streaming_inline(
-                &bundle_path,
-                warmup_frames,
-                test_id.as_str(),
-                stream_frame_id,
-                stream_window_snapshot_seq,
-                stream_window_id,
-                max_matches,
-                max_ancestors,
-            )?
-        };
-
-        if let Some(payload) = streaming_res {
-            let should_fallback_to_find_match = !explicit_selector
-                && index_default.is_some()
-                && payload
-                    .get("matches")
-                    .and_then(|v| v.as_array())
-                    .is_some_and(|v| v.is_empty());
-
-            if should_fallback_to_find_match {
-                if let Some(idx) = bundle_index.as_ref() {
-                    const MAX_CANDIDATES: usize = 6;
-                    let skip =
-                        stream_window_id.map(|w| (w, stream_frame_id, stream_window_snapshot_seq));
-                    if let Some(hit) = try_find_hit_payload_by_streaming_candidates(
-                        &bundle_path,
-                        idx,
-                        warmup_frames,
-                        test_id.as_str(),
-                        window_id,
-                        MAX_CANDIDATES,
-                        max_matches,
-                        max_ancestors,
-                        skip,
-                    )? {
-                        hit
-                    } else {
-                        build_from_bundle()?
-                    }
-                } else {
-                    build_from_bundle()?
-                }
-            } else {
-                payload
-            }
-        } else {
-            build_from_bundle()?
-        }
-    } else {
-        build_from_bundle()?
-    };
+    let payload = build_test_id_slice_payload_from_bundle_path(
+        &bundle_path,
+        warmup_frames,
+        test_id.as_str(),
+        frame_id,
+        window_snapshot_seq,
+        window_id,
+        max_matches,
+        max_ancestors,
+    )?;
 
     let out = slice_out
         .map(|p| crate::resolve_path(workspace_root, p))
