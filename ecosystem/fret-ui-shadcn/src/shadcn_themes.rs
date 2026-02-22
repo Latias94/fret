@@ -39,14 +39,23 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
         .entry("duration.shadcn.motion.sidebar.toggle".to_string())
         .or_insert(200);
 
-    // Toast/Sonner: tuned to feel less "sticky" than a full 200ms both ways, while remaining
-    // deterministic under fixed-frame-delta diagnostics.
+    // Toast/Sonner: align with upstream `sonner` defaults.
+    //
+    // - Toast enter/stack transitions use 400ms `ease` by default.
+    // - Toast unmount after exit uses 200ms (`TIME_BEFORE_UNMOUNT` in `sonner`).
     cfg.durations_ms
         .entry("duration.shadcn.motion.toast.enter".to_string())
-        .or_insert(160);
+        .or_insert(400);
     cfg.durations_ms
         .entry("duration.shadcn.motion.toast.exit".to_string())
-        .or_insert(120);
+        .or_insert(200);
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.toast.stack.shift".to_string())
+        .or_insert(400);
+    // Upstream `sonner` does not stagger stack reflow; keep the default at 0ms.
+    cfg.durations_ms
+        .entry("duration.shadcn.motion.toast.stack.shift.stagger".to_string())
+        .or_insert(0);
 
     // Drawer springs (duration + bounce) are read from theme tokens when present.
     cfg.durations_ms
@@ -83,9 +92,19 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
     cfg.easings
         .entry("easing.shadcn.motion.sidebar".to_string())
         .or_insert(linear);
+    // CSS `ease` (used by upstream `sonner` toast transitions).
+    let css_ease = CubicBezier {
+        x1: 0.25,
+        y1: 0.1,
+        x2: 0.25,
+        y2: 1.0,
+    };
     cfg.easings
         .entry("easing.shadcn.motion.toast".to_string())
-        .or_insert(shadcn_ease);
+        .or_insert(css_ease);
+    cfg.easings
+        .entry("easing.shadcn.motion.toast.stack.shift".to_string())
+        .or_insert(css_ease);
 
     // Canonical cross-ecosystem semantic motion keys (preferred for long-term authoring).
     //
