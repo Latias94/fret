@@ -22,17 +22,11 @@ pub(super) fn preview_combobox(
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
+    let popup = sections::popup_trigger(cx, &models);
     let invalid = sections::invalid(cx, &models);
     let disabled = sections::disabled(cx, &models);
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
-
-    let (trigger_title, trigger) = doc_layout::gap_card(
-        cx,
-        "Trigger Button",
-        "Upstream shows a trigger-as-button recipe (`ComboboxTrigger` + `ComboboxValue`). Current Fret `Combobox` is a Popover+Command recipe with an integrated trigger; trigger-as-child composition is not exposed yet.",
-        "ui-gallery-combobox-trigger-gap",
-    );
 
     let (multiple_title, multiple) = doc_layout::gap_card(
         cx,
@@ -45,7 +39,7 @@ pub(super) fn preview_combobox(
         cx,
         [
             "Combobox is a Popover + Command recipe. Keep shadcn demo order stable so parity gaps are explicit and testable.",
-            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select and trigger composition are tracked as explicit gaps.",
+            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select + chips remains an explicit gap.",
             "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
             "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
         ],
@@ -105,14 +99,11 @@ pub(super) fn preview_combobox(
         shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
     ])
     .into_element(cx);"#,
-                ),
-            DocSection::new(trigger_title, trigger)
-                .description("Upstream trigger-as-button recipe; kept as an explicit parity gap marker.")
-                .code(
-                    "rust",
-                    r#"// Not yet implemented: trigger-as-child / trigger-as-button composition is not exposed yet.
-// Track this as a dedicated API surface before mirroring Base UI's `ComboboxTrigger`/`ComboboxValue`."#,
-                ),
+                )
+                .no_shell(),
+            DocSection::new("Trigger Button", popup)
+                .description("Aligns Base UI combobox \"Popup\" recipe: a button-like trigger with the searchable listbox in the popover content.")
+                .no_shell(),
             DocSection::new(multiple_title, multiple)
                 .description("Upstream multi-select chips recipe; kept as an explicit parity gap marker.")
                 .code(
