@@ -628,44 +628,27 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        let id = self.registries.render_targets.register(desc);
-        self.registries.render_target_revisions.insert(id, 1);
-        self.registries.render_targets_generation =
-            self.registries.render_targets_generation.saturating_add(1);
+        let id = self.registries.register_render_target(desc);
         id
     }
 
     pub fn register_image(&mut self, desc: ImageDescriptor) -> fret_core::ImageId {
-        let id = self.registries.images.register(desc);
-        self.registries.image_revisions.insert(id, 1);
-        self.registries.images_generation = self.registries.images_generation.saturating_add(1);
-        id
+        self.registries.register_image(desc)
     }
 
     pub fn update_image(&mut self, id: fret_core::ImageId, desc: ImageDescriptor) -> bool {
-        if !self.registries.images.update(id, desc) {
+        if !self.registries.update_image(id, desc) {
             return false;
         }
-        let next = self
-            .registries
-            .image_revisions
-            .get(&id)
-            .copied()
-            .unwrap_or(0)
-            + 1;
-        self.registries.image_revisions.insert(id, next);
         self.bind_group_caches.invalidate_image(id);
-        self.registries.images_generation = self.registries.images_generation.saturating_add(1);
         true
     }
 
     pub fn unregister_image(&mut self, id: fret_core::ImageId) -> bool {
-        if !self.registries.images.unregister(id) {
+        if !self.registries.unregister_image(id) {
             return false;
         }
-        self.registries.image_revisions.remove(&id);
         self.bind_group_caches.invalidate_image(id);
-        self.registries.images_generation = self.registries.images_generation.saturating_add(1);
         true
     }
 
@@ -704,20 +687,10 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        if !self.registries.render_targets.update(id, desc) {
+        if !self.registries.update_render_target(id, desc) {
             return false;
         }
-        let next = self
-            .registries
-            .render_target_revisions
-            .get(&id)
-            .copied()
-            .unwrap_or(0)
-            + 1;
-        self.registries.render_target_revisions.insert(id, next);
         self.bind_group_caches.invalidate_render_target(id);
-        self.registries.render_targets_generation =
-            self.registries.render_targets_generation.saturating_add(1);
         true
     }
 
@@ -766,13 +739,10 @@ impl Renderer {
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
-        if !self.registries.render_targets.unregister(id) {
+        if !self.registries.unregister_render_target(id) {
             return false;
         }
-        self.registries.render_target_revisions.remove(&id);
         self.bind_group_caches.invalidate_render_target(id);
-        self.registries.render_targets_generation =
-            self.registries.render_targets_generation.saturating_add(1);
         true
     }
 

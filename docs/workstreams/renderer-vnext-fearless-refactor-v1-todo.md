@@ -327,6 +327,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-refactor-040 Stage 4: extract image/render-target registries + revision/generation tracking into an explicit subsystem.
   - Goal: keep “resource registry mutation → revision/generation bump → bind group cache invalidation” localized and reviewable.
   - Landed (step 1): move registry state (`ImageRegistry`, `RenderTargetRegistry`) + revision/generation counters into `GpuRegistries`.
+  - Landed (step 2): move revision/generation bump rules behind `GpuRegistries` mutation helpers (register/update/unregister).
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`GpuRegistries`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::registries`)
