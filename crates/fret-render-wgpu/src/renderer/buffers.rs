@@ -190,8 +190,6 @@ impl Renderer {
         clip_buffer: &wgpu::Buffer,
         mask_buffer: &wgpu::Buffer,
         render_space_buffer: &wgpu::Buffer,
-        mask_image_sampler: &wgpu::Sampler,
-        mask_image_view: &wgpu::TextureView,
     ) -> wgpu::BindGroup {
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
@@ -242,11 +240,11 @@ impl Renderer {
                 },
                 wgpu::BindGroupEntry {
                     binding: 6,
-                    resource: wgpu::BindingResource::Sampler(mask_image_sampler),
+                    resource: wgpu::BindingResource::Sampler(&self.mask_image_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 7,
-                    resource: wgpu::BindingResource::TextureView(mask_image_view),
+                    resource: wgpu::BindingResource::TextureView(&self.mask_image_identity_view),
                 },
             ],
         })
@@ -275,8 +273,6 @@ impl Renderer {
             &self.clip_buffer,
             &self.mask_buffer,
             &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
         );
 
         self.uniform_buffer = uniform_buffer;
@@ -309,8 +305,6 @@ impl Renderer {
             &self.clip_buffer,
             &self.mask_buffer,
             &render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
         );
 
         self.render_space_buffer = render_space_buffer;
@@ -360,8 +354,6 @@ impl Renderer {
             &clip_buffer,
             &self.mask_buffer,
             &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
         );
 
         self.clip_buffer = clip_buffer;
@@ -393,8 +385,6 @@ impl Renderer {
             &self.clip_buffer,
             &mask_buffer,
             &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
         );
 
         self.mask_buffer = mask_buffer;
