@@ -1,4 +1,4 @@
-use fret_core::{Axis, Edges, FontId, Px, TextLineHeightPolicy, TextStyle};
+use fret_core::{Axis, Edges, FontId, Px, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
 use fret_ui::Invalidation;
@@ -10,6 +10,7 @@ use crate::declarative::icon;
 use crate::declarative::style as decl_style;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
+use crate::typography::{self, TextIntent};
 use crate::{Items, Justify, LayoutRefinement, Size, Space};
 
 #[track_caller]
@@ -127,13 +128,15 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         chrome.caret_color = resolved.text_color;
         chrome.selection_color = resolved.selection_color;
 
-        let text_style = TextStyle {
-            font: FontId::default(),
-            size: resolved.text_px,
-            line_height: Some(font_line_height),
-            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-            ..Default::default()
-        };
+        let text_style = typography::with_intent(
+            TextStyle {
+                font: FontId::default(),
+                size: resolved.text_px,
+                line_height: Some(font_line_height),
+                ..Default::default()
+            },
+            TextIntent::Control,
+        );
 
         let mut input = TextInputProps::new(model);
         input.chrome = chrome;
