@@ -118,7 +118,7 @@ pub(crate) fn default_test_ids_out_path(bundle_path: &Path) -> PathBuf {
     crate::bundle_index::default_test_ids_path(bundle_path)
 }
 
-fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
+pub(crate) fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err: &str) {
     use fret_diag_protocol::UiScriptResultV1;
 
     let reason_code = "tooling.artifact.integrity.failed";
