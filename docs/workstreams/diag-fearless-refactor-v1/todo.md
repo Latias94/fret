@@ -25,7 +25,7 @@ scope: diagnostics, automation, tooling, refactor
 
 - [x] Move UI gallery markdown-editor checks out of `crates/fret-diag/src/stats.rs` into
       `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`.
-- [ ] Move UI gallery code-editor checks out of `crates/fret-diag/src/stats.rs` into
+- [x] Move UI gallery code-editor checks out of `crates/fret-diag/src/stats.rs` into
       `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`.
 
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
