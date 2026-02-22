@@ -53,6 +53,8 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
 - `fret-code-view`: treat monospace line-aligned rows as **control intent** (stable fixed line boxes).
 - `fret-markdown`: default to **content intent** for prose; use **control intent** for fixed-height
   chrome labels (e.g. code fence headers).
+- `fret-ui-editor`: prefer **control intent** for inspector rows / single-line controls; prefer
+  **content intent** for multiline editing surfaces.
 
 ## Evidence anchors
 
@@ -70,6 +72,7 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
     - `ecosystem/fret-ui-shadcn/src/button_group.rs`
     - `ecosystem/fret-code-view/src/code_block.rs`
     - `ecosystem/fret-markdown/src/lib.rs`
+    - `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
 - Regression gate:
   - `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
   - `ecosystem/fret-ui-material3/src/lib.rs` (tokens and real shaping gates: `material3_control_typography_tokens_use_stable_line_boxes`, `material3_control_text_keeps_metrics_stable_across_fallback_runs`)
