@@ -113,26 +113,26 @@
       "type": "wait_until"
     },
     {
-      "height_px": 240.0,
+      "height_px": 420.0,
       "type": "set_window_inner_size",
-      "width_px": 420.0
+      "width_px": 900.0
     },
     {
       "container": {
-        "id": "ui-gallery-page-combobox",
+        "id": "ui-gallery-content-viewport",
         "kind": "test_id"
       },
       "delta_x": 0.0,
-      "delta_y": -720.0,
+      "delta_y": -60.0,
       "padding_insets_px": null,
       "padding_px": 2.0,
-      "require_fully_within_container": false,
-      "require_fully_within_window": true,
+      "require_fully_within_container": true,
+      "require_fully_within_window": false,
       "target": {
-        "id": "ui-gallery-combobox-rtl-trigger",
+        "id": "ui-gallery-combobox-long-list-trigger",
         "kind": "test_id"
       },
-      "timeout_frames": 240,
+      "timeout_frames": 600,
       "type": "scroll_into_view"
     },
     {
@@ -140,7 +140,7 @@
       "max_move_px": 1.0,
       "stable_frames": 2,
       "target": {
-        "id": "ui-gallery-combobox-rtl-trigger",
+        "id": "ui-gallery-combobox-long-list-trigger",
         "kind": "test_id"
       },
       "timeout_frames": 180,
@@ -150,7 +150,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-rtl-input",
+          "id": "ui-gallery-combobox-long-list-input",
           "kind": "test_id"
         }
       },
@@ -161,7 +161,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-rtl-listbox",
+          "id": "ui-gallery-combobox-long-list-listbox",
           "kind": "test_id"
         }
       },
@@ -170,8 +170,8 @@
     },
     {
       "query": {
-        "anchor_test_id": "ui-gallery-combobox-rtl-trigger",
-        "content_test_id": "ui-gallery-combobox-rtl-listbox",
+        "anchor_test_id": "ui-gallery-combobox-long-list-trigger",
+        "content_test_id": "ui-gallery-combobox-long-list-listbox",
         "flipped": true,
         "kind": "anchored_panel"
       },
@@ -184,7 +184,7 @@
         "kind": "bounds_within_window",
         "padding_px": 2.0,
         "target": {
-          "id": "ui-gallery-combobox-rtl-listbox",
+          "id": "ui-gallery-combobox-long-list-listbox",
           "kind": "test_id"
         }
       },

@@ -17,29 +17,24 @@ pub(super) fn preview_combobox(
 ) -> Vec<AnyElement> {
     let models = models::get_or_init(cx);
 
-    let demo = sections::demo(cx, value, open, query);
+    let conformance_demo = sections::demo(cx, value, open, query);
+    let basic = sections::basic_frameworks(cx, &models);
     let clear = sections::clear_button(cx, &models);
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
     let popup = sections::popup_trigger(cx, &models);
+    let multiple = sections::multiple_selection(cx, &models);
     let invalid = sections::invalid(cx, &models);
     let disabled = sections::disabled(cx, &models);
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
 
-    let (multiple_title, multiple) = doc_layout::gap_card(
-        cx,
-        "Multiple Selection",
-        "Upstream supports `multiple` + chips (`ComboboxChips`) with `autoHighlight`. Current Fret `Combobox` is single-select; multi-select + chips is tracked as an API expansion.",
-        "ui-gallery-combobox-multiple-gap",
-    );
-
     let notes = doc_layout::notes(
         cx,
         [
             "Combobox is a Popover + Command recipe. Keep shadcn demo order stable so parity gaps are explicit and testable.",
-            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select + chips remains an explicit gap.",
+            "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
             "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
             "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
         ],
@@ -48,10 +43,13 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn ComboboxDemo order: Basic, Clear Button, Groups, Trigger Button, Multiple Selection. Extras are Fret-specific gates.",
+            "Preview follows shadcn ComboboxDemo order, with a small conformance-first section at the top to keep diag scripts stable.",
         ),
         vec![
-            DocSection::new("Basic", demo)
+            DocSection::new("Conformance Demo", conformance_demo)
+                .description("Small deterministic surface for `fretboard diag suite ui-gallery-combobox` scripts.")
+                .no_shell(),
+            DocSection::new("Basic", basic)
                 .description("Upstream shadcn demo: basic framework combobox with search.")
                 .code(
                     "rust",
@@ -109,12 +107,26 @@ pub(super) fn preview_combobox(
             DocSection::new("Trigger Button", popup)
                 .description("Aligns Base UI combobox \"Popup\" recipe: a button-like trigger with the searchable listbox in the popover content.")
                 .no_shell(),
-            DocSection::new(multiple_title, multiple)
-                .description("Upstream multi-select chips recipe; kept as an explicit parity gap marker.")
+            DocSection::new("Multiple Selection", multiple)
+                .description("Upstream multi-select chips recipe: select multiple values and remove them via chips.")
                 .code(
                     "rust",
-                    r#"// Not yet implemented: upstream supports `multiple` + chips (`ComboboxChips`) + `autoHighlight`.
-// Current Fret `Combobox` is single-select."#,
+                    r#"let values: Model<Vec<Arc<str>>> = cx.app.models_mut().insert(vec![]);
+let open: Model<bool> = cx.app.models_mut().insert(false);
+let query: Model<String> = cx.app.models_mut().insert(String::new());
+
+shadcn::ComboboxChips::new(values, open)
+    .a11y_label("Combobox multiple selection")
+    .width(Px(260.0))
+    .placeholder("Select frameworks")
+    .query_model(query)
+    .test_id_prefix("ui-gallery-combobox-multiple")
+    .trigger_test_id("ui-gallery-combobox-multiple-trigger")
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+    ])
+    .into_element(cx);"#,
                 ),
             DocSection::new("Extras: Custom Items", custom_items_top)
                 .description(

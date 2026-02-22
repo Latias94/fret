@@ -1115,7 +1115,7 @@ fn combobox_with_patch<H: UiHost>(
                             let mut entries: Vec<CommandEntry> =
                                 Vec::with_capacity(items.len() + groups.len());
 
-                            let push_item = |item: ComboboxItem, entries: &mut Vec<CommandEntry>| {
+                            let make_item = |item: ComboboxItem| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1147,31 +1147,31 @@ fn combobox_with_patch<H: UiHost>(
                                         test_id_slug(item.value.as_ref())
                                     ));
                                 }
-                                entries.push(CommandEntry::Item(cmd_item));
+                                cmd_item
                             };
 
                             for item in items.iter().cloned() {
-                                push_item(item, &mut entries);
+                                entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            if !items.is_empty() && !groups.is_empty() {
+                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                                .iter()
+                                .cloned()
+                                .filter(|group| !group.items.is_empty())
+                                .collect();
+                            let non_empty_groups_len = non_empty_groups.len();
+
+                            if !items.is_empty() && non_empty_groups_len > 0 {
                                 entries.push(CommandEntry::Separator(CommandSeparator::new()));
                             }
 
-                            for (idx, group) in groups.iter().cloned().enumerate() {
-                                let mut group_items: Vec<CommandItem> =
-                                    Vec::with_capacity(group.items.len());
-                                for item in group.items {
-                                    let mut group_entries: Vec<CommandEntry> = Vec::new();
-                                    push_item(item, &mut group_entries);
-                                    if let Some(CommandEntry::Item(item)) = group_entries.pop() {
-                                        group_items.push(item);
-                                    }
-                                }
+                            for (idx, group) in non_empty_groups.into_iter().enumerate() {
+                                let group_items: Vec<CommandItem> =
+                                    group.items.into_iter().map(|item| make_item(item)).collect();
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
-                                if idx + 1 < groups.len() {
+                                if idx + 1 < non_empty_groups_len {
                                     entries.push(CommandEntry::Separator(CommandSeparator::new()));
                                 }
                             }
@@ -1211,9 +1211,7 @@ fn combobox_with_patch<H: UiHost>(
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
-                            let mut command_items: Vec<CommandItem> =
-                                Vec::with_capacity(items.len());
-                            for item in items.iter().cloned() {
+                            let mut make_item = |item: ComboboxItem| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1285,10 +1283,40 @@ fn combobox_with_patch<H: UiHost>(
                                         test_id_slug(item.value.as_ref())
                                     ));
                                 }
-                                command_items.push(cmd_item);
+                                cmd_item
+                            };
+
+                            let mut entries: Vec<CommandEntry> =
+                                Vec::with_capacity(items.len() + groups.len());
+                            for item in items.iter().cloned() {
+                                entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            CommandList::new(command_items)
+                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                                .iter()
+                                .cloned()
+                                .filter(|group| !group.items.is_empty())
+                                .collect();
+                            let non_empty_groups_len = non_empty_groups.len();
+                            if !items.is_empty() && non_empty_groups_len > 0 {
+                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            }
+
+                            for (idx, group) in non_empty_groups.into_iter().enumerate() {
+                                let group_items: Vec<CommandItem> = group
+                                    .items
+                                    .into_iter()
+                                    .map(|item| make_item(item))
+                                    .collect();
+                                entries.push(CommandEntry::Group(
+                                    CommandGroup::new(group_items).heading(group.heading),
+                                ));
+                                if idx + 1 < non_empty_groups_len {
+                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                }
+                            }
+
+                            CommandList::new_entries(entries)
                                 .disabled(disabled)
                                 .empty_text(empty_text.clone())
                                 .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
@@ -1314,10 +1342,13 @@ fn combobox_with_patch<H: UiHost>(
 
         let search_input_id = search_enabled.then(|| Rc::new(Cell::new(None)));
         let search_input_id_for_content = search_input_id.clone();
+        let listbox_id_for_diag = Rc::new(Cell::new(None));
+        let listbox_id_for_diag_for_content = listbox_id_for_diag.clone();
 
         let mut popover = Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
+            .diagnostics_content_element_from_cell(listbox_id_for_diag)
             .on_dismiss_request(Some(
                 kit_combobox::set_open_change_reason_on_dismiss_request(
                     open_change_reason_model.clone(),
@@ -1583,6 +1614,7 @@ fn combobox_with_patch<H: UiHost>(
                 let test_id_prefix = test_id_prefix_for_content.clone();
                 let open_change_reason_model = open_change_reason_model_for_content.clone();
                 let search_input_id = search_input_id_for_content.clone();
+                let listbox_id_for_diag = listbox_id_for_diag_for_content.clone();
                 let theme_max_list_h = theme
                     .metric_by_key("component.combobox.max_list_height")
                     .or_else(|| theme.metric_by_key("component.select.max_list_height"))
@@ -1591,7 +1623,35 @@ fn combobox_with_patch<H: UiHost>(
                 let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                 let list = if search_enabled {
-                    let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                    // Clamp the list height to the best-available main-axis space around the
+                    // trigger. This models the Radix popper "available height" variables used by
+                    // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
+                    // from overflowing tight windows.
+                    //
+                    // We bias towards "the side with more room" so the popover placement solver
+                    // can flip when needed without the listbox exceeding the window bounds.
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+                    let side_offset = Px(4.0);
+                    let outer_top = outer.origin.y.0;
+                    let outer_bottom = outer_top + outer.size.height.0.max(0.0);
+                    let anchor_top = anchor.origin.y.0;
+                    let anchor_bottom = anchor_top + anchor.size.height.0.max(0.0);
+                    let available_above = Px((anchor_top - outer_top - side_offset.0).max(0.0));
+                    let available_below =
+                        Px((outer_bottom - anchor_bottom - side_offset.0).max(0.0));
+                    let available_main = if available_above.0 > available_below.0 {
+                        available_above
+                    } else {
+                        available_below
+                    };
+                    // CommandPalette includes a fixed-height search row above the list.
+                    let header_estimate = Px(48.0);
+                    let max_list_h = Px(
+                        theme_max_list_h
+                            .0
+                            .max(0.0)
+                            .min((available_main.0 - header_estimate.0).max(0.0)),
+                    );
                     let popover_surface = ChromeRefinement::default()
                         .rounded(Radius::Md)
                         .border_width(Px(1.0))
@@ -1608,7 +1668,7 @@ fn combobox_with_patch<H: UiHost>(
                     let mut entries: Vec<CommandEntry> =
                         Vec::with_capacity(items.len() + groups.len());
 
-                    let push_item = |item: ComboboxItem, entries: &mut Vec<CommandEntry>| {
+                    let make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1639,30 +1699,31 @@ fn combobox_with_patch<H: UiHost>(
                                 test_id_slug(item.value.as_ref())
                             ));
                         }
-                        entries.push(CommandEntry::Item(cmd_item));
+                        cmd_item
                     };
 
                     for item in items.iter().cloned() {
-                        push_item(item, &mut entries);
+                        entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    if !items.is_empty() && !groups.is_empty() {
+                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                        .iter()
+                        .cloned()
+                        .filter(|group| !group.items.is_empty())
+                        .collect();
+                    let non_empty_groups_len = non_empty_groups.len();
+
+                    if !items.is_empty() && non_empty_groups_len > 0 {
                         entries.push(CommandEntry::Separator(CommandSeparator::new()));
                     }
 
-                    for (idx, group) in groups.iter().cloned().enumerate() {
-                        let mut group_items: Vec<CommandItem> = Vec::with_capacity(group.items.len());
-                        for item in group.items {
-                            let mut group_entries: Vec<CommandEntry> = Vec::new();
-                            push_item(item, &mut group_entries);
-                            if let Some(CommandEntry::Item(item)) = group_entries.pop() {
-                                group_items.push(item);
-                            }
-                        }
+                    for (idx, group) in non_empty_groups.into_iter().enumerate() {
+                        let group_items: Vec<CommandItem> =
+                            group.items.into_iter().map(|item| make_item(item)).collect();
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
-                        if idx + 1 < groups.len() {
+                        if idx + 1 < non_empty_groups_len {
                             entries.push(CommandEntry::Separator(CommandSeparator::new()));
                         }
                     }
@@ -1676,6 +1737,7 @@ fn combobox_with_patch<H: UiHost>(
                             .input_id_out_cell(search_input_id.clone().expect(
                                 "combobox search-enabled popover should provide input-id cell",
                             ))
+                            .list_id_out_cell(listbox_id_for_diag.clone())
                             .a11y_selected_mode(
                                 crate::command::CommandPaletteA11ySelectedMode::Checked,
                             )
@@ -1702,8 +1764,7 @@ fn combobox_with_patch<H: UiHost>(
                     let fg_disabled = alpha_mul(fg, 0.5);
                     let item_text_style = crate::command::item_text_style(&theme);
 
-                    let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                    for item in items.iter().cloned() {
+                    let mut make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1772,10 +1833,40 @@ fn combobox_with_patch<H: UiHost>(
                                 test_id_slug(item.value.as_ref())
                             ));
                         }
-                        command_items.push(cmd_item);
+                        cmd_item
+                    };
+
+                    let mut entries: Vec<CommandEntry> =
+                        Vec::with_capacity(items.len() + groups.len());
+                    for item in items.iter().cloned() {
+                        entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    CommandList::new(command_items)
+                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                        .iter()
+                        .cloned()
+                        .filter(|group| !group.items.is_empty())
+                        .collect();
+                    let non_empty_groups_len = non_empty_groups.len();
+                    if !items.is_empty() && non_empty_groups_len > 0 {
+                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                    }
+
+                    for (idx, group) in non_empty_groups.into_iter().enumerate() {
+                        let group_items: Vec<CommandItem> = group
+                            .items
+                            .into_iter()
+                            .map(|item| make_item(item))
+                            .collect();
+                        entries.push(CommandEntry::Group(
+                            CommandGroup::new(group_items).heading(group.heading),
+                        ));
+                        if idx + 1 < non_empty_groups_len {
+                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        }
+                    }
+
+                    CommandList::new_entries(entries)
                         .disabled(disabled)
                         .empty_text(empty_text)
                         .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))

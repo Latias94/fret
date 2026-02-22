@@ -155,7 +155,23 @@ pub(crate) fn content_view(
     } else {
         // Key the scroll area by the selected page so navigation resets scroll position.
         cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
+            // Provide an explicit per-page handle so scroll position cannot leak across navigation.
+            // (We still key the subtree above to ensure the handle resets deterministically.)
+            let scroll_handle =
+                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let should_reset_scroll = cx.with_state(|| true, |reset| {
+                let out = *reset;
+                *reset = false;
+                out
+            });
+            if should_reset_scroll {
+                scroll_handle.scroll_to_offset(fret_core::Point::new(
+                    fret_core::Px(0.0),
+                    fret_core::Px(0.0),
+                ));
+            }
             let mut scroll = shadcn::ScrollArea::new([body])
+                .scroll_handle(scroll_handle)
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(

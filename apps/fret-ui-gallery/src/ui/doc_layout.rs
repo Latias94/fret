@@ -309,6 +309,7 @@ pub(in crate::ui) fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) ->
     shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
+#[allow(dead_code)]
 pub(in crate::ui) fn gap_card(
     cx: &mut ElementContext<'_, App>,
     title: &'static str,

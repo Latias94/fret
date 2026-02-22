@@ -2,6 +2,9 @@ use super::prelude::*;
 
 #[derive(Default, Clone)]
 struct ComboboxModelsState {
+    basic_value: Option<Model<Option<Arc<str>>>>,
+    basic_open: Option<Model<bool>>,
+    basic_query: Option<Model<String>>,
     clear_value: Option<Model<Option<Arc<str>>>>,
     clear_open: Option<Model<bool>>,
     clear_query: Option<Model<String>>,
@@ -29,10 +32,16 @@ struct ComboboxModelsState {
     rtl_value: Option<Model<Option<Arc<str>>>>,
     rtl_open: Option<Model<bool>>,
     rtl_query: Option<Model<String>>,
+    multiple_values: Option<Model<Vec<Arc<str>>>>,
+    multiple_open: Option<Model<bool>>,
+    multiple_query: Option<Model<String>>,
 }
 
 #[derive(Clone)]
 pub(super) struct ComboboxModels {
+    pub(super) basic_value: Model<Option<Arc<str>>>,
+    pub(super) basic_open: Model<bool>,
+    pub(super) basic_query: Model<String>,
     pub(super) clear_value: Model<Option<Arc<str>>>,
     pub(super) clear_open: Model<bool>,
     pub(super) clear_query: Model<String>,
@@ -60,11 +69,17 @@ pub(super) struct ComboboxModels {
     pub(super) rtl_value: Model<Option<Arc<str>>>,
     pub(super) rtl_open: Model<bool>,
     pub(super) rtl_query: Model<String>,
+    pub(super) multiple_values: Model<Vec<Arc<str>>>,
+    pub(super) multiple_open: Model<bool>,
+    pub(super) multiple_query: Model<String>,
 }
 
 impl ComboboxModels {
     fn try_from_state(state: ComboboxModelsState) -> Option<Self> {
         Some(ComboboxModels {
+            basic_value: state.basic_value?,
+            basic_open: state.basic_open?,
+            basic_query: state.basic_query?,
             clear_value: state.clear_value?,
             clear_open: state.clear_open?,
             clear_query: state.clear_query?,
@@ -92,6 +107,9 @@ impl ComboboxModels {
             rtl_value: state.rtl_value?,
             rtl_open: state.rtl_open?,
             rtl_query: state.rtl_query?,
+            multiple_values: state.multiple_values?,
+            multiple_open: state.multiple_open?,
+            multiple_query: state.multiple_query?,
         })
     }
 }
@@ -101,6 +119,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     if let Some(models) = ComboboxModels::try_from_state(state) {
         return models;
     }
+
+    let basic_value = cx.app.models_mut().insert(None);
+    let basic_open = cx.app.models_mut().insert(false);
+    let basic_query = cx.app.models_mut().insert(String::new());
 
     let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("next")));
     let clear_open = cx.app.models_mut().insert(false);
@@ -138,7 +160,15 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let rtl_open = cx.app.models_mut().insert(false);
     let rtl_query = cx.app.models_mut().insert(String::new());
 
+    let multiple_values = cx.app.models_mut().insert(Vec::<Arc<str>>::new());
+    let multiple_open = cx.app.models_mut().insert(false);
+    let multiple_query = cx.app.models_mut().insert(String::new());
+
     cx.with_state(ComboboxModelsState::default, |st| {
+        st.basic_value = Some(basic_value.clone());
+        st.basic_open = Some(basic_open.clone());
+        st.basic_query = Some(basic_query.clone());
+
         st.clear_value = Some(clear_value.clone());
         st.clear_open = Some(clear_open.clone());
         st.clear_query = Some(clear_query.clone());
@@ -174,9 +204,16 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.rtl_value = Some(rtl_value.clone());
         st.rtl_open = Some(rtl_open.clone());
         st.rtl_query = Some(rtl_query.clone());
+
+        st.multiple_values = Some(multiple_values.clone());
+        st.multiple_open = Some(multiple_open.clone());
+        st.multiple_query = Some(multiple_query.clone());
     });
 
     ComboboxModels {
+        basic_value,
+        basic_open,
+        basic_query,
         clear_value,
         clear_open,
         clear_query,
@@ -204,5 +241,8 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         rtl_value,
         rtl_open,
         rtl_query,
+        multiple_values,
+        multiple_open,
+        multiple_query,
     }
 }

@@ -41,6 +41,7 @@ pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
+pub mod combobox_chips;
 pub mod command;
 mod command_gating;
 pub mod context_menu;
@@ -153,6 +154,7 @@ pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
 pub use combobox::{Combobox, ComboboxGroup, ComboboxItem, ComboboxTriggerVariant, combobox};
+pub use combobox_chips::ComboboxChips;
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandPalette, CommandSeparator, CommandShortcut, command,
