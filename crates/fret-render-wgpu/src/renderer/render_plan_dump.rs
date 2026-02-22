@@ -112,6 +112,7 @@ enum JsonDumpEffectMarker {
     Push {
         draw_ix: usize,
         scissor: JsonDumpScissorRect,
+        scissor_space: &'static str,
         uniform_index: u32,
         mode: String,
         quality: String,
@@ -134,6 +135,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
         } => JsonDumpEffectMarker::Push {
             draw_ix: m.draw_ix,
             scissor: scissor.into(),
+            scissor_space: "absolute",
             uniform_index,
             mode: format!("{mode:?}"),
             quality: format!("{quality:?}"),
@@ -148,6 +150,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
         } => JsonDumpEffectMarker::Push {
             draw_ix: m.draw_ix,
             scissor: scissor.into(),
+            scissor_space: "absolute",
             uniform_index,
             mode: "ClipPath".to_string(),
             quality: "N/A".to_string(),
@@ -164,6 +167,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
         } => JsonDumpEffectMarker::Push {
             draw_ix: m.draw_ix,
             scissor: scissor.into(),
+            scissor_space: "absolute",
             uniform_index,
             mode: format!("CompositeGroup({mode:?})"),
             quality: format!("{quality:?}"),
@@ -192,6 +196,7 @@ enum JsonDumpPass {
         target_size: [u32; 2],
         draw_range: [usize; 2],
         union_scissor: JsonDumpScissorRect,
+        union_scissor_space: &'static str,
         batch_uniform_index: u32,
         load: JsonDumpLoadOp,
     },
@@ -367,6 +372,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             target_size: [pass.target_size.0, pass.target_size.1],
             draw_range: [pass.draw_range.start, pass.draw_range.end],
             union_scissor: pass.union_scissor.into(),
+            union_scissor_space: "absolute",
             batch_uniform_index: pass.batch_uniform_index,
             load: encode_load_op(pass.load),
         },
