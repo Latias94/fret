@@ -19,7 +19,7 @@
   - “Downsample scissor mapping never expands bounds” regression (unit test)
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:
   - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
-  - `ClipMask` pass clear/load assumptions
+  - `ClipMask` pass clear/load assumptions (always `Clear`)
   - mask sampling + viewport rect mapping rules for each postprocess pass
 
 ## Nice-to-have

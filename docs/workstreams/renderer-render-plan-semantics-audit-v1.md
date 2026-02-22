@@ -35,17 +35,25 @@ Guardrail:
 
 - `LoadOp::Clear` means the pass does not depend on previous contents of `dst`.
 - `LoadOp::Load` means the pass composes into existing `dst` content and therefore requires a prior initialization within the frame (or a defined surface content for `Output`).
+- `ClipMask` always clears its destination mask target (it is an initialization pass).
+- `PathMsaaBatch` always composites with `LoadOp::Load` into its destination target.
 
 ### 3) Coordinate spaces
 
 - `render_space_offset_u32` selects the correct `RenderSpaceUniform` for a pass.
 - Scissors passed to a pass are expressed in the destination target space (unless explicitly documented otherwise).
 - Scissor mapping across downsample/upsample chains must preserve coverage monotonicity (never expands beyond the mapped bounds).
+- Absolute (render-space) scissors:
+  - `PathClipMask.scissor`
+  - `PathMsaaBatch.union_scissor`
+  - `CompositePremul.dst_scissor`
 
 ### 4) Masks and clip targets
 
 - Mask targets are `R8Unorm` and sampled consistently across passes that accept `MaskRef`.
 - `MaskRef.viewport_rect` must align the mask sample space with the destination target space for that pass.
+- `MaskRef.viewport_rect` is expressed in destination-target coordinates and must fit within `dst_size`.
+- `MaskRef.size` must match `viewport_rect` downsampled for the target tier (`Mask0` = 1x, `Mask1` = 2x, `Mask2` = 4x).
 
 ### 5) Degradations are deterministic
 
