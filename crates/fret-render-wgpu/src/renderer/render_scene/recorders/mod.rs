@@ -16,4 +16,5 @@ pub(super) use effects::record_color_adjust_pass;
 pub(super) use effects::record_color_matrix_pass;
 pub(super) use effects::record_composite_premul_pass;
 pub(super) use effects::record_drop_shadow_pass;
+pub(super) use path_clip_mask::record_path_clip_mask_pass;
 pub(super) use scale_nearest::record_scale_nearest_pass;

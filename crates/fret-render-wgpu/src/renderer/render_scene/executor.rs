@@ -5,7 +5,7 @@ use super::recorders::{
     record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
     record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
     record_composite_premul_pass, record_drop_shadow_pass, record_fullscreen_blit_pass,
-    record_scale_nearest_pass,
+    record_path_clip_mask_pass, record_scale_nearest_pass,
 };
 
 pub(super) struct RenderSceneExecutor<'a> {
@@ -86,25 +86,12 @@ impl<'a> RenderSceneExecutor<'a> {
     ) {
         match planned_pass {
             RenderPlanPass::PathClipMask(mask_pass) => {
-                let mut ctx = ExecuteCtx {
-                    device: self.device,
-                    queue: self.queue,
-                    frame_index: self.frame_index,
-                    format: self.format,
-                    target_view: self.target_view,
-                    viewport_size: self.viewport_size,
-                    usage: self.usage,
-                    encoder: self.encoder,
-                    frame_targets: self.frame_targets,
-                    encoding: self.encoding,
+                record_path_clip_mask_pass(
+                    self,
+                    path_vertex_buffer,
+                    mask_pass,
                     render_space_offset_u32,
-                    quad_vertex_size: self.quad_vertex_size,
-                    quad_vertex_bases: self.quad_vertex_bases,
-                    perf_enabled: self.perf_enabled,
-                    frame_perf: self.frame_perf,
-                };
-                self.renderer
-                    .record_path_clip_mask_pass(&mut ctx, path_vertex_buffer, mask_pass);
+                );
             }
             RenderPlanPass::SceneDrawRange(scene_pass) => {
                 let mut ctx = ExecuteCtx {
