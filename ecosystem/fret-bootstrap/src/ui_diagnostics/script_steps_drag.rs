@@ -560,3 +560,251 @@ pub(super) fn handle_drag_pointer_until_step(
 
     true
 }
+
+pub(super) struct DragToStepReturn {
+    pub(super) should_return_output: bool,
+    pub(super) requeue_active_for_window: bool,
+}
+
+pub(super) fn handle_drag_to_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> Option<DragToStepReturn> {
+    let UiActionStepV2::DragTo {
+        window: target_window,
+        from,
+        to,
+        button,
+        steps,
+        timeout_frames,
+    } = step
+    else {
+        return None;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+        if target_window != window {
+            *handoff_to = Some(target_window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(target_window));
+            output.request_redraw = true;
+            active.v2_step_state = None;
+        }
+    } else if target_window.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-drag_to-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    }
+
+    if *stop_script {
+        active.v2_step_state = None;
+    } else if handoff_to.is_some() {
+        active.v2_step_state = None;
+    } else if let Some(snapshot) = semantics_snapshot {
+        let mut state = match active.v2_step_state.take() {
+            Some(V2StepState::DragTo(mut state)) if state.step_index == step_index => {
+                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                state
+            }
+            _ => V2DragToState {
+                step_index,
+                remaining_frames: timeout_frames,
+                playback: None,
+            },
+        };
+
+        let mut playback = if let Some(playback) = state.playback.take() {
+            playback
+        } else {
+            let from_node = select_semantics_node_with_trace(
+                snapshot,
+                window,
+                element_runtime,
+                &from,
+                step_index as u32,
+                svc.cfg.redact_text,
+                &mut active.selector_resolution_trace,
+            );
+            let to_node = select_semantics_node_with_trace(
+                snapshot,
+                window,
+                element_runtime,
+                &to,
+                step_index as u32,
+                svc.cfg.redact_text,
+                &mut active.selector_resolution_trace,
+            );
+            if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
+                let start = ui
+                    .as_deref()
+                    .map(|ui| {
+                        wheel_position_prefer_intended_hit(
+                            snapshot,
+                            ui,
+                            from_node,
+                            from_node.bounds,
+                            window_bounds,
+                        )
+                    })
+                    .unwrap_or_else(|| {
+                        center_of_rect_clamped_to_rect(from_node.bounds, window_bounds)
+                    });
+                let end = ui
+                    .as_deref()
+                    .map(|ui| {
+                        wheel_position_prefer_intended_hit(
+                            snapshot,
+                            ui,
+                            to_node,
+                            to_node.bounds,
+                            window_bounds,
+                        )
+                    })
+                    .unwrap_or_else(|| {
+                        center_of_rect_clamped_to_rect(to_node.bounds, window_bounds)
+                    });
+                if let Some(ui) = ui.as_deref_mut() {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        element_runtime,
+                        window,
+                        Some(snapshot),
+                        &from,
+                        step_index as u32,
+                        start,
+                        Some(from_node),
+                        Some("drag_to.start"),
+                        svc.cfg.max_debug_string_bytes,
+                    );
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        element_runtime,
+                        window,
+                        Some(snapshot),
+                        &to,
+                        step_index as u32,
+                        end,
+                        Some(to_node),
+                        Some("drag_to.end"),
+                        svc.cfg.max_debug_string_bytes,
+                    );
+                }
+                V2DragPointerState {
+                    step_index,
+                    window,
+                    steps: steps.max(1),
+                    button,
+                    start,
+                    end,
+                    frame: 0,
+                }
+            } else if state.remaining_frames == 0 {
+                output.request_redraw = true;
+                let label = format!("script-step-{step_index:04}-drag_to-timeout");
+                if svc.cfg.script_auto_dump {
+                    svc.dump_bundle(Some(&label));
+                }
+                push_script_event_log(
+                    active,
+                    &svc.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "script_failed".to_string(),
+                        step_index: Some(step_index as u32),
+                        note: Some("drag_to_timeout".to_string()),
+                        bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
+                    },
+                );
+                svc.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id: active.run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: Some(window.data().as_ffi()),
+                    stage: UiScriptStageV1::Failed,
+                    step_index: Some(step_index as u32),
+                    reason_code: reason_code_for_script_failure("drag_to_timeout")
+                        .map(|s| s.to_string()),
+                    reason: Some("drag_to_timeout".to_string()),
+                    evidence: script_evidence_for_active(active),
+                    last_bundle_dir: svc
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&svc.cfg.out_dir, p)),
+                    last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+                });
+                return Some(DragToStepReturn {
+                    should_return_output: true,
+                    requeue_active_for_window: false,
+                });
+            } else {
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                active.v2_step_state = Some(V2StepState::DragTo(state));
+                output.request_redraw = true;
+                output.effects.push(Effect::RequestAnimationFrame(window));
+                return Some(DragToStepReturn {
+                    should_return_output: true,
+                    requeue_active_for_window: true,
+                });
+            }
+        };
+
+        let done = push_drag_playback_frame(&mut playback, &mut output.events);
+        let _ = write_cursor_override_window_client_logical(
+            &svc.cfg.out_dir,
+            playback.window,
+            drag_playback_last_position(&playback).x.0,
+            drag_playback_last_position(&playback).y.0,
+        );
+        output.request_redraw = true;
+        if done {
+            active.pending_cancel_cross_window_drag =
+                Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
+            active.v2_step_state = None;
+            active.next_step = active.next_step.saturating_add(1);
+            if svc.cfg.script_auto_dump {
+                *force_dump_label = Some(format!("script-step-{step_index:04}-drag_to"));
+            }
+        } else {
+            state.playback = Some(playback);
+            active.v2_step_state = Some(V2StepState::DragTo(state));
+        }
+    } else {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-drag_to-no-semantics"));
+        *stop_script = true;
+        *failure_reason = Some("no_semantics_snapshot".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    }
+
+    Some(DragToStepReturn {
+        should_return_output: false,
+        requeue_active_for_window: false,
+    })
+}
