@@ -102,39 +102,34 @@ impl<'a> RenderSceneExecutor<'a> {
                 record_path_msaa_batch_pass(self, ctx, resources, path_pass);
             }
             RenderPlanPass::ScaleNearest(pass) => {
-                record_scale_nearest_pass(self, pass, ctx.render_space_offset_u32);
+                record_scale_nearest_pass(self, ctx, pass);
             }
             RenderPlanPass::Blur(pass) => {
-                record_blur_pass(self, pass, ctx.render_space_offset_u32);
+                record_blur_pass(self, ctx, pass);
             }
             RenderPlanPass::FullscreenBlit(pass) => {
                 record_fullscreen_blit_pass(self, pass);
             }
             RenderPlanPass::BackdropWarp(pass) => {
-                record_backdrop_warp_pass(self, pass, ctx.render_space_offset_u32);
+                record_backdrop_warp_pass(self, ctx, pass);
             }
             RenderPlanPass::ColorAdjust(pass) => {
-                record_color_adjust_pass(self, pass, ctx.render_space_offset_u32);
+                record_color_adjust_pass(self, ctx, pass);
             }
             RenderPlanPass::ColorMatrix(pass) => {
-                record_color_matrix_pass(self, pass, ctx.render_space_offset_u32);
+                record_color_matrix_pass(self, ctx, pass);
             }
             RenderPlanPass::AlphaThreshold(pass) => {
-                record_alpha_threshold_pass(self, pass, ctx.render_space_offset_u32);
+                record_alpha_threshold_pass(self, ctx, pass);
             }
             RenderPlanPass::DropShadow(pass) => {
-                record_drop_shadow_pass(self, pass, ctx.render_space_offset_u32);
+                record_drop_shadow_pass(self, ctx, pass);
             }
             RenderPlanPass::CompositePremul(pass) => {
-                record_composite_premul_pass(
-                    self,
-                    ctx.pass_index,
-                    pass,
-                    ctx.render_space_offset_u32,
-                );
+                record_composite_premul_pass(self, ctx, pass);
             }
             RenderPlanPass::ClipMask(pass) => {
-                record_clip_mask_pass(self, pass, ctx.render_space_offset_u32);
+                record_clip_mask_pass(self, ctx, pass);
             }
             RenderPlanPass::ReleaseTarget(target) => {
                 self.frame_targets

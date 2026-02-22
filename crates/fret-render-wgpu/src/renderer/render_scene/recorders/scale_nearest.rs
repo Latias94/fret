@@ -1,13 +1,13 @@
 use super::super::super::*;
-use super::super::executor::RenderSceneExecutor;
+use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
 };
 
 pub(in super::super) fn record_scale_nearest_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ScaleNearestPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -152,7 +152,7 @@ pub(in super::super) fn record_scale_nearest_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -226,7 +226,7 @@ pub(in super::super) fn record_scale_nearest_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);

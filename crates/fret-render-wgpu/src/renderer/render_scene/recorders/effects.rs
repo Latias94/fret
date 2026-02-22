@@ -1,5 +1,5 @@
 use super::super::super::*;
-use super::super::executor::RenderSceneExecutor;
+use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
     set_scissor_rect_absolute,
@@ -7,8 +7,8 @@ use super::super::helpers::{
 
 pub(in super::super) fn record_color_adjust_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ColorAdjustPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -132,7 +132,7 @@ pub(in super::super) fn record_color_adjust_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -208,7 +208,7 @@ pub(in super::super) fn record_color_adjust_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -267,8 +267,8 @@ pub(in super::super) fn record_color_adjust_pass(
 
 pub(in super::super) fn record_alpha_threshold_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &AlphaThresholdPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -391,7 +391,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -467,7 +467,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -526,8 +526,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
 
 pub(in super::super) fn record_color_matrix_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ColorMatrixPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -659,7 +659,7 @@ pub(in super::super) fn record_color_matrix_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -735,7 +735,7 @@ pub(in super::super) fn record_color_matrix_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -794,8 +794,8 @@ pub(in super::super) fn record_color_matrix_pass(
 
 pub(in super::super) fn record_drop_shadow_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &DropShadowPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -928,7 +928,7 @@ pub(in super::super) fn record_drop_shadow_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1004,7 +1004,7 @@ pub(in super::super) fn record_drop_shadow_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1063,9 +1063,8 @@ pub(in super::super) fn record_drop_shadow_pass(
 
 pub(in super::super) fn record_composite_premul_pass(
     exec: &mut RenderSceneExecutor<'_>,
-    pass_index: usize,
+    ctx: &RecordPassCtx<'_>,
     pass: &CompositePremulPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let format = exec.format;
@@ -1168,7 +1167,7 @@ pub(in super::super) fn record_composite_premul_pass(
             bind_group,
         )
     };
-    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+    let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
     };
 
@@ -1205,7 +1204,7 @@ pub(in super::super) fn record_composite_premul_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1214,7 +1213,7 @@ pub(in super::super) fn record_composite_premul_pass(
         rp.set_bind_group(
             0,
             &renderer.uniform_bind_group,
-            &[0, render_space_offset_u32],
+            &[0, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1243,8 +1242,8 @@ pub(in super::super) fn record_composite_premul_pass(
 
 pub(in super::super) fn record_clip_mask_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ClipMaskPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -1316,7 +1315,7 @@ pub(in super::super) fn record_clip_mask_pass(
                 .copied()
                 .flatten(),
         ),
-        &[uniform_offset, render_space_offset_u32],
+        &[uniform_offset, ctx.render_space_offset_u32],
     );
     if perf_enabled {
         frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
