@@ -58,6 +58,7 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
   - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`line_height_px`, `line_box_in_bounds`)
 - Regression gate:
   - `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
+  - `ecosystem/fret-ui-material3/src/lib.rs` (tokens and real shaping gates: `material3_control_typography_tokens_use_stable_line_boxes`, `material3_control_text_keeps_metrics_stable_across_fallback_runs`)
 
 ## Tracking
 

@@ -19,7 +19,7 @@ This is a checklist-style tracker. It is **non-normative**.
       fixed line boxes via `fret-ui-kit` helpers.
 - [ ] `fret-ui-shadcn`: finish remaining ad-hoc control text literals (e.g. `button_group.rs`) and
       remove redundant local helpers where feasible.
-- [ ] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces.
+- [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
 - [ ] `fret-ui-editor` / `fret-code-view`: audit where monospace presets should be used.
 - [ ] `fret-markdown`: decide per-surface default (control vs content) and document it.
 
@@ -31,6 +31,8 @@ This is a checklist-style tracker. It is **non-normative**.
   - same widget height across frames
   - stable metrics snapshot (line height / baseline)
   - Evidence: `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
+- [x] Add at least one Material 3 regression gate that exercises real shaping with bundled fonts.
+  - Evidence: `ecosystem/fret-ui-material3/src/lib.rs`
 - [ ] Add at least one UI Gallery screenshot gate that includes the above control.
 
 ## Cleanup
