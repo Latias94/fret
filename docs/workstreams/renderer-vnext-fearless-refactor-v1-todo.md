@@ -233,8 +233,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`, `rebuild_uniform_bind_group`)
   - Gate: run the anchor conformance set listed in ADR 0201.
-- [ ] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
+- [~] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.
+  - Landed (step 1): move viewport/image sampler+texture bind group caching behind `BindGroupCaches` methods (no recorder-side closures).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_viewport_sampler_texture_bind_group`, `ensure_image_sampler_texture_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (call sites in `prepare_*_bind_groups`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
 ## M7 — Post-v1 semantic expansions (deferred backlog)
