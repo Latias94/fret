@@ -70,7 +70,8 @@ scope: diagnostics, automation, tooling, refactor
 
 ## M3: Tooling + AI loop
 
-- [ ] Define CLI “agent presets” (commands + env vars) for repeatable triage.
+- [x] Define CLI “agent presets” (commands + env vars) for repeatable triage.
+  - `fretboard diag agent <bundle> --warmup-frames <n>`
 - [x] Document a recommended “agent loop” that prefers sidecars over large `bundle.json`.
   - `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`
 - [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).

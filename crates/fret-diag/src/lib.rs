@@ -2380,6 +2380,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             warmup_frames,
             stats_json,
         ),
+        "agent" => commands::agent::cmd_agent(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            warmup_frames,
+            stats_json,
+        ),
         "hotspots" => commands::hotspots::cmd_hotspots(
             &rest,
             pack_after_run,

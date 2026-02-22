@@ -19,6 +19,9 @@ The goal is to avoid “open a huge `bundle.json`” during first-pass triage by
 
 Run doctor first. It is safe to run repeatedly.
 
+- (Optional) Generate a plan file:
+  - `fretboard diag agent <bundle_dir|bundle.json> --warmup-frames <n>`
+
 - `fretboard diag doctor --check <bundle_dir> --warmup-frames <n>`
 - If missing/invalid artifacts are reported:
   - `fretboard diag doctor --fix <bundle_dir> --warmup-frames <n>`
@@ -75,4 +78,3 @@ If the lite loop points to a specific failure, escalate to heavier artifacts onl
 - full `triage.json` (stats-heavy; may require materializing more of `bundle.json`)
 - full `hotspots` (JSON subtree size hotspots)
 - screenshot diffs / renderdoc / tracy traces
-
