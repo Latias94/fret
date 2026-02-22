@@ -75,6 +75,9 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::TextField => Role::TextInput,
         SemanticsRole::List => Role::List,
         SemanticsRole::ListItem => Role::ListItem,
+        // AccessKit does not currently expose a dedicated "separator" role; map to a safe
+        // structural container role.
+        SemanticsRole::Separator => Role::Group,
         SemanticsRole::ListBox => Role::ListBox,
         SemanticsRole::ListBoxOption => Role::ListBoxOption,
         SemanticsRole::TreeItem => Role::TreeItem,

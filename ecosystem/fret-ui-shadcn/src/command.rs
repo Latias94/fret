@@ -1411,6 +1411,7 @@ pub struct CommandPalette {
     scroll: LayoutRefinement,
     test_id_input: Option<Arc<str>>,
     test_id_item_prefix: Option<Arc<str>>,
+    test_id_heading_prefix: Option<Arc<str>>,
     pub(crate) input_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
@@ -1697,6 +1698,10 @@ impl std::fmt::Debug for CommandPalette {
                 "test_id_item_prefix",
                 &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
             )
+            .field(
+                "test_id_heading_prefix",
+                &self.test_id_heading_prefix.as_ref().map(|s| s.as_ref()),
+            )
             .field("input_id_out_cell", &self.input_id_out_cell.is_some())
             .finish()
     }
@@ -1742,6 +1747,7 @@ impl CommandPalette {
                 .min_w_0(),
             test_id_input: None,
             test_id_item_prefix: None,
+            test_id_heading_prefix: None,
             input_id_out_cell: None,
         }
     }
@@ -1902,6 +1908,12 @@ impl CommandPalette {
         self
     }
 
+    /// Installs stable `test_id`s on group headings using `{prefix}{sanitized_heading}`.
+    pub fn test_id_heading_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_heading_prefix = Some(prefix.into());
+        self
+    }
+
     pub(crate) fn input_id_out_cell(mut self, cell: Rc<Cell<Option<GlobalElementId>>>) -> Self {
         self.input_id_out_cell = Some(cell);
         self
@@ -1970,6 +1982,7 @@ impl CommandPalette {
             let a11y_selected_mode = self.a11y_selected_mode;
             let test_id_input = self.test_id_input;
             let test_id_item_prefix = self.test_id_item_prefix;
+            let test_id_heading_prefix = self.test_id_heading_prefix;
             let query = cx
                 .watch_model(&self.model)
                 .layout()
@@ -2129,7 +2142,11 @@ impl CommandPalette {
                     CommandPaletteRenderRow::Heading(heading) => {
                         let fg = theme.color_token("muted-foreground");
                         let style = heading_text_style(&theme);
-                        cx.container(
+                        let test_id_for_row = test_id_heading_prefix.clone().map(|prefix| {
+                            let seg = sanitize_test_id_segment(heading.as_ref());
+                            Arc::<str>::from(format!("{prefix}{seg}"))
+                        });
+                        let mut heading_row = cx.container(
                             ContainerProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
@@ -2164,7 +2181,11 @@ impl CommandPalette {
 
                                 vec![text.into_element(cx)]
                             },
-                        )
+                        );
+                        if let Some(test_id) = test_id_for_row {
+                            heading_row = heading_row.test_id(test_id);
+                        }
+                        heading_row
                     }
                     CommandPaletteRenderRow::GroupPad => cx.container(
                         ContainerProps {
@@ -2201,6 +2222,9 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             |_cx| Vec::new(),
+                        );
+                        sep = sep.attach_semantics(
+                            SemanticsDecoration::default().role(SemanticsRole::Separator),
                         );
                         if let Some(test_id) = test_id.clone() {
                             sep = sep.test_id(test_id);

@@ -4930,6 +4930,7 @@ mod tests {
                     SemanticsRole::TextField => "TextField",
                     SemanticsRole::List => "List",
                     SemanticsRole::ListItem => "ListItem",
+                    SemanticsRole::Separator => "Separator",
                     SemanticsRole::ListBox => "ListBox",
                     SemanticsRole::ListBoxOption => "ListBoxOption",
                     SemanticsRole::TreeItem => "TreeItem",

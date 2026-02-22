@@ -20,6 +20,7 @@ pub(super) fn preview_command_palette(
         demo_filter_query: Option<Model<String>>,
         demo_disable_filtering: Option<Model<bool>>,
         demo_filter_value: Option<Model<Option<Arc<str>>>>,
+        demo_group_force_query: Option<Model<String>>,
     }
 
     let (
@@ -33,6 +34,7 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
             st.basic_open.clone(),
@@ -45,6 +47,7 @@ pub(super) fn preview_command_palette(
             st.demo_filter_query.clone(),
             st.demo_disable_filtering.clone(),
             st.demo_filter_value.clone(),
+            st.demo_group_force_query.clone(),
         )
     });
 
@@ -59,6 +62,7 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) = match (
         basic_open,
         basic_query,
@@ -70,6 +74,7 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) {
         (
             Some(basic_open),
@@ -82,6 +87,7 @@ pub(super) fn preview_command_palette(
             Some(demo_filter_query),
             Some(demo_disable_filtering),
             Some(demo_filter_value),
+            Some(demo_group_force_query),
         ) => (
             basic_open,
             basic_query,
@@ -93,6 +99,7 @@ pub(super) fn preview_command_palette(
             demo_filter_query,
             demo_disable_filtering,
             demo_filter_value,
+            demo_group_force_query,
         ),
         _ => {
             let basic_open = cx.app.models_mut().insert(false);
@@ -108,6 +115,7 @@ pub(super) fn preview_command_palette(
                 .app
                 .models_mut()
                 .insert(Some(Arc::<str>::from("Calendar")));
+            let demo_group_force_query = cx.app.models_mut().insert(String::new());
             cx.with_state(CommandPageModels::default, |st| {
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
@@ -120,6 +128,7 @@ pub(super) fn preview_command_palette(
                 st.demo_filter_query = Some(demo_filter_query.clone());
                 st.demo_disable_filtering = Some(demo_disable_filtering.clone());
                 st.demo_filter_value = Some(demo_filter_value.clone());
+                st.demo_group_force_query = Some(demo_group_force_query.clone());
             });
             (
                 basic_open,
@@ -132,6 +141,7 @@ pub(super) fn preview_command_palette(
                 demo_filter_query,
                 demo_disable_filtering,
                 demo_filter_value,
+                demo_group_force_query,
             )
         }
     };
@@ -340,6 +350,34 @@ pub(super) fn preview_command_palette(
                 .into_element(cx)
                 .test_id("ui-gallery-command-demo-filter");
 
+            let group_force_entries = vec![
+                shadcn::CommandGroup::new([
+                    shadcn::CommandItem::new("Alpha")
+                        .on_select_action(on_select(Arc::from("command.group_force.alpha"))),
+                    shadcn::CommandItem::new("Beta")
+                        .on_select_action(on_select(Arc::from("command.group_force.beta"))),
+                ])
+                .heading("Letters")
+                .force_mount(true)
+                .into(),
+                shadcn::CommandSeparator::new().into(),
+                shadcn::CommandGroup::new([shadcn::CommandItem::new("Giraffe")
+                    .on_select_action(on_select(Arc::from("command.group_force.giraffe")))])
+                .heading("Animals")
+                .into(),
+            ];
+            let group_force_palette =
+                shadcn::CommandPalette::new(demo_group_force_query.clone(), Vec::new())
+                    .placeholder("Type to filter groups... (demo-only)")
+                    .a11y_label("Command group forceMount demo")
+                    .entries(group_force_entries)
+                    .test_id_input("ui-gallery-command-group-force-input")
+                    .list_test_id("ui-gallery-command-group-force-listbox")
+                    .test_id_item_prefix("ui-gallery-command-group-force-item-")
+                    .test_id_heading_prefix("ui-gallery-command-group-force-heading-")
+                    .into_element(cx)
+                    .test_id("ui-gallery-command-group-force");
+
             let demo_block = stack::vstack(
                 cx,
                 stack::VStackProps::default()
@@ -361,6 +399,8 @@ pub(super) fn preview_command_palette(
                         controlled_selection_row,
                         demo_toggle_row,
                         demo_palette,
+                        cx.text("Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out."),
+                        group_force_palette,
                     ]
                 },
             );
