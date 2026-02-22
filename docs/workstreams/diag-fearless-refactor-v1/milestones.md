@@ -41,6 +41,9 @@ Exit criteria:
 Exit criteria:
 
 - A maintainer can run a scripted repro, collect evidence, and generate a small “triage bundle” quickly.
+- Huge-bundle first-pass triage does not require loading `bundle.json` into memory:
+  - `fretboard diag triage --lite ...` works from `frames.index.json`.
+  - `fretboard diag hotspots --lite ...` reports slow frames from `frames.index.json`.
 - Evidence anchors in docs stay in sync with the implementation.
 
 ## Milestone 4: Debt is removed (no redundant code paths)

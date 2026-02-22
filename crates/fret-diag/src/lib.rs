@@ -31,6 +31,7 @@ mod compare;
 pub mod devtools;
 mod frames_index;
 mod gates;
+mod hotspots_lite;
 mod json_bundle;
 mod lint;
 mod paths;
@@ -2385,6 +2386,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &workspace_root,
             &resolved_out_dir,
             hotspots_out,
+            warmup_frames,
             stats_json,
         ),
         "bundle-v2" => commands::bundle_v2::cmd_bundle_v2(

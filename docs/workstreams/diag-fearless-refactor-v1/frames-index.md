@@ -16,6 +16,7 @@ It is generated from `bundle.json` via:
 - or indirectly via `fretboard diag doctor --fix-sidecars ...`
 - and is included in `fretboard diag ai-packet ...` (subject to packet budgets).
 - and is used by `fretboard diag triage --lite ...` to avoid loading full `bundle.json` into memory.
+- and is used by `fretboard diag hotspots --lite ...` to provide a “slow frames” report without materializing `bundle.json`.
 
 ## What it contains
 

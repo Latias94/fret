@@ -71,7 +71,8 @@ scope: diagnostics, automation, tooling, refactor
 ## M3: Tooling + AI loop
 
 - [ ] Define CLI “agent presets” (commands + env vars) for repeatable triage.
-- [ ] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
+- [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
+- [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
 - [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
 
