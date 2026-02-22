@@ -134,6 +134,19 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let uniforms = UniformResources::new(
+            uniform_buffer,
+            uniform_stride,
+            uniform_capacity,
+            render_space_buffer,
+            render_space_stride,
+            render_space_capacity,
+            clip_buffer,
+            clip_capacity,
+            mask_buffer,
+            mask_capacity,
+        );
+
         let material_catalog_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret material catalog texture array"),
             size: wgpu::Extent3d {
@@ -213,10 +226,10 @@ impl Renderer {
         .create(
             device,
             "fret quad uniforms bind group",
-            &uniform_buffer,
-            &clip_buffer,
-            &mask_buffer,
-            &render_space_buffer,
+            &uniforms.uniform_buffer,
+            &uniforms.clip_buffer,
+            &uniforms.mask_buffer,
+            &uniforms.render_space_buffer,
         );
 
         let viewport_bind_group_layout =
@@ -447,7 +460,6 @@ impl Renderer {
 
         Self {
             adapter: adapter.clone(),
-            uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
             mask_image_sampler,
@@ -455,15 +467,7 @@ impl Renderer {
             _mask_image_identity_texture: mask_image_identity_texture,
             mask_image_identity_view,
             mask_image_identity_uploaded: false,
-            render_space_buffer,
-            render_space_stride,
-            render_space_capacity,
-            uniform_stride,
-            uniform_capacity,
-            clip_buffer,
-            clip_capacity,
-            mask_buffer,
-            mask_capacity,
+            uniforms,
             material_catalog_texture,
             material_catalog_view,
             material_catalog_sampler,
@@ -619,7 +623,6 @@ impl Renderer {
             render_targets_generation: 0,
             image_revisions: HashMap::new(),
             images_generation: 0,
-            uniform_resources_revision: 1,
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),

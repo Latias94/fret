@@ -18,6 +18,7 @@ mod clip_path_mask_cache;
 mod path;
 mod revisioned_cache;
 mod types;
+mod uniform_resources;
 mod util;
 
 mod buffers;
@@ -46,6 +47,7 @@ use path::*;
 use render_plan::*;
 use types::*;
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
+use uniform_resources::UniformResources;
 use util::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -64,7 +66,6 @@ impl Default for ClearColor {
 
 pub struct Renderer {
     adapter: wgpu::Adapter,
-    uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
     mask_image_sampler: wgpu::Sampler,
@@ -72,15 +73,7 @@ pub struct Renderer {
     _mask_image_identity_texture: wgpu::Texture,
     mask_image_identity_view: wgpu::TextureView,
     mask_image_identity_uploaded: bool,
-    render_space_buffer: wgpu::Buffer,
-    render_space_stride: u64,
-    render_space_capacity: usize,
-    uniform_stride: u64,
-    uniform_capacity: usize,
-    clip_buffer: wgpu::Buffer,
-    clip_capacity: usize,
-    mask_buffer: wgpu::Buffer,
-    mask_capacity: usize,
+    uniforms: UniformResources,
 
     material_catalog_texture: wgpu::Texture,
     material_catalog_view: wgpu::TextureView,
@@ -275,8 +268,6 @@ pub struct Renderer {
 
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
-
-    uniform_resources_revision: u64,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

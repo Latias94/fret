@@ -212,10 +212,10 @@ impl Renderer {
         self.uniform_bind_group = self.create_uniform_bind_group(
             device,
             label,
-            &self.uniform_buffer,
-            &self.clip_buffer,
-            &self.mask_buffer,
-            &self.render_space_buffer,
+            &self.uniforms.uniform_buffer,
+            &self.uniforms.clip_buffer,
+            &self.uniforms.mask_buffer,
+            &self.uniforms.render_space_buffer,
         );
     }
 
@@ -223,26 +223,26 @@ impl Renderer {
         &mut self,
         device: &wgpu::Device,
         label: &'static str,
-        update: impl FnOnce(&mut Self),
+        update: impl FnOnce(&mut super::uniform_resources::UniformResources),
     ) {
-        update(self);
-        self.uniform_resources_revision = self.uniform_resources_revision.wrapping_add(1);
+        update(&mut self.uniforms);
+        self.uniforms.bump_revision();
         self.bind_group_caches.invalidate_uniform_resources();
         self.rebuild_uniform_bind_group(device, label);
     }
 
     pub(super) fn ensure_uniform_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.uniform_capacity {
+        if needed <= self.uniforms.uniform_capacity {
             return;
         }
 
         let new_capacity = needed
             .next_power_of_two()
-            .max(self.uniform_capacity.saturating_mul(2).max(1));
+            .max(self.uniforms.uniform_capacity.saturating_mul(2).max(1));
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret uniforms buffer (resized)"),
-            size: self.uniform_stride * new_capacity as u64,
+            size: self.uniforms.uniform_stride * new_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -250,25 +250,25 @@ impl Renderer {
         self.with_uniform_resource_update(
             device,
             "fret uniforms bind group (resized)",
-            |renderer| {
-                renderer.uniform_buffer = uniform_buffer;
-                renderer.uniform_capacity = new_capacity;
+            |uniforms| {
+                uniforms.uniform_buffer = uniform_buffer;
+                uniforms.uniform_capacity = new_capacity;
             },
         );
     }
 
     pub(super) fn ensure_render_space_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.render_space_capacity {
+        if needed <= self.uniforms.render_space_capacity {
             return;
         }
 
         let new_capacity = needed
             .next_power_of_two()
-            .max(self.render_space_capacity.saturating_mul(2).max(1));
+            .max(self.uniforms.render_space_capacity.saturating_mul(2).max(1));
 
         let render_space_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret render-space uniform buffer (resized)"),
-            size: self.render_space_stride * new_capacity as u64,
+            size: self.uniforms.render_space_stride * new_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -276,9 +276,9 @@ impl Renderer {
         self.with_uniform_resource_update(
             device,
             "fret uniforms bind group (resized render space)",
-            |renderer| {
-                renderer.render_space_buffer = render_space_buffer;
-                renderer.render_space_capacity = new_capacity;
+            |uniforms| {
+                uniforms.render_space_buffer = render_space_buffer;
+                uniforms.render_space_capacity = new_capacity;
             },
         );
     }
@@ -302,13 +302,13 @@ impl Renderer {
     }
 
     pub(super) fn ensure_clip_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.clip_capacity {
+        if needed <= self.uniforms.clip_capacity {
             return;
         }
 
         let new_capacity = needed
             .next_power_of_two()
-            .max(self.clip_capacity.saturating_mul(2).max(1));
+            .max(self.uniforms.clip_capacity.saturating_mul(2).max(1));
         let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
         let clip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret clip stack buffer (resized)"),
@@ -320,21 +320,21 @@ impl Renderer {
         self.with_uniform_resource_update(
             device,
             "fret uniforms bind group (resized clip buffer)",
-            |renderer| {
-                renderer.clip_buffer = clip_buffer;
-                renderer.clip_capacity = new_capacity;
+            |uniforms| {
+                uniforms.clip_buffer = clip_buffer;
+                uniforms.clip_capacity = new_capacity;
             },
         );
     }
 
     pub(super) fn ensure_mask_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.mask_capacity {
+        if needed <= self.uniforms.mask_capacity {
             return;
         }
 
         let new_capacity = needed
             .next_power_of_two()
-            .max(self.mask_capacity.saturating_mul(2).max(1));
+            .max(self.uniforms.mask_capacity.saturating_mul(2).max(1));
         let mask_entry_size = std::mem::size_of::<MaskGradientUniform>() as u64;
         let mask_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret mask stack buffer (resized)"),
@@ -346,9 +346,9 @@ impl Renderer {
         self.with_uniform_resource_update(
             device,
             "fret uniforms bind group (resized mask buffer)",
-            |renderer| {
-                renderer.mask_buffer = mask_buffer;
-                renderer.mask_capacity = new_capacity;
+            |uniforms| {
+                uniforms.mask_buffer = mask_buffer;
+                uniforms.mask_capacity = new_capacity;
             },
         );
     }

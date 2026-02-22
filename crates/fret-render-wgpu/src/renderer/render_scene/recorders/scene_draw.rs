@@ -267,7 +267,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -313,7 +313,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -406,7 +406,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -465,7 +465,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -725,7 +725,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -776,7 +776,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)

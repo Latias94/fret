@@ -76,12 +76,12 @@ impl Renderer {
 
         let globals = UniformMaskImageBindGroupGlobals {
             layout: &self.uniform_bind_group_layout,
-            uniform_buffer: &self.uniform_buffer,
-            clip_buffer: &self.clip_buffer,
-            mask_buffer: &self.mask_buffer,
+            uniform_buffer: &self.uniforms.uniform_buffer,
+            clip_buffer: &self.uniforms.clip_buffer,
+            mask_buffer: &self.uniforms.mask_buffer,
             material_catalog_view: &self.material_catalog_view,
             material_catalog_sampler: &self.material_catalog_sampler,
-            render_space_buffer: &self.render_space_buffer,
+            render_space_buffer: &self.uniforms.render_space_buffer,
         };
 
         for &sel in uniform_mask_images.iter().flatten() {
@@ -91,7 +91,7 @@ impl Renderer {
             };
 
             let image_revision = self.image_revisions.get(&image).copied().unwrap_or(0);
-            let revision = mix_revisions(image_revision, self.uniform_resources_revision);
+            let revision = mix_revisions(image_revision, self.uniforms.revision());
             self.bind_group_caches
                 .ensure_uniform_mask_image_override_bind_groups(
                     device,

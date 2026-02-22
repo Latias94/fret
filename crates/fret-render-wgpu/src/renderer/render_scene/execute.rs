@@ -592,13 +592,13 @@ impl Renderer {
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         let mut uniform_bytes =
-            vec![0u8; (self.uniform_stride * encoding.uniforms.len() as u64) as usize];
+            vec![0u8; (self.uniforms.uniform_stride * encoding.uniforms.len() as u64) as usize];
         for (i, u) in encoding.uniforms.iter().enumerate() {
-            let offset = (self.uniform_stride * i as u64) as usize;
+            let offset = (self.uniforms.uniform_stride * i as u64) as usize;
             uniform_bytes[offset..offset + uniform_size as usize]
                 .copy_from_slice(bytemuck::bytes_of(u));
         }
-        queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
+        queue.write_buffer(&self.uniforms.uniform_buffer, 0, &uniform_bytes);
         if perf_enabled {
             frame_perf.uniform_bytes = frame_perf
                 .uniform_bytes
@@ -607,7 +607,11 @@ impl Renderer {
 
         self.ensure_clip_capacity(device, encoding.clips.len().max(1));
         if !encoding.clips.is_empty() {
-            queue.write_buffer(&self.clip_buffer, 0, bytemuck::cast_slice(&encoding.clips));
+            queue.write_buffer(
+                &self.uniforms.clip_buffer,
+                0,
+                bytemuck::cast_slice(&encoding.clips),
+            );
             if perf_enabled {
                 frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
                     (std::mem::size_of::<ClipRRectUniform>() * encoding.clips.len()) as u64,
@@ -617,7 +621,11 @@ impl Renderer {
 
         self.ensure_mask_capacity(device, encoding.masks.len().max(1));
         if !encoding.masks.is_empty() {
-            queue.write_buffer(&self.mask_buffer, 0, bytemuck::cast_slice(&encoding.masks));
+            queue.write_buffer(
+                &self.uniforms.mask_buffer,
+                0,
+                bytemuck::cast_slice(&encoding.masks),
+            );
             if perf_enabled {
                 frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
                     (std::mem::size_of::<MaskGradientUniform>() * encoding.masks.len()) as u64,
@@ -737,11 +745,11 @@ impl Renderer {
         let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
 
         debug_assert!(
-            (std::mem::size_of::<RenderSpaceUniform>() as u64) <= self.render_space_stride,
+            (std::mem::size_of::<RenderSpaceUniform>() as u64) <= self.uniforms.render_space_stride,
             "render_space_stride must fit RenderSpaceUniform"
         );
         let render_space_uniform_size = std::mem::size_of::<RenderSpaceUniform>();
-        let render_space_stride = self.render_space_stride as usize;
+        let render_space_stride = self.uniforms.render_space_stride as usize;
         let mut render_space_bytes =
             vec![0u8; render_space_stride.saturating_mul(plan.passes.len())];
         for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
@@ -757,7 +765,7 @@ impl Renderer {
             );
         }
         if !render_space_bytes.is_empty() {
-            queue.write_buffer(&self.render_space_buffer, 0, &render_space_bytes);
+            queue.write_buffer(&self.uniforms.render_space_buffer, 0, &render_space_bytes);
         }
 
         let (_, record_elapsed) = fret_perf::measure_span(
@@ -765,8 +773,8 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.record_passes", frame_index),
             || {
-                let render_space_capacity = self.render_space_capacity;
-                let render_space_stride = self.render_space_stride;
+                let render_space_capacity = self.uniforms.render_space_capacity;
+                let render_space_stride = self.uniforms.render_space_stride;
                 let mut executor = RenderSceneExecutor::new(
                     self,
                     device,

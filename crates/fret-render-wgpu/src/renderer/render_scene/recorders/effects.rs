@@ -66,7 +66,8 @@ pub(in super::super) fn record_color_adjust_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask color-adjust needs uniform index");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "ColorAdjust")
@@ -137,7 +138,8 @@ pub(in super::super) fn record_color_adjust_pass(
             .color_adjust_masked_pipeline
             .as_ref()
             .expect("color-adjust masked pipeline must exist");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -251,7 +253,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask alpha-threshold needs uniform index");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "AlphaThreshold")
@@ -321,7 +324,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
             .alpha_threshold_masked_pipeline
             .as_ref()
             .expect("alpha-threshold masked pipeline must exist");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -444,7 +448,8 @@ pub(in super::super) fn record_color_matrix_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask color-matrix needs uniform index");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "ColorMatrix")
@@ -514,7 +519,8 @@ pub(in super::super) fn record_color_matrix_pass(
             .color_matrix_masked_pipeline
             .as_ref()
             .expect("color-matrix masked pipeline must exist");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -637,7 +643,8 @@ pub(in super::super) fn record_drop_shadow_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask drop-shadow needs uniform index");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "DropShadow")
@@ -708,7 +715,8 @@ pub(in super::super) fn record_drop_shadow_pass(
             .drop_shadow_masked_pipeline
             .as_ref()
             .expect("drop-shadow masked pipeline must exist");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -873,7 +881,8 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let (uniform_bind_group, uniform_offsets) =
         if let Some(mask_uniform_index) = pass.mask_uniform_index {
-            let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+            let uniform_offset =
+                (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
             let mask_image = encoding
                 .uniform_mask_images
                 .get(mask_uniform_index as usize)
@@ -954,7 +963,7 @@ pub(in super::super) fn record_clip_mask_pass(
         .clip_mask_pipeline
         .as_ref()
         .expect("clip mask pipeline must exist");
-    let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniform_stride) as u32;
+    let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
     run_clip_mask_triangle_pass(
         encoder,
