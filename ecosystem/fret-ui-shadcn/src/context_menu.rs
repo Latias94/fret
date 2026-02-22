@@ -424,8 +424,8 @@ impl ContextMenuShortcut {
         ui::text(cx, self.text)
             .layout(LayoutRefinement::default().ml_auto())
             .text_size_px(font_size)
-            .line_height_px(font_line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(font_line_height)
+            .line_box_in_bounds()
             .font_normal()
             .letter_spacing_em(0.12)
             .nowrap()
@@ -872,8 +872,8 @@ impl ContextMenuRenderEnv {
                 vec![
                     ui::text(cx, text)
                         .text_size_px(font_size)
-                        .line_height_px(font_line_height)
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                        .fixed_line_box_px(font_line_height)
+                        .line_box_in_bounds()
                         .font_medium()
                         .nowrap()
                         .text_color(ColorRef::Color(label_fg))
@@ -1948,9 +1948,7 @@ fn menu_row_children<H: UiHost>(
                 }));
 
             if let Some(line_height) = style.line_height {
-                text = text
-                    .line_height_px(line_height)
-                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
             }
 
             if let Some(letter_spacing_em) = style.letter_spacing_em {

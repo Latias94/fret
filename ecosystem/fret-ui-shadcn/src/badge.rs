@@ -5,7 +5,7 @@ use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, Length, SpinnerProp
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -248,12 +248,11 @@ fn badge_with_patch<H: UiHost>(
     cx.container(props, |cx| {
         let label = ui::text(cx, label)
             .text_size_px(text_px)
-            .line_height_px(line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(line_height)
+            .line_box_in_bounds()
             .font_semibold()
             .nowrap()
             .text_color(ColorRef::Color(fg))
-            .h_px(MetricRef::Px(line_height))
             .into_element(cx);
 
         if children.is_empty() {

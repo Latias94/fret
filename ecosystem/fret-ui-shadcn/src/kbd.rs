@@ -99,11 +99,10 @@ fn kbd_with_patch<H: UiHost>(
                 vec![
                     ui::label(cx, text.clone())
                         .text_size_px(px)
-                        .line_height_px(line_height)
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                        .fixed_line_box_px(line_height)
+                        .line_box_in_bounds()
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(ColorRef::Color(fg))
-                        .h_px(line_height)
                         .into_element(cx),
                 ]
             },

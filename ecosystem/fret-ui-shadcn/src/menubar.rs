@@ -312,8 +312,8 @@ impl MenubarShortcut {
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
             .ml_auto()
             .text_size_px(font_size)
-            .line_height_px(font_line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(font_line_height)
+            .line_box_in_bounds()
             .font_normal()
             .letter_spacing_em(0.12)
             .text_color(ColorRef::Color(fg))
@@ -658,9 +658,9 @@ fn menu_row_children<H: UiHost>(
                 .text_color(ColorRef::Color(fg))
                 .nowrap();
             if let Some(line_height) = text_style.line_height {
-                label_text = label_text.line_height_px(line_height);
-                label_text =
-                    label_text.line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                label_text = label_text
+                    .fixed_line_box_px(line_height)
+                    .line_box_in_bounds();
             }
             if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                 label_text = label_text.letter_spacing_em(letter_spacing_em);
