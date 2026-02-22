@@ -19,7 +19,6 @@ pub(super) fn preview_command_palette(
         rtl_query: Option<Model<String>>,
         demo_filter_query: Option<Model<String>>,
         demo_disable_filtering: Option<Model<bool>>,
-        demo_filter_value: Option<Model<Option<Arc<str>>>>,
     }
 
     let (
@@ -32,7 +31,6 @@ pub(super) fn preview_command_palette(
         rtl_query,
         demo_filter_query,
         demo_disable_filtering,
-        demo_filter_value,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
             st.basic_open.clone(),
@@ -44,7 +42,6 @@ pub(super) fn preview_command_palette(
             st.rtl_query.clone(),
             st.demo_filter_query.clone(),
             st.demo_disable_filtering.clone(),
-            st.demo_filter_value.clone(),
         )
     });
 
@@ -58,7 +55,6 @@ pub(super) fn preview_command_palette(
         rtl_query,
         demo_filter_query,
         demo_disable_filtering,
-        demo_filter_value,
     ) = match (
         basic_open,
         basic_query,
@@ -69,7 +65,6 @@ pub(super) fn preview_command_palette(
         rtl_query,
         demo_filter_query,
         demo_disable_filtering,
-        demo_filter_value,
     ) {
         (
             Some(basic_open),
@@ -81,7 +76,6 @@ pub(super) fn preview_command_palette(
             Some(rtl_query),
             Some(demo_filter_query),
             Some(demo_disable_filtering),
-            Some(demo_filter_value),
         ) => (
             basic_open,
             basic_query,
@@ -92,7 +86,6 @@ pub(super) fn preview_command_palette(
             rtl_query,
             demo_filter_query,
             demo_disable_filtering,
-            demo_filter_value,
         ),
         _ => {
             let basic_open = cx.app.models_mut().insert(false);
@@ -104,7 +97,6 @@ pub(super) fn preview_command_palette(
             let rtl_query = cx.app.models_mut().insert(String::new());
             let demo_filter_query = cx.app.models_mut().insert(String::new());
             let demo_disable_filtering = cx.app.models_mut().insert(false);
-            let demo_filter_value = cx.app.models_mut().insert(None);
             cx.with_state(CommandPageModels::default, |st| {
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
@@ -116,7 +108,6 @@ pub(super) fn preview_command_palette(
                 st.rtl_query = Some(rtl_query.clone());
                 st.demo_filter_query = Some(demo_filter_query.clone());
                 st.demo_disable_filtering = Some(demo_disable_filtering.clone());
-                st.demo_filter_value = Some(demo_filter_value.clone());
             });
             (
                 basic_open,
@@ -128,7 +119,6 @@ pub(super) fn preview_command_palette(
                 rtl_query,
                 demo_filter_query,
                 demo_disable_filtering,
-                demo_filter_value,
             )
         }
     };
@@ -379,11 +369,6 @@ pub(super) fn preview_command_palette(
                 .get_cloned(&demo_disable_filtering)
                 .unwrap_or(false);
             let demo_disable_filtering_for_toggle = demo_disable_filtering.clone();
-            let demo_filter_value_value = cx
-                .app
-                .models()
-                .get_cloned(&demo_filter_value)
-                .unwrap_or(None);
 
             let toggle_row = stack::hstack(
                 cx,
@@ -407,7 +392,6 @@ pub(super) fn preview_command_palette(
             let palette = shadcn::CommandPalette::new(demo_filter_query.clone(), Vec::new())
                 .placeholder("Type a command or search... (demo-only)")
                 .a11y_label("Command shouldFilter demo")
-                .value(Some(demo_filter_value.clone()))
                 .entries(demo_filter_entries.clone())
                 .should_filter(!demo_disable_filtering_value)
                 .test_id_input("ui-gallery-command-demo-filter-input")
@@ -419,10 +403,6 @@ pub(super) fn preview_command_palette(
             vec![
                 cx.text("This section is demo-only (not part of shadcn docs)."),
                 cx.text(format!("last action: {last}")),
-                cx.text(format!(
-                    "selection value (cmdk value): {}",
-                    demo_filter_value_value.as_deref().unwrap_or("<none>")
-                )),
                 toggle_row,
                 palette,
             ]
