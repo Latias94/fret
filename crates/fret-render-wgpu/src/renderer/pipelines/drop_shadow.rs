@@ -7,19 +7,19 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.drop_shadow_pipeline_format == Some(format)
-            && self.drop_shadow_pipeline.is_some()
-            && self.drop_shadow_masked_pipeline.is_some()
-            && self.drop_shadow_mask_pipeline.is_some()
-            && self.drop_shadow_bind_group_layout.is_some()
-            && self.drop_shadow_mask_bind_group_layout.is_some()
+        if self.pipelines.drop_shadow_pipeline_format == Some(format)
+            && self.pipelines.drop_shadow_pipeline.is_some()
+            && self.pipelines.drop_shadow_masked_pipeline.is_some()
+            && self.pipelines.drop_shadow_mask_pipeline.is_some()
+            && self.pipelines.drop_shadow_bind_group_layout.is_some()
+            && self.pipelines.drop_shadow_mask_bind_group_layout.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.drop_shadow_pipeline_format != Some(format) {
+                let reason = if self.pipelines.drop_shadow_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -248,11 +248,48 @@ impl Renderer {
             cache: None,
         });
 
-        self.drop_shadow_pipeline_format = Some(format);
-        self.drop_shadow_pipeline = Some(pipeline);
-        self.drop_shadow_masked_pipeline = Some(masked_pipeline);
-        self.drop_shadow_mask_pipeline = Some(mask_pipeline);
-        self.drop_shadow_bind_group_layout = Some(bind_group_layout);
-        self.drop_shadow_mask_bind_group_layout = Some(mask_bind_group_layout);
+        self.pipelines.drop_shadow_pipeline_format = Some(format);
+        self.pipelines.drop_shadow_pipeline = Some(pipeline);
+        self.pipelines.drop_shadow_masked_pipeline = Some(masked_pipeline);
+        self.pipelines.drop_shadow_mask_pipeline = Some(mask_pipeline);
+        self.pipelines.drop_shadow_bind_group_layout = Some(bind_group_layout);
+        self.pipelines.drop_shadow_mask_bind_group_layout = Some(mask_bind_group_layout);
+    }
+
+    pub(in crate::renderer) fn drop_shadow_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .drop_shadow_bind_group_layout
+            .as_ref()
+            .expect("drop-shadow bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn drop_shadow_mask_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .drop_shadow_mask_bind_group_layout
+            .as_ref()
+            .expect("drop-shadow mask bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn drop_shadow_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .drop_shadow_pipeline
+            .as_ref()
+            .expect("drop-shadow pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn drop_shadow_masked_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .drop_shadow_masked_pipeline
+            .as_ref()
+            .expect("drop-shadow masked pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn drop_shadow_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .drop_shadow_mask_pipeline
+            .as_ref()
+            .expect("drop-shadow mask pipeline must exist")
     }
 }

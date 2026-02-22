@@ -274,6 +274,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (backdrop-warp pipeline cache fields)
     - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (`ensure_backdrop_warp_pipeline`, `*_ref`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` (uses `*_ref`)
+  - Landed (step 12): move effect pipeline caches into `GpuPipelines` (color-adjust, color-matrix, alpha-threshold, drop-shadow).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (effect pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/{color_adjust,color_matrix,alpha_threshold,drop_shadow}.rs` (ensure + `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (uses `*_ref`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

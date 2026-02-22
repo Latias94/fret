@@ -98,36 +98,12 @@ pub struct Renderer {
 
     backdrop_warp_param_buffer: wgpu::Buffer,
 
-    color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
-    color_adjust_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_mask_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_adjust_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_adjust_param_buffer: wgpu::Buffer,
 
-    color_matrix_pipeline_format: Option<wgpu::TextureFormat>,
-    color_matrix_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_masked_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_mask_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_matrix_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_matrix_param_buffer: wgpu::Buffer,
 
-    alpha_threshold_pipeline_format: Option<wgpu::TextureFormat>,
-    alpha_threshold_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_masked_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_mask_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     alpha_threshold_param_buffer: wgpu::Buffer,
 
-    drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
-    drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     drop_shadow_param_buffer: wgpu::Buffer,
 
     path_vertices: buffers::RingBuffer<PathVertex>,

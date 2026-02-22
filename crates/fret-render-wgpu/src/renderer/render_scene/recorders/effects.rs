@@ -74,10 +74,7 @@ pub(in super::super) fn record_color_adjust_pass(
         else {
             return;
         };
-        let layout = renderer
-            .color_adjust_mask_bind_group_layout
-            .as_ref()
-            .expect("color-adjust mask bind group layout must exist");
+        let layout = renderer.color_adjust_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret color-adjust mask bind group"),
             layout,
@@ -97,10 +94,7 @@ pub(in super::super) fn record_color_adjust_pass(
             ],
         });
 
-        let pipeline = renderer
-            .color_adjust_mask_pipeline
-            .as_ref()
-            .expect("color-adjust mask pipeline must exist");
+        let pipeline = renderer.color_adjust_mask_pipeline_ref();
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -123,10 +117,7 @@ pub(in super::super) fn record_color_adjust_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer
-            .color_adjust_bind_group_layout
-            .as_ref()
-            .expect("color-adjust bind group layout must exist");
+        let layout = renderer.color_adjust_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret color-adjust bind group",
@@ -134,10 +125,7 @@ pub(in super::super) fn record_color_adjust_pass(
             &src_view,
             renderer.color_adjust_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .color_adjust_masked_pipeline
-            .as_ref()
-            .expect("color-adjust masked pipeline must exist");
+        let pipeline = renderer.color_adjust_masked_pipeline_ref();
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
@@ -162,10 +150,7 @@ pub(in super::super) fn record_color_adjust_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .color_adjust_bind_group_layout
-            .as_ref()
-            .expect("color-adjust bind group layout must exist");
+        let layout = renderer.color_adjust_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret color-adjust bind group",
@@ -173,10 +158,7 @@ pub(in super::super) fn record_color_adjust_pass(
             &src_view,
             renderer.color_adjust_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .color_adjust_pipeline
-            .as_ref()
-            .expect("color-adjust pipeline must exist");
+        let pipeline = renderer.color_adjust_pipeline_ref();
         run_fullscreen_triangle_pass(
             encoder,
             "fret color-adjust pass",
@@ -261,10 +243,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
         else {
             return;
         };
-        let layout = renderer
-            .alpha_threshold_mask_bind_group_layout
-            .as_ref()
-            .expect("alpha-threshold mask bind group layout must exist");
+        let layout = renderer.alpha_threshold_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret alpha-threshold mask bind group"),
             layout,
@@ -283,10 +262,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
                 },
             ],
         });
-        let pipeline = renderer
-            .alpha_threshold_mask_pipeline
-            .as_ref()
-            .expect("alpha-threshold mask pipeline must exist");
+        let pipeline = renderer.alpha_threshold_mask_pipeline_ref();
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -309,10 +285,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer
-            .alpha_threshold_bind_group_layout
-            .as_ref()
-            .expect("alpha-threshold bind group layout must exist");
+        let layout = renderer.alpha_threshold_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret alpha-threshold bind group",
@@ -320,10 +293,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             &src_view,
             renderer.alpha_threshold_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .alpha_threshold_masked_pipeline
-            .as_ref()
-            .expect("alpha-threshold masked pipeline must exist");
+        let pipeline = renderer.alpha_threshold_masked_pipeline_ref();
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
@@ -348,10 +318,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .alpha_threshold_bind_group_layout
-            .as_ref()
-            .expect("alpha-threshold bind group layout must exist");
+        let layout = renderer.alpha_threshold_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret alpha-threshold bind group",
@@ -359,10 +326,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             &src_view,
             renderer.alpha_threshold_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .alpha_threshold_pipeline
-            .as_ref()
-            .expect("alpha-threshold pipeline must exist");
+        let pipeline = renderer.alpha_threshold_pipeline_ref();
         run_fullscreen_triangle_pass(
             encoder,
             "fret alpha-threshold pass",
@@ -456,10 +420,7 @@ pub(in super::super) fn record_color_matrix_pass(
         else {
             return;
         };
-        let layout = renderer
-            .color_matrix_mask_bind_group_layout
-            .as_ref()
-            .expect("color-matrix mask bind group layout must exist");
+        let layout = renderer.color_matrix_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret color-matrix mask bind group"),
             layout,
@@ -478,10 +439,7 @@ pub(in super::super) fn record_color_matrix_pass(
                 },
             ],
         });
-        let pipeline = renderer
-            .color_matrix_mask_pipeline
-            .as_ref()
-            .expect("color-matrix mask pipeline must exist");
+        let pipeline = renderer.color_matrix_mask_pipeline_ref();
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -504,10 +462,7 @@ pub(in super::super) fn record_color_matrix_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer
-            .color_matrix_bind_group_layout
-            .as_ref()
-            .expect("color-matrix bind group layout must exist");
+        let layout = renderer.color_matrix_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret color-matrix bind group",
@@ -515,10 +470,7 @@ pub(in super::super) fn record_color_matrix_pass(
             &src_view,
             renderer.color_matrix_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .color_matrix_masked_pipeline
-            .as_ref()
-            .expect("color-matrix masked pipeline must exist");
+        let pipeline = renderer.color_matrix_masked_pipeline_ref();
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
@@ -543,10 +495,7 @@ pub(in super::super) fn record_color_matrix_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .color_matrix_bind_group_layout
-            .as_ref()
-            .expect("color-matrix bind group layout must exist");
+        let layout = renderer.color_matrix_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret color-matrix bind group",
@@ -554,10 +503,7 @@ pub(in super::super) fn record_color_matrix_pass(
             &src_view,
             renderer.color_matrix_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .color_matrix_pipeline
-            .as_ref()
-            .expect("color-matrix pipeline must exist");
+        let pipeline = renderer.color_matrix_pipeline_ref();
         run_fullscreen_triangle_pass(
             encoder,
             "fret color-matrix pass",
@@ -651,10 +597,7 @@ pub(in super::super) fn record_drop_shadow_pass(
         else {
             return;
         };
-        let layout = renderer
-            .drop_shadow_mask_bind_group_layout
-            .as_ref()
-            .expect("drop-shadow mask bind group layout must exist");
+        let layout = renderer.drop_shadow_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret drop-shadow mask bind group"),
             layout,
@@ -674,10 +617,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             ],
         });
 
-        let pipeline = renderer
-            .drop_shadow_mask_pipeline
-            .as_ref()
-            .expect("drop-shadow mask pipeline must exist");
+        let pipeline = renderer.drop_shadow_mask_pipeline_ref();
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
@@ -700,10 +640,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer
-            .drop_shadow_bind_group_layout
-            .as_ref()
-            .expect("drop-shadow bind group layout must exist");
+        let layout = renderer.drop_shadow_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret drop-shadow bind group",
@@ -711,10 +648,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             &src_view,
             renderer.drop_shadow_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .drop_shadow_masked_pipeline
-            .as_ref()
-            .expect("drop-shadow masked pipeline must exist");
+        let pipeline = renderer.drop_shadow_masked_pipeline_ref();
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
@@ -739,10 +673,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .drop_shadow_bind_group_layout
-            .as_ref()
-            .expect("drop-shadow bind group layout must exist");
+        let layout = renderer.drop_shadow_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret drop-shadow bind group",
@@ -750,10 +681,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             &src_view,
             renderer.drop_shadow_param_buffer.as_entire_binding(),
         );
-        let pipeline = renderer
-            .drop_shadow_pipeline
-            .as_ref()
-            .expect("drop-shadow pipeline must exist");
+        let pipeline = renderer.drop_shadow_pipeline_ref();
         run_fullscreen_triangle_pass(
             encoder,
             "fret drop-shadow pass",
