@@ -213,7 +213,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target: “encode/compile/execute” ownership and regression discipline without contract changes.
   - Evidence: `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`,
     `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row + summary update).
-- [ ] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+- [~] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+  - Landed (step 1): reduce bind-group rebuild churn by making “stable sampler + linear/nearest pair” explicit and reusing renderer-owned globals
+    in uniform bind groups.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`SamplingBindGroups`, `SamplingBindGroups::pick`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`create_uniform_bind_group` uses renderer-owned mask identity resources)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`UniformMaskImageBindGroupGlobals`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
   - Goal: reduce churn in bind group rebuild paths and make ownership explicit.
   - Gate: `cargo test -p fret-render-wgpu --lib` + `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 - [ ] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
