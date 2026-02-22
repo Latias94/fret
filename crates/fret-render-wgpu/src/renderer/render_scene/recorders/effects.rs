@@ -35,33 +35,22 @@ pub(in super::super) fn record_color_adjust_pass(
             .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
     }
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ColorAdjust src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "ColorAdjust")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ColorAdjust dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "ColorAdjust",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
@@ -79,7 +68,11 @@ pub(in super::super) fn record_color_adjust_pass(
             .expect("mask color-adjust needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "ColorAdjust")
+        else {
+            return;
+        };
         let layout = renderer
             .color_adjust_mask_bind_group_layout
             .as_ref()
@@ -302,33 +295,22 @@ pub(in super::super) fn record_alpha_threshold_pass(
             .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
     }
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "AlphaThreshold src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "AlphaThreshold")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "AlphaThreshold dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "AlphaThreshold",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
@@ -346,7 +328,11 @@ pub(in super::super) fn record_alpha_threshold_pass(
             .expect("mask alpha-threshold needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "AlphaThreshold")
+        else {
+            return;
+        };
         let layout = renderer
             .alpha_threshold_mask_bind_group_layout
             .as_ref()
@@ -577,33 +563,22 @@ pub(in super::super) fn record_color_matrix_pass(
             .saturating_add(std::mem::size_of::<[f32; 20]>() as u64);
     }
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ColorMatrix src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "ColorMatrix")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ColorMatrix dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "ColorMatrix",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
@@ -621,7 +596,11 @@ pub(in super::super) fn record_color_matrix_pass(
             .expect("mask color-matrix needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "ColorMatrix")
+        else {
+            return;
+        };
         let layout = renderer
             .color_matrix_mask_bind_group_layout
             .as_ref()
@@ -852,33 +831,22 @@ pub(in super::super) fn record_drop_shadow_pass(
             .saturating_add(std::mem::size_of::<[f32; 8]>() as u64);
     }
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "DropShadow src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "DropShadow")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "DropShadow dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "DropShadow",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
@@ -896,7 +864,11 @@ pub(in super::super) fn record_drop_shadow_pass(
             .expect("mask drop-shadow needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "DropShadow")
+        else {
+            return;
+        };
         let layout = renderer
             .drop_shadow_mask_bind_group_layout
             .as_ref()
