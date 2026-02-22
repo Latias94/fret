@@ -58,7 +58,7 @@ Evidence:
 
 ## M4 — Ecosystem opt-in adopted for text areas
 
-Status: Partial.
+Status: Done.
 
 Exit criteria:
 
