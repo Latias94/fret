@@ -154,11 +154,27 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) enum RenderPlanPassTraceScissorSpace {
+    Absolute,
+    DstLocal,
+}
+
+impl RenderPlanPassTraceScissorSpace {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Absolute => "absolute",
+            Self::DstLocal => "dst_local",
+        }
+    }
+}
+
 pub(super) struct RenderPlanPassTraceMeta {
     pub(super) src: Option<PlanTarget>,
     pub(super) dst: Option<PlanTarget>,
     pub(super) load: Option<&'static str>,
     pub(super) scissor: Option<ScissorRect>,
+    pub(super) scissor_space: Option<RenderPlanPassTraceScissorSpace>,
     pub(super) render_origin: Option<(u32, u32)>,
     pub(super) render_size: Option<(u32, u32)>,
 }
@@ -182,6 +198,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.target),
             load: Some(load_label(pass.load)),
             scissor: None,
+            scissor_space: None,
             render_origin,
             render_size,
         },
@@ -190,6 +207,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.target),
             load: Some(load_label(pass.load)),
             scissor: Some(pass.union_scissor.0),
+            scissor_space: Some(RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -198,6 +216,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: Some(pass.scissor.0),
+            scissor_space: Some(RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -206,6 +225,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -214,6 +236,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -222,6 +247,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -230,6 +258,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -238,6 +269,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -246,6 +280,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -254,6 +291,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -262,6 +302,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -270,6 +313,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -278,6 +324,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -286,6 +335,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(*target),
             load: None,
             scissor: None,
+            scissor_space: None,
             render_origin,
             render_size,
         },
@@ -311,6 +361,14 @@ pub(super) fn render_plan_trace_fingerprint(passes: &[RenderPlanPass]) -> u64 {
         (u64::from(s.x) << 48) ^ (u64::from(s.y) << 32) ^ (u64::from(s.w) << 16) ^ u64::from(s.h)
     }
 
+    fn pack_scissor_space(s: Option<RenderPlanPassTraceScissorSpace>) -> u64 {
+        match s {
+            None => 0,
+            Some(RenderPlanPassTraceScissorSpace::Absolute) => 1,
+            Some(RenderPlanPassTraceScissorSpace::DstLocal) => 2,
+        }
+    }
+
     fn pack_point(p: Option<(u32, u32)>) -> u64 {
         let Some(p) = p else {
             return 0;
@@ -330,6 +388,7 @@ pub(super) fn render_plan_trace_fingerprint(passes: &[RenderPlanPass]) -> u64 {
         hash = mix_fnv1a(hash, meta.dst.map(|t| t as u64 + 1).unwrap_or(0));
         hash = mix_fnv1a(hash, meta.load.map(|s| mix_str(0, s)).unwrap_or(0));
         hash = mix_fnv1a(hash, pack_scissor(meta.scissor));
+        hash = mix_fnv1a(hash, pack_scissor_space(meta.scissor_space));
         hash = mix_fnv1a(hash, pack_point(meta.render_origin));
         hash = mix_fnv1a(hash, pack_point(meta.render_size));
     }

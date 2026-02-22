@@ -811,6 +811,10 @@ impl Renderer {
                             dst = ?meta.dst,
                             load = meta.load.unwrap_or(""),
                             scissor = ?meta.scissor,
+                            scissor_space = meta
+                                .scissor_space
+                                .map(|s| s.as_str())
+                                .unwrap_or(""),
                             render_origin = ?meta.render_origin,
                             render_size = ?meta.render_size
                         )
