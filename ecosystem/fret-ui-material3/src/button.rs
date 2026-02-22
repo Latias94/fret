@@ -18,6 +18,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -420,11 +421,12 @@ struct ButtonCornerRuntime {
 }
 
 fn button_label_style(theme: &Theme) -> fret_core::TextStyle {
-    theme
+    let style = theme
         .text_style_by_key("md.comp.button.label-text")
         .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
         .or_else(|| theme.text_style_by_key("text_style.button"))
-        .unwrap_or_else(|| fret_core::TextStyle::default())
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 fn button_shape_radius(theme: &Theme) -> f32 {

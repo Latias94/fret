@@ -7,9 +7,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -24,6 +22,7 @@ use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -422,9 +421,6 @@ fn material_primary_tab<H: UiHost>(
     let label = item.label.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
-    let chrome_test_id = test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -637,9 +633,10 @@ fn primary_tab_label<H: UiHost>(
 ) -> AnyElement {
     let style = {
         let theme = Theme::global(&*cx.app);
-        theme
+        let style = theme
             .text_style_by_key("md.sys.typescale.title-small")
-            .unwrap_or_else(TextStyle::default)
+            .unwrap_or_default();
+        typography::with_intent(style, TextIntent::Control)
     };
 
     let mut props = TextProps::new(label.clone());

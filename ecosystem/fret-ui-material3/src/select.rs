@@ -28,6 +28,7 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
 use fret_ui_kit::{
     OverrideSlot, WidgetStateProperty, WidgetStates, merge_override_slot,
@@ -1018,7 +1019,8 @@ fn select_trigger_element<H: UiHost>(
                     if let Some(inherited) = crate::foundation::context::inherited_text_style(cx) {
                         style = Some(inherited);
                     }
-                    props.style = style;
+                    props.style =
+                        style.map(|style| typography::with_intent(style, TextIntent::Control));
                     props.color = Some(display_color);
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
@@ -1324,7 +1326,8 @@ fn select_trigger_label<H: UiHost>(
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
+            .map(|style| typography::with_intent(style, TextIntent::Control));
         let color = resolve_override_slot_with(
             style_override.label_color.as_ref(),
             states,
@@ -1403,7 +1406,9 @@ fn select_supporting_text<H: UiHost>(
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let style = theme.text_style_by_key("md.sys.typescale.body-small");
+        let style = theme
+            .text_style_by_key("md.sys.typescale.body-small")
+            .map(|style| typography::with_intent(style, TextIntent::Content));
         let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,
@@ -2008,18 +2013,21 @@ fn select_list_item<H: UiHost>(
                     let label_color =
                         select_tokens::menu_list_item_label_text_color(theme, variant);
                     let label_style =
-                        select_tokens::menu_list_item_label_text_style(theme, variant);
+                        select_tokens::menu_list_item_label_text_style(theme, variant)
+                            .map(|style| typography::with_intent(style, TextIntent::Control));
 
                     let item_top_space = list_tokens::item_top_space(theme);
                     let item_bottom_space = list_tokens::item_bottom_space(theme);
 
                     let supporting_color =
                         list_tokens::supporting_text_color(theme, enabled, is_selected);
-                    let supporting_style = list_tokens::supporting_text_style(theme, is_selected);
+                    let supporting_style = list_tokens::supporting_text_style(theme, is_selected)
+                        .map(|style| typography::with_intent(style, TextIntent::Control));
                     let trailing_supporting_color =
                         list_tokens::trailing_supporting_text_color(theme, enabled, is_selected);
                     let trailing_supporting_style =
-                        list_tokens::trailing_supporting_text_style(theme, is_selected);
+                        list_tokens::trailing_supporting_text_style(theme, is_selected)
+                            .map(|style| typography::with_intent(style, TextIntent::Control));
 
                     let leading_icon_color =
                         select_tokens::menu_list_item_leading_icon_color(theme, variant);
