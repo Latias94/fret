@@ -165,7 +165,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .test_id(test_id)
     };
 
-    let item_team = {
+    let item_team = |cx: &mut ElementContext<'_, App>,
+                     test_id: &'static str,
+                     action_test_id: &'static str| {
         let avatars = stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N1).items_center(),
@@ -192,7 +194,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             cx,
             "lucide.chevron-right",
             shadcn::ButtonVariant::Outline,
-            Arc::<str>::from("ui-gallery-item-team-action"),
+            Arc::<str>::from(action_test_id),
         );
         let actions = shadcn::ItemActions::new([chevron])
             .refine_layout(LayoutRefinement::default().mt(Space::N1))
@@ -202,7 +204,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .on_click(CMD_APP_OPEN)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
-            .test_id("ui-gallery-item-team")
+            .test_id(test_id)
     };
 
     let item_download = {
@@ -406,13 +408,14 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .into_element(cx)
             .test_id("ui-gallery-item-people-group");
 
+        let team = item_team(cx, "ui-gallery-item-team", "ui-gallery-item-team-action");
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N6)
                 .items_start()
                 .layout(max_w_sm.clone()),
-            |_cx| vec![group, item_team.clone(), item_download],
+            |_cx| vec![group, team, item_download],
         )
         .test_id("ui-gallery-item-column-people")
     };
@@ -834,6 +837,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .into_element(cx)
             .test_id("ui-gallery-item-avatar-one");
 
+        let item_team = item_team(
+            cx,
+            "ui-gallery-item-avatar-team",
+            "ui-gallery-item-avatar-team-action",
+        );
         stack::vstack(
             cx,
             stack::VStackProps::default()
