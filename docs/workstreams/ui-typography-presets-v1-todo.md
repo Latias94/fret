@@ -17,8 +17,10 @@ This is a checklist-style tracker. It is **non-normative**.
 
 - [x] `fret-ui-shadcn`: migrate core control text (inputs, menus, tabs, sidebars, tables) to stable
       fixed line boxes via `fret-ui-kit` helpers.
-- [ ] `fret-ui-shadcn`: finish remaining ad-hoc control text literals (e.g. `button_group.rs`) and
+- [x] `fret-ui-shadcn`: finish remaining ad-hoc control text literals (e.g. `button_group.rs`) and
       remove redundant local helpers where feasible.
+- [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
+      toasts) to the intent-first stability defaults.
 - [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
 - [ ] `fret-ui-editor` / `fret-code-view`: audit where monospace presets should be used.
 - [ ] `fret-markdown`: decide per-surface default (control vs content) and document it.

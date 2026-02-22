@@ -55,7 +55,13 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
   - `crates/fret-render-text/src/parley_shaper.rs` (fixed line box baseline model)
 - Ecosystem authoring:
   - `ecosystem/fret-ui-kit/src/ui.rs` (`TextPreset`, `TextBox`)
+  - `ecosystem/fret-ui-kit/src/typography.rs` (`TextIntent`, `TypographyPreset`, `with_intent`)
   - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`line_height_px`, `line_box_in_bounds`)
+  - Adopters:
+    - `ecosystem/fret-ui-kit/src/primitives/label.rs`
+    - `ecosystem/fret-ui-kit/src/declarative/text_field.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (toasts)
+    - `ecosystem/fret-ui-shadcn/src/button_group.rs`
 - Regression gate:
   - `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
   - `ecosystem/fret-ui-material3/src/lib.rs` (tokens and real shaping gates: `material3_control_typography_tokens_use_stable_line_boxes`, `material3_control_text_keeps_metrics_stable_across_fallback_runs`)
