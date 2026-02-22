@@ -34,6 +34,8 @@ Exit criteria:
   - Evidence: `crates/fret-diag/src/diag_matrix.rs`
 - The `diag repeat` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_repeat.rs`
+- The `diag repro` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_repro.rs`
 - `cargo check -p fret-diag` is green.
 
 ## Milestone 2: Sidecar indexes reduce day-to-day pain
