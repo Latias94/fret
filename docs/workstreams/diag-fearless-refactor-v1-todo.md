@@ -40,6 +40,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_input.rs`
   - [x] Extract menu selection step (`menu_select`):
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_menu.rs`
+  - [x] Extract scroll-into-view step (`scroll_into_view`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
