@@ -225,14 +225,36 @@ pub(crate) fn cmd_ai_packet(
 
     if include_triage {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-        let report = bundle_stats_from_path(
+        match bundle_stats_from_path(
             &bundle_path,
             stats_top,
             sort,
             BundleStatsOptions { warmup_frames },
-        )?;
-        let payload = crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
-        crate::util::write_json_value(&packet_dir.join("triage.json"), &payload)?;
+        ) {
+            Ok(report) => {
+                let payload =
+                    crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+                crate::util::write_json_value(&packet_dir.join("triage.json"), &payload)?;
+            }
+            Err(err) => {
+                eprintln!("ai-packet: failed to generate triage.json: {err}");
+                crate::util::write_json_value(
+                    &packet_dir.join("triage.error.json"),
+                    &serde_json::json!({
+                        "schema_version": 1,
+                        "kind": "diag.ai_packet_note",
+                        "bundle": bundle_path.display().to_string(),
+                        "warmup_frames": warmup_frames,
+                        "message": "Failed to generate triage.json; falling back to triage.lite.json.",
+                        "error": err,
+                        "suggestions": [
+                            format!("fretboard diag triage {} --warmup-frames {}", bundle_path.display(), warmup_frames),
+                            format!("fretboard diag triage --lite {} --warmup-frames {}", bundle_path.display(), warmup_frames),
+                        ],
+                    }),
+                )?;
+            }
+        }
     }
 
     if let Some(test_id) = &test_id {
