@@ -300,6 +300,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::uniforms`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (writes to `uniforms.*_buffer`)
+  - Landed (step 4): extract effect parameter buffers (clip-mask params, scale-nearest params, effect uniform params) into `GpuEffectParams`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_effect_params.rs` (`GpuEffectParams`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`GpuEffectParams` init)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (layout uses `effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scale-param capacity via `effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scale_nearest,backdrop_warp,effects}.rs` (buffer uses)
   - Gate: run the anchor conformance set listed in ADR 0201.
 - [~] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.

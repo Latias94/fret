@@ -15,6 +15,7 @@ use std::sync::Arc;
 mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
+mod gpu_effect_params;
 mod gpu_globals;
 mod gpu_pipelines;
 mod gpu_textures;
@@ -45,6 +46,7 @@ mod tests;
 use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
+use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
 use gpu_textures::GpuTextures;
@@ -76,6 +78,7 @@ pub struct Renderer {
     uniforms: UniformResources,
     globals: GpuGlobals,
     textures: GpuTextures,
+    effect_params: GpuEffectParams,
     pipelines: GpuPipelines,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
@@ -87,24 +90,6 @@ pub struct Renderer {
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
     text_vertices: buffers::RingBuffer<TextVertex>,
-
-    clip_mask_param_buffer: wgpu::Buffer,
-    clip_mask_param_bind_group: wgpu::BindGroup,
-    clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
-
-    scale_param_buffer: wgpu::Buffer,
-    scale_param_stride: u64,
-    scale_param_capacity: usize,
-
-    backdrop_warp_param_buffer: wgpu::Buffer,
-
-    color_adjust_param_buffer: wgpu::Buffer,
-
-    color_matrix_param_buffer: wgpu::Buffer,
-
-    alpha_threshold_param_buffer: wgpu::Buffer,
-
-    drop_shadow_param_buffer: wgpu::Buffer,
 
     path_vertices: buffers::RingBuffer<PathVertex>,
 

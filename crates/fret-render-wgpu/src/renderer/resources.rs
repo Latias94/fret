@@ -471,18 +471,7 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        Self {
-            adapter: adapter.clone(),
-            uniform_bind_group,
-            uniforms,
-            globals,
-            textures,
-            pipelines: GpuPipelines::default(),
-            quad_instances,
-            path_paints,
-            text_paints,
-            viewport_vertices,
-            text_vertices,
+        let effect_params = super::gpu_effect_params::GpuEffectParams {
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
             clip_mask_param_bind_group_layout,
@@ -494,6 +483,21 @@ impl Renderer {
             color_matrix_param_buffer,
             alpha_threshold_param_buffer,
             drop_shadow_param_buffer,
+        };
+
+        Self {
+            adapter: adapter.clone(),
+            uniform_bind_group,
+            uniforms,
+            globals,
+            textures,
+            effect_params,
+            pipelines: GpuPipelines::default(),
+            quad_instances,
+            path_paints,
+            text_paints,
+            viewport_vertices,
+            text_vertices,
             path_vertices,
             path_intermediate: None,
             path_composite_vertices,

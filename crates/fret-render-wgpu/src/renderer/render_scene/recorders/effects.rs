@@ -25,7 +25,7 @@ pub(in super::super) fn record_color_adjust_pass(
     let renderer = &mut *exec.renderer;
 
     queue.write_buffer(
-        &renderer.color_adjust_param_buffer,
+        &renderer.effect_params.color_adjust_param_buffer,
         0,
         bytemuck::cast_slice(&[pass.saturation, pass.brightness, pass.contrast, 0.0]),
     );
@@ -85,7 +85,10 @@ pub(in super::super) fn record_color_adjust_pass(
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: renderer.color_adjust_param_buffer.as_entire_binding(),
+                    resource: renderer
+                        .effect_params
+                        .color_adjust_param_buffer
+                        .as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -123,7 +126,10 @@ pub(in super::super) fn record_color_adjust_pass(
             "fret color-adjust bind group",
             layout,
             &src_view,
-            renderer.color_adjust_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .color_adjust_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.color_adjust_masked_pipeline_ref();
         let uniform_offset =
@@ -156,7 +162,10 @@ pub(in super::super) fn record_color_adjust_pass(
             "fret color-adjust bind group",
             layout,
             &src_view,
-            renderer.color_adjust_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .color_adjust_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.color_adjust_pipeline_ref();
         run_fullscreen_triangle_pass(
@@ -194,7 +203,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
     let renderer = &mut *exec.renderer;
 
     queue.write_buffer(
-        &renderer.alpha_threshold_param_buffer,
+        &renderer.effect_params.alpha_threshold_param_buffer,
         0,
         bytemuck::cast_slice(&[pass.cutoff, pass.soft, 0.0, 0.0]),
     );
@@ -254,7 +263,10 @@ pub(in super::super) fn record_alpha_threshold_pass(
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: renderer.alpha_threshold_param_buffer.as_entire_binding(),
+                    resource: renderer
+                        .effect_params
+                        .alpha_threshold_param_buffer
+                        .as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -291,7 +303,10 @@ pub(in super::super) fn record_alpha_threshold_pass(
             "fret alpha-threshold bind group",
             layout,
             &src_view,
-            renderer.alpha_threshold_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .alpha_threshold_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.alpha_threshold_masked_pipeline_ref();
         let uniform_offset =
@@ -324,7 +339,10 @@ pub(in super::super) fn record_alpha_threshold_pass(
             "fret alpha-threshold bind group",
             layout,
             &src_view,
-            renderer.alpha_threshold_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .alpha_threshold_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.alpha_threshold_pipeline_ref();
         run_fullscreen_triangle_pass(
@@ -371,7 +389,7 @@ pub(in super::super) fn record_color_matrix_pass(
         m[4], m[9], m[14], m[19],
     ];
     queue.write_buffer(
-        &renderer.color_matrix_param_buffer,
+        &renderer.effect_params.color_matrix_param_buffer,
         0,
         bytemuck::cast_slice(&packed),
     );
@@ -431,7 +449,10 @@ pub(in super::super) fn record_color_matrix_pass(
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: renderer.color_matrix_param_buffer.as_entire_binding(),
+                    resource: renderer
+                        .effect_params
+                        .color_matrix_param_buffer
+                        .as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -468,7 +489,10 @@ pub(in super::super) fn record_color_matrix_pass(
             "fret color-matrix bind group",
             layout,
             &src_view,
-            renderer.color_matrix_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .color_matrix_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.color_matrix_masked_pipeline_ref();
         let uniform_offset =
@@ -501,7 +525,10 @@ pub(in super::super) fn record_color_matrix_pass(
             "fret color-matrix bind group",
             layout,
             &src_view,
-            renderer.color_matrix_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .color_matrix_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.color_matrix_pipeline_ref();
         run_fullscreen_triangle_pass(
@@ -539,7 +566,7 @@ pub(in super::super) fn record_drop_shadow_pass(
     let renderer = &mut *exec.renderer;
 
     queue.write_buffer(
-        &renderer.drop_shadow_param_buffer,
+        &renderer.effect_params.drop_shadow_param_buffer,
         0,
         bytemuck::cast_slice(&[
             pass.offset_px.0,
@@ -608,7 +635,10 @@ pub(in super::super) fn record_drop_shadow_pass(
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: renderer.drop_shadow_param_buffer.as_entire_binding(),
+                    resource: renderer
+                        .effect_params
+                        .drop_shadow_param_buffer
+                        .as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -646,7 +676,10 @@ pub(in super::super) fn record_drop_shadow_pass(
             "fret drop-shadow bind group",
             layout,
             &src_view,
-            renderer.drop_shadow_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .drop_shadow_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.drop_shadow_masked_pipeline_ref();
         let uniform_offset =
@@ -679,7 +712,10 @@ pub(in super::super) fn record_drop_shadow_pass(
             "fret drop-shadow bind group",
             layout,
             &src_view,
-            renderer.drop_shadow_param_buffer.as_entire_binding(),
+            renderer
+                .effect_params
+                .drop_shadow_param_buffer
+                .as_entire_binding(),
         );
         let pipeline = renderer.drop_shadow_pipeline_ref();
         run_fullscreen_triangle_pass(
@@ -854,7 +890,7 @@ pub(in super::super) fn record_clip_mask_pass(
     let renderer = &mut *exec.renderer;
 
     queue.write_buffer(
-        &renderer.clip_mask_param_buffer,
+        &renderer.effect_params.clip_mask_param_buffer,
         0,
         bytemuck::cast_slice(&[pass.dst_size.0 as f32, pass.dst_size.1 as f32, 0.0, 0.0]),
     );
@@ -892,7 +928,7 @@ pub(in super::super) fn record_clip_mask_pass(
                 .flatten(),
         ),
         &[uniform_offset, ctx.render_space_offset_u32],
-        &renderer.clip_mask_param_bind_group,
+        &renderer.effect_params.clip_mask_param_bind_group,
         &[],
         pass.dst_scissor,
         pass.dst_size,

@@ -396,6 +396,21 @@ Progress record (Effect pipeline caches moved into GpuPipelines):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (GpuEffectParams extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 2 step 4)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_effect_params.rs` (`GpuEffectParams`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`GpuEffectParams` init)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (layout uses `effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scale-param capacity via `effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scale_nearest,backdrop_warp,effects}.rs` (buffer uses)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
