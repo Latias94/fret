@@ -264,6 +264,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (blit/blur fields)
     - `crates/fret-render-wgpu/src/renderer/pipelines/{blit,blur}.rs` (`ensure_*`, `*_ref`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{blit,blur}.rs` (call sites)
+  - Landed (step 10): move scale-nearest pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (scale-nearest fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/scale_nearest.rs` (`ensure_scale_nearest_pipelines`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` (call sites)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

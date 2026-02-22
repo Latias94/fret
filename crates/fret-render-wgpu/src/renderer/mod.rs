@@ -92,13 +92,6 @@ pub struct Renderer {
     clip_mask_param_bind_group: wgpu::BindGroup,
     clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
 
-    scale_pipeline_format: Option<wgpu::TextureFormat>,
-    downsample_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
-    scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
     scale_param_stride: u64,
     scale_param_capacity: usize,

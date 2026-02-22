@@ -360,6 +360,18 @@ Progress record (Blit/Blur pipeline caches moved into GpuPipelines):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Scale-nearest pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 10)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (scale-nearest fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/scale_nearest.rs` (`ensure_scale_nearest_pipelines`, `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

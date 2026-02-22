@@ -52,6 +52,14 @@ pub(super) struct GpuPipelines {
     pub(super) blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) scale_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) downsample_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) upscale_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -93,6 +101,13 @@ impl Default for GpuPipelines {
             blur_h_mask_pipeline: None,
             blur_v_mask_pipeline: None,
             blit_mask_bind_group_layout: None,
+            scale_pipeline_format: None,
+            downsample_pipeline: None,
+            upscale_pipeline: None,
+            upscale_masked_pipeline: None,
+            upscale_mask_pipeline: None,
+            scale_bind_group_layout: None,
+            scale_mask_bind_group_layout: None,
         }
     }
 }
