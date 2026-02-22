@@ -357,7 +357,7 @@ pub(crate) fn cmd_hotspots(
     const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
     if !force && file_bytes > DEFAULT_MAX_FILE_BYTES {
         return Err(format!(
-            "bundle.json is too large to analyze safely by default (size={} > {}); re-run with --force",
+            "bundle.json is too large to analyze safely by default (size={} > {}); re-run with --lite (recommended) or --force",
             human_bytes(file_bytes),
             human_bytes(DEFAULT_MAX_FILE_BYTES)
         ));
