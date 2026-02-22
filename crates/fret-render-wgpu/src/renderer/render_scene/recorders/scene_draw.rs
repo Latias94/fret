@@ -1,6 +1,6 @@
 use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
-use super::super::helpers::set_scissor_rect_absolute;
+use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
 
 impl Renderer {
     pub(in super::super) fn record_scene_draw_range_pass(
@@ -28,37 +28,16 @@ impl Renderer {
         let target_origin = scene_pass.target_origin;
         let target_size = scene_pass.target_size;
         let load = scene_pass.load;
-        let pass_target_view_owned = match scene_pass.target {
-            PlanTarget::Output => None,
-            PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
-                &mut self.intermediate_pool,
-                device,
-                PlanTarget::Intermediate0,
-                target_size,
-                format,
-                usage,
-            )),
-            PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
-                &mut self.intermediate_pool,
-                device,
-                PlanTarget::Intermediate1,
-                target_size,
-                format,
-                usage,
-            )),
-            PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
-                &mut self.intermediate_pool,
-                device,
-                PlanTarget::Intermediate2,
-                target_size,
-                format,
-                usage,
-            )),
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-                debug_assert!(false, "SceneDrawRange cannot target mask targets");
-                None
-            }
-        };
+        let pass_target_view_owned = ensure_color_dst_view_owned(
+            frame_targets,
+            &mut self.intermediate_pool,
+            device,
+            scene_pass.target,
+            target_size,
+            format,
+            usage,
+            "SceneDrawRange",
+        );
         let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
         {

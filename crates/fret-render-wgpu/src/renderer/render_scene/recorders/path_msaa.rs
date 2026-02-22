@@ -1,6 +1,6 @@
 use super::super::super::*;
 use super::super::executor::RenderSceneExecutor;
-use super::super::helpers::set_scissor_rect_absolute;
+use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
 
 pub(in super::super) fn record_path_msaa_batch_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -28,23 +28,16 @@ pub(in super::super) fn record_path_msaa_batch_pass(
     debug_assert!(path_pass.segment.0 < plan.segments.len());
     let target_origin = path_pass.target_origin;
     let target_size = path_pass.target_size;
-    let pass_target_view_owned = match path_pass.target {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                path_pass.target,
-                target_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "PathMsaaBatch cannot target mask targets");
-            None
-        }
-    };
+    let pass_target_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        path_pass.target,
+        target_size,
+        format,
+        usage,
+        "PathMsaaBatch",
+    );
     let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
     let start = path_pass.draw_range.start;
