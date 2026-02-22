@@ -2,28 +2,51 @@ use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
 use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
 
+pub(in super::super) struct SceneDrawRangePassArgs<'a> {
+    pub(in super::super) device: &'a wgpu::Device,
+    pub(in super::super) format: wgpu::TextureFormat,
+    pub(in super::super) target_view: &'a wgpu::TextureView,
+    pub(in super::super) usage: wgpu::TextureUsages,
+    pub(in super::super) encoder: &'a mut wgpu::CommandEncoder,
+    pub(in super::super) frame_targets: &'a mut FrameTargets,
+    pub(in super::super) encoding: &'a SceneEncoding,
+    pub(in super::super) render_space_offset_u32: u32,
+    pub(in super::super) perf_enabled: bool,
+    pub(in super::super) frame_perf: &'a mut RenderPerfStats,
+    pub(in super::super) plan: &'a RenderPlan,
+    pub(in super::super) scene_pass: &'a SceneDrawRangePass,
+    pub(in super::super) viewport_vertex_buffer: &'a wgpu::Buffer,
+    pub(in super::super) text_vertex_buffer: &'a wgpu::Buffer,
+    pub(in super::super) path_vertex_buffer: &'a wgpu::Buffer,
+    pub(in super::super) quad_instance_bind_group: &'a wgpu::BindGroup,
+    pub(in super::super) text_paint_bind_group: &'a wgpu::BindGroup,
+    pub(in super::super) path_paint_bind_group: &'a wgpu::BindGroup,
+}
+
 impl Renderer {
     pub(in super::super) fn record_scene_draw_range_pass(
         &mut self,
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        plan: &RenderPlan,
-        scene_pass: &SceneDrawRangePass,
-        viewport_vertex_buffer: &wgpu::Buffer,
-        text_vertex_buffer: &wgpu::Buffer,
-        path_vertex_buffer: &wgpu::Buffer,
-        quad_instance_bind_group: &wgpu::BindGroup,
-        text_paint_bind_group: &wgpu::BindGroup,
-        path_paint_bind_group: &wgpu::BindGroup,
+        args: &mut SceneDrawRangePassArgs<'_>,
     ) {
+        let device = args.device;
+        let format = args.format;
+        let target_view = args.target_view;
+        let usage = args.usage;
+        let encoder = &mut *args.encoder;
+        let frame_targets = &mut *args.frame_targets;
+        let encoding = args.encoding;
+        let render_space_offset_u32 = args.render_space_offset_u32;
+        let perf_enabled = args.perf_enabled;
+        let frame_perf = &mut *args.frame_perf;
+        let plan = args.plan;
+        let scene_pass = args.scene_pass;
+        let viewport_vertex_buffer = args.viewport_vertex_buffer;
+        let text_vertex_buffer = args.text_vertex_buffer;
+        let path_vertex_buffer = args.path_vertex_buffer;
+        let quad_instance_bind_group = args.quad_instance_bind_group;
+        let text_paint_bind_group = args.text_paint_bind_group;
+        let path_paint_bind_group = args.path_paint_bind_group;
+
         debug_assert!(scene_pass.segment.0 < plan.segments.len());
         let target_origin = scene_pass.target_origin;
         let target_size = scene_pass.target_size;

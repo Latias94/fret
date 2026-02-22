@@ -1,8 +1,8 @@
 use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use super::recorders::{
-    record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
-    record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
+    SceneDrawRangePassArgs, record_alpha_threshold_pass, record_backdrop_warp_pass,
+    record_blur_pass, record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
     record_composite_premul_pass, record_drop_shadow_pass, record_fullscreen_blit_pass,
     record_path_clip_mask_pass, record_path_msaa_batch_pass, record_scale_nearest_pass,
 };
@@ -105,7 +105,7 @@ impl<'a> RenderSceneExecutor<'a> {
                 let frame_targets = &mut *self.frame_targets;
                 let frame_perf = &mut *self.frame_perf;
 
-                renderer.record_scene_draw_range_pass(
+                let mut args = SceneDrawRangePassArgs {
                     device,
                     format,
                     target_view,
@@ -124,7 +124,8 @@ impl<'a> RenderSceneExecutor<'a> {
                     quad_instance_bind_group,
                     text_paint_bind_group,
                     path_paint_bind_group,
-                );
+                };
+                renderer.record_scene_draw_range_pass(&mut args);
             }
             RenderPlanPass::PathMsaaBatch(path_pass) => {
                 record_path_msaa_batch_pass(
