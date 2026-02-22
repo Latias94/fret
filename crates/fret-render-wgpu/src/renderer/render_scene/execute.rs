@@ -981,14 +981,8 @@ impl Renderer {
                         }
                         RenderPlanPass::SceneDrawRange(scene_pass) => {
                             self.record_scene_draw_range_pass(
-                                ctx.device,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.usage,
-                                ctx.frame_targets,
-                                ctx.encoder,
+                                &mut ctx,
                                 &plan,
-                                ctx.encoding,
                                 scene_pass,
                                 &viewport_vertex_buffer,
                                 &text_vertex_buffer,
@@ -996,9 +990,6 @@ impl Renderer {
                                 &quad_instance_bind_group,
                                 &text_paint_bind_group,
                                 &path_paint_bind_group,
-                                ctx.render_space_offset_u32,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
                             );
                         }
                         RenderPlanPass::PathMsaaBatch(path_pass) => {

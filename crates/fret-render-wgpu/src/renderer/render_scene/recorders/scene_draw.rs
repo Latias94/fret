@@ -1,18 +1,12 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::ctx::ExecuteCtx;
 use super::super::helpers::set_scissor_rect_absolute;
 
 impl Renderer {
     pub(in super::super) fn record_scene_draw_range_pass(
         &mut self,
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        usage: wgpu::TextureUsages,
-        frame_targets: &mut FrameTargets,
-        encoder: &mut wgpu::CommandEncoder,
+        ctx: &mut ExecuteCtx<'_>,
         plan: &RenderPlan,
-        encoding: &SceneEncoding,
         scene_pass: &SceneDrawRangePass,
         viewport_vertex_buffer: &wgpu::Buffer,
         text_vertex_buffer: &wgpu::Buffer,
@@ -20,10 +14,18 @@ impl Renderer {
         quad_instance_bind_group: &wgpu::BindGroup,
         text_paint_bind_group: &wgpu::BindGroup,
         path_paint_bind_group: &wgpu::BindGroup,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
     ) {
+        let device = ctx.device;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let usage = ctx.usage;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoder = &mut *ctx.encoder;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         debug_assert!(scene_pass.segment.0 < plan.segments.len());
         let target_origin = scene_pass.target_origin;
         let target_size = scene_pass.target_size;
