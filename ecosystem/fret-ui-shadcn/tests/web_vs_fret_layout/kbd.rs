@@ -132,7 +132,23 @@ fn fret_layout_kbd_text_is_vertically_centered_ascii() {
 }
 
 #[test]
-fn fret_layout_kbd_text_is_vertically_centered_symbols() {
-    assert_kbd_text_is_vertically_centered("⌘");
-    assert_kbd_text_is_vertically_centered("⏎");
+fn fret_layout_kbd_icon_only_height_matches_control_height() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(240.0), Px(80.0)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
+                cx,
+                IconId::new_static("lucide.command"),
+            )])
+            .into_element(cx)
+            .test_id("kbd-icon-only"),
+        ]
+    });
+
+    let kbd = find_by_test_id(&snap, "kbd-icon-only");
+    assert_close_px("kbd icon-only height", kbd.bounds.size.height, 20.0, 1.0);
 }

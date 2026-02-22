@@ -1,16 +1,24 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
+use fret_icons::IconId;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone)]
+enum KbdContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+#[derive(Debug, Clone)]
 pub struct Kbd {
-    text: Arc<str>,
+    content: KbdContent,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -18,10 +26,27 @@ pub struct Kbd {
 impl Kbd {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            content: KbdContent::Text(text.into()),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn from_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: KbdContent::Children(children.into_iter().collect()),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Overrides the contents of this `Kbd` with an explicit child list.
+    ///
+    /// This is primarily used for icon-first keycap rendering (shadcn `&>svg` patterns), so
+    /// demos can avoid relying on platform fonts having `⌘`/`⌥` glyphs.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.content = KbdContent::Children(children.into_iter().collect());
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -36,26 +61,35 @@ impl Kbd {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        kbd_with_patch(cx, self.text, self.chrome, self.layout)
+        kbd_with_patch(cx, self.content, self.chrome, self.layout)
     }
 }
 
 pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     kbd_with_patch(
         cx,
-        text,
+        KbdContent::Text(text.into()),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
     )
 }
 
+#[track_caller]
+pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let px = theme
+        .metric_by_key("component.kbd.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    decl_icon::icon_with(cx, icon, Some(px), None)
+}
+
 fn kbd_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
+    content: KbdContent,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
-    let text = text.into();
     let theme = Theme::global(&*cx.app).clone();
 
     let bg = theme.color_token("muted");
@@ -76,6 +110,7 @@ fn kbd_with_patch<H: UiHost>(
     let props = decl_style::container_props(&theme, chrome, layout_override);
 
     let fg = theme.color_token("muted-foreground");
+    let gap = MetricRef::space(Space::N1).resolve(&theme);
 
     let px = theme
         .metric_by_key("component.kbd.text_px")
@@ -97,22 +132,21 @@ fn kbd_with_patch<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
+                gap,
                 padding: fret_core::Edges::all(Px(0.0)),
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
                 wrap: false,
             },
-            move |cx| {
-                vec![
-                    ui::label(cx, text.clone())
+            move |cx| match &content {
+                KbdContent::Text(text) => vec![ui::label(cx, Arc::clone(text))
                         .text_size_px(px)
                         .fixed_line_box_px(line_height)
                         .line_box_in_bounds()
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(ColorRef::Color(fg))
-                        .into_element(cx),
-                ]
+                        .into_element(cx)],
+                KbdContent::Children(children) => children.clone(),
             },
         )]
     })

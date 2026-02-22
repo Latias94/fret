@@ -27,10 +27,26 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             |cx| {
                 vec![
                     shadcn::KbdGroup::new([
-                        shadcn::Kbd::new("⌘").into_element(cx),
-                        shadcn::Kbd::new("⇧").into_element(cx),
-                        shadcn::Kbd::new("⌥").into_element(cx),
-                        shadcn::Kbd::new("⌃").into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.command"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.arrow-big-up"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.option"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevron-up"),
+                        )])
+                        .into_element(cx),
                     ])
                     .into_element(cx),
                     shadcn::KbdGroup::new([
@@ -78,7 +94,11 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .refine_style(ChromeRefinement::default().pr(Space::N2))
-            .children([shadcn::Kbd::new("⏎").into_element(cx)])
+            .children([shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.corner-down-left"),
+            )])
+            .into_element(cx)])
             .into_element(cx)
             .test_id("ui-gallery-kbd-button-accept");
 
@@ -177,7 +197,11 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .a11y_label("Search")
             .leading([search_icon])
             .trailing([
-                shadcn::Kbd::new("⌘").into_element(cx),
+                shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                    cx,
+                    fret_icons::IconId::new_static("lucide.command"),
+                )])
+                .into_element(cx),
                 shadcn::Kbd::new("K").into_element(cx),
             ])
             .trailing_has_kbd(true)
@@ -210,16 +234,16 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         Some("Preview follows shadcn Kbd docs order: Demo, Group, Button, Tooltip, Input Group, RTL."),
         vec![
             DocSection::new("Demo", demo)
-                .description("Two shortcut display patterns (symbols and chord).")
+                .description("Two shortcut display patterns (icons and chord).")
                 .code(
                     "rust",
                     r#"stack::vstack(cx, stack::VStackProps::default().gap(Space::N4).items_center(), |cx| {
     vec![
         shadcn::KbdGroup::new([
-            shadcn::Kbd::new("⌘").into_element(cx),
-            shadcn::Kbd::new("⇧").into_element(cx),
-            shadcn::Kbd::new("⌥").into_element(cx),
-            shadcn::Kbd::new("⌃").into_element(cx),
+            shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.command"))]).into_element(cx),
+            shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.arrow-big-up"))]).into_element(cx),
+            shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.option"))]).into_element(cx),
+            shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.chevron-up"))]).into_element(cx),
         ])
         .into_element(cx),
         shadcn::KbdGroup::new([
@@ -257,7 +281,7 @@ stack::hstack(cx, stack::HStackProps::default().gap(Space::N1).items_center(), |
     .variant(shadcn::ButtonVariant::Outline)
     .size(shadcn::ButtonSize::Sm)
     .refine_style(ChromeRefinement::default().pr(Space::N2))
-    .children([shadcn::Kbd::new("⏎").into_element(cx)])
+    .children([shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.corner-down-left"))]).into_element(cx)])
     .into_element(cx);"#,
                 ),
             DocSection::new("Tooltip", tooltip)
@@ -294,7 +318,10 @@ let search_icon = shadcn::icon::icon_with(
 shadcn::InputGroup::new(query)
     .a11y_label("Search")
     .leading([search_icon])
-    .trailing([shadcn::Kbd::new("⌘").into_element(cx), shadcn::Kbd::new("K").into_element(cx)])
+    .trailing([
+        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(cx, fret_icons::IconId::new_static("lucide.command"))]).into_element(cx),
+        shadcn::Kbd::new("K").into_element(cx),
+    ])
     .trailing_has_kbd(true);"#,
                 ),
             DocSection::new("RTL", rtl)
