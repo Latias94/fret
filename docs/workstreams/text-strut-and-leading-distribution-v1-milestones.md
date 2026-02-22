@@ -58,9 +58,12 @@ Evidence:
 
 ## M4 — Ecosystem opt-in adopted for text areas
 
-Status: Not started.
+Status: Partial.
 
 Exit criteria:
 
 - `fret-ui-kit::typography` exposes a clear opt-in for multiline stable line boxes.
 - At least one real surface (text area / form) adopts it.
+
+Evidence:
+- `ecosystem/fret-ui-shadcn/src/textarea.rs`

@@ -183,7 +183,8 @@ pub fn textarea<H: UiHost>(
 
     let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
 
-    let text_style = typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+    let text_style =
+        typography::text_area_control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
 
     let mut chrome = TextAreaStyle::default();
     chrome.padding_x = resolved.padding.left;
