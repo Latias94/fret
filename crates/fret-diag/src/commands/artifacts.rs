@@ -327,11 +327,11 @@ pub(crate) fn cmd_meta(
             if root.is_file() && try_read_bundle_meta_json(&root, warmup_frames).is_some() {
                 (root.clone(), root)
             } else {
-            let bundle_path = crate::resolve_bundle_json_path(&src);
-            let canonical =
-                crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
-            let out = crate::default_meta_out_path(&bundle_path);
-            (canonical, out)
+                let bundle_path = crate::resolve_bundle_json_path(&src);
+                let canonical =
+                    crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+                let out = crate::default_meta_out_path(&bundle_path);
+                (canonical, out)
             }
         }
     } else {

@@ -205,10 +205,12 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::ResetDiagnostics) => {
-            let handled = script_steps::handle_effect_only_steps(service, window, step, active, output);
+            let handled =
+                script_steps::handle_effect_only_steps(service, window, step, active, output);
             debug_assert!(handled);
         }
-        step @ (UiActionStepV2::CaptureBundle { .. } | UiActionStepV2::CaptureScreenshot { .. }) => {
+        step
+        @ (UiActionStepV2::CaptureBundle { .. } | UiActionStepV2::CaptureScreenshot { .. }) => {
             let handled = script_steps::handle_capture_steps(
                 service,
                 app,
@@ -1392,7 +1394,6 @@ impl UiDiagnosticsService {
             }
         }
 
-
         return finalize_drive_script_for_window(
             self,
             app,
@@ -1419,6 +1420,4 @@ impl UiDiagnosticsService {
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
     }
-
 }
-
