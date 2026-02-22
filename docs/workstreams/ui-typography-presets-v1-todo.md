@@ -21,8 +21,22 @@ This is a checklist-style tracker. It is **non-normative**.
       remove redundant local helpers where feasible.
 - [x] `fret-ui-shadcn`: migrate key builder-chain control text callsites (menus, buttons, kbd/select)
       to stable fixed line boxes (`fixed_line_box_px(..)` + `line_box_in_bounds()`).
-- [ ] `fret-ui-shadcn`: continue the builder-chain audit across the remaining surfaces (command,
+- [x] `fret-ui-shadcn`: continue the builder-chain audit across the remaining surfaces (command,
       breadcrumbs, avatar, dialogs, calendars) and remove redundant `FixedFromStyle` callsites.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/command.rs`
+    - `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
+    - `ecosystem/fret-ui-shadcn/src/avatar.rs`
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs`
+    - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
+    - `ecosystem/fret-ui-shadcn/src/calendar.rs`
+    - `ecosystem/fret-ui-shadcn/src/calendar_range.rs`
+    - `ecosystem/fret-ui-shadcn/src/calendar_multiple.rs`
+    - `ecosystem/fret-ui-shadcn/src/calendar_hijri.rs`
+    - `ecosystem/fret-ui-shadcn/src/sheet.rs`
+    - `ecosystem/fret-ui-shadcn/src/card.rs`
+- [ ] `fret-ui-shadcn`: continue the builder-chain audit across the remaining surfaces (context menu,
+      popover, tooltip, field, chart, sidebar) and remove redundant `FixedFromStyle` callsites.
 - [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
       toasts) to the intent-first stability defaults.
 - [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
