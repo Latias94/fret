@@ -27,6 +27,8 @@ Related living docs:
 - Diagnostics service + script runner live in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
 - Script step handlers are already split into dedicated modules under `ecosystem/fret-bootstrap/src/ui_diagnostics/`.
 - Internal script runner state types were extracted into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs` to reduce churn.
+- The per-frame script driver (`UiDiagnosticsService::drive_script_for_window`) was extracted into
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
 
 ## Goals
 
@@ -51,4 +53,3 @@ See:
 
 - TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
 - Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
-

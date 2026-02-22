@@ -12,7 +12,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract internal script runner state types into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`.
 - [x] Move script evidence + trace helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
 - [x] Extract `drive_script_for_window` finalization into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
-- [ ] Extract the per-frame driver (`UiDiagnosticsService::drive_script_for_window`) out of
+- [x] Extract the per-frame driver (`UiDiagnosticsService::drive_script_for_window`) out of
       `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
   - Keep the public entrypoint signature stable.
 - [ ] Define a stable “module boundary” inside `ecosystem/fret-bootstrap/src/ui_diagnostics/`:
