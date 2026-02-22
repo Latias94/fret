@@ -8,13 +8,14 @@
 - [x] Migrate clip-mask / composite-premul to executor-based functions.
 - [x] Migrate path clip-mask / MSAA path batch to executor-based functions.
 - [x] Remove `ExecuteCtx` (executor-only shared inputs).
+- [x] Extract scissor mapping helpers out of `execute.rs`.
+- [x] Extract uniform bind-group picking out of `execute.rs`.
+- [x] Centralize plan-pass trace/render-space helpers out of `execute.rs`.
 
 ## Next
 
-- [ ] Extract shared helpers out of `execute.rs` (reduce `pub(in ...)` leakage):
-  - scissor mapping helpers
-  - target selection helpers (output vs intermediate vs mask)
-  - uniform bind-group picking (mask-image override selection)
+- [ ] Extract target selection helpers (output vs intermediate vs mask) into a dedicated helper
+      surface to reduce per-pass boilerplate.
 - [ ] Decide the final ownership shape for `SceneDrawRange`:
   - keep as a `Renderer` method with explicit args (status quo), or
   - migrate to an executor-based recorder function (more churn; higher uniformity)
