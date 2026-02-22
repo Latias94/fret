@@ -4,6 +4,7 @@ use super::super::{RenderPerfStats, SceneEncoding};
 pub(super) struct ExecuteCtx<'a> {
     pub(super) device: &'a wgpu::Device,
     pub(super) queue: &'a wgpu::Queue,
+    pub(super) frame_index: u64,
     pub(super) format: wgpu::TextureFormat,
     pub(super) target_view: &'a wgpu::TextureView,
     pub(super) viewport_size: (u32, u32),

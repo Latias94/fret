@@ -956,6 +956,7 @@ impl Renderer {
                     let mut ctx = ExecuteCtx {
                         device,
                         queue,
+                        frame_index,
                         format,
                         target_view,
                         viewport_size,
@@ -973,16 +974,8 @@ impl Renderer {
                     match planned_pass {
                         RenderPlanPass::PathClipMask(mask_pass) => {
                             self.record_path_clip_mask_pass(
-                                ctx.device,
-                                ctx.usage,
-                                frame_index,
-                                ctx.frame_targets,
-                                ctx.encoder,
-                                ctx.encoding,
+                                &mut ctx,
                                 &path_vertex_buffer,
-                                ctx.render_space_offset_u32,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
                                 mask_pass,
                             );
                         }

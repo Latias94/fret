@@ -1,22 +1,24 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::ctx::ExecuteCtx;
 use super::super::helpers::set_scissor_rect_absolute;
 
 impl Renderer {
     pub(in super::super) fn record_path_clip_mask_pass(
         &mut self,
-        device: &wgpu::Device,
-        usage: wgpu::TextureUsages,
-        frame_index: u64,
-        frame_targets: &mut FrameTargets,
-        encoder: &mut wgpu::CommandEncoder,
-        encoding: &SceneEncoding,
+        ctx: &mut ExecuteCtx<'_>,
         path_vertex_buffer: &wgpu::Buffer,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
         mask_pass: &PathClipMaskPass,
     ) {
+        let device = ctx.device;
+        let frame_index = ctx.frame_index;
+        let usage = ctx.usage;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoder = &mut *ctx.encoder;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         let target_size = mask_pass.dst_size;
 
         let (pass_target_texture, pass_target_view) = frame_targets.ensure_target_with_texture(
