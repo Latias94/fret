@@ -1,6 +1,9 @@
 use super::super::super::*;
 use super::super::executor::RenderSceneExecutor;
-use super::super::helpers::set_scissor_rect_absolute;
+use super::super::helpers::{
+    ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
+    set_scissor_rect_absolute,
+};
 
 pub(in super::super) fn record_color_adjust_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -1109,33 +1112,22 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let pipeline_ix = pass.blend_mode.pipeline_index();
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "CompositePremul src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "CompositePremul")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "CompositePremul dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "CompositePremul",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     let (composite_pipeline, bind_group) = if let Some(mask) = pass.mask {
@@ -1148,7 +1140,11 @@ pub(in super::super) fn record_composite_premul_pass(
             "mask-based composite expects full-size destination"
         );
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "CompositePremul")
+        else {
+            return;
+        };
         let layout = renderer
             .composite_mask_bind_group_layout
             .as_ref()
@@ -1289,10 +1285,6 @@ pub(in super::super) fn record_clip_mask_pass(
 
     let renderer = &mut *exec.renderer;
 
-    debug_assert!(matches!(
-        pass.dst,
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-    ));
     queue.write_buffer(
         &renderer.clip_mask_param_buffer,
         0,
@@ -1303,14 +1295,17 @@ pub(in super::super) fn record_clip_mask_pass(
             .uniform_bytes
             .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
     }
-    let dst_view = frame_targets.ensure_target(
+    let Some(dst_view) = ensure_mask_dst_view(
+        frame_targets,
         &mut renderer.intermediate_pool,
         device,
         pass.dst,
         pass.dst_size,
-        wgpu::TextureFormat::R8Unorm,
         usage,
-    );
+        "ClipMask",
+    ) else {
+        return;
+    };
 
     let pipeline = renderer
         .clip_mask_pipeline

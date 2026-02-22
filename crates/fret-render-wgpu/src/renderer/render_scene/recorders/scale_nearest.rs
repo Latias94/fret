@@ -1,5 +1,8 @@
 use super::super::super::*;
 use super::super::executor::RenderSceneExecutor;
+use super::super::helpers::{
+    ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
+};
 
 pub(in super::super) fn record_scale_nearest_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -52,33 +55,22 @@ pub(in super::super) fn record_scale_nearest_pass(
         size: Some(scale_param_size_nz),
     });
 
-    let src_view = match pass.src {
-        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ScaleNearest src cannot be Output/mask targets");
-            return;
-        }
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            frame_targets.require_target(pass.src, pass.src_size)
-        }
+    let Some(src_view) =
+        require_color_src_view(frame_targets, pass.src, pass.src_size, "ScaleNearest")
+    else {
+        return;
     };
 
-    let dst_view_owned = match pass.dst {
-        PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.ensure_target(
-                &mut renderer.intermediate_pool,
-                device,
-                pass.dst,
-                pass.dst_size,
-                format,
-                usage,
-            ))
-        }
-        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-            debug_assert!(false, "ScaleNearest dst cannot be mask targets");
-            None
-        }
-    };
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "ScaleNearest",
+    );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
     if let Some(mask) = pass.mask {
@@ -97,7 +89,11 @@ pub(in super::super) fn record_scale_nearest_pass(
             .expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let Some(mask_view) =
+            require_mask_view(frame_targets, mask.target, mask.size, "ScaleNearest")
+        else {
+            return;
+        };
         let mask_layout = renderer
             .scale_mask_bind_group_layout
             .as_ref()
