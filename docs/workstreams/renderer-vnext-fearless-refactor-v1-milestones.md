@@ -239,6 +239,19 @@ Exit criteria:
   - `tools/perf/headless_clip_mask_stress_gate.py`
   - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 
+Progress record (Bind group + uniform-resource lifecycle tightening):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 2 step 2; Stage 3 follow-up)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`uniform_resources_revision`)
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

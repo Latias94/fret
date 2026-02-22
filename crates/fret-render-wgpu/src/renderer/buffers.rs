@@ -217,7 +217,6 @@ impl Renderer {
             &self.mask_buffer,
             &self.render_space_buffer,
         );
-        self.bind_group_caches.clear_uniform_mask_images();
     }
 
     fn with_uniform_resource_update(
@@ -227,6 +226,8 @@ impl Renderer {
         update: impl FnOnce(&mut Self),
     ) {
         update(self);
+        self.uniform_resources_revision = self.uniform_resources_revision.wrapping_add(1);
+        self.bind_group_caches.invalidate_uniform_resources();
         self.rebuild_uniform_bind_group(device, label);
     }
 

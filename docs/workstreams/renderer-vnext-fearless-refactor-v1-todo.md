@@ -232,6 +232,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 1): centralize uniform-dependent buffer replacement so every resize flows through a single rebuild+invalidate path.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`, `rebuild_uniform_bind_group`)
+  - Landed (step 2): make uniform-resource invalidation explicit and versioned (uniform buffers ↔ mask-image override bind groups).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`uniform_resources_revision`)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups` mixes revisions)
   - Gate: run the anchor conformance set listed in ADR 0201.
 - [~] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.

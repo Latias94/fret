@@ -619,6 +619,7 @@ impl Renderer {
             render_targets_generation: 0,
             image_revisions: HashMap::new(),
             images_generation: 0,
+            uniform_resources_revision: 1,
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),

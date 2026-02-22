@@ -276,6 +276,8 @@ pub struct Renderer {
     image_revisions: HashMap<fret_core::ImageId, u64>,
     images_generation: u64,
 
+    uniform_resources_revision: u64,
+
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
     scene_encoding_scratch: SceneEncoding,

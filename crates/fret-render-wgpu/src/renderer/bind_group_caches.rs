@@ -108,7 +108,7 @@ impl BindGroupCaches {
         self.uniform_mask_images.remove(id);
     }
 
-    pub(super) fn clear_uniform_mask_images(&mut self) {
+    pub(super) fn invalidate_uniform_resources(&mut self) {
         self.uniform_mask_images.clear();
     }
 

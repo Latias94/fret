@@ -68,6 +68,12 @@ impl Renderer {
         device: &wgpu::Device,
         uniform_mask_images: &[Option<UniformMaskImageSelection>],
     ) {
+        fn mix_revisions(a: u64, b: u64) -> u64 {
+            let hash = 0xcbf2_9ce4_8422_2325u64;
+            let hash = (hash ^ a).wrapping_mul(0x100_0000_01B3);
+            (hash ^ b).wrapping_mul(0x100_0000_01B3)
+        }
+
         let globals = UniformMaskImageBindGroupGlobals {
             layout: &self.uniform_bind_group_layout,
             uniform_buffer: &self.uniform_buffer,
@@ -84,7 +90,8 @@ impl Renderer {
                 continue;
             };
 
-            let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
+            let image_revision = self.image_revisions.get(&image).copied().unwrap_or(0);
+            let revision = mix_revisions(image_revision, self.uniform_resources_revision);
             self.bind_group_caches
                 .ensure_uniform_mask_image_override_bind_groups(
                     device,
