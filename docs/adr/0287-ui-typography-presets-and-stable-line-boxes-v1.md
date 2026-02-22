@@ -1,6 +1,6 @@
 # ADR 0287: UI Typography Presets and Stable Line Boxes (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -99,4 +99,3 @@ intent: stable layout for UI controls, with opt-in correctness for content surfa
    asserts the control height and first-line line box remain stable.
 2. Migrate `fret-ui-shadcn` control text constructors to use the `fret-ui-kit` preset surface where
    possible.
-
