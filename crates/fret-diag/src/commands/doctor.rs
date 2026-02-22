@@ -194,6 +194,10 @@ pub(crate) fn run_doctor_for_bundle_dir(
             crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames).map(|p| {
                 fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display()))
             });
+        let _ =
+            crate::frames_index::ensure_frames_index_json(&bundle_json, warmup_frames).map(|p| {
+                fixes_applied.push(format!("regenerated frames.index.json ({})", p.display()))
+            });
     }
 
     let report = doctor_report_json(&bundle_dir, warmup_frames);
@@ -370,6 +374,8 @@ pub(crate) fn cmd_doctor(
             .join("_root")
             .join("test_ids.index.json")
             .is_file()
+        || bundle_dir.join("frames.index.json").is_file()
+        || bundle_dir.join("_root").join("frames.index.json").is_file()
         || bundle_dir.join("manifest.json").is_file()
         || bundle_dir.join("_root").join("manifest.json").is_file();
     if !has_bundleish_artifact {
@@ -556,10 +562,22 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
             warmup_frames
         ),
     ));
+    items.push(build_item(
+        bundle_dir,
+        "frames.index.json",
+        "frames_index",
+        "frames.index.json",
+        warmup_frames,
+        format!(
+            "fretboard diag frames-index {} --warmup-frames {}",
+            bundle_dir.display(),
+            warmup_frames
+        ),
+    ));
 
     let required_ok = items
         .iter()
-        .filter(|it| it.kind != "test_ids_index")
+        .filter(|it| it.kind != "test_ids_index" && it.kind != "frames_index")
         .all(|it| it.status == DoctorStatus::Ok);
     let ok = items.iter().all(|it| it.status == DoctorStatus::Ok);
     (items, required_ok, ok)

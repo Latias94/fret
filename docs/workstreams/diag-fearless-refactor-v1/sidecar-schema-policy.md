@@ -29,7 +29,7 @@ For packed zip artifacts:
 
 Every sidecar JSON object should include:
 
-- `kind`: a stable identifier for the sidecar payload (e.g. `bundle_index`, `bundle_meta`, `test_ids_index`).
+- `kind`: a stable identifier for the sidecar payload (e.g. `bundle_index`, `bundle_meta`, `test_ids_index`, `frames_index`).
 - `schema_version`: an integer schema version for that `kind`.
 - `warmup_frames`: the warmup frame count the sidecar was generated with (treat mismatches as invalid).
 - `bundle`: a string label/path for traceability (best-effort).
@@ -73,6 +73,15 @@ Preferred behavior order:
    - which file is missing,
    - which command regenerates it (e.g. `fretboard diag index <bundle_dir|bundle.json>`),
    - and what capability/env setting enables sidecar writing during dumps.
+
+## Current sidecars (v1)
+
+- `bundle.index.json` (`kind=bundle_index`, `schema_version=1`): snapshot selectors + semantics bloom accelerators.
+- `bundle.meta.json` (`kind=bundle_meta`, `schema_version=1`): high-level counters and uniqueness summaries.
+- `test_ids.index.json` (`kind=test_ids_index`, `schema_version=1`): catalog of known test-ids.
+- `frames.index.json` (`kind=frames_index`, `schema_version=1`): per-frame lightweight stats + selectors.
+  - Uses a columnar encoding: `columns[]` + per-window `rows[]` where each row is an array aligned to `columns`.
+  - `semantics_source_tag`: `0=none`, `1=inline`, `2=table`.
 
 ## Scope limits
 

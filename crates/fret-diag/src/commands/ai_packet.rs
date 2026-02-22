@@ -15,6 +15,7 @@ struct AiPacketBudgetConfig {
     max_bundle_meta_bytes: u64,
     max_bundle_index_bytes: u64,
     max_test_ids_index_bytes: u64,
+    max_frames_index_bytes: u64,
     max_slice_bytes: u64,
 }
 
@@ -26,6 +27,7 @@ impl Default for AiPacketBudgetConfig {
             max_bundle_meta_bytes: 128 * 1024,
             max_bundle_index_bytes: 4 * 1024 * 1024,
             max_test_ids_index_bytes: 2 * 1024 * 1024,
+            max_frames_index_bytes: 2 * 1024 * 1024,
             max_slice_bytes: 2 * 1024 * 1024,
         }
     }
@@ -159,10 +161,13 @@ pub(crate) fn cmd_ai_packet(
         crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
     let bundle_index_path =
         crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+    let frames_index_path =
+        crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
     copy_file_named(&meta_path, &packet_dir, "bundle.meta.json")?;
     copy_file_named(&test_ids_index_path, &packet_dir, "test_ids.index.json")?;
     copy_file_named(&bundle_index_path, &packet_dir, "bundle.index.json")?;
+    copy_file_named(&frames_index_path, &packet_dir, "frames.index.json")?;
 
     copy_if_present(
         &bundle_dir.join("script.result.json"),
@@ -265,6 +270,7 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
             "max_bundle_meta_bytes": report.budget.max_bundle_meta_bytes,
             "max_bundle_index_bytes": report.budget.max_bundle_index_bytes,
             "max_test_ids_index_bytes": report.budget.max_test_ids_index_bytes,
+            "max_frames_index_bytes": report.budget.max_frames_index_bytes,
             "max_slice_bytes": report.budget.max_slice_bytes,
         },
         "bytes_total": report.bytes_total,
@@ -682,6 +688,7 @@ fn enforce_ai_packet_budgets(dir: &Path, report: &mut AiPacketBudgetReport) -> R
     clip_bundle_meta_if_needed(dir, &cfg, report)?;
     clip_bundle_index_if_needed(dir, &cfg, report)?;
     clip_test_ids_index_if_needed(dir, &cfg, report)?;
+    clip_frames_index_if_needed(dir, &cfg, report)?;
 
     // Optional files: if we are above the hard total budget, drop these first.
     let mut total = packet_total_bytes(dir)?;
@@ -1018,6 +1025,107 @@ fn clip_test_ids_index_if_needed(
         }
 
         max_keep = (max_keep * 2 / 3).max(64);
+    }
+}
+
+fn clip_frames_index_if_needed(
+    dir: &Path,
+    cfg: &AiPacketBudgetConfig,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join("frames.index.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let bytes = file_bytes(&path)?;
+    if bytes <= cfg.max_frames_index_bytes {
+        return Ok(());
+    }
+
+    let mut v = read_json(&path)?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("frames_index") {
+        return Ok(());
+    }
+
+    let mut max_keep: usize = v
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map(|windows| {
+            windows
+                .iter()
+                .filter_map(|w| w.get("rows").and_then(|v| v.as_array()).map(|a| a.len()))
+                .max()
+                .unwrap_or(0)
+        })
+        .unwrap_or(0);
+    max_keep = max_keep.min(8192).max(64);
+
+    loop {
+        let frames_total: u64 = {
+            let windows = v
+                .get_mut("windows")
+                .and_then(|v| v.as_array_mut())
+                .ok_or_else(|| "invalid frames.index.json: missing windows".to_string())?;
+
+            for w in windows.iter_mut() {
+                let rows_len = {
+                    let Some(rows) = w.get_mut("rows").and_then(|v| v.as_array_mut()) else {
+                        continue;
+                    };
+                    if rows.len() > max_keep {
+                        let len = rows.len();
+                        rows.drain(0..(len - max_keep));
+                    }
+                    rows.len() as u64
+                };
+                if let Some(obj) = w.as_object_mut() {
+                    obj.insert(
+                        "frames_total".to_string(),
+                        serde_json::Value::from(rows_len),
+                    );
+                }
+            }
+
+            windows
+                .iter()
+                .filter_map(|w| {
+                    w.get("rows")
+                        .and_then(|v| v.as_array())
+                        .map(|a| a.len() as u64)
+                })
+                .sum()
+        };
+
+        if let Some(obj) = v.as_object_mut() {
+            obj.insert(
+                "frames_total".to_string(),
+                serde_json::Value::from(frames_total),
+            );
+            obj.insert(
+                "clipped".to_string(),
+                serde_json::json!({
+                    "schema_version": 1,
+                    "max_rows_per_window": max_keep,
+                    "reason": "frames_index_exceeds_budget",
+                }),
+            );
+        }
+
+        write_json_compact(&path, &v)?;
+
+        let new_bytes = file_bytes(&path)?;
+        if new_bytes <= cfg.max_frames_index_bytes {
+            report.clipped_files.push("frames.index.json".to_string());
+            return Ok(());
+        }
+
+        if max_keep <= 32 {
+            // frames.index.json is optional: drop it instead of failing the whole packet.
+            drop_if_present(dir, "frames.index.json", report)?;
+            return Ok(());
+        }
+
+        max_keep = (max_keep * 2 / 3).max(32);
     }
 }
 

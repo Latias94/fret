@@ -276,6 +276,42 @@ pub(crate) fn cmd_test_ids_index(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub(crate) fn cmd_frames_index(
+    rest: &[String],
+    pack_after_run: bool,
+    workspace_root: &Path,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    if pack_after_run {
+        return Err("--pack is only supported with `diag run`".to_string());
+    }
+    let Some(src) = rest.first().cloned() else {
+        return Err(
+            "missing bundle path (try: fretboard diag frames-index ./target/fret-diag/1234/bundle.json)"
+                .to_string(),
+        );
+    };
+    if rest.len() != 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
+
+    if stats_json {
+        println!(
+            "{}",
+            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
+        );
+    } else {
+        println!("{}", out.display());
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_meta(
     rest: &[String],
     pack_after_run: bool,

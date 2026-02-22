@@ -29,6 +29,7 @@ mod cli;
 mod commands;
 mod compare;
 pub mod devtools;
+mod frames_index;
 mod gates;
 mod json_bundle;
 mod lint;
@@ -2357,6 +2358,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
         ),
         "test-ids-index" => commands::artifacts::cmd_test_ids_index(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            warmup_frames,
+            stats_json,
+        ),
+        "frames-index" => commands::artifacts::cmd_frames_index(
             &rest,
             pack_after_run,
             &workspace_root,

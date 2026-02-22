@@ -33,6 +33,8 @@ Exit criteria:
 - Tools can locate relevant snapshots without opening full `bundle.json` in memory.
 - Sidecars are documented and versioned.
 - Missing sidecars degrade gracefully (no “hang until timeout”).
+- A lightweight per-frame index exists for agentic triage:
+  - `frames.index.json` (generated via `fretboard diag frames-index` and included in `diag doctor --fix-sidecars` / `diag ai-packet`).
 
 ## Milestone 3: Agent-friendly triage loop
 

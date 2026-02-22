@@ -65,3 +65,4 @@ See:
 
 - TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
 - Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
+- Sidecar details: `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`

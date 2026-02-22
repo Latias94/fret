@@ -36,6 +36,7 @@ scope: diagnostics, automation, tooling, refactor
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),
   - `test_ids.index.json` (test-id catalog / lookup),
+  - `frames.index.json` (per-frame lightweight stats + selectors; columnar rows for agent-friendly triage),
   - `script.result.json` + `bundle.index.json.script` (script step → snapshot mapping for fast evidence lookup, script dumps only).
 - [x] Make sidecars forward-compatible:
   - versioned schema (`kind` + `schema_version`),
@@ -57,7 +58,7 @@ scope: diagnostics, automation, tooling, refactor
   - Evidence: `crates/fret-diag/src/commands/doctor.rs`
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
-  - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars.
+  - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars (including `frames.index.json`).
   - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
   - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
   - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
