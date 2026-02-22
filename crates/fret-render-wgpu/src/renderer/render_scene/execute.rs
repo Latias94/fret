@@ -1,6 +1,6 @@
 use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
-use super::executor::{RecordPassResources, RenderSceneExecutor};
+use super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::helpers::{render_plan_pass_render_space, render_plan_pass_trace_kind};
 use super::quad_vertices::upload_plan_quad_vertices;
 use fret_core::time::Instant;
@@ -803,14 +803,13 @@ impl Renderer {
                     let render_space_offset =
                         (pass_index as u64).saturating_mul(render_space_stride);
                     let render_space_offset_u32 = render_space_offset as u32;
-
-                    executor.record_pass(
-                        &plan,
+                    let ctx = RecordPassCtx {
+                        plan: &plan,
                         pass_index,
-                        planned_pass,
                         render_space_offset_u32,
-                        &resources,
-                    );
+                    };
+
+                    executor.record_pass(planned_pass, &ctx, &resources);
                 }
             },
         );

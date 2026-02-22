@@ -17,6 +17,7 @@ See also:
 - [x] Centralize plan-pass trace/render-space helpers out of `execute.rs`.
 - [x] Extract target selection helpers (output vs intermediate vs mask) into `render_scene/helpers.rs`.
 - [x] Pack pass resources (buffers + bind groups) into `RecordPassResources`.
+- [x] Pack per-pass context (plan/index/offset) into `RecordPassCtx`.
 
 ## Next
 
