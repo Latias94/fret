@@ -333,6 +333,93 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
         );
     }
 }
+
+#[test]
+fn item_description_clamps_to_two_lines_by_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(260.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let line_height = {
+        let theme = Theme::global(&app);
+        theme
+            .metric_by_key("component.item.description_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"))
+    };
+    let max_h = Px(line_height.0 * 2.0);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        |cx| {
+            let wrapper_layout = fret_ui_kit::declarative::style::layout_style(
+                &Theme::global(&*cx.app),
+                LayoutRefinement::default().w_full().max_w(Px(240.0)),
+            );
+
+            let long = "This is a long description that should wrap into multiple lines. ";
+            let long: Arc<str> = Arc::from(long.repeat(16));
+
+            let item = fret_ui_shadcn::Item::new([fret_ui_shadcn::ItemContent::new([
+                fret_ui_shadcn::ItemTitle::new("Item").into_element(cx),
+                fret_ui_shadcn::ItemDescription::new(long)
+                    .into_element(cx)
+                    .test_id("test.item.description"),
+            ])
+            .into_element(cx)])
+            .variant(fret_ui_shadcn::ItemVariant::Outline)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx);
+
+            vec![cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: wrapper_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![item],
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let desc = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("test.item.description"))
+        .expect("missing description node");
+
+    assert!(
+        desc.bounds.size.height.0 <= max_h.0 + 0.5,
+        "expected description height <= {}px (2 lines); got={}px",
+        max_h.0,
+        desc.bounds.size.height.0
+    );
+}
 #[test]
 fn web_vs_fret_layout_item_size_item_rects_match_web() {
     let web = read_web_golden("item-size");

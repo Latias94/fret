@@ -56,7 +56,15 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-item-group" }
+        "target": { "kind": "test_id", "id": "ui-gallery-item-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-item-link-render" }
       },
       "timeout_frames": 600
     },
