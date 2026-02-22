@@ -56,6 +56,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
   - [x] Extract pointer sweep step (`move_pointer_sweep`):
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_sweep.rs`
+  - [x] Extract wait step (`wait_bounds_stable`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
