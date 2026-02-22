@@ -29,6 +29,7 @@ mod cli;
 mod commands;
 mod compare;
 pub mod devtools;
+mod diag_simple_dispatch;
 mod frames_index;
 mod gates;
 mod hotspots_lite;
@@ -2271,195 +2272,60 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
     };
 
-    match sub.as_str() {
-        "path" => commands::session::cmd_path(&rest, pack_after_run, &resolved_trigger_path),
-        "poke" => commands::session::cmd_poke(&rest, pack_after_run, &resolved_trigger_path),
-        "latest" => commands::session::cmd_latest(&rest, pack_after_run, &resolved_out_dir),
-        "trace" => {
-            if pack_after_run {
-                return Err("--pack is only supported with `diag run`".to_string());
-            }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
+    if let Some(res) = diag_simple_dispatch::dispatch_simple(
+        sub.as_str(),
+        &rest,
+        pack_after_run,
+        &workspace_root,
+        &resolved_out_dir,
+        &resolved_trigger_path,
+        trace_out.clone(),
+        &pack_out,
+        pack_include_root_artifacts,
+        pack_include_triage,
+        pack_include_screenshots,
+        &triage_out,
+        &lint_out,
+        &meta_out,
+        meta_report,
+        &index_out,
+        &test_ids_out,
+        &hotspots_out,
+        &bundle_v2_out,
+        &query_out,
+        &slice_out,
+        &ai_packet_out,
+        stats_top,
+        sort_override,
+        warmup_frames,
+        stats_json,
+        max_test_ids,
+        lint_all_test_ids_bounds,
+        lint_eps_px,
+        &resolved_script_path,
+        &resolved_script_trigger_path,
+        &resolved_script_result_path,
+        &resolved_script_result_trigger_path,
+        &resolved_ready_path,
+        &resolved_exit_path,
+        script_tool_check,
+        script_tool_write,
+        &script_tool_check_out,
+        &shrink_out,
+        shrink_any_fail,
+        &shrink_match_reason_code,
+        &shrink_match_reason,
+        shrink_min_steps,
+        shrink_max_iters,
+        &launch,
+        &launch_env,
+        timeout_ms,
+        poll_ms,
+    ) {
+        return res;
+    }
 
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let bundle_path = resolve_bundle_json_path(&src);
-            let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
-            let out = trace_out
-                .take()
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
-            crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
-            println!("{}", out.display());
-            Ok(())
-        }
-        "pack" => commands::artifacts::cmd_pack(
-            &rest,
-            &workspace_root,
-            &resolved_out_dir,
-            pack_out,
-            pack_include_root_artifacts,
-            pack_include_triage,
-            pack_include_screenshots,
-            stats_top,
-            sort_override,
-            warmup_frames,
-        ),
-        "triage" => commands::artifacts::cmd_triage(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            triage_out,
-            stats_top,
-            sort_override,
-            warmup_frames,
-            stats_json,
-        ),
-        "lint" => commands::artifacts::cmd_lint(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            lint_out,
-            lint_all_test_ids_bounds,
-            lint_eps_px,
-            warmup_frames,
-            stats_json,
-        ),
-        "meta" => commands::artifacts::cmd_meta(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            meta_out,
-            warmup_frames,
-            stats_json,
-            meta_report,
-        ),
-        "index" => commands::index::cmd_index(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            index_out,
-            warmup_frames,
-            stats_json,
-        ),
-        "test-ids" => commands::artifacts::cmd_test_ids(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            test_ids_out,
-            warmup_frames,
-            max_test_ids,
-            stats_json,
-        ),
-        "test-ids-index" => commands::artifacts::cmd_test_ids_index(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            warmup_frames,
-            stats_json,
-        ),
-        "frames-index" => commands::artifacts::cmd_frames_index(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            warmup_frames,
-            stats_json,
-        ),
-        "doctor" => commands::doctor::cmd_doctor(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            warmup_frames,
-            stats_json,
-        ),
-        "agent" => commands::agent::cmd_agent(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            warmup_frames,
-            stats_json,
-        ),
-        "hotspots" => commands::hotspots::cmd_hotspots(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            hotspots_out,
-            warmup_frames,
-            stats_json,
-        ),
-        "bundle-v2" => commands::bundle_v2::cmd_bundle_v2(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            bundle_v2_out,
-            stats_json,
-        ),
-        "ai-packet" => commands::ai_packet::cmd_ai_packet(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            ai_packet_out,
-            pack_include_triage,
-            stats_top,
-            sort_override,
-            warmup_frames,
-        ),
-        "query" => commands::query::cmd_query(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            query_out,
-            warmup_frames,
-            stats_json,
-        ),
-        "slice" => commands::slice::cmd_slice(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            slice_out,
-            warmup_frames,
-            stats_json,
-        ),
-        "script" => commands::script::cmd_script(
-            &rest,
-            pack_after_run,
-            &workspace_root,
-            &resolved_out_dir,
-            &resolved_script_path,
-            &resolved_script_trigger_path,
-            &resolved_script_result_path,
-            &resolved_script_result_trigger_path,
-            &resolved_ready_path,
-            &resolved_exit_path,
-            script_tool_check,
-            script_tool_write,
-            script_tool_check_out,
-            shrink_out,
-            shrink_any_fail,
-            shrink_match_reason_code,
-            shrink_match_reason,
-            shrink_min_steps,
-            shrink_max_iters,
-            &launch,
-            &launch_env,
-            timeout_ms,
-            poll_ms,
-            stats_json,
-        ),
+    match sub.as_str() {
         "run" => {
             let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
             let Some(src) = rest.first().cloned() else {
