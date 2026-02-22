@@ -1032,21 +1032,22 @@ fn combobox_with_patch<H: UiHost>(
                                 let query_for_select = query_model.clone();
                                 let open_change_reason_model_for_select =
                                     open_change_reason_model.clone();
-                                let value_for_select = item.value.clone();
-                                let on_select = kit_combobox::commit_selection_on_activate(
-                                    selection_commit_policy,
-                                    model_for_select,
-                                    open_for_select,
-                                    query_for_select,
-                                    open_change_reason_model_for_select,
-                                    value_for_select,
-                                );
 
                                 let mut cmd_item = CommandItem::new(item.label.clone())
                                     .value(item.value.clone())
                                     .disabled(item_disabled)
                                     .checkmark(is_selected)
-                                    .on_select_action(on_select);
+                                    .on_select_value_action(move |host, action_cx, reason, value| {
+                                        let on_select = kit_combobox::commit_selection_on_activate(
+                                            selection_commit_policy,
+                                            model_for_select.clone(),
+                                            open_for_select.clone(),
+                                            query_for_select.clone(),
+                                            open_change_reason_model_for_select.clone(),
+                                            value,
+                                        );
+                                        on_select(host, action_cx, reason);
+                                    });
                                 if let Some(prefix) = test_id_prefix.as_deref() {
                                     cmd_item = cmd_item.test_id(format!(
                                         "{prefix}-item-{}",
@@ -1103,15 +1104,6 @@ fn combobox_with_patch<H: UiHost>(
                                 let query_for_select = query_model.clone();
                                 let open_change_reason_model_for_select =
                                     open_change_reason_model.clone();
-                                let value_for_select = item.value.clone();
-                                let on_select = kit_combobox::commit_selection_on_activate(
-                                    selection_commit_policy,
-                                    model_for_select,
-                                    open_for_select,
-                                    query_for_select,
-                                    open_change_reason_model_for_select,
-                                    value_for_select,
-                                );
 
                                 let label_text = item.label.clone();
                                 let label_style = item_text_style.clone();
@@ -1156,7 +1148,17 @@ fn combobox_with_patch<H: UiHost>(
                                 let mut cmd_item = CommandItem::new(label_text)
                                     .value(item.value.clone())
                                     .disabled(item_disabled)
-                                    .on_select_action(on_select)
+                                    .on_select_value_action(move |host, action_cx, reason, value| {
+                                        let on_select = kit_combobox::commit_selection_on_activate(
+                                            selection_commit_policy,
+                                            model_for_select.clone(),
+                                            open_for_select.clone(),
+                                            query_for_select.clone(),
+                                            open_change_reason_model_for_select.clone(),
+                                            value,
+                                        );
+                                        on_select(host, action_cx, reason);
+                                    })
                                     .children(vec![text, icon]);
                                 if let Some(prefix) = test_id_prefix.as_deref() {
                                     cmd_item = cmd_item.test_id(format!(
@@ -1490,21 +1492,22 @@ fn combobox_with_patch<H: UiHost>(
                         let open_for_select = open.clone();
                         let query_for_select = query_model.clone();
                         let open_change_reason_model_for_select = open_change_reason_model.clone();
-                        let value_for_select = item.value.clone();
-                        let on_select = kit_combobox::commit_selection_on_activate(
-                            selection_commit_policy,
-                            model_for_select,
-                            open_for_select,
-                            query_for_select,
-                            open_change_reason_model_for_select,
-                            value_for_select,
-                        );
 
                         let mut cmd_item = CommandItem::new(item.label.clone())
                             .value(item.value.clone())
                             .disabled(item_disabled)
                             .checkmark(is_selected)
-                            .on_select_action(on_select);
+                            .on_select_value_action(move |host, action_cx, reason, value| {
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select.clone(),
+                                    open_for_select.clone(),
+                                    query_for_select.clone(),
+                                    open_change_reason_model_for_select.clone(),
+                                    value,
+                                );
+                                on_select(host, action_cx, reason);
+                            });
                         if let Some(prefix) = test_id_prefix.as_deref() {
                             cmd_item = cmd_item.test_id(format!(
                                 "{prefix}-item-{}",
@@ -1559,15 +1562,6 @@ fn combobox_with_patch<H: UiHost>(
                         let open_for_select = open.clone();
                         let query_for_select = query_model.clone();
                         let open_change_reason_model_for_select = open_change_reason_model.clone();
-                        let value_for_select = item.value.clone();
-                        let on_select = kit_combobox::commit_selection_on_activate(
-                            selection_commit_policy,
-                            model_for_select,
-                            open_for_select,
-                            query_for_select,
-                            open_change_reason_model_for_select,
-                            value_for_select,
-                        );
 
                         let label_text = item.label.clone();
                         let label_style = item_text_style.clone();
@@ -1610,7 +1604,17 @@ fn combobox_with_patch<H: UiHost>(
                         let mut cmd_item = CommandItem::new(label_text)
                             .value(item.value.clone())
                             .disabled(item_disabled)
-                            .on_select_action(on_select)
+                            .on_select_value_action(move |host, action_cx, reason, value| {
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select.clone(),
+                                    open_for_select.clone(),
+                                    query_for_select.clone(),
+                                    open_change_reason_model_for_select.clone(),
+                                    value,
+                                );
+                                on_select(host, action_cx, reason);
+                            })
                             .children(vec![text, icon]);
                         if let Some(prefix) = test_id_prefix.as_deref() {
                             cmd_item = cmd_item.test_id(format!(
@@ -2338,6 +2342,131 @@ mod tests {
             ui.focus(),
             Some(input.id),
             "expected keyboard-open to autofocus the search input"
+        );
+    }
+
+    #[test]
+    fn combobox_keyboard_enter_commits_active_item_via_cmdk_on_select_value() {
+        use fret_core::{Event, KeyCode, Modifiers};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+            ComboboxItem::new("gamma", "Gamma"),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("combobox trigger node");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert!(
+            app.models().get_copied(&open).unwrap_or(false),
+            "expected Enter to open combobox"
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_some())
+            .expect("combobox search input node");
+        assert_eq!(
+            ui.focus(),
+            Some(input.id),
+            "expected keyboard-open to autofocus the search input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&model).flatten().as_deref(),
+            Some("alpha"),
+            "expected Enter on the cmdk input to commit the active item"
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected commit to close the combobox"
         );
     }
 
