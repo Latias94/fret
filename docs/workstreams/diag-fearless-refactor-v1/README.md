@@ -1,0 +1,54 @@
+---
+title: Diagnostics Fearless Refactor v1
+status: draft
+date: 2026-02-22
+scope: diagnostics, automation, tooling, refactor
+---
+
+# Diagnostics Fearless Refactor v1
+
+This workstream is about making the diagnostics + scripted UI automation stack easier to evolve **without** large rewrites, while
+keeping the day-to-day debugging loop fast:
+
+- smaller, more queryable artifacts (avoid “open a 200MB `bundle.json`”),
+- more modular implementation (reduce churn in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`),
+- better support for AI/agentic triage (deterministic evidence + stable indexes).
+
+This workstream is intentionally scoped to refactors and additive sidecars. It must not change the core runtime contracts in
+`crates/fret-ui` (mechanism only).
+
+Related living docs:
+
+- `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
+
+## Current state (evidence anchors)
+
+- Diagnostics service + script runner live in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+- Script step handlers are already split into dedicated modules under `ecosystem/fret-bootstrap/src/ui_diagnostics/`.
+- Internal script runner state types were extracted into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs` to reduce churn.
+
+## Goals
+
+1. **Artifact ergonomics**
+   - Keep `bundle.json` reviewable and bounded.
+   - Add small sidecars for fast queries (indexing, fingerprints, bloom filters, step markers).
+2. **Implementation modularity**
+   - Split the monolithic `ui_diagnostics.rs` by responsibility (script engine, bundle dump, index writing, WS bridge).
+3. **AI/agent-friendly debugging**
+   - Make “what happened” explainable via structured evidence (selector traces, hit-test traces, routing traces).
+   - Make “where to look” cheap: stable indexes that allow tools to filter/locate snapshots quickly.
+
+## Non-goals
+
+- Replacing the canonical protocol types in `crates/fret-diag-protocol`.
+- Introducing policy into mechanism crates (`crates/fret-ui`, `crates/fret-core`).
+- Changing UI component behavior to satisfy diagnostics (components should expose `test_id`/semantics; runner/tooling adapts).
+
+## Plan
+
+See:
+
+- TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
+
