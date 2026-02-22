@@ -80,8 +80,6 @@ pub(super) fn dump_bundle_with_options(
                 let mut bundle = bundle_v1;
                 bundle.apply_semantics_mode_v1(semantics_mode);
 
-                let bundle_schema_version = 1_u32;
-
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
                         write_json(bundle_json_path.clone(), &bundle)
@@ -120,20 +118,17 @@ pub(super) fn dump_bundle_with_options(
                         .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
                         .unwrap_or(true);
                     if want_index {
-                        let index = bundle_index::UiDiagnosticsBundleIndexV1::from_windows(
-                            ts,
-                            bundle_schema_version,
-                            semantics_mode,
-                            &bundle.windows,
-                        );
-                        let meta = bundle_index::UiDiagnosticsBundleMetaV1::from_windows(
-                            ts,
-                            bundle_schema_version,
-                            semantics_mode,
-                            &bundle.windows,
-                        );
+                        let label = bundle_json_path.display().to_string();
+                        let index =
+                            bundle_index::build_bundle_index_json(&label, &bundle.windows, None);
+                        let meta =
+                            bundle_index::build_bundle_meta_json(&label, &bundle.windows, None);
+                        let test_ids_index =
+                            bundle_index::build_test_ids_index_json(&label, &bundle.windows, None);
                         let _ = write_json_compact(dir.join("bundle.index.json"), &index);
                         let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
+                        let _ =
+                            write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
                     }
                 }
 
@@ -150,8 +145,6 @@ pub(super) fn dump_bundle_with_options(
                 let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
                 bundle.apply_semantics_mode_v1(semantics_mode);
 
-                let bundle_schema_version = 2_u32;
-
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
                         write_json(bundle_json_path.clone(), &bundle)
@@ -190,20 +183,27 @@ pub(super) fn dump_bundle_with_options(
                         .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
                         .unwrap_or(true);
                     if want_index {
-                        let index = bundle_index::UiDiagnosticsBundleIndexV1::from_windows(
-                            ts,
-                            bundle_schema_version,
-                            semantics_mode,
+                        let label = bundle_json_path.display().to_string();
+                        let semantics_table = bundle.tables.semantics.as_ref();
+                        let index = bundle_index::build_bundle_index_json(
+                            &label,
                             &bundle.windows,
+                            semantics_table,
                         );
-                        let meta = bundle_index::UiDiagnosticsBundleMetaV1::from_windows(
-                            ts,
-                            bundle_schema_version,
-                            semantics_mode,
+                        let meta = bundle_index::build_bundle_meta_json(
+                            &label,
                             &bundle.windows,
+                            semantics_table,
+                        );
+                        let test_ids_index = bundle_index::build_test_ids_index_json(
+                            &label,
+                            &bundle.windows,
+                            semantics_table,
                         );
                         let _ = write_json_compact(dir.join("bundle.index.json"), &index);
                         let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
+                        let _ =
+                            write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
                     }
                 }
 

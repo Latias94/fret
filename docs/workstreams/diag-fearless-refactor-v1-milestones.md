@@ -29,7 +29,7 @@ Definition of done:
 ### M1: Bundle export modularization
 
 - [x] Extract bundle schema selection + JSON writing into a cohesive module (`bundle_dump.rs`).
-- [ ] Make schema v2 + semantics-mode defaults explicit and documented.
+- [x] Make schema v2 + semantics-mode defaults explicit and documented.
 
 Definition of done:
 
@@ -60,6 +60,8 @@ Definition of done:
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
   in pack/repro flows.
+  - [x] Runtime writes canonical sidecars on native dumps.
+  - [ ] Ensure `diag pack --include-all` always includes sidecars under `_root/` (even when the bundle dir is relocated).
 
 Definition of done:
 

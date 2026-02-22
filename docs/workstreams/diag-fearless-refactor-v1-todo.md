@@ -75,10 +75,15 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 
 - [ ] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime.
 - [ ] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
-  - [x] Runtime writes `bundle.index.json` + `bundle.meta.json` on dump (native filesystem).
-  - [ ] Tooling consumes `bundle.index.json` for fast queries/slicing.
-  - [ ] Generate `test_ids.index.json` (or equivalent) as a first-class sidecar.
-- [ ] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
+  - [x] Runtime writes canonical sidecars on dump (native filesystem):
+    - [x] `bundle.index.json`
+    - [x] `bundle.meta.json`
+    - [x] `test_ids.index.json`
+  - [x] Tooling consumes sidecars for fast queries (avoid reparsing `bundle.json` when possible):
+    - [x] `diag meta` reads `bundle.meta.json` when present
+    - [x] `diag query test-id` reads `test_ids.index.json` when present
+    - [x] `diag query snapshots` / `diag slice` read `bundle.index.json` when present (selection + semantics presence)
+- [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
 
 ## Schema migration hygiene

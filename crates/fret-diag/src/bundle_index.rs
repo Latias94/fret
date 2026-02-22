@@ -322,8 +322,16 @@ pub(crate) fn ensure_bundle_meta_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_bundle_meta_path(bundle_path);
-    if out.is_file() && read_json_value(&out).is_some() {
-        return Ok(out);
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_meta");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            if kind_ok && schema_ok && warmup_ok {
+                return Ok(out);
+            }
+        }
     }
     let payload = build_bundle_meta_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
@@ -336,8 +344,18 @@ pub(crate) fn ensure_test_ids_json(
     max_test_ids: usize,
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_path(bundle_path);
-    if out.is_file() && read_json_value(&out).is_some() {
-        return Ok(out);
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            let max_ok = existing.get("max_test_ids").and_then(|v| v.as_u64())
+                == Some(max_test_ids.min(u64::MAX as usize) as u64);
+            if kind_ok && schema_ok && warmup_ok && max_ok {
+                return Ok(out);
+            }
+        }
     }
     let payload = build_test_ids_payload(bundle_path, warmup_frames, max_test_ids)?;
     write_pretty_json(&out, &payload)?;
@@ -349,8 +367,16 @@ pub(crate) fn ensure_test_ids_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_index_path(bundle_path);
-    if out.is_file() && read_json_value(&out).is_some() {
-        return Ok(out);
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids_index");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            if kind_ok && schema_ok && warmup_ok {
+                return Ok(out);
+            }
+        }
     }
     let payload = build_test_ids_index_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
@@ -364,19 +390,28 @@ pub(crate) fn ensure_bundle_index_json(
     let out = default_bundle_index_path(bundle_path);
     if out.is_file() {
         if let Some(existing) = read_json_value(&out) {
-            // Best-effort upgrade: older indexes may be missing the additive `script` markers.
-            // If we can compute them (script.result.json adjacent), regenerate once.
-            let missing_script_markers = existing
-                .get("script")
-                .and_then(|v| v.get("steps"))
-                .is_none();
-            if missing_script_markers
-                && let Some(script_result) = try_read_script_result_json(bundle_path)
-                && build_script_step_index_payload(&existing, &script_result).is_some()
-            {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_index");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+
+            if !kind_ok || !schema_ok || !warmup_ok {
                 // Fall through and regenerate.
             } else {
-                return Ok(out);
+                // Best-effort upgrade: older indexes may be missing the additive `script` markers.
+                // If we can compute them (script.result.json adjacent), regenerate once.
+                let missing_script_markers = existing
+                    .get("script")
+                    .and_then(|v| v.get("steps"))
+                    .is_none();
+                if missing_script_markers
+                    && let Some(script_result) = try_read_script_result_json(bundle_path)
+                    && build_script_step_index_payload(&existing, &script_result).is_some()
+                {
+                    // Fall through and regenerate.
+                } else {
+                    return Ok(out);
+                }
             }
         } else {
             // Fall through and regenerate.
