@@ -8582,28 +8582,6 @@ fn unix_ms_now() -> u64 {
         .unwrap_or_default()
 }
 
-fn env_flag_default_false(name: &str) -> bool {
-    let Ok(v) = std::env::var(name) else {
-        return false;
-    };
-    let v = v.trim().to_ascii_lowercase();
-    if v.is_empty() {
-        return true;
-    }
-    !matches!(v.as_str(), "0" | "false" | "no" | "off")
-}
-
-fn env_flag_default_true(name: &str) -> bool {
-    let Ok(v) = std::env::var(name) else {
-        return true;
-    };
-    let v = v.trim().to_ascii_lowercase();
-    if v.is_empty() {
-        return true;
-    }
-    !matches!(v.as_str(), "0" | "false" | "no" | "off")
-}
-
 fn semantics_fingerprint_v1(
     snapshot: &fret_core::SemanticsSnapshot,
     redact_text: bool,
