@@ -18,7 +18,7 @@
   - “ReleaseTarget inserted after last use” regression (unit test)
   - “Downsample scissor mapping never expands bounds” regression (unit test)
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:
-  - `PathMsaaBatch` initialization rules
+  - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
   - `ClipMask` pass clear/load assumptions
   - mask sampling + viewport rect mapping rules for each postprocess pass
 

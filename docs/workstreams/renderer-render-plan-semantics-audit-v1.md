@@ -26,6 +26,7 @@ This workstream is intentionally backend-focused (wgpu today) but aims to keep t
 - Intermediate/mask targets must not be read after being released.
 - A pass that reads `src` must only read from an initialized target.
 - A pass that writes `dst` with `LoadOp::Load` must only do so when `dst` is initialized in the current frame.
+- `PathMsaaBatch` composites into its target using `LoadOp::Load` and therefore requires the target to be initialized earlier in the frame.
 
 Guardrail:
 - `RenderPlan::debug_validate()` (debug-only) must remain enabled at `render_scene_execute` call sites.
@@ -61,4 +62,3 @@ Minimum gates to keep green during refactors:
 
 - Workstream prerequisite: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-todo.md`
 - Upstream inspirations for semantics comparisons live under `repo-ref/` (zed/gpui, radix primitives, shadcn/ui, mui/base-ui)
-

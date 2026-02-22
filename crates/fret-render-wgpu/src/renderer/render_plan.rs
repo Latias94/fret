@@ -475,7 +475,14 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 mark_write(&mut live, &mut initialized, pass_index, target, Some(load))?;
             }
             RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, .. }) => {
-                mark_write(&mut live, &mut initialized, pass_index, target, None)?;
+                // Path MSAA batches composite into the target using LoadOp::Load.
+                mark_write(
+                    &mut live,
+                    &mut initialized,
+                    pass_index,
+                    target,
+                    Some(wgpu::LoadOp::Load),
+                )?;
             }
             RenderPlanPass::PathClipMask(PathClipMaskPass { dst, load, .. }) => {
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;

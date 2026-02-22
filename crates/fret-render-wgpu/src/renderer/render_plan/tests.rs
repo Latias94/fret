@@ -43,6 +43,28 @@ fn debug_validate_rejects_load_before_init() {
 }
 
 #[test]
+fn debug_validate_rejects_path_msaa_batch_before_init() {
+    let pass = RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+        segment: SceneSegmentId(0),
+        target: PlanTarget::Intermediate0,
+        target_origin: (0, 0),
+        target_size: (64, 64),
+        draw_range: 0..1,
+        union_scissor: ScissorRect {
+            x: 0,
+            y: 0,
+            w: 1,
+            h: 1,
+        },
+        batch_uniform_index: 0,
+    });
+
+    let err = validate_plan_target_lifetimes(&[pass]).unwrap_err();
+    assert!(err.contains("writes Intermediate0"), "{err}");
+    assert!(err.contains("LoadOp::Load"), "{err}");
+}
+
+#[test]
 fn debug_validate_rejects_absolute_scissor_without_intersection() {
     let pass = RenderPlanPass::PathClipMask(PathClipMaskPass {
         dst: PlanTarget::Mask0,
