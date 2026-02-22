@@ -15,7 +15,7 @@
   - render-scene trace span includes `plan_fingerprint`
 - [x] Add targeted semantic tests (unit or integration):
   - “LoadOp::Load requires prior init” regression (validator unit test)
-  - “ReleaseTarget inserted after last use” regression
+  - “ReleaseTarget inserted after last use” regression (unit test)
   - “Downsample scissor mapping never expands bounds” regression
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:
   - `PathMsaaBatch` initialization rules

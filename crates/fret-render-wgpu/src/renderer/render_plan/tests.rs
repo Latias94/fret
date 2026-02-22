@@ -66,6 +66,45 @@ fn debug_validate_rejects_absolute_scissor_without_intersection() {
 }
 
 #[test]
+fn insert_early_releases_inserts_release_after_last_use() {
+    let mut passes = vec![
+        RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+            segment: SceneSegmentId(0),
+            target: PlanTarget::Intermediate0,
+            target_origin: (0, 0),
+            target_size: (64, 64),
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            draw_range: 0..0,
+        }),
+        RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: PlanTarget::Intermediate0,
+            dst: PlanTarget::Output,
+            src_size: (64, 64),
+            dst_size: (64, 64),
+            dst_scissor: None,
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        }),
+    ];
+
+    let inserted = insert_early_releases(&mut passes);
+    assert_eq!(inserted, 1);
+
+    let last_use = passes
+        .iter()
+        .rposition(|p| match p {
+            RenderPlanPass::SceneDrawRange(p) => p.target == PlanTarget::Intermediate0,
+            RenderPlanPass::FullscreenBlit(p) => p.src == PlanTarget::Intermediate0,
+            _ => false,
+        })
+        .unwrap();
+    let release_at = passes
+        .iter()
+        .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
+        .unwrap();
+    assert!(release_at > last_use);
+}
+
+#[test]
 fn compile_for_scene_none_targets_output() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
