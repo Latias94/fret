@@ -158,6 +158,23 @@ pub fn text_area_content_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
+/// Returns a theme-based text style intended for content-like multiline text areas, scaled to an
+/// explicit size.
+pub fn text_area_content_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+    let ratio = base_line_height_ratio(theme);
+    let line_height = Px((size.0 * ratio).max(size.0));
+
+    let mut style = TextStyle {
+        font,
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    };
+    style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+    style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
+    style
+}
+
 /// Returns an opt-in text style intended for UI/form multiline text areas.
 ///
 /// This favors stable per-line metrics via:
