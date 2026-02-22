@@ -191,63 +191,21 @@ impl Renderer {
         mask_buffer: &wgpu::Buffer,
         render_space_buffer: &wgpu::Buffer,
     ) -> wgpu::BindGroup {
-        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
-
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(label),
+        super::bind_group_builders::UniformBindGroupGlobals {
             layout: &self.uniform_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: uniform_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: clip_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: mask_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(&self.material_catalog_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: wgpu::BindingResource::Sampler(&self.material_catalog_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: render_space_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(&self.mask_image_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(&self.mask_image_identity_view),
-                },
-            ],
-        })
+            material_catalog_view: &self.material_catalog_view,
+            material_catalog_sampler: &self.material_catalog_sampler,
+            mask_image_sampler: &self.mask_image_sampler,
+            mask_image_identity_view: &self.mask_image_identity_view,
+        }
+        .create(
+            device,
+            label,
+            uniform_buffer,
+            clip_buffer,
+            mask_buffer,
+            render_space_buffer,
+        )
     }
 
     fn rebuild_uniform_bind_group(&mut self, device: &wgpu::Device, label: &'static str) {

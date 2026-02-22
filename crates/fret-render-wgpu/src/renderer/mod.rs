@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // Split from the original single-file renderer for maintainability.
+mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
 mod path;

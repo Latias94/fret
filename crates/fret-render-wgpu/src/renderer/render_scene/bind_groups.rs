@@ -1,3 +1,4 @@
+use super::super::bind_group_builders::UniformMaskImageBindGroupGlobals;
 use super::super::bind_group_caches::SamplingBindGroups;
 use super::super::*;
 
@@ -22,83 +23,6 @@ fn create_sampler_texture_bind_group(
             },
         ],
     })
-}
-
-struct UniformMaskImageBindGroupGlobals<'a> {
-    layout: &'a wgpu::BindGroupLayout,
-    uniform_buffer: &'a wgpu::Buffer,
-    clip_buffer: &'a wgpu::Buffer,
-    mask_buffer: &'a wgpu::Buffer,
-    material_catalog_view: &'a wgpu::TextureView,
-    material_catalog_sampler: &'a wgpu::Sampler,
-    render_space_buffer: &'a wgpu::Buffer,
-    uniform_size: u64,
-    render_space_size: u64,
-}
-
-impl<'a> UniformMaskImageBindGroupGlobals<'a> {
-    fn create(
-        &self,
-        device: &wgpu::Device,
-        label: &'static str,
-        mask_image_sampler: &wgpu::Sampler,
-        mask_image_view: &wgpu::TextureView,
-    ) -> wgpu::BindGroup {
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(label),
-            layout: self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: self.uniform_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(self.uniform_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: self.clip_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: self.mask_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(self.material_catalog_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: wgpu::BindingResource::Sampler(self.material_catalog_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: self.render_space_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(self.render_space_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(mask_image_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(mask_image_view),
-                },
-            ],
-        })
-    }
 }
 
 impl Renderer {
@@ -181,8 +105,6 @@ impl Renderer {
         device: &wgpu::Device,
         uniform_mask_images: &[Option<UniformMaskImageSelection>],
     ) {
-        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
         let globals = UniformMaskImageBindGroupGlobals {
             layout: &self.uniform_bind_group_layout,
             uniform_buffer: &self.uniform_buffer,
@@ -191,8 +113,6 @@ impl Renderer {
             material_catalog_view: &self.material_catalog_view,
             material_catalog_sampler: &self.material_catalog_sampler,
             render_space_buffer: &self.render_space_buffer,
-            uniform_size,
-            render_space_size,
         };
 
         for &sel in uniform_mask_images.iter().flatten() {

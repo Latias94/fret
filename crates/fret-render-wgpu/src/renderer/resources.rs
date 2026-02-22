@@ -203,60 +203,21 @@ impl Renderer {
         let mask_image_identity_view =
             mask_image_identity_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret quad uniforms bind group"),
+        let uniform_bind_group = super::bind_group_builders::UniformBindGroupGlobals {
             layout: &uniform_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &uniform_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &clip_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &mask_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &render_space_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(&mask_image_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(&mask_image_identity_view),
-                },
-            ],
-        });
+            material_catalog_view: &material_catalog_view,
+            material_catalog_sampler: &material_catalog_sampler,
+            mask_image_sampler: &mask_image_sampler,
+            mask_image_identity_view: &mask_image_identity_view,
+        }
+        .create(
+            device,
+            "fret quad uniforms bind group",
+            &uniform_buffer,
+            &clip_buffer,
+            &mask_buffer,
+            &render_space_buffer,
+        );
 
         let viewport_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
