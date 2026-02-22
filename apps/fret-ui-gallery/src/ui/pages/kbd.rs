@@ -211,12 +211,43 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let rtl = doc_layout::rtl(cx, |cx| {
-        shadcn::KbdGroup::new([
-            shadcn::Kbd::new("Ctrl").into_element(cx),
-            shadcn::Kbd::new("Shift").into_element(cx),
-            shadcn::Kbd::new("B").into_element(cx),
-        ])
-        .into_element(cx)
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N4).items_center(),
+            |cx| {
+                vec![
+                    shadcn::KbdGroup::new([
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.command"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.arrow-big-up"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.option"),
+                        )])
+                        .into_element(cx),
+                        shadcn::Kbd::from_children([shadcn::kbd::kbd_icon(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.chevron-up"),
+                        )])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::KbdGroup::new([
+                        shadcn::Kbd::new("Ctrl").into_element(cx),
+                        ui::text(cx, "+").into_element(cx),
+                        shadcn::Kbd::new("B").into_element(cx),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        )
     })
     .test_id("ui-gallery-kbd-rtl");
 

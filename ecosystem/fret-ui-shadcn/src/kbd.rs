@@ -8,6 +8,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone)]
@@ -176,7 +177,11 @@ impl KbdGroup {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
-        let children = self.children;
+        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let children = match direction {
+            direction_prim::LayoutDirection::Ltr => self.children,
+            direction_prim::LayoutDirection::Rtl => self.children.into_iter().rev().collect(),
+        };
         let layout = decl_style::layout_style(&theme, self.layout);
 
         cx.flex(
