@@ -1,7 +1,7 @@
 use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use super::ctx::ExecuteCtx;
-use super::recorders::record_fullscreen_blit_pass;
+use super::recorders::{record_fullscreen_blit_pass, record_scale_nearest_pass};
 
 pub(super) struct RenderSceneExecutor<'a> {
     pub(super) renderer: &'a mut Renderer,
@@ -93,8 +93,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -116,8 +114,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -148,8 +144,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -165,26 +159,7 @@ impl<'a> RenderSceneExecutor<'a> {
                 );
             }
             RenderPlanPass::ScaleNearest(pass) => {
-                let mut ctx = ExecuteCtx {
-                    device: self.device,
-                    queue: self.queue,
-                    frame_index: self.frame_index,
-                    format: self.format,
-                    target_view: self.target_view,
-                    viewport_size: self.viewport_size,
-                    usage: self.usage,
-                    encoder: self.encoder,
-                    frame_targets: self.frame_targets,
-                    encoding: self.encoding,
-                    render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
-                    quad_vertex_size: self.quad_vertex_size,
-                    quad_vertex_bases: self.quad_vertex_bases,
-                    perf_enabled: self.perf_enabled,
-                    frame_perf: self.frame_perf,
-                };
-                self.renderer.record_scale_nearest_pass(&mut ctx, pass);
+                record_scale_nearest_pass(self, pass, render_space_offset_u32);
             }
             RenderPlanPass::Blur(pass) => {
                 let mut ctx = ExecuteCtx {
@@ -199,8 +174,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -224,8 +197,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -246,8 +217,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -268,8 +237,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -290,8 +257,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -312,8 +277,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -334,8 +297,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
@@ -357,8 +318,6 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_targets: self.frame_targets,
                     encoding: self.encoding,
                     render_space_offset_u32,
-                    scale_param_size: self.scale_param_size,
-                    scale_param_cursor: self.scale_param_cursor,
                     quad_vertex_size: self.quad_vertex_size,
                     quad_vertex_bases: self.quad_vertex_bases,
                     perf_enabled: self.perf_enabled,
