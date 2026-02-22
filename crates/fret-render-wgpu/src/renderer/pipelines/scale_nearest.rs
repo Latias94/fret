@@ -104,12 +104,15 @@ impl Renderer {
         });
         let masked_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret scale-nearest masked pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &bind_group_layout],
+            bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &bind_group_layout],
             immediate_size: 0,
         });
         let mask_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret scale-nearest mask pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &mask_bind_group_layout],
+            bind_group_layouts: &[
+                &self.globals.uniform_bind_group_layout,
+                &mask_bind_group_layout,
+            ],
             immediate_size: 0,
         });
 

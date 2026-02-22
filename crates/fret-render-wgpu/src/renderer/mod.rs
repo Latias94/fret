@@ -15,6 +15,7 @@ use std::sync::Arc;
 mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
+mod gpu_globals;
 mod path;
 mod revisioned_cache;
 mod types;
@@ -42,6 +43,7 @@ mod tests;
 use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
+use gpu_globals::GpuGlobals;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
@@ -67,17 +69,12 @@ impl Default for ClearColor {
 pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
-    uniform_bind_group_layout: wgpu::BindGroupLayout,
-    mask_image_sampler: wgpu::Sampler,
-    mask_image_sampler_nearest: wgpu::Sampler,
     _mask_image_identity_texture: wgpu::Texture,
-    mask_image_identity_view: wgpu::TextureView,
     mask_image_identity_uploaded: bool,
     uniforms: UniformResources,
+    globals: GpuGlobals,
 
     material_catalog_texture: wgpu::Texture,
-    material_catalog_view: wgpu::TextureView,
-    material_catalog_sampler: wgpu::Sampler,
     material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
@@ -85,9 +82,6 @@ pub struct Renderer {
 
     viewport_pipeline_format: Option<wgpu::TextureFormat>,
     viewport_pipeline: Option<wgpu::RenderPipeline>,
-    viewport_bind_group_layout: wgpu::BindGroupLayout,
-    viewport_sampler: wgpu::Sampler,
-    image_sampler_nearest: wgpu::Sampler,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 

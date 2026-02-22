@@ -42,7 +42,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],
@@ -217,7 +217,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret color text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],
@@ -337,7 +337,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret subpixel text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],

@@ -25,8 +25,8 @@ impl Renderer {
             self.bind_group_caches
                 .ensure_viewport_sampler_texture_bind_group(
                     device,
-                    &self.viewport_bind_group_layout,
-                    &self.viewport_sampler,
+                    &self.globals.viewport_bind_group_layout,
+                    &self.globals.viewport_sampler,
                     view,
                     target,
                     revision,
@@ -53,9 +53,9 @@ impl Renderer {
             self.bind_group_caches
                 .ensure_image_sampler_texture_bind_groups(
                     device,
-                    &self.viewport_bind_group_layout,
-                    &self.viewport_sampler,
-                    &self.image_sampler_nearest,
+                    &self.globals.viewport_bind_group_layout,
+                    &self.globals.viewport_sampler,
+                    &self.globals.image_sampler_nearest,
                     view,
                     image,
                     revision,
@@ -69,12 +69,12 @@ impl Renderer {
         uniform_mask_images: &[Option<UniformMaskImageSelection>],
     ) {
         let globals = UniformMaskImageBindGroupGlobals {
-            layout: &self.uniform_bind_group_layout,
+            layout: &self.globals.uniform_bind_group_layout,
             uniform_buffer: &self.uniforms.uniform_buffer,
             clip_buffer: &self.uniforms.clip_buffer,
             mask_buffer: &self.uniforms.mask_buffer,
-            material_catalog_view: &self.material_catalog_view,
-            material_catalog_sampler: &self.material_catalog_sampler,
+            material_catalog_view: &self.globals.material_catalog_view,
+            material_catalog_sampler: &self.globals.material_catalog_sampler,
             render_space_buffer: &self.uniforms.render_space_buffer,
         };
 
@@ -89,8 +89,8 @@ impl Renderer {
                 .ensure_uniform_mask_image_override_bind_groups(
                     device,
                     &globals,
-                    &self.mask_image_sampler,
-                    &self.mask_image_sampler_nearest,
+                    &self.globals.mask_image_sampler,
+                    &self.globals.mask_image_sampler_nearest,
                     view,
                     image,
                     image_revision,

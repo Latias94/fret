@@ -276,6 +276,18 @@ impl Renderer {
             ..Default::default()
         });
 
+        let globals = GpuGlobals {
+            uniform_bind_group_layout,
+            viewport_bind_group_layout,
+            viewport_sampler,
+            image_sampler_nearest,
+            material_catalog_view,
+            material_catalog_sampler,
+            mask_image_sampler,
+            mask_image_sampler_nearest,
+            mask_image_identity_view,
+        };
+
         let clip_mask_param_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret clip-mask params bind group layout"),
@@ -461,24 +473,16 @@ impl Renderer {
         Self {
             adapter: adapter.clone(),
             uniform_bind_group,
-            uniform_bind_group_layout,
-            mask_image_sampler,
-            mask_image_sampler_nearest,
             _mask_image_identity_texture: mask_image_identity_texture,
-            mask_image_identity_view,
             mask_image_identity_uploaded: false,
             uniforms,
+            globals,
             material_catalog_texture,
-            material_catalog_view,
-            material_catalog_sampler,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
             quad_pipelines: HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
-            viewport_bind_group_layout,
-            viewport_sampler,
-            image_sampler_nearest,
             quad_instances,
             path_paints,
             text_paints,

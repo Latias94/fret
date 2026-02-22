@@ -834,7 +834,7 @@ pub(in super::super) fn record_composite_premul_pass(
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
+                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -856,11 +856,11 @@ pub(in super::super) fn record_composite_premul_pass(
     } else {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret composite premul bind group"),
-            layout: &renderer.viewport_bind_group_layout,
+            layout: &renderer.globals.viewport_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
+                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,

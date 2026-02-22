@@ -31,8 +31,8 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret mask pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
-                &self.viewport_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
+                &self.globals.viewport_bind_group_layout,
             ],
             immediate_size: 0,
         });

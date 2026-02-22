@@ -264,6 +264,18 @@ Progress record (UniformResources subsystem extraction):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (GpuGlobals extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_globals.rs` (`GpuGlobals`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::globals`)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/` (pipeline layouts bind `globals.*_bind_group_layout`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

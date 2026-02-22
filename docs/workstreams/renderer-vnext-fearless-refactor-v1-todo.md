@@ -222,6 +222,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
     - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
+  - Landed (step 2): extract stable bind-group layouts/samplers/views into `GpuGlobals` and migrate call sites.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_globals.rs` (`GpuGlobals`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::globals`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/` (pipeline layouts bind `globals.*_bind_group_layout`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (prepares via `globals` samplers/layouts)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

@@ -96,12 +96,12 @@ impl Renderer {
         let masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret blur masked pipeline layout"),
-                bind_group_layouts: &[&self.uniform_bind_group_layout, layout],
+                bind_group_layouts: &[&self.globals.uniform_bind_group_layout, layout],
                 immediate_size: 0,
             });
         let mask_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret blur mask pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &mask_layout],
+            bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &mask_layout],
             immediate_size: 0,
         });
 
