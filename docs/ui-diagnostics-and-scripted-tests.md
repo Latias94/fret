@@ -32,7 +32,8 @@ Related ADRs:
 
 Implementation pointers (where the code lives today):
 
-- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` and
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
 - Script/selector/result types (serde): `crates/fret-diag-protocol`
 - CLI tooling engine (pack/stats/gates/compare): `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 

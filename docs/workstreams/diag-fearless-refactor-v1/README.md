@@ -12,6 +12,7 @@ keeping the day-to-day debugging loop fast:
 
 - smaller, more queryable artifacts (avoid “open a 200MB `bundle.json`”),
 - more modular implementation (reduce churn in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`),
+- more modular CLI tooling (reduce churn in `crates/fret-diag/src/stats.rs`),
 - better support for AI/agentic triage (deterministic evidence + stable indexes).
 
 This workstream is intentionally scoped to refactors and additive sidecars. It must not change the core runtime contracts in
@@ -27,6 +28,12 @@ Related living docs:
 - Diagnostics service + script runner live in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
 - Script step handlers are already split into dedicated modules under `ecosystem/fret-bootstrap/src/ui_diagnostics/`.
 - Internal script runner state types were extracted into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs` to reduce churn.
+- The per-frame script driver (`UiDiagnosticsService::drive_script_for_window`) was extracted into
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
+- `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
+  `crates/fret-diag/src/stats/`:
+  - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
 
 ## Goals
 
@@ -38,6 +45,8 @@ Related living docs:
 3. **AI/agent-friendly debugging**
    - Make “what happened” explainable via structured evidence (selector traces, hit-test traces, routing traces).
    - Make “where to look” cheap: stable indexes that allow tools to filter/locate snapshots quickly.
+4. **Debt removal (finish the migration)**
+   - After extraction steps land, remove transitional forwarders and redundant code paths so the new module boundaries stick.
 
 ## Non-goals
 
@@ -51,4 +60,3 @@ See:
 
 - TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
 - Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
-
