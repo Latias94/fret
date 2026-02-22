@@ -7,14 +7,14 @@
 ## Next
 
 - [ ] Expand debug validation:
-  - verify scissors are within destination bounds when provided
-  - verify `MaskRef.viewport_rect` is within mask target size
+  - verify scissors are within destination bounds when provided (in progress)
+  - verify `MaskRef.viewport_rect` is within mask target size (in progress)
   - verify `target_origin + target_size` bounds are consistent per pass
-- [ ] Add “plan shape” diagnostics:
-  - add a helper to dump a minimal per-pass summary (kind/src/dst/size/load/scissor) under trace
-  - ensure dumps are stable enough to diff across refactors
-- [ ] Add targeted semantic tests (unit or integration):
-  - “LoadOp::Load requires prior init” regression
+- [x] Add “plan shape” diagnostics:
+  - per-pass trace spans include kind/src/dst/load/scissor/render-space
+  - render-scene trace span includes `plan_fingerprint`
+- [x] Add targeted semantic tests (unit or integration):
+  - “LoadOp::Load requires prior init” regression (validator unit test)
   - “ReleaseTarget inserted after last use” regression
   - “Downsample scissor mapping never expands bounds” regression
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:

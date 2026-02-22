@@ -3,6 +3,7 @@ use super::super::*;
 use super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::helpers::{
     render_plan_pass_render_space, render_plan_pass_trace_kind, render_plan_pass_trace_meta,
+    render_plan_trace_fingerprint,
 };
 use super::quad_vertices::upload_plan_quad_vertices;
 use fret_core::time::Instant;
@@ -41,6 +42,7 @@ impl Renderer {
                 plan_segments = tracing::field::Empty,
                 plan_degradations = tracing::field::Empty,
                 plan_estimated_peak_intermediate_bytes = tracing::field::Empty,
+                plan_fingerprint = tracing::field::Empty,
             )
         } else {
             tracing::Span::none()
@@ -346,6 +348,12 @@ impl Renderer {
             "plan_estimated_peak_intermediate_bytes",
             plan.compile_stats.estimated_peak_intermediate_bytes,
         );
+        if trace_enabled {
+            render_scene_span.record(
+                "plan_fingerprint",
+                render_plan_trace_fingerprint(&plan.passes),
+            );
+        }
         if perf_enabled {
             use super::super::render_plan::{
                 RenderPlanDegradationKind as DegradationKind,
