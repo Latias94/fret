@@ -111,7 +111,7 @@ pub struct UiDiagnosticsService {
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
-    pending_force_dump: Option<PendingForceDumpRequest>,
+    pending_force_dump: Option<fs_triggers::PendingForceDumpRequest>,
     last_dump_dir: Option<PathBuf>,
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
@@ -139,15 +139,6 @@ pub struct UiDiagnosticsService {
     pending_devtools_semantics_node_get: Option<PendingDevtoolsSemanticsNodeGetRequest>,
     #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
-}
-
-#[derive(Debug, Clone)]
-struct PendingForceDumpRequest {
-    label: String,
-    dump_max_snapshots: Option<usize>,
-    script_run_id: Option<u64>,
-    script_step_index: Option<u32>,
-    request_id: Option<u64>,
 }
 
 #[cfg(feature = "diagnostics-ws")]
@@ -1859,23 +1850,6 @@ impl UiDiagnosticsService {
                 },
             );
         }
-    }
-
-    fn request_force_dump(
-        &mut self,
-        label: String,
-        dump_max_snapshots: Option<usize>,
-        script_run_id: Option<u64>,
-        script_step_index: Option<u32>,
-        request_id: Option<u64>,
-    ) {
-        self.pending_force_dump = Some(PendingForceDumpRequest {
-            label: sanitize_label(&label),
-            dump_max_snapshots,
-            script_run_id,
-            script_step_index,
-            request_id,
-        });
     }
 
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {

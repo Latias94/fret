@@ -7,8 +7,17 @@ use fret_diag_protocol::{
 
 use super::{
     PendingScript, UiDiagnosticsService, display_path, push_script_event_log, read_touch_stamp,
-    unix_ms_now,
+    sanitize_label, unix_ms_now,
 };
+
+#[derive(Debug, Clone)]
+pub(super) struct PendingForceDumpRequest {
+    pub(super) label: String,
+    pub(super) dump_max_snapshots: Option<usize>,
+    pub(super) script_run_id: Option<u64>,
+    pub(super) script_step_index: Option<u32>,
+    pub(super) request_id: Option<u64>,
+}
 
 fn warn_fs_once(
     warned: &mut bool,
@@ -31,6 +40,23 @@ fn warn_fs_once(
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn request_force_dump(
+        &mut self,
+        label: String,
+        dump_max_snapshots: Option<usize>,
+        script_run_id: Option<u64>,
+        script_step_index: Option<u32>,
+        request_id: Option<u64>,
+    ) {
+        self.pending_force_dump = Some(PendingForceDumpRequest {
+            label: sanitize_label(&label),
+            dump_max_snapshots,
+            script_run_id,
+            script_step_index,
+            request_id,
+        });
+    }
+
     pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
         if !self.is_enabled() {
             return None;
