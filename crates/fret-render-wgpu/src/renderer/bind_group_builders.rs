@@ -1,5 +1,28 @@
 use super::*;
 
+pub(super) fn create_sampler_texture_bind_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    sampler: &wgpu::Sampler,
+    view: &wgpu::TextureView,
+    label: &'static str,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(label),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Sampler(sampler),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::TextureView(view),
+            },
+        ],
+    })
+}
+
 pub(super) struct UniformBindGroupGlobals<'a> {
     pub(super) layout: &'a wgpu::BindGroupLayout,
     pub(super) material_catalog_view: &'a wgpu::TextureView,

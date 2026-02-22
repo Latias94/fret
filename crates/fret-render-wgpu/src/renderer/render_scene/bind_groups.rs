@@ -1,29 +1,7 @@
 use super::super::bind_group_builders::UniformMaskImageBindGroupGlobals;
+use super::super::bind_group_builders::create_sampler_texture_bind_group;
 use super::super::bind_group_caches::SamplingBindGroups;
 use super::super::*;
-
-fn create_sampler_texture_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    sampler: &wgpu::Sampler,
-    view: &wgpu::TextureView,
-    label: &'static str,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some(label),
-        layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::Sampler(sampler),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::TextureView(view),
-            },
-        ],
-    })
-}
 
 impl Renderer {
     pub(super) fn prepare_viewport_bind_groups(
