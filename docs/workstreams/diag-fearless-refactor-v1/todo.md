@@ -58,6 +58,7 @@ scope: diagnostics, automation, tooling, refactor
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
   - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars.
+  - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
   - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
   - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
 
