@@ -341,7 +341,6 @@ impl AvatarFallback {
             let label = ui::label(cx, self.text)
                 .text_size_px(text_px)
                 .line_height_px(line_height)
-                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                 .font_medium()
                 .text_color(ColorRef::Color(fg))
                 .nowrap()

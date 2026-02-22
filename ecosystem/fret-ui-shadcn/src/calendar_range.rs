@@ -1527,9 +1527,7 @@ fn calendar_icon_button<H: UiHost>(
                 .text_color(ColorRef::Color(fg))
                 .nowrap();
             if let Some(line_height) = style.line_height {
-                label = label
-                    .line_height_px(line_height)
-                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                label = label.line_height_px(line_height);
             }
             if let Some(letter_spacing_em) = style.letter_spacing_em {
                 label = label.letter_spacing_em(letter_spacing_em);
@@ -1765,7 +1763,6 @@ fn calendar_range_day_cell<H: UiHost>(
                     let label = ui::label(cx, day_text.clone())
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .font_medium()
                         .w_full()
                         .text_align(fret_core::TextAlign::Center)

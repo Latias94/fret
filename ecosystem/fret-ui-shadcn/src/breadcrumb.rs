@@ -287,9 +287,7 @@ fn breadcrumb_text<H: UiHost>(
         .overflow(overflow);
 
     if let Some(line_height) = base_style.line_height {
-        el = el
-            .line_height_px(line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+        el = el.line_height_px(line_height);
     }
 
     if let Some(letter_spacing_em) = base_style.letter_spacing_em {
@@ -664,9 +662,7 @@ pub mod primitives {
                                 .overflow(overflow);
 
                             if let Some(line_height) = line_height {
-                                text = text.line_height_px(line_height).line_height_policy(
-                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                );
+                                text = text.line_height_px(line_height);
                             }
 
                             if let Some(letter_spacing_em) = letter_spacing_em {
@@ -691,9 +687,7 @@ pub mod primitives {
                         .overflow(overflow);
 
                     if let Some(line_height) = line_height {
-                        text = text
-                            .line_height_px(line_height)
-                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                        text = text.line_height_px(line_height);
                     }
 
                     if let Some(letter_spacing_em) = letter_spacing_em {
@@ -768,9 +762,7 @@ pub mod primitives {
                     .overflow(overflow);
 
                 if let Some(line_height) = line_height {
-                    text = text
-                        .line_height_px(line_height)
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                    text = text.line_height_px(line_height);
                 }
 
                 if let Some(letter_spacing_em) = letter_spacing_em {
