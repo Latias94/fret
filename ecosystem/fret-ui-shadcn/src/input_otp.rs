@@ -3,11 +3,12 @@ use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    PositionStyle, SizeStyle, TextInputProps,
+    PositionStyle, SemanticsDecoration, ShadowLayerStyle, ShadowStyle, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
@@ -24,6 +25,19 @@ fn otp_gap(theme: &Theme) -> Px {
 
 fn otp_separator_color(theme: &Theme) -> Color {
     theme.color_token("muted-foreground")
+}
+
+fn otp_active_ring_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.ring.width")
+        .unwrap_or(Px(3.0))
+}
+
+fn otp_active_ring_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("ring/50")
+        .or_else(|| theme.color_by_key("ring"))
+        .unwrap_or_else(|| theme.color_token("ring"))
 }
 
 fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
@@ -63,6 +77,7 @@ pub struct InputOtp {
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id_prefix: Option<Arc<str>>,
     container_gap_override: Option<Px>,
     slot_gap_override: Option<Px>,
     slot_size_override: Option<(Px, Px)>,
@@ -81,6 +96,10 @@ impl std::fmt::Debug for InputOtp {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field(
+                "test_id_prefix",
+                &self.test_id_prefix.as_ref().map(|s| s.as_ref()),
+            )
             .field("container_gap_override", &self.container_gap_override)
             .field("slot_gap_override", &self.slot_gap_override)
             .field("slot_size_override", &self.slot_size_override)
@@ -104,6 +123,7 @@ impl InputOtp {
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id_prefix: None,
             container_gap_override: None,
             slot_gap_override: None,
             slot_size_override: None,
@@ -111,6 +131,11 @@ impl InputOtp {
             slot_line_height_px_override: None,
             slot_corner_mode: InputOtpSlotCornerMode::default(),
         }
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
+        self
     }
 
     pub fn length(mut self, length: usize) -> Self {
@@ -222,6 +247,11 @@ impl InputOtp {
             |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
 
+                let input_test_id: Option<Arc<str>> = self
+                    .test_id_prefix
+                    .as_ref()
+                    .map(|prefix| Arc::from(format!("{prefix}.input")));
+
                 let group_size = self.group_size.unwrap_or(length).max(1);
                 let mut groups: Vec<(usize, usize)> = Vec::new();
                 let mut start = 0;
@@ -231,12 +261,67 @@ impl InputOtp {
                     start = end;
                 }
 
+                let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+                chrome.padding = Edges::all(Px(0.0));
+                chrome.corner_radii = Corners::all(Px(0.0));
+                chrome.border = Edges::all(Px(0.0));
+                chrome.background = Color::TRANSPARENT;
+                chrome.border_color = Color::TRANSPARENT;
+                chrome.border_color_focused = Color::TRANSPARENT;
+                chrome.text_color = Color::TRANSPARENT;
+                chrome.selection_color = Color::TRANSPARENT;
+                chrome.caret_color = Color::TRANSPARENT;
+                chrome.preedit_color = Color::TRANSPARENT;
+                chrome.preedit_underline_color = Color::TRANSPARENT;
+
+                let mut input = TextInputProps::new(self.model);
+                input.chrome = chrome;
+                input.text_style = slot_text_style.clone();
+                input.test_id = input_test_id.clone();
+                input.layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        left: Some(Px(0.0)),
+                        top: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        bottom: Some(Px(0.0)),
+                    },
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    overflow: fret_ui::element::Overflow::Clip,
+                    ..Default::default()
+                };
+                let input_el = cx.text_input(input);
+
+                let input_id = input_el.id;
+                let focused = cx.is_focused_element(input_id);
+                let active_slot_idx = focused.then(|| chars.len().min(length.saturating_sub(1)));
+                let fake_caret_idx = (focused && chars.len() < length).then_some(chars.len());
+
+                scheduling::set_continuous_frames(cx, focused && fake_caret_idx.is_some());
+
+                let caret_blink_visible = if focused && fake_caret_idx.is_some() {
+                    // Approximate shadcn's `animate-caret-blink duration-1000`.
+                    // Full cycle ≈ 60 frames; toggles every ≈ 30 frames.
+                    (cx.frame_id.0 / 30) % 2 == 0
+                } else {
+                    false
+                };
+
+                let mut slot_ids: Vec<fret_ui::elements::GlobalElementId> =
+                    Vec::with_capacity(length);
+                let mut slot_corners: Vec<Corners> = Vec::with_capacity(length);
                 let mut pieces: Vec<AnyElement> = Vec::new();
                 for (group_idx, (start, end)) in groups.iter().copied().enumerate() {
                     let mut slots: Vec<AnyElement> = Vec::new();
                     for idx in start..end {
                         let is_first = idx == start;
                         let is_last = idx + 1 == end;
+                        let is_active = active_slot_idx == Some(idx);
+                        let has_fake_caret = fake_caret_idx == Some(idx);
 
                         let ch = chars.get(idx).copied();
                         let text: Arc<str> = ch
@@ -245,7 +330,11 @@ impl InputOtp {
 
                         let bg = resolved.background;
                         let border = resolved.border_width;
-                        let border_color = resolved.border_color;
+                        let border_color = if is_active {
+                            resolved.border_color_focused
+                        } else {
+                            resolved.border_color
+                        };
                         let radius = resolved.radius;
                         let fg = resolved.text_color;
 
@@ -274,7 +363,12 @@ impl InputOtp {
                         };
 
                         let slot_text_style_for_slot = slot_text_style.clone();
-                        slots.push(cx.container(
+                        let slot_test_id: Option<Arc<str>> = self
+                            .test_id_prefix
+                            .as_ref()
+                            .map(|prefix| Arc::from(format!("{prefix}.slot.{idx}")));
+
+                        let mut slot_el = cx.container(
                             ContainerProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
@@ -293,7 +387,9 @@ impl InputOtp {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.flex(
+                                let mut inner: Vec<AnyElement> = Vec::new();
+
+                                inner.push(cx.flex(
                                     FlexProps {
                                         layout: LayoutStyle {
                                             size: SizeStyle {
@@ -329,9 +425,79 @@ impl InputOtp {
                                         }
                                         vec![label.into_element(cx)]
                                     },
-                                )]
+                                ));
+
+                                if has_fake_caret && caret_blink_visible {
+                                    let caret_color = fg;
+                                    let caret_h = Px(16.0).min(Px((slot_h.0 - 8.0).max(0.0)));
+                                    inner.push(cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                position: PositionStyle::Absolute,
+                                                inset: InsetStyle {
+                                                    left: Some(Px(0.0)),
+                                                    top: Some(Px(0.0)),
+                                                    right: Some(Px(0.0)),
+                                                    bottom: Some(Px(0.0)),
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx| {
+                                            vec![cx.flex(
+                                                FlexProps {
+                                                    layout: LayoutStyle {
+                                                        size: SizeStyle {
+                                                            width: Length::Fill,
+                                                            height: Length::Fill,
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    direction: Axis::Horizontal,
+                                                    gap: Px(0.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Center,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |cx| {
+                                                    vec![cx.container(
+                                                        ContainerProps {
+                                                            layout: LayoutStyle {
+                                                                size: SizeStyle {
+                                                                    width: Length::Px(Px(1.0)),
+                                                                    height: Length::Px(caret_h),
+                                                                    ..Default::default()
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            background: Some(caret_color),
+                                                            ..Default::default()
+                                                        },
+                                                        |_cx| Vec::<AnyElement>::new(),
+                                                    )]
+                                                },
+                                            )]
+                                        },
+                                    ));
+                                }
+
+                                inner
                             },
-                        ));
+                        );
+
+                        slot_ids.push(slot_el.id);
+                        slot_corners.push(corner_radii);
+
+                        let mut decoration = SemanticsDecoration::default().selected(is_active);
+                        if let Some(test_id) = slot_test_id {
+                            decoration = decoration.test_id(test_id);
+                        }
+                        slot_el = slot_el.attach_semantics(decoration);
+
+                        slots.push(slot_el);
                     }
 
                     pieces.push(cx.flex(
@@ -390,40 +556,64 @@ impl InputOtp {
                     move |_cx| pieces,
                 ));
 
-                let mut chrome = TextInputStyle::from_theme(theme.snapshot());
-                chrome.padding = Edges::all(Px(0.0));
-                chrome.corner_radii = Corners::all(Px(0.0));
-                chrome.border = Edges::all(Px(0.0));
-                chrome.background = Color::TRANSPARENT;
-                chrome.border_color = Color::TRANSPARENT;
-                chrome.border_color_focused = Color::TRANSPARENT;
-                chrome.text_color = Color::TRANSPARENT;
-                chrome.selection_color = Color::TRANSPARENT;
-                chrome.caret_color = Color::TRANSPARENT;
-                chrome.preedit_color = Color::TRANSPARENT;
-                chrome.preedit_underline_color = Color::TRANSPARENT;
+                out.push(input_el);
 
-                let mut input = TextInputProps::new(self.model);
-                input.chrome = chrome;
-                input.text_style = slot_text_style;
-                input.layout = LayoutStyle {
-                    position: PositionStyle::Absolute,
-                    inset: InsetStyle {
-                        left: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
-                    },
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    overflow: fret_ui::element::Overflow::Clip,
-                    ..Default::default()
-                };
+                if focused {
+                    if let Some(active_idx) = active_slot_idx {
+                        let root_bounds = cx.last_bounds_for_element(cx.root_id());
+                        let slot_bounds = slot_ids
+                            .get(active_idx)
+                            .and_then(|id| cx.last_bounds_for_element(*id));
+                        if let (Some(root_bounds), Some(slot_bounds)) = (root_bounds, slot_bounds) {
+                            let ring_w = otp_active_ring_width(&theme);
+                            let ring_color = otp_active_ring_color(&theme);
+                            let corners = slot_corners
+                                .get(active_idx)
+                                .copied()
+                                .unwrap_or_else(|| Corners::all(resolved.radius));
+                            let left =
+                                Px((slot_bounds.origin.x.0 - root_bounds.origin.x.0).max(0.0));
+                            let top =
+                                Px((slot_bounds.origin.y.0 - root_bounds.origin.y.0).max(0.0));
 
-                out.push(cx.text_input(input));
+                            out.push(cx.hit_test_gate(false, move |cx| {
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            position: PositionStyle::Absolute,
+                                            inset: InsetStyle {
+                                                left: Some(left),
+                                                top: Some(top),
+                                                right: None,
+                                                bottom: None,
+                                            },
+                                            size: SizeStyle {
+                                                width: Length::Px(slot_bounds.size.width),
+                                                height: Length::Px(slot_bounds.size.height),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        shadow: Some(ShadowStyle {
+                                            primary: ShadowLayerStyle {
+                                                color: ring_color,
+                                                offset_x: Px(0.0),
+                                                offset_y: Px(0.0),
+                                                blur: Px(0.0),
+                                                spread: ring_w,
+                                            },
+                                            secondary: None,
+                                            corner_radii: corners,
+                                        }),
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::<AnyElement>::new(),
+                                )]
+                            }));
+                        }
+                    }
+                }
+
                 out
             },
         )

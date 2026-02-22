@@ -729,6 +729,11 @@ pub struct TextAreaOptions {
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub min_height: Px,
+    /// If true, opt into a stable multiline line-box policy suitable for UI/form text areas.
+    ///
+    /// This is expected to reduce baseline jitter across mixed-script / emoji lines, at the cost
+    /// of potentially clipping glyph ink that exceeds the chosen line box.
+    pub stable_line_boxes: bool,
 }
 
 impl Default for TextAreaOptions {
@@ -739,6 +744,7 @@ impl Default for TextAreaOptions {
             a11y_label: None,
             test_id: None,
             min_height: Px(80.0),
+            stable_line_boxes: false,
         }
     }
 }
@@ -4727,10 +4733,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 props.a11y_label = options.a11y_label.clone();
                 props.test_id = options.test_id.clone();
                 props.min_height = options.min_height;
-                props.chrome = {
+                let (chrome, text_style) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
-                    default_text_area_style_from_theme(theme)
+                    let chrome = default_text_area_style_from_theme(theme);
+                    let text_style = if options.stable_line_boxes {
+                        crate::typography::text_area_control_text_style(theme)
+                    } else {
+                        crate::typography::text_area_content_text_style(theme)
+                    };
+                    (chrome, text_style)
                 };
+                props.chrome = chrome;
+                props.text_style = text_style;
 
                 let mut element = cx.text_area(props);
                 element.id = id;

@@ -7,6 +7,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     struct FieldPageModels {
         username: Option<Model<String>>,
         password: Option<Model<String>>,
+        email_invalid: Option<Model<String>>,
         feedback: Option<Model<String>>,
         street: Option<Model<String>>,
         city: Option<Model<String>>,
@@ -25,6 +26,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let (
         username,
         password,
+        email_invalid,
         feedback,
         street,
         city,
@@ -42,6 +44,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         (
             st.username.clone(),
             st.password.clone(),
+            st.email_invalid.clone(),
             st.feedback.clone(),
             st.street.clone(),
             st.city.clone(),
@@ -61,6 +64,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let (
         username,
         password,
+        email_invalid,
         feedback,
         street,
         city,
@@ -77,6 +81,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     ) = match (
         username,
         password,
+        email_invalid,
         feedback,
         street,
         city,
@@ -94,6 +99,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         (
             Some(username),
             Some(password),
+            Some(email_invalid),
             Some(feedback),
             Some(street),
             Some(city),
@@ -110,6 +116,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ) => (
             username,
             password,
+            email_invalid,
             feedback,
             street,
             city,
@@ -127,6 +134,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         _ => {
             let username = cx.app.models_mut().insert(String::new());
             let password = cx.app.models_mut().insert(String::new());
+            let email_invalid = cx.app.models_mut().insert(String::new());
             let feedback = cx.app.models_mut().insert(String::new());
             let street = cx.app.models_mut().insert(String::new());
             let city = cx.app.models_mut().insert(String::new());
@@ -147,6 +155,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             cx.with_state(FieldPageModels::default, |st| {
                 st.username = Some(username.clone());
                 st.password = Some(password.clone());
+                st.email_invalid = Some(email_invalid.clone());
                 st.feedback = Some(feedback.clone());
                 st.street = Some(street.clone());
                 st.city = Some(city.clone());
@@ -165,6 +174,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             (
                 username,
                 password,
+                email_invalid,
                 feedback,
                 street,
                 city,
@@ -211,6 +221,22 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)
         .test_id("ui-gallery-field-input");
         content
+    };
+
+    let validation_and_errors = {
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("Email").into_element(cx),
+            shadcn::Input::new(email_invalid)
+                .placeholder("email@example.com")
+                .a11y_label("Email")
+                .aria_invalid(true)
+                .into_element(cx),
+            shadcn::FieldError::new("Enter a valid email address.").into_element(cx),
+        ])
+        .invalid(true)
+        .refine_layout(max_w_md.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-field-validation-and-errors")
     };
 
     let textarea = {
@@ -462,6 +488,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                         .into_element(cx),
                     shadcn::FieldLabel::new("Push notifications").into_element(cx),
                 ])
+                .disabled(true)
                 .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx)])
                 .checkbox_group()
@@ -598,6 +625,22 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     shadcn::Input::new(model).placeholder("Max Leiter").into_element(cx),
     shadcn::FieldDescription::new("Choose a unique username.").into_element(cx),
 ])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Validation and Errors", validation_and_errors)
+                .description("Field invalid state + control `aria_invalid` styling.")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Email").into_element(cx),
+    shadcn::Input::new(model)
+        .placeholder("email@example.com")
+        .a11y_label("Email")
+        .aria_invalid(true)
+        .into_element(cx),
+    shadcn::FieldError::new("Enter a valid email address.").into_element(cx),
+])
+.invalid(true)
 .into_element(cx);"#,
                 ),
             DocSection::new("Textarea", textarea)

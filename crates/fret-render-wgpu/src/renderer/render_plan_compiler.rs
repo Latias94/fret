@@ -651,7 +651,8 @@ fn compile_for_scene_inner(
                                     src_size: scope.content_size,
                                     dst_origin: scope.parent_origin,
                                     dst_size: scope.parent_size,
-                                    dst_scissor: cropped.then_some(scope.scissor),
+                                    dst_scissor: cropped
+                                        .then_some(super::AbsoluteScissorRect(scope.scissor)),
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
                                     blend_mode: fret_core::BlendMode::Over,
@@ -767,7 +768,7 @@ fn compile_for_scene_inner(
                                 dst: mask_target,
                                 dst_origin: (scissor.x, scissor.y),
                                 dst_size: mask_size,
-                                scissor,
+                                scissor: super::AbsoluteScissorRect(scissor),
                                 uniform_index,
                                 first_vertex: mask_draw.first_vertex,
                                 vertex_count: mask_draw.vertex_count,
@@ -830,7 +831,7 @@ fn compile_for_scene_inner(
                                     src_size: scope.content_size,
                                     dst_origin: scope.parent_origin,
                                     dst_size: scope.parent_size,
-                                    dst_scissor: Some(scope.scissor),
+                                    dst_scissor: Some(super::AbsoluteScissorRect(scope.scissor)),
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: Some(super::MaskRef {
                                         target: mask_target,
@@ -963,7 +964,7 @@ fn compile_for_scene_inner(
                                     src_size: scope.content_size,
                                     dst_origin: scope.parent_origin,
                                     dst_size: scope.parent_size,
-                                    dst_scissor: Some(scope.scissor),
+                                    dst_scissor: Some(super::AbsoluteScissorRect(scope.scissor)),
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
                                     blend_mode: scope.mode,
@@ -1024,8 +1025,9 @@ fn compile_for_scene_inner(
                 target_origin: scope.origin,
                 target_size: scope.size,
                 draw_range: cursor..end,
-                union_scissor: union,
+                union_scissor: super::AbsoluteScissorRect(union),
                 batch_uniform_index,
+                load: wgpu::LoadOp::Load,
             }));
 
             cursor = end;

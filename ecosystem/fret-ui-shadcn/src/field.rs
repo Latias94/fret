@@ -9,6 +9,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
 use fret_ui_kit::primitives::direction as direction_prim;
+use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 fn muted_foreground(theme: &Theme) -> fret_core::Color {
@@ -630,9 +631,14 @@ impl FieldTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
-            let fg = theme
-                .color_by_key("foreground")
-                .unwrap_or_else(|| theme.color_token("foreground"));
+            let field_state = field_state_prim::use_field_state_in_scope(cx, None);
+            let fg = if field_state.invalid {
+                theme.color_token("destructive")
+            } else {
+                theme
+                    .color_by_key("foreground")
+                    .unwrap_or_else(|| theme.color_token("foreground"))
+            };
             let px = theme
                 .metric_by_key("component.field.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
@@ -648,7 +654,7 @@ impl FieldTitle {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
-        ui::label(cx, self.text)
+        let el = ui::label(cx, self.text)
             .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
@@ -656,7 +662,14 @@ impl FieldTitle {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .text_align(align)
-            .into_element(cx)
+            .into_element(cx);
+
+        let field_state = field_state_prim::use_field_state_in_scope(cx, None);
+        if field_state.disabled {
+            cx.opacity(0.5, |_cx| vec![el])
+        } else {
+            el
+        }
     }
 }
 
@@ -665,7 +678,10 @@ pub struct FieldLabel {
     text: Arc<str>,
     layout: LayoutRefinement,
     for_control: Option<ControlId>,
+    children: Option<Vec<AnyElement>>,
+    render_text: bool,
     text_color: Option<ColorRef>,
+    test_id: Option<Arc<str>>,
 }
 
 impl FieldLabel {
@@ -674,8 +690,30 @@ impl FieldLabel {
             text: text.into(),
             layout: LayoutRefinement::default(),
             for_control: None,
+            children: None,
+            render_text: true,
             text_color: None,
+            test_id: None,
         }
+    }
+
+    /// Wrap an arbitrary subtree in a clickable label that forwards activation to `for_control`.
+    ///
+    /// This aligns with upstream shadcn/ui's `<FieldLabel htmlFor="...">...</FieldLabel>` usage
+    /// where the label can contain a full `Field` layout (title + description + control).
+    ///
+    /// By default, calling this disables rendering of `text` (it is still used for accessibility
+    /// label and diagnostics surfaces). Set [`Self::render_text`] back to `true` if you want both.
+    pub fn wrap(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self.render_text = false;
+        self
+    }
+
+    /// Controls whether the label's `text` is rendered as a visible child.
+    pub fn render_text(mut self, render_text: bool) -> Self {
+        self.render_text = render_text;
+        self
     }
 
     /// Binds this label to a logical form control id (similar to HTML `label[for]`).
@@ -694,6 +732,11 @@ impl FieldLabel {
 
     pub fn text_color(mut self, text_color: ColorRef) -> Self {
         self.text_color = Some(text_color);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 
@@ -720,35 +763,73 @@ impl FieldLabel {
             (fg, px, line_height)
         };
 
-        let fg = self
-            .text_color
-            .clone()
-            .unwrap_or(ColorRef::Color(default_fg));
+        let field_state = field_state_prim::use_field_state_in_scope(cx, None);
+        let fg = if let Some(fg) = self.text_color.clone() {
+            fg
+        } else if field_state.invalid {
+            ColorRef::Color(Theme::global(&*cx.app).color_token("destructive"))
+        } else {
+            ColorRef::Color(default_fg)
+        };
 
+        let wrap_children = self.children.clone();
         let Some(for_control) = self.for_control.clone() else {
             let align = match direction_prim::use_direction_in_scope(cx, None) {
                 direction_prim::LayoutDirection::Rtl => TextAlign::End,
                 direction_prim::LayoutDirection::Ltr => TextAlign::Start,
             };
-            return ui::label(cx, self.text)
-                .layout(self.layout)
-                .w_full()
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_medium()
-                .text_color(fg)
-                .wrap(TextWrap::Word)
-                .text_align(align)
-                .into_element(cx);
+            let mut el = if let Some(children) = wrap_children {
+                let theme = Theme::global(&*cx.app);
+                let border = theme.color_token("border");
+                let wrapper = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(ColorRef::Color(border))
+                        .p_4(),
+                    LayoutRefinement::default().w_full().merge(self.layout),
+                );
+                cx.container(wrapper, move |_cx| children)
+            } else {
+                ui::label(cx, self.text)
+                    .layout(self.layout)
+                    .w_full()
+                    .text_size_px(px)
+                    .line_height_px(line_height)
+                    .font_medium()
+                    .text_color(fg)
+                    .wrap(TextWrap::Word)
+                    .text_align(align)
+                    .into_element(cx)
+            };
+
+            if let Some(test_id) = self.test_id {
+                el = el.test_id(test_id);
+            }
+
+            if field_state.disabled {
+                return cx.opacity(0.5, |_cx| vec![el]);
+            }
+            return el;
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let pressable_layout = decl_style::layout_style(&theme, self.layout);
+        let pressable_layout_default = if self.children.is_some() {
+            LayoutRefinement::default().w_full().min_w_0()
+        } else {
+            LayoutRefinement::default().flex_1().min_w_0()
+        };
+        let pressable_layout =
+            decl_style::layout_style(&theme, pressable_layout_default.merge(self.layout));
         let control_registry = control_registry_model(cx);
         let text = self.text.clone();
         let fg = fg.clone();
+        let test_id = self.test_id.clone();
+        let render_text = self.render_text;
+        let wrap_children = wrap_children.clone();
 
-        cx.pressable_with_id_props(move |cx, _st, id| {
+        let el = cx.pressable_with_id_props(move |cx, _st, id| {
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
                 reg.register_label(
                     cx.window,
@@ -830,6 +911,7 @@ impl FieldLabel {
             let mut a11y = PressableA11y {
                 role: Some(SemanticsRole::Text),
                 label: Some(text.clone()),
+                test_id: test_id.clone(),
                 ..Default::default()
             };
             if let Some(element) = controls_element {
@@ -844,21 +926,47 @@ impl FieldLabel {
                 ..Default::default()
             };
 
-            let align = match direction_prim::use_direction_in_scope(cx, None) {
-                direction_prim::LayoutDirection::Rtl => TextAlign::End,
-                direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            let children: Vec<AnyElement> = if let Some(children) = wrap_children.clone() {
+                let theme = Theme::global(&*cx.app);
+                let border = theme.color_token("border");
+                let wrapper = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(ColorRef::Color(border))
+                        .p_4(),
+                    LayoutRefinement::default(),
+                );
+                let inner = cx.container(wrapper, move |_cx| children);
+                vec![inner]
+            } else if render_text {
+                let align = match direction_prim::use_direction_in_scope(cx, None) {
+                    direction_prim::LayoutDirection::Rtl => TextAlign::End,
+                    direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+                };
+                vec![
+                    ui::label(cx, text.clone())
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_medium()
+                        .text_color(fg.clone())
+                        .wrap(TextWrap::Word)
+                        .text_align(align)
+                        .into_element(cx),
+                ]
+            } else {
+                Vec::new()
             };
-            let child = ui::label(cx, text.clone())
-                .w_full()
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_medium()
-                .text_color(fg.clone())
-                .wrap(TextWrap::Word)
-                .text_align(align)
-                .into_element(cx);
-            (props, vec![child])
-        })
+
+            (props, children)
+        });
+
+        if field_state.disabled {
+            cx.opacity(0.5, |_cx| vec![el])
+        } else {
+            el
+        }
     }
 }
 
@@ -1081,6 +1189,8 @@ impl Default for FieldSeparator {
 pub struct Field {
     orientation: FieldOrientation,
     children: Vec<AnyElement>,
+    invalid: bool,
+    disabled: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -1091,9 +1201,23 @@ impl Field {
         Self {
             orientation: FieldOrientation::default(),
             children,
+            invalid: false,
+            disabled: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Apply the upstream `data-invalid` styling state to this field grouping.
+    pub fn invalid(mut self, invalid: bool) -> Self {
+        self.invalid = invalid;
+        self
+    }
+
+    /// Apply the upstream `data-disabled` styling state to this field grouping.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
     }
 
     pub fn orientation(mut self, orientation: FieldOrientation) -> Self {
@@ -1113,153 +1237,160 @@ impl Field {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
-            let theme = Theme::global(&*cx.app);
-            let gap = MetricRef::space(Space::N3).resolve(theme);
-            let wrapper = decl_style::container_props(
-                theme,
-                self.chrome,
-                LayoutRefinement::default().w_full().merge(self.layout),
-            );
-            let inner_layout =
-                decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
-            let muted = muted_foreground(theme);
-            let desc_mt_neg =
-                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
-            (gap, wrapper, inner_layout, muted, desc_mt_neg)
+        let field_state = field_state_prim::FieldState {
+            invalid: self.invalid,
+            disabled: self.disabled,
         };
 
-        let orientation = self.orientation;
-        let children = self.children;
-        let align_horizontal = if children.iter().any(subtree_has_flex_grow) {
-            CrossAlign::Start
-        } else {
-            CrossAlign::Center
-        };
+        field_state_prim::with_field_state_provider(cx, field_state, |cx| {
+            let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
+                let theme = Theme::global(&*cx.app);
+                let gap = MetricRef::space(Space::N3).resolve(theme);
+                let wrapper = decl_style::container_props(
+                    theme,
+                    self.chrome,
+                    LayoutRefinement::default().w_full().merge(self.layout),
+                );
+                let inner_layout =
+                    decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
+                let muted = muted_foreground(theme);
+                let desc_mt_neg =
+                    decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
+                (gap, wrapper, inner_layout, muted, desc_mt_neg)
+            };
 
-        let region_props = LayoutQueryRegionProps {
-            layout: inner_layout.clone(),
-            name: None,
-        };
+            let orientation = self.orientation;
+            let children = self.children;
+            let align_horizontal = if children.iter().any(subtree_has_flex_grow) {
+                CrossAlign::Start
+            } else {
+                CrossAlign::Center
+            };
 
-        fret_ui_kit::declarative::container_query_region_with_id(
-            cx,
-            "shadcn.field",
-            region_props,
-            move |cx, region_id| {
-                vec![cx.container(wrapper, move |cx| {
-                    let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
-                        cx,
-                        region_id,
-                        Invalidation::Layout,
-                        false,
-                        &[(
-                            fret_ui_kit::declarative::container_queries::tailwind::MD,
-                            true,
-                        )],
-                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-                    );
+            let region_props = LayoutQueryRegionProps {
+                layout: inner_layout.clone(),
+                name: None,
+            };
 
-                    let inner = match orientation {
-                        FieldOrientation::Vertical => cx.column(
-                            ColumnProps {
-                                layout: inner_layout.clone(),
-                                gap,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                                let len = children.len();
-                                children
-                                    .into_iter()
-                                    .enumerate()
-                                    .map(|(idx, child)| {
-                                        if len >= 2
-                                            && idx == len - 2
-                                            && is_field_description(muted, &child)
-                                        {
-                                            cx.container(
-                                                ContainerProps {
-                                                    layout: desc_mt_neg.clone(),
-                                                    ..Default::default()
-                                                },
-                                                move |_cx| vec![child],
-                                            )
-                                        } else {
-                                            child
-                                        }
-                                    })
-                                    .collect::<Vec<_>>()
-                            },
-                        ),
-                        FieldOrientation::Horizontal => cx.row(
-                            RowProps {
-                                layout: inner_layout,
-                                gap,
-                                justify: MainAlign::Start,
-                                align: align_horizontal,
-                                ..Default::default()
-                            },
-                            move |_cx| children,
-                        ),
-                        FieldOrientation::Responsive => {
-                            let children_row = children.clone();
-                            let children_col = children;
-                            if md_breakpoint {
-                                let children_row = children_row
-                                    .into_iter()
-                                    .map(responsive_md_width_auto)
-                                    .collect::<Vec<_>>();
-                                cx.row(
-                                    RowProps {
-                                        layout: inner_layout,
-                                        gap,
-                                        justify: MainAlign::Start,
-                                        align: align_horizontal,
-                                        ..Default::default()
-                                    },
-                                    move |_cx| children_row,
-                                )
-                            } else {
-                                cx.column(
-                                    ColumnProps {
-                                        layout: inner_layout.clone(),
-                                        gap,
-                                        ..Default::default()
-                                    },
-                                    move |cx| {
-                                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                                        let len = children_col.len();
-                                        children_col
-                                            .into_iter()
-                                            .enumerate()
-                                            .map(|(idx, child)| {
-                                                if len >= 2
-                                                    && idx == len - 2
-                                                    && is_field_description(muted, &child)
-                                                {
-                                                    cx.container(
-                                                        ContainerProps {
-                                                            layout: desc_mt_neg.clone(),
-                                                            ..Default::default()
-                                                        },
-                                                        move |_cx| vec![child],
-                                                    )
-                                                } else {
-                                                    child
-                                                }
-                                            })
-                                            .collect::<Vec<_>>()
-                                    },
-                                )
+            fret_ui_kit::declarative::container_query_region_with_id(
+                cx,
+                "shadcn.field",
+                region_props,
+                move |cx, region_id| {
+                    vec![cx.container(wrapper, move |cx| {
+                        let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                            cx,
+                            region_id,
+                            Invalidation::Layout,
+                            false,
+                            &[(
+                                fret_ui_kit::declarative::container_queries::tailwind::MD,
+                                true,
+                            )],
+                            fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                        );
+
+                        let inner = match orientation {
+                            FieldOrientation::Vertical => cx.column(
+                                ColumnProps {
+                                    layout: inner_layout.clone(),
+                                    gap,
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                                    let len = children.len();
+                                    children
+                                        .into_iter()
+                                        .enumerate()
+                                        .map(|(idx, child)| {
+                                            if len >= 2
+                                                && idx == len - 2
+                                                && is_field_description(muted, &child)
+                                            {
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: desc_mt_neg.clone(),
+                                                        ..Default::default()
+                                                    },
+                                                    move |_cx| vec![child],
+                                                )
+                                            } else {
+                                                child
+                                            }
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            ),
+                            FieldOrientation::Horizontal => cx.row(
+                                RowProps {
+                                    layout: inner_layout,
+                                    gap,
+                                    justify: MainAlign::Start,
+                                    align: align_horizontal,
+                                    ..Default::default()
+                                },
+                                move |_cx| children,
+                            ),
+                            FieldOrientation::Responsive => {
+                                let children_row = children.clone();
+                                let children_col = children;
+                                if md_breakpoint {
+                                    let children_row = children_row
+                                        .into_iter()
+                                        .map(responsive_md_width_auto)
+                                        .collect::<Vec<_>>();
+                                    cx.row(
+                                        RowProps {
+                                            layout: inner_layout,
+                                            gap,
+                                            justify: MainAlign::Start,
+                                            align: align_horizontal,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| children_row,
+                                    )
+                                } else {
+                                    cx.column(
+                                        ColumnProps {
+                                            layout: inner_layout.clone(),
+                                            gap,
+                                            ..Default::default()
+                                        },
+                                        move |cx| {
+                                            // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                                            let len = children_col.len();
+                                            children_col
+                                                .into_iter()
+                                                .enumerate()
+                                                .map(|(idx, child)| {
+                                                    if len >= 2
+                                                        && idx == len - 2
+                                                        && is_field_description(muted, &child)
+                                                    {
+                                                        cx.container(
+                                                            ContainerProps {
+                                                                layout: desc_mt_neg.clone(),
+                                                                ..Default::default()
+                                                            },
+                                                            move |_cx| vec![child],
+                                                        )
+                                                    } else {
+                                                        child
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()
+                                        },
+                                    )
+                                }
                             }
-                        }
-                    };
+                        };
 
-                    vec![inner]
-                })]
-            },
-        )
+                        vec![inner]
+                    })]
+                },
+            )
+        })
     }
 }
 

@@ -15,7 +15,7 @@ pub(super) fn build_plan_quad_vertices(
     for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
         match planned_pass {
             RenderPlanPass::PathMsaaBatch(path_pass) => {
-                let union = path_pass.union_scissor;
+                let union = path_pass.union_scissor.0;
                 if union.w == 0 || union.h == 0 {
                     continue;
                 }
@@ -74,7 +74,7 @@ pub(super) fn build_plan_quad_vertices(
                 ]);
             }
             RenderPlanPass::CompositePremul(pass) => {
-                let (x0, y0, x1, y1) = if let Some(scissor) = pass.dst_scissor {
+                let (x0, y0, x1, y1) = if let Some(scissor) = pass.dst_scissor.map(|s| s.0) {
                     (
                         scissor.x as f32,
                         scissor.y as f32,

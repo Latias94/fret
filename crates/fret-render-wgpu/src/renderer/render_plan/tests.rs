@@ -43,17 +43,40 @@ fn debug_validate_rejects_load_before_init() {
 }
 
 #[test]
+fn debug_validate_rejects_path_msaa_batch_before_init() {
+    let pass = RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+        segment: SceneSegmentId(0),
+        target: PlanTarget::Intermediate0,
+        target_origin: (0, 0),
+        target_size: (64, 64),
+        draw_range: 0..1,
+        union_scissor: AbsoluteScissorRect(ScissorRect {
+            x: 0,
+            y: 0,
+            w: 1,
+            h: 1,
+        }),
+        batch_uniform_index: 0,
+        load: wgpu::LoadOp::Load,
+    });
+
+    let err = validate_plan_target_lifetimes(&[pass]).unwrap_err();
+    assert!(err.contains("writes Intermediate0"), "{err}");
+    assert!(err.contains("LoadOp::Load"), "{err}");
+}
+
+#[test]
 fn debug_validate_rejects_absolute_scissor_without_intersection() {
     let pass = RenderPlanPass::PathClipMask(PathClipMaskPass {
         dst: PlanTarget::Mask0,
         dst_origin: (10, 10),
         dst_size: (16, 16),
-        scissor: ScissorRect {
+        scissor: AbsoluteScissorRect(ScissorRect {
             x: 0,
             y: 0,
             w: 5,
             h: 5,
-        },
+        }),
         uniform_index: 0,
         first_vertex: 0,
         vertex_count: 3,
@@ -63,6 +86,117 @@ fn debug_validate_rejects_absolute_scissor_without_intersection() {
 
     let err = validate_plan_scissors(&[pass]).unwrap_err();
     assert!(err.contains("does not intersect"), "{err}");
+}
+
+#[test]
+fn debug_validate_rejects_mask_viewport_rect_out_of_bounds() {
+    let pass = RenderPlanPass::Blur(BlurPass {
+        src: PlanTarget::Intermediate0,
+        dst: PlanTarget::Intermediate1,
+        src_size: (10, 10),
+        dst_size: (10, 10),
+        dst_scissor: None,
+        mask_uniform_index: Some(0),
+        mask: Some(MaskRef {
+            target: PlanTarget::Mask0,
+            size: (2, 2),
+            viewport_rect: ScissorRect {
+                x: 9,
+                y: 0,
+                w: 2,
+                h: 1,
+            },
+        }),
+        axis: BlurAxis::Horizontal,
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("mask viewport_rect"), "{err}");
+}
+
+#[test]
+fn debug_validate_rejects_mask_size_mismatch() {
+    let pass = RenderPlanPass::ColorAdjust(ColorAdjustPass {
+        src: PlanTarget::Intermediate0,
+        dst: PlanTarget::Intermediate1,
+        src_size: (10, 10),
+        dst_size: (10, 10),
+        dst_scissor: None,
+        mask_uniform_index: Some(0),
+        mask: Some(MaskRef {
+            target: PlanTarget::Mask1,
+            // Expected for 3x5 viewport rect at Mask1 is downsampled_size((3,5),2) == (2,3).
+            size: (1, 1),
+            viewport_rect: ScissorRect {
+                x: 1,
+                y: 2,
+                w: 3,
+                h: 5,
+            },
+        }),
+        saturation: 1.0,
+        brightness: 1.0,
+        contrast: 1.0,
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("mask size mismatch"), "{err}");
+}
+
+#[test]
+fn debug_validate_rejects_origin_size_overflow() {
+    let pass = RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+        segment: SceneSegmentId(0),
+        target: PlanTarget::Intermediate0,
+        target_origin: (u32::MAX, 0),
+        target_size: (1, 1),
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        draw_range: 0..0,
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("overflows"), "{err}");
+}
+
+#[test]
+fn insert_early_releases_inserts_release_after_last_use() {
+    let mut passes = vec![
+        RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+            segment: SceneSegmentId(0),
+            target: PlanTarget::Intermediate0,
+            target_origin: (0, 0),
+            target_size: (64, 64),
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            draw_range: 0..0,
+        }),
+        RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: PlanTarget::Intermediate0,
+            dst: PlanTarget::Output,
+            src_size: (64, 64),
+            dst_size: (64, 64),
+            dst_scissor: None,
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        }),
+    ];
+
+    let inserted = insert_early_releases(&mut passes);
+    assert_eq!(inserted, 1);
+
+    let last_use = passes
+        .iter()
+        .rposition(|p| match p {
+            RenderPlanPass::SceneDrawRange(p) => p.target == PlanTarget::Intermediate0,
+            RenderPlanPass::FullscreenBlit(p) => p.src == PlanTarget::Intermediate0,
+            _ => false,
+        })
+        .unwrap();
+    let release_at = passes
+        .iter()
+        .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
+        .unwrap();
+    assert!(release_at > last_use);
 }
 
 #[test]
@@ -525,6 +659,59 @@ fn downsample_nearest_scissor_mapping_matches_integer_division_for_non_divisible
 }
 
 #[test]
+fn downsample_scissor_mapping_does_not_expand_across_steps() {
+    let full_size = (3, 5);
+    let scissor_in_full = Some(ScissorRect {
+        x: 1,
+        y: 3,
+        w: 1,
+        h: 2,
+    });
+
+    let mut plan = RenderPlan {
+        segments: Vec::new(),
+        passes: Vec::new(),
+        compile_stats: RenderPlanCompileStats::default(),
+        degradations: Vec::new(),
+    };
+
+    let out = append_downsample_half_quarter(
+        &mut plan,
+        PlanTarget::Intermediate0,
+        full_size,
+        PlanTarget::Intermediate2,
+        PlanTarget::Intermediate1,
+        scissor_in_full,
+        full_size,
+        wgpu::Color::TRANSPARENT,
+    );
+
+    let expected_half_scissor =
+        effects::map_scissor_to_size(scissor_in_full, full_size, downsampled_size(full_size, 2));
+    let expected_quarter_scissor =
+        effects::map_scissor_to_size(scissor_in_full, full_size, out.quarter_size);
+    let chained_quarter_scissor = effects::map_scissor_to_size(
+        expected_half_scissor,
+        downsampled_size(full_size, 2),
+        out.quarter_size,
+    );
+    assert_ne!(expected_quarter_scissor, chained_quarter_scissor);
+
+    let RenderPlanPass::ScaleNearest(half_pass) = plan.passes[0] else {
+        panic!("expected half downsample pass");
+    };
+    assert_eq!(half_pass.dst_scissor.map(|s| s.0), expected_half_scissor);
+
+    let RenderPlanPass::ScaleNearest(quarter_pass) = plan.passes[1] else {
+        panic!("expected quarter downsample pass");
+    };
+    assert_eq!(
+        quarter_pass.dst_scissor.map(|s| s.0),
+        expected_quarter_scissor
+    );
+}
+
+#[test]
 fn blur_scissor_is_mapped_per_pass_dst_size() {
     let encoding = SceneEncoding::default();
     let viewport_size = (100, 100);
@@ -557,7 +744,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected half downsample pass");
     assert_eq!(
-        half.dst_scissor,
+        half.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 5,
             y: 5,
@@ -574,7 +761,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected blur-h pass");
     assert_eq!(
-        blur_h.dst_scissor,
+        blur_h.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 5,
             y: 5,
@@ -609,7 +796,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected upscale-to-output pass");
     assert_eq!(
-        upscale.dst_scissor,
+        upscale.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 10,
             y: 10,

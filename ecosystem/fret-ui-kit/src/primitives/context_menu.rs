@@ -161,7 +161,7 @@ pub fn context_menu_touch_long_press_on_pointer_down(
         let mut state = long_press.lock().unwrap_or_else(|e| e.into_inner());
         clear_touch_long_press_inner(host, &mut state);
         state.pointer_id = Some(down.pointer_id);
-        state.origin = Some(down.position);
+        state.origin = Some(down.position_window.unwrap_or(down.position));
         state.timer = Some(token);
     }
 
@@ -187,8 +187,9 @@ pub fn context_menu_touch_long_press_on_pointer_move(
     if state.pointer_id != Some(mv.pointer_id) {
         return false;
     }
+    let position = mv.position_window.unwrap_or(mv.position);
     if let Some(origin) = state.origin
-        && touch_long_press_exceeds_move_threshold(origin, mv.position)
+        && touch_long_press_exceeds_move_threshold(origin, position)
     {
         clear_touch_long_press_inner(host, &mut state);
     }

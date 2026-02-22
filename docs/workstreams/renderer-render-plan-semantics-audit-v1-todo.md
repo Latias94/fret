@@ -3,23 +3,24 @@
 ## Done
 
 - [x] Add a debug-only `RenderPlan` validator to catch target lifetime, `LoadOp::Load`, scissor, and mask shape misuse early.
+- [x] Make scissor coordinate spaces explicit in the plan (`AbsoluteScissorRect` vs `LocalScissorRect`).
 
 ## Next
 
-- [ ] Expand debug validation:
+- [x] Expand debug validation:
   - verify scissors are within destination bounds when provided
-  - verify `MaskRef.viewport_rect` is within mask target size
-  - verify `target_origin + target_size` bounds are consistent per pass
-- [ ] Add “plan shape” diagnostics:
-  - add a helper to dump a minimal per-pass summary (kind/src/dst/size/load/scissor) under trace
-  - ensure dumps are stable enough to diff across refactors
-- [ ] Add targeted semantic tests (unit or integration):
-  - “LoadOp::Load requires prior init” regression
-  - “ReleaseTarget inserted after last use” regression
-  - “Downsample scissor mapping never expands bounds” regression
+  - verify `MaskRef.viewport_rect` and `MaskRef.size` are consistent per pass
+  - reject integer overflow in scissor/rect bounds math
+- [x] Add “plan shape” diagnostics:
+  - per-pass trace spans include kind/src/dst/load/scissor/render-space
+  - render-scene trace span includes `plan_fingerprint`
+- [x] Add targeted semantic tests (unit or integration):
+  - “LoadOp::Load requires prior init” regression (validator unit test)
+  - “ReleaseTarget inserted after last use” regression (unit test)
+  - “Downsample scissor mapping never expands bounds” regression (unit test)
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:
-  - `PathMsaaBatch` initialization rules
-  - `ClipMask` pass clear/load assumptions
+  - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
+  - `ClipMask` pass clear/load assumptions (always `Clear`)
   - mask sampling + viewport rect mapping rules for each postprocess pass
 
 ## Nice-to-have

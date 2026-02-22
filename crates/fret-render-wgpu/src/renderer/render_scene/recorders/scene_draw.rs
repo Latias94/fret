@@ -1,5 +1,6 @@
 use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
 
 pub(in super::super) struct SceneDrawRangePassArgs<'a> {
@@ -21,6 +22,47 @@ pub(in super::super) struct SceneDrawRangePassArgs<'a> {
     pub(in super::super) quad_instance_bind_group: &'a wgpu::BindGroup,
     pub(in super::super) text_paint_bind_group: &'a wgpu::BindGroup,
     pub(in super::super) path_paint_bind_group: &'a wgpu::BindGroup,
+}
+
+pub(in super::super) fn record_scene_draw_range_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    resources: &RecordPassResources<'_>,
+    scene_pass: &SceneDrawRangePass,
+) {
+    let device = exec.device;
+    let format = exec.format;
+    let target_view = exec.target_view;
+    let usage = exec.usage;
+    let encoder = &mut *exec.encoder;
+    let frame_targets = &mut *exec.frame_targets;
+    let encoding = exec.encoding;
+    let perf_enabled = exec.perf_enabled;
+    let frame_perf = &mut *exec.frame_perf;
+
+    let renderer = &mut *exec.renderer;
+
+    let mut args = SceneDrawRangePassArgs {
+        device,
+        format,
+        target_view,
+        usage,
+        encoder,
+        frame_targets,
+        encoding,
+        render_space_offset_u32: ctx.render_space_offset_u32,
+        perf_enabled,
+        frame_perf,
+        plan: ctx.plan,
+        scene_pass,
+        viewport_vertex_buffer: resources.viewport_vertex_buffer,
+        text_vertex_buffer: resources.text_vertex_buffer,
+        path_vertex_buffer: resources.path_vertex_buffer,
+        quad_instance_bind_group: resources.quad_instance_bind_group,
+        text_paint_bind_group: resources.text_paint_bind_group,
+        path_paint_bind_group: resources.path_paint_bind_group,
+    };
+    renderer.record_scene_draw_range_pass(&mut args);
 }
 
 impl Renderer {

@@ -142,6 +142,34 @@ impl TextMeasureCaches {
                     fret_core::TextLineHeightPolicy::ExpandToFit => 0,
                     fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
                 },
+                leading_distribution: match style.leading_distribution {
+                    fret_core::text::TextLeadingDistribution::Even => 0,
+                    fret_core::text::TextLeadingDistribution::Proportional => 1,
+                },
+                strut_force: style
+                    .strut_style
+                    .as_ref()
+                    .map(|s| if s.force { 1 } else { 0 })
+                    .unwrap_or(0),
+                strut_font: style.strut_style.as_ref().and_then(|s| s.font.clone()),
+                strut_size_bits: style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.size.map(|px| px.0.to_bits())),
+                strut_line_height_bits: style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.line_height.map(|px| px.0.to_bits())),
+                strut_line_height_em_bits: style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.line_height_em.map(|v| v.to_bits())),
+                strut_leading_distribution: style.strut_style.as_ref().and_then(|s| {
+                    s.leading_distribution.map(|d| match d {
+                        fret_core::text::TextLeadingDistribution::Even => 0,
+                        fret_core::text::TextLeadingDistribution::Proportional => 1,
+                    })
+                }),
                 letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
                 scale_bits: constraints.scale_factor.to_bits(),
             };
@@ -352,6 +380,34 @@ impl TextMeasureCaches {
                     fret_core::TextLineHeightPolicy::ExpandToFit => 0,
                     fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
                 },
+                leading_distribution: match base_style.leading_distribution {
+                    fret_core::text::TextLeadingDistribution::Even => 0,
+                    fret_core::text::TextLeadingDistribution::Proportional => 1,
+                },
+                strut_force: base_style
+                    .strut_style
+                    .as_ref()
+                    .map(|s| if s.force { 1 } else { 0 })
+                    .unwrap_or(0),
+                strut_font: base_style.strut_style.as_ref().and_then(|s| s.font.clone()),
+                strut_size_bits: base_style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.size.map(|px| px.0.to_bits())),
+                strut_line_height_bits: base_style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.line_height.map(|px| px.0.to_bits())),
+                strut_line_height_em_bits: base_style
+                    .strut_style
+                    .as_ref()
+                    .and_then(|s| s.line_height_em.map(|v| v.to_bits())),
+                strut_leading_distribution: base_style.strut_style.as_ref().and_then(|s| {
+                    s.leading_distribution.map(|d| match d {
+                        fret_core::text::TextLeadingDistribution::Even => 0,
+                        fret_core::text::TextLeadingDistribution::Proportional => 1,
+                    })
+                }),
                 letter_spacing_bits: base_style.letter_spacing_em.map(|v| v.to_bits()),
                 scale_bits: constraints.scale_factor.to_bits(),
             };

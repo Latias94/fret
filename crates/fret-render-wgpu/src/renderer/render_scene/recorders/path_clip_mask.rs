@@ -1,12 +1,12 @@
 use super::super::super::*;
-use super::super::executor::RenderSceneExecutor;
+use super::super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::super::helpers::set_scissor_rect_absolute;
 
 pub(in super::super) fn record_path_clip_mask_pass(
     exec: &mut RenderSceneExecutor<'_>,
-    path_vertex_buffer: &wgpu::Buffer,
+    ctx: &RecordPassCtx<'_>,
+    resources: &RecordPassResources<'_>,
     mask_pass: &PathClipMaskPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let frame_index = exec.frame_index;
@@ -82,14 +82,14 @@ pub(in super::super) fn record_path_clip_mask_pass(
         rp.set_bind_group(
             0,
             uniform_bind_group,
-            &[uniform_offset as u32, render_space_offset_u32],
+            &[uniform_offset as u32, ctx.render_space_offset_u32],
         );
 
         if size != 0 {
-            rp.set_vertex_buffer(0, path_vertex_buffer.slice(first..first + size));
+            rp.set_vertex_buffer(0, resources.path_vertex_buffer.slice(first..first + size));
             let _ = set_scissor_rect_absolute(
                 &mut rp,
-                mask_pass.scissor,
+                mask_pass.scissor.0,
                 mask_pass.dst_origin,
                 mask_pass.dst_size,
             );

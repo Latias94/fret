@@ -51,6 +51,7 @@ pub(in super::super) fn record_fullscreen_blit_pass(
         "fret blit pass",
         blit_pipeline,
         dst_view,
+        pass.dst_size,
         pass.load,
         &blit_bind_group,
         &[],

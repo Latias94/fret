@@ -14,7 +14,7 @@ use fret_ui::action::{
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
-    RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
+    RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -2280,6 +2280,7 @@ pub struct ContextMenu {
     on_close_auto_focus: Option<OnCloseAutoFocus>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_complete: Option<OnOpenChange>,
+    content_test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for ContextMenu {
@@ -2300,6 +2301,7 @@ impl std::fmt::Debug for ContextMenu {
                 "on_open_change_complete",
                 &self.on_open_change_complete.is_some(),
             )
+            .field("content_test_id", &self.content_test_id)
             .finish()
     }
 }
@@ -2328,6 +2330,7 @@ impl ContextMenu {
             on_close_auto_focus: None,
             on_open_change: None,
             on_open_change_complete: None,
+            content_test_id: None,
         }
     }
 
@@ -2397,6 +2400,12 @@ impl ContextMenu {
 
     pub fn min_width(mut self, min_width: Px) -> Self {
         self.min_width = min_width;
+        self
+    }
+
+    /// Optional debug/test-only identifier for the menu content semantics node (`role=menu`).
+    pub fn content_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.content_test_id = Some(id.into());
         self
     }
 
@@ -2586,8 +2595,9 @@ impl ContextMenu {
                     let handled = base_pointer_policy(host, cx, down);
                     if handled {
                         menu::context_menu_touch_long_press_clear(&touch_long_press, host);
+                        let anchor_position = down.position_window.unwrap_or(down.position);
                         let _ = host.models_mut().update(&anchor_store_model, |map| {
-                            map.insert(open_model_id, down.position);
+                            map.insert(open_model_id, anchor_position);
                         });
                         // Base UI: once opened, wait 500ms before allowing `mouseup` to cancel-open.
                         // (`LONG_PRESS_DELAY = 500` in `ContextMenuTrigger.tsx`.)
@@ -2706,6 +2716,8 @@ impl ContextMenu {
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let align_leading_icons = self.align_leading_icons;
                 let modal = self.modal;
+                let content_test_id = self.content_test_id.clone();
+                let overlay_root_name_for_trace = overlay_root_name_for_controls.clone();
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -2837,11 +2849,14 @@ impl ContextMenu {
                         estimated_menu_panel_height_for_entries(&entries_flat, menu_row_height, max_h);
                     let desired = Size::new(desired_w, desired_h);
 
-                    let layout = popper::popper_content_layout_sized(
+                    let (layout, placement_trace) = popper::popper_layout_sized_with_trace(
                         outer,
                         anchor_rect,
                         desired,
-                        popper_placement,
+                        popper_placement.side_offset,
+                        popper_placement.side,
+                        popper_placement.align,
+                        popper_placement.options(),
                     );
 
                     let placed = layout.rect;
@@ -2913,10 +2928,15 @@ impl ContextMenu {
 
                     let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
 
-                    let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
-                        cx,
-                        content_layout,
-                        move |cx| {
+                    let (content_id, content) =
+                        menu::content_panel::menu_content_semantics_with_id_props(
+                            cx,
+                            SemanticsProps {
+                                layout: content_layout,
+                                test_id: content_test_id.clone(),
+                                ..Default::default()
+                            },
+                            move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -2938,6 +2958,8 @@ impl ContextMenu {
                                         })
                                         .flatten();
 
+                                    let overlay_root_name_for_controls_for_content =
+                                        overlay_root_name_for_controls.clone();
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
@@ -3000,7 +3022,8 @@ impl ContextMenu {
                                                         window_margin,
                                                         submenu_max_height_metric,
                                                         overlay_root_name_for_controls:
-                                                            overlay_root_name_for_controls.clone(),
+                                                            overlay_root_name_for_controls_for_content
+                                                                .clone(),
                                                         submenu_cfg,
                                                         submenu_models: submenu_for_content.clone(),
                                                     };
@@ -3584,6 +3607,12 @@ impl ContextMenu {
                                 },
                             )]
                         },
+                    );
+                    cx.diagnostics_record_overlay_placement_anchored_panel(
+                        Some(overlay_root_name_for_trace.as_ref()),
+                        None,
+                        Some(content_id),
+                        placement_trace,
                     );
 
                     let content =

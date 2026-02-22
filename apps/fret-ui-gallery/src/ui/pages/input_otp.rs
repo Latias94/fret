@@ -82,7 +82,8 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         shadcn::InputOtp::new(simple_value)
             .length(6)
             .numeric_only(true)
-            .group_size(Some(3)),
+            .group_size(Some(3))
+            .test_id_prefix("ui-gallery-input-otp-simple"),
         "ui-gallery-input-otp-simple",
     );
 
@@ -92,7 +93,8 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         shadcn::InputOtp::new(digits_only_value)
             .length(6)
             .numeric_only(true)
-            .group_size(Some(6)),
+            .group_size(Some(6))
+            .test_id_prefix("ui-gallery-input-otp-digits-only"),
         "ui-gallery-input-otp-digits-only",
     );
 
@@ -102,7 +104,8 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         shadcn::InputOtp::new(separator_value)
             .length(6)
             .numeric_only(true)
-            .group_size(Some(2)),
+            .group_size(Some(2))
+            .test_id_prefix("ui-gallery-input-otp-with-separator"),
         "ui-gallery-input-otp-with-separator",
     );
 
@@ -116,6 +119,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .group_size(Some(6))
             .slot_gap_px(slot_gap)
             .slot_corner_mode(shadcn::input_otp::InputOtpSlotCornerMode::All)
+            .test_id_prefix("ui-gallery-input-otp-with-spacing")
             .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(destructive))),
         "ui-gallery-input-otp-with-spacing",
     );

@@ -129,28 +129,30 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
 fn context_menu(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
     let context_menu_open = models.context_menu_open.clone();
 
-    shadcn::ContextMenu::new(context_menu_open).into_element(
-        cx,
-        |cx| {
-            shadcn::Button::new("ContextMenu (right click)")
-                .variant(shadcn::ButtonVariant::Outline)
-                .test_id("ui-gallery-context-trigger")
-                .into_element(cx)
-        },
-        |_cx| {
-            vec![
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Action")
-                        .test_id("ui-gallery-context-item-action")
-                        .on_select(CMD_MENU_CONTEXT_ACTION),
-                ),
-                shadcn::ContextMenuEntry::Separator,
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Disabled").disabled(true),
-                ),
-            ]
-        },
-    )
+    shadcn::ContextMenu::new(context_menu_open)
+        .content_test_id("ui-gallery-context-content")
+        .into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("ContextMenu (right click)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-context-trigger")
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Action")
+                            .test_id("ui-gallery-context-item-action")
+                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                    ),
+                    shadcn::ContextMenuEntry::Separator,
+                    shadcn::ContextMenuEntry::Item(
+                        shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                    ),
+                ]
+            },
+        )
 }
 
 fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement {
@@ -158,6 +160,7 @@ fn context_menu_edge(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -
 
     // Keep this trigger near the window edge so the default `side=Right` placement is forced to flip.
     shadcn::ContextMenu::new(context_menu_edge_open)
+        .content_test_id("ui-gallery-context-edge-content")
         .min_width(Px(240.0))
         .window_margin(Px(8.0))
         .into_element(

@@ -1,4 +1,6 @@
-use fret_core::{FontId, Px, TextLineHeightPolicy, TextStyle, TextVerticalPlacement};
+use fret_core::{
+    FontId, Px, TextLineHeightPolicy, TextStrutStyle, TextStyle, TextVerticalPlacement,
+};
 use fret_ui::Theme;
 
 use crate::theme_tokens;
@@ -129,6 +131,78 @@ pub fn as_control_text(style: TextStyle) -> TextStyle {
 
 pub fn as_content_text(style: TextStyle) -> TextStyle {
     with_intent(style, TextIntent::Content)
+}
+
+fn force_strut_from_style(style: &TextStyle) -> Option<TextStrutStyle> {
+    if style.line_height.is_none() && style.line_height_em.is_none() {
+        return None;
+    }
+
+    Some(TextStrutStyle {
+        line_height: style.line_height,
+        line_height_em: style.line_height_em,
+        force: true,
+        ..Default::default()
+    })
+}
+
+/// Returns a theme-based text style intended for content-like multiline text areas.
+///
+/// This leaves `TextLineHeightPolicy` as `ExpandToFit` to avoid clipping.
+pub fn text_area_content_text_style(theme: &Theme) -> TextStyle {
+    TextStyle {
+        font: FontId::ui(),
+        size: font_size(theme),
+        line_height: Some(font_line_height(theme)),
+        ..Default::default()
+    }
+}
+
+/// Returns a theme-based text style intended for content-like multiline text areas, scaled to an
+/// explicit size.
+pub fn text_area_content_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+    let ratio = base_line_height_ratio(theme);
+    let line_height = Px((size.0 * ratio).max(size.0));
+
+    let mut style = TextStyle {
+        font,
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    };
+    style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+    style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
+    style
+}
+
+/// Returns an opt-in text style intended for UI/form multiline text areas.
+///
+/// This favors stable per-line metrics via:
+/// - fixed line height policy (stable line boxes),
+/// - and a forced strut derived from the chosen style line height (stable baseline across mixed
+///   scripts / emoji fallback runs).
+pub fn text_area_control_text_style(theme: &Theme) -> TextStyle {
+    let mut style = text_area_content_text_style(theme);
+    style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
+    style.strut_style = force_strut_from_style(&style);
+    style
+}
+
+/// Returns an opt-in text style intended for UI/form multiline text areas, scaled to an explicit
+/// size.
+pub fn text_area_control_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+    let ratio = base_line_height_ratio(theme);
+    let line_height = Px((size.0 * ratio).max(size.0));
+
+    let mut style = TextStyle {
+        font,
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    };
+    style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
+    style.strut_style = force_strut_from_style(&style);
+    style
 }
 
 /// Returns a control-text style intended for UI components (stable line box).

@@ -1,6 +1,7 @@
 use super::render_plan::{
-    BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan, RenderPlanDegradation,
-    RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, ScaleMode,
+    AbsoluteScissorRect, BlurAxis, DebugPostprocess, LocalScissorRect, MaskRef, PlanTarget,
+    RenderPlan, RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason,
+    RenderPlanPass, ScaleMode,
 };
 use super::{EffectMarker, EffectMarkerKind, ScissorRect};
 
@@ -23,6 +24,18 @@ impl From<ScissorRect> for JsonDumpScissorRect {
             w: r.w,
             h: r.h,
         }
+    }
+}
+
+impl From<AbsoluteScissorRect> for JsonDumpScissorRect {
+    fn from(r: AbsoluteScissorRect) -> Self {
+        r.0.into()
+    }
+}
+
+impl From<LocalScissorRect> for JsonDumpScissorRect {
+    fn from(r: LocalScissorRect) -> Self {
+        r.0.into()
     }
 }
 
@@ -180,6 +193,7 @@ enum JsonDumpPass {
         draw_range: [usize; 2],
         union_scissor: JsonDumpScissorRect,
         batch_uniform_index: u32,
+        load: JsonDumpLoadOp,
     },
     PathClipMask {
         dst: String,
@@ -306,6 +320,7 @@ enum JsonDumpPass {
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
         uniform_index: u32,
+        load: JsonDumpLoadOp,
     },
     ReleaseTarget {
         target: String,
@@ -342,6 +357,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             draw_range: [pass.draw_range.start, pass.draw_range.end],
             union_scissor: pass.union_scissor.into(),
             batch_uniform_index: pass.batch_uniform_index,
+            load: encode_load_op(pass.load),
         },
         RenderPlanPass::PathClipMask(pass) => JsonDumpPass::PathClipMask {
             dst: plan_target_name(pass.dst).to_string(),
@@ -477,6 +493,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
             uniform_index: pass.uniform_index,
+            load: encode_load_op(pass.load),
         },
         RenderPlanPass::ReleaseTarget(t) => JsonDumpPass::ReleaseTarget {
             target: plan_target_name(*t).to_string(),

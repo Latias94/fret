@@ -102,6 +102,7 @@ impl CheckboxStyle {
 #[derive(Clone)]
 pub struct Checkbox {
     checked: CheckboxCheckedModel,
+    aria_invalid: bool,
     disabled: bool,
     control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
@@ -123,6 +124,7 @@ impl Checkbox {
     pub fn new(model: Model<bool>) -> Self {
         Self {
             checked: CheckboxCheckedModel::Bool(model),
+            aria_invalid: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -137,6 +139,7 @@ impl Checkbox {
     pub fn new_tristate(model: Model<CheckedState>) -> Self {
         Self {
             checked: CheckboxCheckedModel::TriState(model),
+            aria_invalid: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -154,6 +157,7 @@ impl Checkbox {
     pub fn new_optional(model: Model<Option<bool>>) -> Self {
         Self {
             checked: CheckboxCheckedModel::OptionalBool(model),
+            aria_invalid: false,
             disabled: false,
             control_id: None,
             a11y_label: None,
@@ -212,6 +216,12 @@ impl Checkbox {
         self
     }
 
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     /// Associates this checkbox with a logical form control id so related elements (e.g. labels)
     /// can forward pointer activation and focus.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
@@ -253,6 +263,7 @@ impl Checkbox {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let checked = self.checked;
+            let aria_invalid = self.aria_invalid;
 
             let theme = Theme::global(&*cx.app).clone();
 
@@ -262,15 +273,44 @@ impl Checkbox {
             let bg_on = checkbox_bg_checked(&theme);
             let fg_on = checkbox_fg_checked(&theme);
 
-            let ring_border = checkbox_ring_color(&theme);
+            let ring_border = if aria_invalid {
+                theme.color_token("destructive")
+            } else {
+                checkbox_ring_color(&theme)
+            };
             let mut ring = decl_style::focus_ring(&theme, radius);
-            ring.color = alpha_mul(ring_border, 0.5);
+            ring.color = if aria_invalid {
+                let ring_key = if theme.name.contains("/dark") {
+                    "destructive/40"
+                } else {
+                    "destructive/20"
+                };
+                theme
+                    .color_by_key(ring_key)
+                    .or_else(|| theme.color_by_key("destructive/20"))
+                    .unwrap_or(ring_border)
+            } else {
+                alpha_mul(ring_border, 0.5)
+            };
 
             let default_background = WidgetStateProperty::new(None)
                 .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
-            let default_border_color = WidgetStateProperty::new(ColorRef::Color(border))
-                .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
-                .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+            let default_border_color_off = if aria_invalid {
+                theme.color_token("destructive")
+            } else {
+                border
+            };
+            let default_border_color =
+                WidgetStateProperty::new(ColorRef::Color(default_border_color_off))
+                    .when(
+                        WidgetStates::SELECTED,
+                        ColorRef::Color(if aria_invalid {
+                            theme.color_token("destructive")
+                        } else {
+                            bg_on
+                        }),
+                    )
+                    .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
             let default_foreground = WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
                 .when(WidgetStates::SELECTED, ColorRef::Color(fg_on));
 

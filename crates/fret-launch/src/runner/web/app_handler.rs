@@ -85,6 +85,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
+        // Browsers fire a `contextmenu` event on right click even when we listen to PointerEvents.
+        // If not prevented, the browser's native context menu can steal focus and make app-owned
+        // context menus feel flaky ("right click doesn't open").
+        if self.web_canvas_context_menu_blocker.is_none() {
+            if let Some(canvas) = window.canvas().map(|c| c.clone()) {
+                let cb = Closure::wrap(Box::new(move |evt: web_sys::Event| {
+                    evt.prevent_default();
+                    evt.stop_propagation();
+                }) as Box<dyn FnMut(_)>);
+                let _ = canvas
+                    .add_event_listener_with_callback("contextmenu", cb.as_ref().unchecked_ref());
+                self.web_canvas_context_menu_blocker = Some(cb);
+            }
+        }
+
         if let Some(canvas) = window.canvas().map(|c| c.clone())
             && let Some(mount) = super::ime_mount::ensure_canvas_ime_mount(&canvas)
         {

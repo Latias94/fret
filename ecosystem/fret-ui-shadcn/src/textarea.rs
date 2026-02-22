@@ -62,6 +62,7 @@ pub struct Textarea {
     disabled: bool,
     min_height: Px,
     resizable: bool,
+    stable_line_boxes: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -95,6 +96,7 @@ impl Textarea {
             disabled: false,
             min_height: Px(64.0),
             resizable: true,
+            stable_line_boxes: true,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -131,6 +133,13 @@ impl Textarea {
         self
     }
 
+    /// If true, uses a fixed line box + forced strut for stable multiline metrics (UI/form
+    /// surfaces). If false, uses an expand-to-fit line box to avoid clipping (content surfaces).
+    pub fn stable_line_boxes(mut self, stable: bool) -> Self {
+        self.stable_line_boxes = stable;
+        self
+    }
+
     pub fn size(mut self, size: ComponentSize) -> Self {
         self.size = size;
         self
@@ -157,6 +166,7 @@ impl Textarea {
             self.disabled,
             self.min_height,
             self.resizable,
+            self.stable_line_boxes,
             self.size,
             self.chrome,
             self.layout,
@@ -173,6 +183,7 @@ pub fn textarea<H: UiHost>(
     disabled: bool,
     min_height: Px,
     resizable: bool,
+    stable_line_boxes: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -183,7 +194,11 @@ pub fn textarea<H: UiHost>(
 
     let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
 
-    let text_style = typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+    let text_style = if stable_line_boxes {
+        typography::text_area_control_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+    } else {
+        typography::text_area_content_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+    };
 
     let mut chrome = TextAreaStyle::default();
     chrome.padding_x = resolved.padding.left;

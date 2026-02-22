@@ -16,14 +16,13 @@ pub(super) fn preview_combobox(
     query: Model<String>,
 ) -> Vec<AnyElement> {
     let models = models::get_or_init(cx);
-    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
     let demo = sections::demo(cx, value, open, query);
     let clear = sections::clear_button(cx, &models);
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
-    let invalid = sections::invalid(cx, &models, destructive);
+    let invalid = sections::invalid(cx, &models);
     let disabled = sections::disabled(cx, &models);
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
@@ -155,14 +154,11 @@ shadcn::Combobox::new(value, open)
     .items(items)
     .into_element(cx);"#,
                 ),
-            DocSection::new("Extras: Invalid", invalid).description(
-                "Invalid visual is currently approximated via destructive border style on trigger.",
-            )
+            DocSection::new("Extras: Invalid", invalid)
+                .description("Invalid visual uses `aria_invalid(true)` on the combobox trigger.")
             .code(
                 "rust",
-                r#"let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
-
-shadcn::Combobox::new(value, open)
+                r#"shadcn::Combobox::new(value, open)
     .a11y_label("Combobox invalid")
     .width(Px(260.0))
     .placeholder("Select required option")
@@ -171,11 +167,7 @@ shadcn::Combobox::new(value, open)
         shadcn::ComboboxItem::new("apple", "Apple"),
         shadcn::ComboboxItem::new("banana", "Banana"),
     ])
-    .refine_style(
-        ChromeRefinement::default()
-            .border_1()
-            .border_color(ColorRef::Color(destructive)),
-    )
+    .aria_invalid(true)
     .into_element(cx);"#,
             ),
             DocSection::new("Extras: Disabled", disabled)

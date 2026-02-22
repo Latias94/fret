@@ -189,11 +189,7 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
     content
 }
 
-pub(super) fn invalid(
-    cx: &mut ElementContext<'_, App>,
-    models: &ComboboxModels,
-    destructive: fret_core::Color,
-) -> AnyElement {
+pub(super) fn invalid(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
     let invalid_combo =
         shadcn::Combobox::new(models.invalid_value.clone(), models.invalid_open.clone())
             .a11y_label("Combobox invalid")
@@ -202,11 +198,7 @@ pub(super) fn invalid(
             .query_model(models.invalid_query.clone())
             .test_id_prefix("ui-gallery-combobox-invalid")
             .items(helpers::base_items())
-            .refine_style(
-                ChromeRefinement::default()
-                    .border_1()
-                    .border_color(ColorRef::Color(destructive)),
-            )
+            .aria_invalid(true)
             .into_element(cx)
             .test_id("ui-gallery-combobox-invalid-trigger");
     let content = stack::vstack(

@@ -162,36 +162,39 @@ pub(super) fn preview_context_menu(
         };
 
     let basic = {
-        let menu = shadcn::ContextMenu::new(open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for actions",
-                    "ui-gallery-context-menu-basic-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Profile")
-                            .on_select(CMD_MENU_CONTEXT_ACTION)
-                            .test_id("ui-gallery-context-menu-basic-profile"),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Billing").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Team").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Subscription")
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(open.clone())
+            .content_test_id("ui-gallery-context-menu-basic-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for actions",
+                        "ui-gallery-context-menu-basic-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Profile")
+                                .on_select(CMD_MENU_CONTEXT_ACTION)
+                                .test_id("ui-gallery-context-menu-basic-profile"),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Billing")
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Team").on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Subscription")
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                    ]
+                },
+            );
 
         let last = cx
             .app
@@ -216,202 +219,224 @@ pub(super) fn preview_context_menu(
     };
 
     let submenu = {
-        let menu = shadcn::ContextMenu::new(submenu_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for submenu",
-                    "ui-gallery-context-menu-submenu-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Open")
-                            .on_select(CMD_MENU_CONTEXT_ACTION)
-                            .test_id("ui-gallery-context-menu-submenu-open"),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("More tools")
-                            .test_id("ui-gallery-context-menu-submenu-more-tools")
-                            .submenu(vec![
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Rename")
-                                        .on_select(CMD_MENU_CONTEXT_ACTION)
-                                        .test_id("ui-gallery-context-menu-submenu-rename"),
-                                ),
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Duplicate")
-                                        .on_select(CMD_MENU_CONTEXT_ACTION),
-                                ),
-                                shadcn::ContextMenuEntry::Separator,
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Archive")
-                                        .on_select(CMD_MENU_CONTEXT_ACTION),
-                                ),
-                            ]),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Share").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(submenu_open.clone())
+            .content_test_id("ui-gallery-context-menu-submenu-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for submenu",
+                        "ui-gallery-context-menu-submenu-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Open")
+                                .on_select(CMD_MENU_CONTEXT_ACTION)
+                                .test_id("ui-gallery-context-menu-submenu-open"),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("More tools")
+                                .test_id("ui-gallery-context-menu-submenu-more-tools")
+                                .submenu(vec![
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Rename")
+                                            .on_select(CMD_MENU_CONTEXT_ACTION)
+                                            .test_id("ui-gallery-context-menu-submenu-rename"),
+                                    ),
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Duplicate")
+                                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                                    ),
+                                    shadcn::ContextMenuEntry::Separator,
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Archive")
+                                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                                    ),
+                                ]),
+                        ),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Share")
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                    ]
+                },
+            );
         menu
     };
 
     let shortcuts = {
-        let menu = shadcn::ContextMenu::new(shortcuts_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for shortcuts",
-                    "ui-gallery-context-menu-shortcuts-trigger",
-                )
-            },
-            |cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Open File")
-                            .trailing(shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx))
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Search in Files")
-                            .trailing(
-                                shadcn::ContextMenuShortcut::new("Cmd+Shift+F").into_element(cx),
-                            )
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Toggle Sidebar")
-                            .trailing(shadcn::ContextMenuShortcut::new("Cmd+B").into_element(cx))
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(shortcuts_open.clone())
+            .content_test_id("ui-gallery-context-menu-shortcuts-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for shortcuts",
+                        "ui-gallery-context-menu-shortcuts-trigger",
+                    )
+                },
+                |cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Open File")
+                                .trailing(
+                                    shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx),
+                                )
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Search in Files")
+                                .trailing(
+                                    shadcn::ContextMenuShortcut::new("Cmd+Shift+F")
+                                        .into_element(cx),
+                                )
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Toggle Sidebar")
+                                .trailing(
+                                    shadcn::ContextMenuShortcut::new("Cmd+B").into_element(cx),
+                                )
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                    ]
+                },
+            );
         menu
     };
 
     let groups = {
-        let menu = shadcn::ContextMenu::new(groups_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for grouped actions",
-                    "ui-gallery-context-menu-groups-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("File")),
-                    shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new([
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("New file")
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Open recent")
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                    ])),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Edit")),
-                    shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new([
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Cut").on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Copy").on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                        shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Paste")
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
-                        ),
-                    ])),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(groups_open.clone())
+            .content_test_id("ui-gallery-context-menu-groups-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for grouped actions",
+                        "ui-gallery-context-menu-groups-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("File")),
+                        shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new([
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("New file")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Open recent")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                        ])),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Edit")),
+                        shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new([
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Cut")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Copy")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Paste")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                        ])),
+                    ]
+                },
+            );
         menu
     };
 
     let icons = {
-        let menu = shadcn::ContextMenu::new(icons_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for icon menu",
-                    "ui-gallery-context-menu-icons-trigger",
-                )
-            },
-            |cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Profile")
-                            .leading(shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.user"),
-                            ))
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Settings")
-                            .leading(shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.settings"),
-                            ))
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Download")
-                            .leading(shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.download"),
-                            ))
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(icons_open.clone())
+            .content_test_id("ui-gallery-context-menu-icons-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for icon menu",
+                        "ui-gallery-context-menu-icons-trigger",
+                    )
+                },
+                |cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Profile")
+                                .leading(shadcn::icon::icon(
+                                    cx,
+                                    fret_icons::IconId::new_static("lucide.user"),
+                                ))
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Settings")
+                                .leading(shadcn::icon::icon(
+                                    cx,
+                                    fret_icons::IconId::new_static("lucide.settings"),
+                                ))
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Download")
+                                .leading(shadcn::icon::icon(
+                                    cx,
+                                    fret_icons::IconId::new_static("lucide.download"),
+                                ))
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                    ]
+                },
+            );
         menu
     };
 
     let checkboxes = {
-        let menu = shadcn::ContextMenu::new(checkboxes_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for checkbox items",
-                    "ui-gallery-context-menu-checkboxes-trigger",
-                )
-            },
-            |cx| {
-                vec![
-                    shadcn::ContextMenuEntry::CheckboxItem(
-                        shadcn::ContextMenuCheckboxItem::new(
-                            show_status_bar.clone(),
-                            "Show status bar",
-                        )
-                        .trailing(shadcn::ContextMenuShortcut::new("Cmd+/").into_element(cx)),
-                    ),
-                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
-                        show_activity_bar.clone(),
-                        "Show activity bar",
-                    )),
-                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
-                        show_line_numbers.clone(),
-                        "Show line numbers",
-                    )),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(checkboxes_open.clone())
+            .content_test_id("ui-gallery-context-menu-checkboxes-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for checkbox items",
+                        "ui-gallery-context-menu-checkboxes-trigger",
+                    )
+                },
+                |cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::CheckboxItem(
+                            shadcn::ContextMenuCheckboxItem::new(
+                                show_status_bar.clone(),
+                                "Show status bar",
+                            )
+                            .trailing(shadcn::ContextMenuShortcut::new("Cmd+/").into_element(cx)),
+                        ),
+                        shadcn::ContextMenuEntry::CheckboxItem(
+                            shadcn::ContextMenuCheckboxItem::new(
+                                show_activity_bar.clone(),
+                                "Show activity bar",
+                            ),
+                        ),
+                        shadcn::ContextMenuEntry::CheckboxItem(
+                            shadcn::ContextMenuCheckboxItem::new(
+                                show_line_numbers.clone(),
+                                "Show line numbers",
+                            ),
+                        ),
+                    ]
+                },
+            );
 
         let status = cx.watch_model(&show_status_bar).copied().unwrap_or(true);
         let activity = cx.watch_model(&show_activity_bar).copied().unwrap_or(true);
@@ -429,27 +454,31 @@ pub(super) fn preview_context_menu(
     };
 
     let radio = {
-        let menu = shadcn::ContextMenu::new(radio_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for radio items",
-                    "ui-gallery-context-menu-radio-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Theme mode")),
-                    shadcn::ContextMenuEntry::RadioGroup(
-                        shadcn::ContextMenuRadioGroup::new(theme_mode.clone())
-                            .item(shadcn::ContextMenuRadioItemSpec::new("light", "Light"))
-                            .item(shadcn::ContextMenuRadioItemSpec::new("dark", "Dark"))
-                            .item(shadcn::ContextMenuRadioItemSpec::new("system", "System")),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(radio_open.clone())
+            .content_test_id("ui-gallery-context-menu-radio-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for radio items",
+                        "ui-gallery-context-menu-radio-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new(
+                            "Theme mode",
+                        )),
+                        shadcn::ContextMenuEntry::RadioGroup(
+                            shadcn::ContextMenuRadioGroup::new(theme_mode.clone())
+                                .item(shadcn::ContextMenuRadioItemSpec::new("light", "Light"))
+                                .item(shadcn::ContextMenuRadioItemSpec::new("dark", "Dark"))
+                                .item(shadcn::ContextMenuRadioItemSpec::new("system", "System")),
+                        ),
+                    ]
+                },
+            );
 
         let selected = cx
             .watch_model(&theme_mode)
@@ -467,60 +496,66 @@ pub(super) fn preview_context_menu(
     };
 
     let destructive = {
-        let menu = shadcn::ContextMenu::new(destructive_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click for destructive items",
-                    "ui-gallery-context-menu-destructive-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Rename").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Delete project")
-                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
-                            .on_select(CMD_MENU_CONTEXT_ACTION)
-                            .test_id("ui-gallery-context-menu-destructive-delete"),
-                    ),
-                ]
-            },
-        );
+        let menu = shadcn::ContextMenu::new(destructive_open.clone())
+            .content_test_id("ui-gallery-context-menu-destructive-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click for destructive items",
+                        "ui-gallery-context-menu-destructive-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Rename")
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Delete project")
+                                .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                                .on_select(CMD_MENU_CONTEXT_ACTION)
+                                .test_id("ui-gallery-context-menu-destructive-delete"),
+                        ),
+                    ]
+                },
+            );
         menu
     };
 
     let rtl = doc_layout::rtl(cx, |cx| {
-        shadcn::ContextMenu::new(rtl_open.clone()).into_element(
-            cx,
-            |cx| {
-                trigger_surface(
-                    cx,
-                    "Right click in RTL",
-                    "ui-gallery-context-menu-rtl-trigger",
-                )
-            },
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Open").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Settings").on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Delete")
-                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
-                            .on_select(CMD_MENU_CONTEXT_ACTION),
-                    ),
-                ]
-            },
-        )
+        shadcn::ContextMenu::new(rtl_open.clone())
+            .content_test_id("ui-gallery-context-menu-rtl-content")
+            .into_element(
+                cx,
+                |cx| {
+                    trigger_surface(
+                        cx,
+                        "Right click in RTL",
+                        "ui-gallery-context-menu-rtl-trigger",
+                    )
+                },
+                |_cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Open").on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Settings")
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Delete")
+                                .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
+                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                        ),
+                    ]
+                },
+            )
     });
 
     let notes = doc_layout::notes(

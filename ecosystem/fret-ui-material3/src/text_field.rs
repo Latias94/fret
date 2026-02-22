@@ -9,19 +9,19 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextWrap,
-    Transform2D,
+    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow,
+    TextStrutStyle, TextWrap, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnPressablePointerDown, PointerDownCx, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, Length, MainAlign,
-    Overflow, PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextInputProps,
-    TextProps, VisualTransformProps,
+    Overflow, PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
+use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
@@ -193,6 +193,41 @@ impl AnimatedColor {
     }
 }
 
+fn maybe_force_strut_from_style(mut style: fret_core::TextStyle) -> fret_core::TextStyle {
+    if style.line_height.is_none() && style.line_height_em.is_none() {
+        return style;
+    }
+
+    style.strut_style = Some(TextStrutStyle {
+        line_height: style.line_height,
+        line_height_em: style.line_height_em,
+        force: true,
+        ..Default::default()
+    });
+    style
+}
+
+fn text_area_style_from_text_input_style(input: fret_ui::TextInputStyle) -> TextAreaStyle {
+    let mut preedit_bg_color = input.selection_color;
+    preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
+
+    TextAreaStyle {
+        padding_x: input.padding.left,
+        padding_y: input.padding.top,
+        background: input.background,
+        border: input.border,
+        border_color: input.border_color,
+        focus_ring: input.focus_ring,
+        corner_radii: input.corner_radii,
+        text_color: input.text_color,
+        placeholder_color: input.placeholder_color,
+        selection_color: input.selection_color,
+        caret_color: input.caret_color,
+        preedit_bg_color,
+        preedit_underline_color: input.preedit_underline_color,
+    }
+}
+
 #[derive(Clone)]
 pub struct TextField {
     model: Model<String>,
@@ -216,6 +251,9 @@ pub struct TextField {
     controls_element: Option<u64>,
     expanded: Option<bool>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    multiline: bool,
+    stable_line_boxes: bool,
+    multiline_min_height: Option<Px>,
     token_namespace: TextFieldTokenNamespace,
 }
 
@@ -229,6 +267,8 @@ impl std::fmt::Debug for TextField {
             .field("style", &self.style)
             .field("disabled", &self.disabled)
             .field("error", &self.error)
+            .field("multiline", &self.multiline)
+            .field("stable_line_boxes", &self.stable_line_boxes)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("a11y_role", &self.a11y_role)
@@ -261,6 +301,9 @@ impl TextField {
             controls_element: None,
             expanded: None,
             input_id_out: None,
+            multiline: false,
+            stable_line_boxes: true,
+            multiline_min_height: None,
             token_namespace: TextFieldTokenNamespace::TextField,
         }
     }
@@ -272,6 +315,27 @@ impl TextField {
 
     pub(crate) fn token_namespace(mut self, namespace: TextFieldTokenNamespace) -> Self {
         self.token_namespace = namespace;
+        self
+    }
+
+    /// When true, uses a multiline text area surface instead of a single-line text input.
+    pub fn multiline(mut self, multiline: bool) -> Self {
+        self.multiline = multiline;
+        self
+    }
+
+    /// If true, opts into stable multiline line boxes (fixed line height + forced strut).
+    ///
+    /// This is intended for UI/form surfaces where baseline stability matters more than avoiding
+    /// ink clipping for tall fallback glyphs.
+    pub fn stable_line_boxes(mut self, stable: bool) -> Self {
+        self.stable_line_boxes = stable;
+        self
+    }
+
+    /// Optional minimum height for multiline mode.
+    pub fn multiline_min_height(mut self, min_height: Px) -> Self {
+        self.multiline_min_height = Some(min_height);
         self
     }
 
@@ -398,6 +462,9 @@ impl TextField {
                 controls_element,
                 expanded,
                 input_id_out,
+                multiline,
+                stable_line_boxes,
+                multiline_min_height,
                 token_namespace,
             } = self;
             let height = {
@@ -410,6 +477,13 @@ impl TextField {
                         autocomplete_tokens::text_field_container_height(theme, variant)
                     }
                 }
+            };
+            let height = if multiline {
+                multiline_min_height
+                    .map(|min_height| Px(height.0.max(min_height.0)))
+                    .unwrap_or(height)
+            } else {
+                height
             };
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
@@ -482,262 +556,388 @@ impl TextField {
                                 })
                                 .filter(|c| c.a > 0.0);
 
-                            let text_input = cx.text_input_with_id_props(|cx, id| {
-                                input_id = id;
-                                focused = cx.is_focused_element(id);
-                                states = text_field_widget_states(cx, hovered, focused, disabled);
+                            let text_input = if multiline {
+                                cx.text_area_with_id_props(|cx, id| {
+                                    input_id = id;
+                                    focused = cx.is_focused_element(id);
+                                    states =
+                                        text_field_widget_states(cx, hovered, focused, disabled);
 
-                                let (mut chrome, spatial, fast_effects, slow_effects) = {
-                                    let theme = Theme::global(&*cx.app);
-                                    let mut chrome = match token_namespace {
-                                        TextFieldTokenNamespace::TextField => {
-                                            text_field_tokens::text_input_style(
-                                                theme,
-                                                variant_for_children,
-                                                focused,
-                                                hovered,
-                                                disabled,
-                                                error,
-                                            )
-                                        }
-                                        TextFieldTokenNamespace::Autocomplete => {
-                                            autocomplete_tokens::text_input_style(
-                                                theme,
-                                                variant_for_children,
-                                                focused,
-                                                hovered,
-                                                disabled,
-                                                error,
-                                            )
-                                        }
-                                    };
-                                    apply_text_field_input_overrides(
-                                        theme,
-                                        states,
-                                        &style_override,
-                                        &mut chrome,
-                                    );
-
-                                    let spatial = sys_spring_in_scope(
-                                        &*cx,
-                                        theme,
-                                        MotionSchemeKey::FastSpatial,
-                                    );
-                                    let fast_effects = sys_spring_in_scope(
-                                        &*cx,
-                                        theme,
-                                        MotionSchemeKey::FastEffects,
-                                    );
-                                    let slow_effects = sys_spring_in_scope(
-                                        &*cx,
-                                        theme,
-                                        MotionSchemeKey::SlowEffects,
-                                    );
-
-                                    (chrome, spatial, fast_effects, slow_effects)
-                                };
-
-                                let trailing_icon_hit_width = if trailing_icon.is_some() {
-                                    Px(48.0)
-                                } else {
-                                    Px(0.0)
-                                };
-                                if trailing_icon_hit_width.0 > 0.0 {
-                                    chrome.padding.right =
-                                        Px(chrome.padding.right.0.max(trailing_icon_hit_width.0));
-                                }
-
-                                let should_float = focused || populated;
-                                let input_phase = if focused {
-                                    TextFieldInputPhase::Focused
-                                } else if populated {
-                                    TextFieldInputPhase::UnfocusedNotEmpty
-                                } else {
-                                    TextFieldInputPhase::UnfocusedEmpty
-                                };
-
-                                let placeholder_target_opacity = if label.is_some() {
-                                    if focused && !populated { 1.0 } else { 0.0 }
-                                } else {
-                                    1.0
-                                };
-
-                                let now_frame = cx.frame_id.0;
-
-                                let target_border = chrome.border;
-                                let target_border_color = chrome.border_color;
-
-                                let (
-                                    want_frames,
-                                    next_float_progress,
-                                    animated_border,
-                                    animated_border_color,
-                                    placeholder_opacity,
-                                ) = cx.with_state(TextFieldRuntime::default, |rt| {
-                                    if disabled {
-                                        rt.float_target = should_float;
-                                        rt.float
-                                            .reset(now_frame, if should_float { 1.0 } else { 0.0 });
-                                        rt.last_phase = input_phase;
-                                        rt.placeholder_opacity
-                                            .reset(now_frame, placeholder_target_opacity);
-                                        rt.border_top.reset(now_frame, target_border.top.0);
-                                        rt.border_right.reset(now_frame, target_border.right.0);
-                                        rt.border_bottom.reset(now_frame, target_border.bottom.0);
-                                        rt.border_left.reset(now_frame, target_border.left.0);
-                                        rt.border_color.reset(now_frame, target_border_color);
-
-                                        return (
-                                            false,
-                                            rt.float.value(),
-                                            target_border,
-                                            target_border_color,
-                                            rt.placeholder_opacity.value(),
+                                    let mut chrome = {
+                                        let theme = Theme::global(&*cx.app);
+                                        let mut chrome = match token_namespace {
+                                            TextFieldTokenNamespace::TextField => {
+                                                text_field_tokens::text_input_style(
+                                                    theme,
+                                                    variant_for_children,
+                                                    focused,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                )
+                                            }
+                                            TextFieldTokenNamespace::Autocomplete => {
+                                                autocomplete_tokens::text_input_style(
+                                                    theme,
+                                                    variant_for_children,
+                                                    focused,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                )
+                                            }
+                                        };
+                                        apply_text_field_input_overrides(
+                                            theme,
+                                            states,
+                                            &style_override,
+                                            &mut chrome,
                                         );
+                                        chrome
+                                    };
+
+                                    let trailing_icon_hit_width = if trailing_icon.is_some() {
+                                        Px(48.0)
+                                    } else {
+                                        Px(0.0)
+                                    };
+                                    if trailing_icon_hit_width.0 > 0.0 {
+                                        chrome.padding.right = Px(chrome
+                                            .padding
+                                            .right
+                                            .0
+                                            .max(trailing_icon_hit_width.0));
                                     }
 
-                                    if rt.float_target != should_float {
-                                        rt.float_target = should_float;
-                                        rt.float.set_target(
+                                    let should_float = focused || populated;
+                                    float_progress = if should_float { 1.0 } else { 0.0 };
+
+                                    let placeholder_opacity: f32 = if label.is_some() {
+                                        if focused && !populated { 1.0 } else { 0.0 }
+                                    } else {
+                                        1.0
+                                    };
+
+                                    input_bg = chrome.background;
+                                    outline_width_for_notch = match variant_for_children {
+                                        TextFieldVariant::Outlined => chrome.border.top,
+                                        TextFieldVariant::Filled => Px(0.0),
+                                    };
+
+                                    container.background =
+                                        (chrome.background.a > 0.0).then_some(chrome.background);
+                                    container.corner_radii = chrome.corner_radii;
+                                    container.border = chrome.border;
+                                    container.border_color = Some(chrome.border_color);
+
+                                    chrome.background = Color::TRANSPARENT;
+                                    chrome.border = Edges::all(Px(0.0));
+                                    chrome.border_color = Color::TRANSPARENT;
+                                    chrome.border_color_focused = Color::TRANSPARENT;
+
+                                    chrome.placeholder_color = alpha_mul(
+                                        chrome.placeholder_color,
+                                        placeholder_opacity.clamp(0.0, 1.0),
+                                    );
+
+                                    let mut props = TextAreaProps::new(model.clone());
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.height = Length::Fill;
+                                    props.a11y_label = a11y_label.clone();
+                                    props.test_id = test_id.clone();
+                                    props.placeholder = placeholder.clone();
+                                    props.min_height = height;
+                                    props.chrome = text_area_style_from_text_input_style(chrome);
+
+                                    let base_style =
+                                        crate::foundation::context::inherited_text_style(cx)
+                                            .unwrap_or_else(|| {
+                                                let theme = Theme::global(&*cx.app);
+                                                theme
+                                                    .text_style_by_key(
+                                                        "md.sys.typescale.body-large",
+                                                    )
+                                                    .unwrap_or_default()
+                                            });
+                                    props.text_style = if stable_line_boxes {
+                                        maybe_force_strut_from_style(typography::with_intent(
+                                            base_style,
+                                            TextIntent::Control,
+                                        ))
+                                    } else {
+                                        typography::with_intent(base_style, TextIntent::Content)
+                                    };
+
+                                    props
+                                })
+                            } else {
+                                cx.text_input_with_id_props(|cx, id| {
+                                    input_id = id;
+                                    focused = cx.is_focused_element(id);
+                                    states =
+                                        text_field_widget_states(cx, hovered, focused, disabled);
+
+                                    let (mut chrome, spatial, fast_effects, slow_effects) = {
+                                        let theme = Theme::global(&*cx.app);
+                                        let mut chrome = match token_namespace {
+                                            TextFieldTokenNamespace::TextField => {
+                                                text_field_tokens::text_input_style(
+                                                    theme,
+                                                    variant_for_children,
+                                                    focused,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                )
+                                            }
+                                            TextFieldTokenNamespace::Autocomplete => {
+                                                autocomplete_tokens::text_input_style(
+                                                    theme,
+                                                    variant_for_children,
+                                                    focused,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                )
+                                            }
+                                        };
+                                        apply_text_field_input_overrides(
+                                            theme,
+                                            states,
+                                            &style_override,
+                                            &mut chrome,
+                                        );
+
+                                        let spatial = sys_spring_in_scope(
+                                            &*cx,
+                                            theme,
+                                            MotionSchemeKey::FastSpatial,
+                                        );
+                                        let fast_effects = sys_spring_in_scope(
+                                            &*cx,
+                                            theme,
+                                            MotionSchemeKey::FastEffects,
+                                        );
+                                        let slow_effects = sys_spring_in_scope(
+                                            &*cx,
+                                            theme,
+                                            MotionSchemeKey::SlowEffects,
+                                        );
+
+                                        (chrome, spatial, fast_effects, slow_effects)
+                                    };
+
+                                    let trailing_icon_hit_width = if trailing_icon.is_some() {
+                                        Px(48.0)
+                                    } else {
+                                        Px(0.0)
+                                    };
+                                    if trailing_icon_hit_width.0 > 0.0 {
+                                        chrome.padding.right = Px(chrome
+                                            .padding
+                                            .right
+                                            .0
+                                            .max(trailing_icon_hit_width.0));
+                                    }
+
+                                    let should_float = focused || populated;
+                                    let input_phase = if focused {
+                                        TextFieldInputPhase::Focused
+                                    } else if populated {
+                                        TextFieldInputPhase::UnfocusedNotEmpty
+                                    } else {
+                                        TextFieldInputPhase::UnfocusedEmpty
+                                    };
+
+                                    let placeholder_target_opacity = if label.is_some() {
+                                        if focused && !populated { 1.0 } else { 0.0 }
+                                    } else {
+                                        1.0
+                                    };
+
+                                    let now_frame = cx.frame_id.0;
+
+                                    let target_border = chrome.border;
+                                    let target_border_color = chrome.border_color;
+
+                                    let (
+                                        want_frames,
+                                        next_float_progress,
+                                        animated_border,
+                                        animated_border_color,
+                                        placeholder_opacity,
+                                    ) = cx.with_state(TextFieldRuntime::default, |rt| {
+                                        if disabled {
+                                            rt.float_target = should_float;
+                                            rt.float.reset(
+                                                now_frame,
+                                                if should_float { 1.0 } else { 0.0 },
+                                            );
+                                            rt.last_phase = input_phase;
+                                            rt.placeholder_opacity
+                                                .reset(now_frame, placeholder_target_opacity);
+                                            rt.border_top.reset(now_frame, target_border.top.0);
+                                            rt.border_right.reset(now_frame, target_border.right.0);
+                                            rt.border_bottom
+                                                .reset(now_frame, target_border.bottom.0);
+                                            rt.border_left.reset(now_frame, target_border.left.0);
+                                            rt.border_color.reset(now_frame, target_border_color);
+
+                                            return (
+                                                false,
+                                                rt.float.value(),
+                                                target_border,
+                                                target_border_color,
+                                                rt.placeholder_opacity.value(),
+                                            );
+                                        }
+
+                                        if rt.float_target != should_float {
+                                            rt.float_target = should_float;
+                                            rt.float.set_target(
+                                                now_frame,
+                                                if should_float { 1.0 } else { 0.0 },
+                                                spatial,
+                                            );
+                                        }
+
+                                        let placeholder_effects = match (rt.last_phase, input_phase)
+                                        {
+                                            (
+                                                TextFieldInputPhase::Focused,
+                                                TextFieldInputPhase::UnfocusedEmpty,
+                                            ) => fast_effects,
+                                            (
+                                                TextFieldInputPhase::UnfocusedEmpty,
+                                                TextFieldInputPhase::Focused,
+                                            )
+                                            | (
+                                                TextFieldInputPhase::UnfocusedNotEmpty,
+                                                TextFieldInputPhase::UnfocusedEmpty,
+                                            ) => slow_effects,
+                                            _ => fast_effects,
+                                        };
+                                        rt.last_phase = input_phase;
+
+                                        rt.placeholder_opacity.set_target(
                                             now_frame,
-                                            if should_float { 1.0 } else { 0.0 },
+                                            placeholder_target_opacity,
+                                            placeholder_effects,
+                                        );
+
+                                        rt.border_top.set_target(
+                                            now_frame,
+                                            target_border.top.0,
                                             spatial,
                                         );
+                                        rt.border_right.set_target(
+                                            now_frame,
+                                            target_border.right.0,
+                                            spatial,
+                                        );
+                                        rt.border_bottom.set_target(
+                                            now_frame,
+                                            target_border.bottom.0,
+                                            spatial,
+                                        );
+                                        rt.border_left.set_target(
+                                            now_frame,
+                                            target_border.left.0,
+                                            spatial,
+                                        );
+
+                                        rt.border_color.set_target(
+                                            now_frame,
+                                            target_border_color,
+                                            fast_effects,
+                                        );
+
+                                        rt.float.advance(now_frame);
+                                        rt.placeholder_opacity.advance(now_frame);
+                                        rt.border_top.advance(now_frame);
+                                        rt.border_right.advance(now_frame);
+                                        rt.border_bottom.advance(now_frame);
+                                        rt.border_left.advance(now_frame);
+                                        rt.border_color.advance(now_frame);
+
+                                        let want_frames = rt.float.is_active()
+                                            || rt.placeholder_opacity.is_active()
+                                            || rt.border_top.is_active()
+                                            || rt.border_right.is_active()
+                                            || rt.border_bottom.is_active()
+                                            || rt.border_left.is_active()
+                                            || rt.border_color.is_active();
+
+                                        (
+                                            want_frames,
+                                            rt.float.value(),
+                                            Edges {
+                                                top: Px(rt.border_top.value().max(0.0)),
+                                                right: Px(rt.border_right.value().max(0.0)),
+                                                bottom: Px(rt.border_bottom.value().max(0.0)),
+                                                left: Px(rt.border_left.value().max(0.0)),
+                                            },
+                                            rt.border_color.value(),
+                                            rt.placeholder_opacity.value(),
+                                        )
+                                    });
+
+                                    float_progress = next_float_progress.clamp(0.0, 1.0);
+
+                                    if want_frames {
+                                        cx.request_animation_frame();
                                     }
 
-                                    let placeholder_effects = match (rt.last_phase, input_phase) {
-                                        (
-                                            TextFieldInputPhase::Focused,
-                                            TextFieldInputPhase::UnfocusedEmpty,
-                                        ) => fast_effects,
-                                        (
-                                            TextFieldInputPhase::UnfocusedEmpty,
-                                            TextFieldInputPhase::Focused,
-                                        )
-                                        | (
-                                            TextFieldInputPhase::UnfocusedNotEmpty,
-                                            TextFieldInputPhase::UnfocusedEmpty,
-                                        ) => slow_effects,
-                                        _ => fast_effects,
+                                    input_bg = chrome.background;
+                                    outline_width_for_notch = match variant_for_children {
+                                        TextFieldVariant::Outlined => animated_border.top,
+                                        TextFieldVariant::Filled => Px(0.0),
                                     };
-                                    rt.last_phase = input_phase;
 
-                                    rt.placeholder_opacity.set_target(
-                                        now_frame,
-                                        placeholder_target_opacity,
-                                        placeholder_effects,
+                                    container.background =
+                                        (chrome.background.a > 0.0).then_some(chrome.background);
+                                    container.corner_radii = chrome.corner_radii;
+                                    container.border = animated_border;
+                                    container.border_color = Some(animated_border_color);
+
+                                    chrome.background = Color::TRANSPARENT;
+                                    chrome.border = Edges::all(Px(0.0));
+                                    chrome.border_color = Color::TRANSPARENT;
+                                    chrome.border_color_focused = Color::TRANSPARENT;
+
+                                    chrome.placeholder_color = alpha_mul(
+                                        chrome.placeholder_color,
+                                        placeholder_opacity.clamp(0.0, 1.0),
                                     );
 
-                                    rt.border_top.set_target(
-                                        now_frame,
-                                        target_border.top.0,
-                                        spatial,
-                                    );
-                                    rt.border_right.set_target(
-                                        now_frame,
-                                        target_border.right.0,
-                                        spatial,
-                                    );
-                                    rt.border_bottom.set_target(
-                                        now_frame,
-                                        target_border.bottom.0,
-                                        spatial,
-                                    );
-                                    rt.border_left.set_target(
-                                        now_frame,
-                                        target_border.left.0,
-                                        spatial,
-                                    );
+                                    let mut props = TextInputProps::new(model.clone());
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.height = Length::Fill;
+                                    props.a11y_label = a11y_label.clone();
+                                    props.a11y_role =
+                                        Some(a11y_role.unwrap_or(SemanticsRole::TextField));
+                                    props.test_id = test_id.clone();
+                                    props.placeholder = placeholder.clone();
+                                    props.active_descendant = active_descendant;
+                                    props.controls_element = controls_element;
+                                    props.expanded = expanded;
+                                    props.chrome = chrome;
+                                    let base_style =
+                                        crate::foundation::context::inherited_text_style(cx)
+                                            .unwrap_or_else(|| {
+                                                let theme = Theme::global(&*cx.app);
+                                                theme
+                                                    .text_style_by_key(
+                                                        "md.sys.typescale.body-large",
+                                                    )
+                                                    .unwrap_or_default()
+                                            });
+                                    props.text_style =
+                                        typography::with_intent(base_style, TextIntent::Control);
 
-                                    rt.border_color.set_target(
-                                        now_frame,
-                                        target_border_color,
-                                        fast_effects,
-                                    );
-
-                                    rt.float.advance(now_frame);
-                                    rt.placeholder_opacity.advance(now_frame);
-                                    rt.border_top.advance(now_frame);
-                                    rt.border_right.advance(now_frame);
-                                    rt.border_bottom.advance(now_frame);
-                                    rt.border_left.advance(now_frame);
-                                    rt.border_color.advance(now_frame);
-
-                                    let want_frames = rt.float.is_active()
-                                        || rt.placeholder_opacity.is_active()
-                                        || rt.border_top.is_active()
-                                        || rt.border_right.is_active()
-                                        || rt.border_bottom.is_active()
-                                        || rt.border_left.is_active()
-                                        || rt.border_color.is_active();
-
-                                    (
-                                        want_frames,
-                                        rt.float.value(),
-                                        Edges {
-                                            top: Px(rt.border_top.value().max(0.0)),
-                                            right: Px(rt.border_right.value().max(0.0)),
-                                            bottom: Px(rt.border_bottom.value().max(0.0)),
-                                            left: Px(rt.border_left.value().max(0.0)),
-                                        },
-                                        rt.border_color.value(),
-                                        rt.placeholder_opacity.value(),
-                                    )
-                                });
-
-                                float_progress = next_float_progress.clamp(0.0, 1.0);
-
-                                if want_frames {
-                                    cx.request_animation_frame();
-                                }
-
-                                input_bg = chrome.background;
-                                outline_width_for_notch = match variant_for_children {
-                                    TextFieldVariant::Outlined => animated_border.top,
-                                    TextFieldVariant::Filled => Px(0.0),
-                                };
-
-                                container.background =
-                                    (chrome.background.a > 0.0).then_some(chrome.background);
-                                container.corner_radii = chrome.corner_radii;
-                                container.border = animated_border;
-                                container.border_color = Some(animated_border_color);
-
-                                chrome.background = Color::TRANSPARENT;
-                                chrome.border = Edges::all(Px(0.0));
-                                chrome.border_color = Color::TRANSPARENT;
-                                chrome.border_color_focused = Color::TRANSPARENT;
-
-                                chrome.placeholder_color = alpha_mul(
-                                    chrome.placeholder_color,
-                                    placeholder_opacity.clamp(0.0, 1.0),
-                                );
-
-                                let mut props = TextInputProps::new(model.clone());
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.height = Length::Fill;
-                                props.a11y_label = a11y_label.clone();
-                                props.a11y_role =
-                                    Some(a11y_role.unwrap_or(SemanticsRole::TextField));
-                                props.test_id = test_id.clone();
-                                props.placeholder = placeholder.clone();
-                                props.active_descendant = active_descendant;
-                                props.controls_element = controls_element;
-                                props.expanded = expanded;
-                                props.chrome = chrome;
-                                let base_style =
-                                    crate::foundation::context::inherited_text_style(cx)
-                                        .unwrap_or_else(|| {
-                                            let theme = Theme::global(&*cx.app);
-                                            theme
-                                                .text_style_by_key("md.sys.typescale.body-large")
-                                                .unwrap_or_default()
-                                        });
-                                props.text_style =
-                                    typography::with_intent(base_style, TextIntent::Control);
-
-                                props
-                            });
+                                    props
+                                })
+                            };
                             if let Some(out) = input_id_out.as_ref() {
                                 out.set(Some(input_id));
                             }

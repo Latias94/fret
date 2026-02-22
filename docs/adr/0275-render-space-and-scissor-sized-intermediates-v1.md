@@ -97,6 +97,17 @@ When a pass uses a scissor rectangle that was computed in absolute pixel space, 
 - clamp it to `[0, 0]..[render_space.size_px]`,
 - and treat the result as the GPU scissor for that render pass.
 
+### RenderPlan scissor representation
+
+To avoid accidental mixing of coordinate spaces during refactors, any scissor stored in the internal
+render plan MUST be explicitly tagged as either:
+
+- **absolute (render-space)**: expressed in viewport pixel space, or
+- **local (dst-target space)**: expressed relative to the destination framebuffer origin (`0..dst_size`).
+
+If a pass stores an absolute scissor, it must be mapped through the pass's `RenderSpace` before being
+used as a GPU scissor.
+
 ### Budgeting and deterministic degradation
 
 - Scissor-sized intermediates participate in the same budgeting surface as full-sized
@@ -136,6 +147,6 @@ When a pass uses a scissor rectangle that was computed in absolute pixel space, 
 
 ## Evidence anchors
 
-- `crates/fret-render-wgpu/src/renderer/render_plan.rs` (scissor-sized intermediate planning + budget gating)
+- `crates/fret-render-wgpu/src/renderer/render_plan.rs` (scissor-sized intermediate planning + budget gating; `AbsoluteScissorRect` vs `LocalScissorRect`; debug-only plan validation)
 - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (RenderSpace uniform updates; absolute→local scissor mapping)
 - `crates/fret-render-wgpu/src/renderer/resources.rs` + `crates/fret-render-wgpu/src/renderer/shaders.rs` (binding `@group(0) @binding(5)`)
