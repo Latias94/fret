@@ -1,16 +1,57 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, Px, TextLineHeightPolicy, TextStyle};
+use fret_core::{
+    Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px, TextLineHeightPolicy, TextStyle,
+};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};
-use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost};
+use fret_ui::element::{
+    AnyElement, ContainerProps, Length, PressableProps, SizeStyle, TextAreaProps,
+};
+use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TextareaResizeDrag {
+    start: fret_core::Point,
+    start_height: Px,
+}
+
+#[derive(Default)]
+struct TextareaResizeState {
+    height_override: Option<Model<Option<Px>>>,
+    drag: Option<Model<Option<TextareaResizeDrag>>>,
+}
+
+fn textarea_resize_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<Option<Px>>, Model<Option<TextareaResizeDrag>>) {
+    let needs_init = cx.with_state(TextareaResizeState::default, |st| {
+        st.height_override.is_none() || st.drag.is_none()
+    });
+
+    if needs_init {
+        let height_override = cx.app.models_mut().insert(None::<Px>);
+        let drag = cx.app.models_mut().insert(None::<TextareaResizeDrag>);
+        cx.with_state(TextareaResizeState::default, |st| {
+            st.height_override = Some(height_override.clone());
+            st.drag = Some(drag.clone());
+        });
+        return (height_override, drag);
+    }
+
+    cx.with_state(TextareaResizeState::default, |st| {
+        (
+            st.height_override.clone().expect("height_override"),
+            st.drag.clone().expect("drag"),
+        )
+    })
 }
 
 #[derive(Clone)]
@@ -21,6 +62,7 @@ pub struct Textarea {
     aria_invalid: bool,
     disabled: bool,
     min_height: Px,
+    resizable: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -36,6 +78,7 @@ impl std::fmt::Debug for Textarea {
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
             .field("min_height", &self.min_height)
+            .field("resizable", &self.resizable)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
@@ -52,6 +95,7 @@ impl Textarea {
             aria_invalid: false,
             disabled: false,
             min_height: Px(64.0),
+            resizable: true,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -83,6 +127,11 @@ impl Textarea {
         self
     }
 
+    pub fn resizable(mut self, resizable: bool) -> Self {
+        self.resizable = resizable;
+        self
+    }
+
     pub fn size(mut self, size: ComponentSize) -> Self {
         self.size = size;
         self
@@ -108,6 +157,7 @@ impl Textarea {
             self.aria_invalid,
             self.disabled,
             self.min_height,
+            self.resizable,
             self.size,
             self.chrome,
             self.layout,
@@ -123,10 +173,13 @@ pub fn textarea<H: UiHost>(
     aria_invalid: bool,
     disabled: bool,
     min_height: Px,
+    resizable: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 ) -> AnyElement {
+    let show_resize_handle = resizable && !disabled;
+
     let theme = Theme::global(&*cx.app);
 
     let resolved = resolve_input_chrome(theme, size, &chrome, InputTokenKeys::none());
@@ -195,8 +248,166 @@ pub fn textarea<H: UiHost>(
     };
 
     if disabled {
-        cx.opacity(0.5, move |cx| vec![cx.text_area(props)])
-    } else {
-        cx.text_area(props)
+        return cx.opacity(0.5, move |cx| vec![cx.text_area(props)]);
     }
+
+    if !show_resize_handle {
+        return cx.text_area(props);
+    }
+
+    let outer_layout = props.layout;
+    let size_style = props.layout.size;
+    let mut inner_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+    inner_layout.size = size_style;
+    props.layout = inner_layout;
+
+    cx.container(
+        ContainerProps {
+            layout: outer_layout,
+            padding: Edges::all(Px(0.0)),
+            background: None,
+            shadow: None,
+            border: Edges::all(Px(0.0)),
+            border_color: None,
+            corner_radii: Corners::all(Px(0.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            let (height_override, drag) = textarea_resize_models(cx);
+            let override_px = cx
+                .app
+                .models_mut()
+                .read(&height_override, |v| *v)
+                .ok()
+                .flatten();
+
+            let theme = Theme::global(&*cx.app).clone();
+            let resize_handle_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default()
+                    .absolute()
+                    .right(Space::N1)
+                    .bottom(Space::N1)
+                    .w_px(Px(14.0))
+                    .h_px(Px(14.0)),
+            );
+            let grip_color = theme
+                .color_by_key("muted-foreground")
+                .unwrap_or_else(|| theme.color_token("foreground"));
+            let grip_border_color = alpha_mul(grip_color, 0.55);
+            let grip_layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+
+            let mut props = props;
+            if let Some(px) = override_px {
+                props.layout.size.height = Length::Px(px);
+            }
+
+            let textarea = cx.text_area(props);
+
+            let resize_handle = cx.pressable_with_id_props(move |cx, _st, id| {
+                let height_override_down = height_override.clone();
+                let drag_down = drag.clone();
+                cx.pressable_on_pointer_down_for(
+                    id,
+                    Arc::new(move |host, _action_cx, down| {
+                        if down.button != MouseButton::Left {
+                            return action::PressablePointerDownResult::SkipDefault;
+                        }
+
+                        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                        host.capture_pointer();
+                        host.set_cursor_icon(CursorIcon::NwseResize);
+
+                        let start = down.position_window.unwrap_or(down.position);
+                        let start_height = host
+                            .models_mut()
+                            .read(&height_override_down, |v| *v)
+                            .ok()
+                            .flatten()
+                            .unwrap_or(min_height);
+
+                        let _ = host.models_mut().update(&drag_down, |v| {
+                            *v = Some(TextareaResizeDrag {
+                                start,
+                                start_height,
+                            });
+                        });
+
+                        action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                    }),
+                );
+
+                let height_override_move = height_override.clone();
+                let drag_move = drag.clone();
+                cx.pressable_on_pointer_move_for(
+                    id,
+                    Arc::new(move |host, action_cx, mv| {
+                        host.set_cursor_icon(CursorIcon::NwseResize);
+
+                        if !mv.buttons.left {
+                            let _ = host.models_mut().update(&drag_move, |v| *v = None);
+                            host.release_pointer_capture();
+                            return true;
+                        }
+
+                        let Some(dragging) =
+                            host.models_mut().read(&drag_move, |v| *v).ok().flatten()
+                        else {
+                            return true;
+                        };
+
+                        let now = mv.position_window.unwrap_or(mv.position);
+                        let dy = now.y.0 - dragging.start.y.0;
+                        let next = Px((dragging.start_height.0 + dy).max(min_height.0));
+
+                        let _ = host.models_mut().update(&height_override_move, |v| {
+                            *v = Some(next);
+                        });
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+
+                let drag_up = drag.clone();
+                cx.pressable_on_pointer_up_for(
+                    id,
+                    Arc::new(move |host, _action_cx, _up| {
+                        host.release_pointer_capture();
+                        let _ = host.models_mut().update(&drag_up, |v| *v = None);
+                        action::PressablePointerUpResult::SkipActivate
+                    }),
+                );
+
+                let mut pressable = PressableProps::default();
+                pressable.layout = resize_handle_layout;
+                pressable.enabled = true;
+                pressable.focusable = false;
+                pressable.a11y.label = Some(Arc::from("Resize"));
+
+                let grip = cx.container(
+                    ContainerProps {
+                        layout: grip_layout,
+                        padding: Edges::all(Px(0.0)),
+                        background: None,
+                        shadow: None,
+                        border: Edges {
+                            top: Px(0.0),
+                            right: Px(1.0),
+                            bottom: Px(1.0),
+                            left: Px(0.0),
+                        },
+                        border_color: Some(grip_border_color),
+                        corner_radii: Corners::all(Px(0.0)),
+                        ..Default::default()
+                    },
+                    |_| Vec::new(),
+                );
+
+                (pressable, [grip])
+            });
+
+            vec![textarea, resize_handle]
+        },
+    )
 }
