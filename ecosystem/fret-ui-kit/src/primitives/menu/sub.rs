@@ -83,12 +83,17 @@ impl Default for MenuSubmenuConfig {
 }
 
 /// Return the default submenu floating bounds (Radix Menu-like: side=Right, align=Start, offset=2px).
-pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) -> Rect {
+pub fn default_submenu_bounds(
+    outer: Rect,
+    trigger_anchor: Rect,
+    desired: Size,
+    dir: LayoutDirection,
+) -> Rect {
     // Radix `MenuSubContent` hard-codes `align="start"` and relies on Popper's collision logic to
     // flip the alignment when the submenu would overflow the viewport on the cross axis.
     //
     // We approximate that behavior here by flipping to `Align::End` when the desired height does
-    // not fit below the trigger (LTR: side=Right).
+    // not fit below the trigger (side=Right in LTR, side=Left in RTL).
     let desired_h = desired.height.0.max(0.0);
     let outer_bottom = outer.origin.y.0 + outer.size.height.0.max(0.0);
     let trigger_top = trigger_anchor.origin.y.0;
@@ -98,11 +103,20 @@ pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) 
         Align::Start
     };
 
+    let direction = match dir {
+        LayoutDirection::Ltr => fret_ui::overlay_placement::LayoutDirection::Ltr,
+        LayoutDirection::Rtl => fret_ui::overlay_placement::LayoutDirection::Rtl,
+    };
+    let side = match dir {
+        LayoutDirection::Ltr => Side::Right,
+        LayoutDirection::Rtl => Side::Left,
+    };
+
     // Submenus should not be shifted along the main (side) axis: Radix keeps the submenu aligned to
     // its trigger for pointer-grace ergonomics, flipping to the opposite side when it overflows.
     // However, it still shifts/clamps along the cross axis to remain vertically usable.
     let options = AnchoredPanelOptions {
-        direction: fret_ui::overlay_placement::LayoutDirection::Ltr,
+        direction,
         offset: Offset::default(),
         shift: ShiftOptions {
             main_axis: false,
@@ -118,7 +132,7 @@ pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) 
         trigger_anchor,
         desired,
         Px(2.0),
-        Side::Right,
+        side,
         align,
         options,
     )
@@ -248,7 +262,8 @@ pub fn resolve_open_geometry<H: UiHost>(
         .ok()
         .flatten()?;
     let trigger_anchor = overlay::anchor_bounds_for_element(cx, trigger)?;
-    let placed = default_submenu_bounds(outer, trigger_anchor, desired);
+    let dir = crate::primitives::direction::use_direction_in_scope(cx, None);
+    let placed = default_submenu_bounds(outer, trigger_anchor, desired, dir);
     let geometry = MenuSubmenuGeometry {
         reference: trigger_anchor,
         floating: placed,
@@ -273,7 +288,8 @@ pub fn set_geometry_from_element_anchor_if_present<H: UiHost>(
         return;
     };
 
-    let floating = default_submenu_bounds(outer, anchor, desired);
+    let dir = crate::primitives::direction::use_direction_in_scope(cx, None);
+    let floating = default_submenu_bounds(outer, anchor, desired, dir);
     let geometry = MenuSubmenuGeometry {
         reference: anchor,
         floating,
@@ -1563,6 +1579,34 @@ mod tests {
             Duration::from_millis(3),
         );
         assert_eq!(cfg.pointer_grace_timeout, DEFAULT_POINTER_GRACE_TIMEOUT);
+    }
+
+    #[test]
+    fn default_submenu_bounds_respects_direction() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+        let trigger = Rect::new(
+            Point::new(Px(200.0), Px(120.0)),
+            Size::new(Px(20.0), Px(28.0)),
+        );
+        let desired = Size::new(Px(140.0), Px(180.0));
+
+        let ltr = default_submenu_bounds(outer, trigger, desired, LayoutDirection::Ltr);
+        let rtl = default_submenu_bounds(outer, trigger, desired, LayoutDirection::Rtl);
+
+        let trigger_left = trigger.origin.x.0;
+        let trigger_right = trigger.origin.x.0 + trigger.size.width.0;
+
+        assert!(
+            ltr.origin.x.0 >= trigger_right,
+            "LTR submenu should be placed to the right of the trigger (got {ltr:?})"
+        );
+        assert!(
+            rtl.origin.x.0 + rtl.size.width.0 <= trigger_left,
+            "RTL submenu should be placed to the left of the trigger (got {rtl:?})"
+        );
     }
 
     struct Host<'a> {
