@@ -30,14 +30,20 @@ scope: diagnostics, automation, tooling, refactor
 
 ## M1c: Make `fret-diag` CLI subcommands less monolithic (mechanical moves)
 
+- [x] Extract `diag run` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_run.rs`.
+- [x] Extract `diag suite` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_suite.rs`.
+- [x] Extract `diag repeat` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_repeat.rs`.
 - [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
 - [x] Extract `diag matrix` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_matrix.rs`.
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
-  - `diag run` (context assembly + orchestration),
-  - `diag suite` (suite execution + reporting),
   - `diag repro` (orchestration + evidence/report formatting).
+  - `diag pack` / `diag ai-packet` follow-ups if they become churn hotspots.
+
+- [ ] Reduce churn in `lib.rs` context assembly:
+  - move large check-struct literal assembly into helper fns (so adding a new check is localized),
+  - keep `lib.rs` as “arg parsing + dispatch only”.
 
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 

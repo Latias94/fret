@@ -32,6 +32,9 @@ Related living docs:
   `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
 - `fret-diag` CLI dispatch remains centralized, but larger subcommands are being extracted into dedicated modules to reduce churn in
   `crates/fret-diag/src/lib.rs`:
+  - `crates/fret-diag/src/diag_run.rs` (extracted `diag run` command handler)
+  - `crates/fret-diag/src/diag_suite.rs` (extracted `diag suite` command handler)
+  - `crates/fret-diag/src/diag_repeat.rs` (extracted `diag repeat` command handler)
   - `crates/fret-diag/src/diag_perf.rs` (extracted `diag perf` command handler)
   - `crates/fret-diag/src/diag_compare.rs` (extracted `diag compare` command handler)
   - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
