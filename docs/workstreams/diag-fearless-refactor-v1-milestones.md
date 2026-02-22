@@ -71,6 +71,7 @@ Definition of done:
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.
   - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
+  - [x] Runtime `bundle.index.json` includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to support `--test-id` triage beyond the tail snapshots.
   - [x] Runtime `bundle.index.json` may include additive script step markers (`script.steps`) when `script.result.json` is present.
   - [x] `diag pack --include-all` includes sidecars under `_root/` (even when the bundle dir is relocated).
 

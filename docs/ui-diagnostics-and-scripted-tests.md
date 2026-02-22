@@ -91,6 +91,8 @@ Notes:
 
 - `bundle.index.json` includes `test_id_bloom_hex` only for a bounded tail window (currently the last 64 snapshots per window) so that
   `diag query snapshots --test-id <id>` can quickly prioritize likely-matching snapshots without scanning `bundle.json`.
+- `bundle.index.json` also includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` so that
+  `--test-id` queries can still filter/sort older snapshots that do not carry a per-snapshot `test_id_bloom_hex`.
 - When `script.result.json` is present in the bundle directory, `bundle.index.json` also includes an additive `script.steps` section that
   maps script `step_index` values to the nearest snapshot selector (resolved by `frame_id` first, then by timestamp when needed).
 

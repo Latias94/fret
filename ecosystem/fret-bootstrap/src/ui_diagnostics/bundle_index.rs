@@ -6,6 +6,7 @@ use super::{UiDiagnosticsSnapshotV1, UiDiagnosticsWindowBundleV1, UiSemanticsSna
 
 const DEFAULT_WARMUP_FRAMES: u64 = 0;
 const TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW: usize = 64;
+const TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW: usize = 128;
 
 fn semantics_table_map<'a>(
     table: Option<&'a bundle::UiBundleSemanticsTableV1>,
@@ -71,6 +72,8 @@ pub(super) fn build_bundle_index_json(
 
     let mut total_snapshots: u64 = 0;
     let mut windows_out: Vec<Value> = Vec::with_capacity(windows.len());
+    let mut semantics_blooms_windows: Vec<Value> = Vec::new();
+    let mut semantics_blooms_keys_total: u64 = 0;
 
     for w in windows {
         total_snapshots = total_snapshots.saturating_add(w.snapshots.len() as u64);
@@ -129,6 +132,51 @@ pub(super) fn build_bundle_index_json(
             }));
         }
 
+        let mut keys: HashSet<(u64, u8)> = HashSet::new();
+        let mut items: Vec<Value> = Vec::new();
+        for s in w.snapshots.iter().rev() {
+            if keys.len() >= TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW {
+                break;
+            }
+            let Some(fp) = s.semantics_fingerprint else {
+                continue;
+            };
+
+            let semantics_source = snapshot_semantics_source(s, &semantics_table);
+            let source_tag = match semantics_source {
+                "inline" => 0u8,
+                "table" => 1u8,
+                _ => continue,
+            };
+            if !keys.insert((fp, source_tag)) {
+                continue;
+            }
+
+            let nodes = resolve_semantics_snapshot(s, &semantics_table)
+                .map(|s| s.nodes.as_slice())
+                .unwrap_or(&[]);
+            let mut bloom = super::test_id_bloom::TestIdBloomV1::new();
+            for n in nodes {
+                if let Some(test_id) = n.test_id.as_deref() {
+                    bloom.add(test_id);
+                }
+            }
+            items.push(json!({
+                "semantics_fingerprint": fp,
+                "semantics_source": semantics_source,
+                "test_id_bloom_hex": bloom.to_hex(),
+            }));
+        }
+
+        if !items.is_empty() {
+            semantics_blooms_keys_total =
+                semantics_blooms_keys_total.saturating_add(items.len() as u64);
+            semantics_blooms_windows.push(json!({
+                "window": w.window,
+                "items": items,
+            }));
+        }
+
         windows_out.push(json!({
             "window": w.window,
             "snapshots_total": w.snapshots.len(),
@@ -155,6 +203,15 @@ pub(super) fn build_bundle_index_json(
             "computed_from": "resolved_semantics_nodes",
             "semantics_source": "resolved",
             "covers_semantics_sources": ["inline", "table"],
+        },
+        "semantics_blooms": {
+            "schema_version": 1,
+            "m_bits": super::test_id_bloom::TEST_ID_BLOOM_V1_M_BITS,
+            "k": super::test_id_bloom::TEST_ID_BLOOM_V1_K,
+            "computed_from": "resolved_semantics_nodes",
+            "max_keys_per_window": TEST_ID_BLOOM_MAX_SEMANTICS_KEYS_PER_WINDOW,
+            "keys_total": semantics_blooms_keys_total,
+            "windows": semantics_blooms_windows,
         },
         "windows": windows_out,
     })

@@ -86,6 +86,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `test_ids.index.json`
     - [x] Tail `test_id` bloom (`test_id_bloom_hex`) in `bundle.index.json` for fast `--test-id` queries.
     - [x] Script markers in `bundle.index.json` (`script.steps`) when `script.result.json` is present.
+    - [x] Bounded `semantics_blooms` in `bundle.index.json` for `--test-id` filtering beyond the tail snapshots.
   - [x] Tooling consumes sidecars for fast queries (avoid reparsing `bundle.json` when possible):
     - [x] `diag meta` reads `bundle.meta.json` when present
     - [x] `diag query test-id` reads `test_ids.index.json` when present
