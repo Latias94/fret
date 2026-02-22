@@ -32,6 +32,34 @@
 - [x] Add one targeted unit test for “release after last use” stability in plan shape.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`insert_early_releases_inserts_release_after_last_use`).
 
+## M4 — Refactor-ready summary
+
+This is the “hand-off” section for fearless refactors: what we consider safe to change internally *now*, what needs ADR work first, and what is
+intentionally divergent (and therefore should not be “parity refactored”).
+
+### Safe to refactor internally (guarded)
+
+- Render-plan execute/recording organization and recorder boilerplate reduction, as long as:
+  - scissor coordinate space tags stay explicit,
+  - and the existing conformance + validator gates stay green.
+- Intermediate target reuse/lifetime implementation details (pooling, recorder helpers), as long as:
+  - `RenderPlan::debug_validate()` invariants remain intact,
+  - and plan-shape stability tests (e.g. “release after last use”) stay green.
+- Clip-path mask caching internals (LRU, copy-vs-rasterize plumbing), as long as:
+  - cache key stability and deterministic eviction remain enforced by existing gates.
+
+### Requires ADR work first
+
+- Any change that alters public scene contract semantics (e.g. new `SceneOp` ordering rules, changing the meaning of a clip/mask op, or changing
+  degradation behavior in a user-visible way).
+- Any change that would redefine `RenderSpace` or scissor mapping semantics beyond refactor-level code motion.
+
+### Intentionally divergent from upstream
+
+- Shader-side bounds clipping (Zed/GPUI) vs cached mask textures for shape clips (Fret): Fret’s clip-path feature requires mask targets + caching.
+- Persistent surface-sized intermediates (Zed/GPUI) vs pooled, budgeted, scissor-sized intermediates (Fret): Fret’s multi-pass pipelines rely on
+  deterministic budgeting and explicit lifetimes.
+
 ## Notes / parity template
 
 Copy/paste for each seam:

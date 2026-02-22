@@ -97,6 +97,23 @@ This section is intentionally terse: it is meant to be a checklist for refactors
 - `ReleaseTarget`
   - Ends the lifetime of an intermediate/mask target; future reads/writes must not assume the previous contents.
 
+## Ambiguities / TODO (v1)
+
+This section is deliberately explicit: these are areas where the current implementation *may* be correct, but where we want tighter documentation
+or stronger guardrails before larger internal refactors.
+
+- `PathMsaaBatch` initialization rules:
+  - We rely on `LoadOp::Load` semantics for the composite step, but the exact definition of “initialized within the frame” should be documented
+    precisely (what ops count as initialization for `Intermediate*` targets, and whether `Output` has any special handling).
+- `ClipMask` clear/load assumptions:
+  - We state that `ClipMask` always clears, but this should be mechanically verified against all plan pass variants and recorder code paths.
+- Mask sampling and `MaskRef.viewport_rect` mapping:
+  - Today we rely on “viewport_rect is dst-local” and “size matches tier”, but the mapping rules should be explicitly documented per pass kind
+    (especially for effect chains that downsample/upsample and for any pass that mixes absolute vs dst-local scissors).
+- Scissor mapping across scale chains:
+  - We have unit tests that assert non-expansion across downsample steps; we still want a small doc table that records the exact mapping rules
+    (integer division / rounding behavior) for each scale-related pass so refactors can’t accidentally change them.
+
 ## Evidence / gates
 
 Minimum gates to keep green during refactors:

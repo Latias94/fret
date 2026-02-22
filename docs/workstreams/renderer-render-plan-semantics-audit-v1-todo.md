@@ -22,6 +22,11 @@
   - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
   - `ClipMask` pass clear/load assumptions (always `Clear`)
   - mask sampling + viewport rect mapping rules for each postprocess pass
+  - [x] Add an explicit “Ambiguities / TODO” section to the v1 semantics doc.
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Ambiguities / TODO).
+  - [ ] Mechanically verify `ClipMask` clear/load assumptions across all plan pass variants and recorders.
+  - [ ] Document “initialized within the frame” precisely for `Intermediate*` targets and clarify whether `Output` has any special casing.
+  - [ ] Write a small per-pass table for `MaskRef.viewport_rect` mapping rules (dst-local space, tier expectations, downsample/upsample behavior).
 - [x] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
     `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
