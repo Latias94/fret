@@ -132,6 +132,7 @@ pub struct Combobox {
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
+    aria_invalid: bool,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
@@ -161,6 +162,7 @@ impl Combobox {
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
+            aria_invalid: false,
             disabled: false,
             a11y_label: None,
             search_enabled: true,
@@ -258,6 +260,12 @@ impl Combobox {
         self
     }
 
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -349,6 +357,7 @@ impl Combobox {
             self.placeholder,
             self.search_placeholder,
             self.empty_text,
+            self.aria_invalid,
             self.disabled,
             self.a11y_label,
             self.responsive,
@@ -395,6 +404,7 @@ pub fn combobox<H: UiHost>(
         placeholder,
         search_placeholder,
         empty_text,
+        false,
         disabled,
         a11y_label,
         false,
@@ -425,6 +435,7 @@ fn combobox_with_patch<H: UiHost>(
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
+    aria_invalid: bool,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     responsive: bool,
@@ -534,7 +545,7 @@ fn combobox_with_patch<H: UiHost>(
             .as_ref()
             .map(|m| m.resolve(&theme))
             .unwrap_or_else(|| size.control_radius(&theme));
-        let ring = decl_style::focus_ring(&theme, radius);
+        let mut ring = decl_style::focus_ring(&theme, radius);
 
         let resolved_label = selected
             .as_ref()
@@ -616,6 +627,24 @@ fn combobox_with_patch<H: UiHost>(
                     .or_else(|| theme.color_by_key("border"))
                     .unwrap_or_else(|| theme.color_token("border"))
             });
+        let mut border_base = border_base;
+        let mut ring_border = theme.color_token("ring");
+
+        if aria_invalid {
+            let border_color = theme.color_token("destructive");
+            border_base = border_color;
+            ring_border = border_color;
+
+            let ring_key = if theme.name.contains("/dark") {
+                "destructive/40"
+            } else {
+                "destructive/20"
+            };
+            ring.color = theme
+                .color_by_key(ring_key)
+                .or_else(|| theme.color_by_key("destructive/20"))
+                .unwrap_or(border_color);
+        }
 
         let default_trigger_bg = WidgetStateProperty::new(ColorRef::Color(bg_base))
             .when(WidgetStates::HOVERED, ColorRef::Color(bg_hover))
@@ -623,7 +652,8 @@ fn combobox_with_patch<H: UiHost>(
         let default_trigger_fg = WidgetStateProperty::new(ColorRef::Color(fg_base))
             .when(WidgetStates::HOVERED, ColorRef::Color(fg_hover))
             .when(WidgetStates::ACTIVE, ColorRef::Color(fg_hover));
-        let default_trigger_border = WidgetStateProperty::new(ColorRef::Color(border_base));
+        let default_trigger_border = WidgetStateProperty::new(ColorRef::Color(border_base))
+            .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
         let enabled = !disabled;
         let items: Vec<ComboboxItem> = items.to_vec();
