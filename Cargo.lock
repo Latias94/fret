@@ -2858,7 +2858,9 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
+ "fret-fonts",
  "fret-icons",
+ "fret-render-text",
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",
