@@ -17,5 +17,8 @@ pub(super) fn toaster_view(
     let position = cx
         .get_model_copied(&models.sonner_position, Invalidation::Layout)
         .unwrap_or(shadcn::ToastPosition::TopCenter);
-    shadcn::Toaster::new().position(position).into_element(cx)
+    shadcn::Toaster::new()
+        .position(position)
+        .shadcn_lucide_icons()
+        .into_element(cx)
 }
