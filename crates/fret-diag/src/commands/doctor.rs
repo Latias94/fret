@@ -344,9 +344,9 @@ fn resolve_manifest_path(bundle_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-fn read_json_value(path: &Path) -> Option<Value> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
+fn read_json_value_result(path: &Path) -> Result<Value, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
 }
 
 fn file_bytes(path: &Path) -> Option<u64> {
@@ -363,6 +363,9 @@ fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) ->
     let mut missing: u64 = 0;
     let mut bytes_mismatch: u64 = 0;
     let mut total_expected_bytes: u64 = 0;
+    let mut missing_paths_sample: Vec<String> = Vec::new();
+    let mut bytes_mismatch_paths_sample: Vec<String> = Vec::new();
+    const MAX_SAMPLE: usize = 8;
     for c in chunks {
         let Some(rel) = c.get("path").and_then(|v| v.as_str()) else {
             continue;
@@ -372,6 +375,9 @@ fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) ->
         let p = manifest_dir.join(rel);
         if !p.is_file() {
             missing = missing.saturating_add(1);
+            if missing_paths_sample.len() < MAX_SAMPLE {
+                missing_paths_sample.push(rel.to_string());
+            }
             continue;
         }
         if let Some(actual) = file_bytes(&p)
@@ -379,6 +385,9 @@ fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) ->
             && actual != expected
         {
             bytes_mismatch = bytes_mismatch.saturating_add(1);
+            if bytes_mismatch_paths_sample.len() < MAX_SAMPLE {
+                bytes_mismatch_paths_sample.push(rel.to_string());
+            }
         }
     }
 
@@ -387,6 +396,8 @@ fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) ->
         "chunks_missing": missing,
         "chunks_bytes_mismatch": bytes_mismatch,
         "total_expected_bytes": total_expected_bytes,
+        "missing_paths_sample": missing_paths_sample,
+        "bytes_mismatch_paths_sample": bytes_mismatch_paths_sample,
     }))
 }
 
@@ -420,7 +431,14 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         });
 
     let manifest_path = resolve_manifest_path(bundle_dir);
-    let manifest = manifest_path.as_deref().and_then(read_json_value);
+    let (manifest, manifest_error) = if let Some(path) = manifest_path.as_deref() {
+        match read_json_value_result(path) {
+            Ok(v) => (Some(v), None),
+            Err(e) => (None, Some(e)),
+        }
+    } else {
+        (None, None)
+    };
     let manifest_dir = manifest_path
         .as_deref()
         .and_then(|p| p.parent())
@@ -439,6 +457,14 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 "command": it.suggest,
             }));
         }
+    }
+
+    if let Some(err) = &manifest_error {
+        repairs.push(json!({
+            "code": "invalid_manifest_json",
+            "note": "manifest.json exists but could not be parsed as JSON",
+            "error": err,
+        }));
     }
 
     if bundle_json.is_none() {
@@ -460,13 +486,29 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             } else {
                 repairs.push(json!({
                     "code": "incomplete_chunks",
-                    "note": "bundle.json is missing and manifest chunks are incomplete; re-extract the share zip or re-capture the bundle",
+                    "note": "bundle.json is missing and manifest chunks are incomplete; re-extract the share zip (ensure all chunk files are present) or re-capture the bundle",
+                    "chunks_missing": missing,
+                    "chunks_bytes_mismatch": bytes_mismatch,
+                    "missing_paths_sample": chunks.get("missing_paths_sample"),
+                    "bytes_mismatch_paths_sample": chunks.get("bytes_mismatch_paths_sample"),
                 }));
             }
         } else {
             repairs.push(json!({
                 "code": "missing_bundle_json",
                 "note": "bundle.json is missing and no manifest chunks were found; re-capture the bundle",
+            }));
+        }
+    }
+
+    if let Some(bundle_json_bytes) = bundle_json.as_deref().and_then(file_bytes) {
+        const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
+        if bundle_json_bytes > DEFAULT_MAX_FILE_BYTES {
+            repairs.push(json!({
+                "code": "bundle_json_too_large",
+                "note": "bundle.json is very large; prefer generating a small ai-packet for agentic triage",
+                "bundle_json_bytes": bundle_json_bytes,
+                "command": format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
             }));
         }
     }
@@ -482,6 +524,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "script_result": script_result,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,
+        "manifest_error": manifest_error,
         "repairs": repairs,
         "items": items.iter().map(|it| {
             json!({
