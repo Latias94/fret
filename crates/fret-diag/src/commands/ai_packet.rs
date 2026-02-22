@@ -7,6 +7,8 @@ use std::collections::{HashMap, HashSet};
 
 use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1, UiSelectorV1};
 
+use crate::frames_index::TriageLiteMetric;
+
 #[derive(Debug, Clone)]
 struct AiPacketBudgetConfig {
     soft_total_bytes: u64,
@@ -168,6 +170,30 @@ pub(crate) fn cmd_ai_packet(
     copy_file_named(&test_ids_index_path, &packet_dir, "test_ids.index.json")?;
     copy_file_named(&bundle_index_path, &packet_dir, "bundle.index.json")?;
     copy_file_named(&frames_index_path, &packet_dir, "frames.index.json")?;
+
+    if let Some(frames_index) =
+        crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
+    {
+        let triage_lite = crate::frames_index::triage_lite_json_from_frames_index(
+            &bundle_path,
+            &frames_index_path,
+            &frames_index,
+            warmup_frames,
+            50,
+            TriageLiteMetric::TotalTimeUs,
+        )?;
+        write_json_compact(&packet_dir.join("triage.lite.json"), &triage_lite)?;
+
+        let hotspots_lite = crate::hotspots_lite::hotspots_lite_json_from_frames_index(
+            &bundle_path,
+            &frames_index_path,
+            &frames_index,
+            warmup_frames,
+            50,
+            TriageLiteMetric::TotalTimeUs,
+        )?;
+        write_json_compact(&packet_dir.join("hotspots.lite.json"), &hotspots_lite)?;
+    }
 
     copy_if_present(
         &bundle_dir.join("script.result.json"),
@@ -694,6 +720,8 @@ fn enforce_ai_packet_budgets(dir: &Path, report: &mut AiPacketBudgetReport) -> R
     let mut total = packet_total_bytes(dir)?;
     if total > cfg.hard_total_bytes {
         drop_if_present(dir, "triage.json", report)?;
+        drop_if_present(dir, "hotspots.lite.json", report)?;
+        drop_if_present(dir, "triage.lite.json", report)?;
         drop_if_present(dir, "manifest.json", report)?;
         total = packet_total_bytes(dir)?;
     }
