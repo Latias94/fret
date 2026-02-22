@@ -16,7 +16,8 @@ This is a checklist-style tracker. It is **non-normative**.
 
 ## Ecosystem (`ecosystem/`)
 
-- [ ] Add opt-in presets in `fret-ui-kit::typography` for multiline “control-like” text areas.
+- [x] Add opt-in presets in `fret-ui-kit::typography` for multiline “control-like” text areas.
+  - Evidence: `ecosystem/fret-ui-kit/src/typography.rs` (`text_area_control_text_style`)
 - [ ] Audit form/text-area surfaces to decide default:
   - stable strut (UI-like forms) vs expand-to-fit (content/prose).
 
