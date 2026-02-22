@@ -1,11 +1,57 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::UiScriptResultV1;
 
 use super::{
-    UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService, bundle,
-    bundle_index, unix_ms_now, write_json, write_json_compact, write_latest_pointer,
+    UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService,
+    UiDiagnosticsWindowBundleV1, bundle, bundle_index, unix_ms_now, write_json, write_json_compact,
+    write_latest_pointer,
 };
+
+fn want_sidecars() -> bool {
+    std::env::var("FRET_DIAG_BUNDLE_WRITE_INDEX")
+        .ok()
+        .map(|v| v.trim().to_ascii_lowercase())
+        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+        .unwrap_or(true)
+}
+
+fn read_script_result_v1(path: &Path) -> Option<UiScriptResultV1> {
+    std::fs::read(path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<UiScriptResultV1>(&bytes).ok())
+        .filter(|r| r.schema_version == 1)
+}
+
+fn write_bundle_sidecars(
+    service: &UiDiagnosticsService,
+    dir: &Path,
+    bundle_json_path: &Path,
+    windows: &[UiDiagnosticsWindowBundleV1],
+    semantics_table: Option<&bundle::UiBundleSemanticsTableV1>,
+    is_script_dump: bool,
+) {
+    let label = bundle_json_path.display().to_string();
+    let mut index = bundle_index::build_bundle_index_json(&label, windows, semantics_table);
+    let meta = bundle_index::build_bundle_meta_json(&label, windows, semantics_table);
+    let test_ids_index = bundle_index::build_test_ids_index_json(&label, windows, semantics_table);
+
+    if is_script_dump {
+        if let Some(script_result) = read_script_result_v1(&service.cfg.script_result_path) {
+            let _ = write_json_compact(dir.join("script.result.json"), &script_result);
+            if let Some(script_steps) =
+                super::script_step_index::build_script_step_index_payload(&index, &script_result)
+                && let Some(obj) = index.as_object_mut()
+            {
+                obj.insert("script".to_string(), script_steps);
+            }
+        }
+    }
+
+    let _ = write_json_compact(dir.join("bundle.index.json"), &index);
+    let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
+    let _ = write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
+}
 
 pub(super) fn dump_bundle_with_options(
     service: &mut UiDiagnosticsService,
@@ -114,48 +160,15 @@ pub(super) fn dump_bundle_with_options(
                 }
 
                 if !cfg!(target_arch = "wasm32") {
-                    let want_index = std::env::var("FRET_DIAG_BUNDLE_WRITE_INDEX")
-                        .ok()
-                        .map(|v| v.trim().to_ascii_lowercase())
-                        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
-                        .unwrap_or(true);
-                    if want_index {
-                        let label = bundle_json_path.display().to_string();
-                        let mut index =
-                            bundle_index::build_bundle_index_json(&label, &bundle.windows, None);
-                        let meta =
-                            bundle_index::build_bundle_meta_json(&label, &bundle.windows, None);
-                        let test_ids_index =
-                            bundle_index::build_test_ids_index_json(&label, &bundle.windows, None);
-
-                        if is_script_dump {
-                            let script_result = std::fs::read(&service.cfg.script_result_path)
-                                .ok()
-                                .and_then(|bytes| {
-                                    serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
-                                })
-                                .filter(|r| r.schema_version == 1);
-                            if let Some(script_result) = &script_result {
-                                let _ = write_json_compact(
-                                    dir.join("script.result.json"),
-                                    script_result,
-                                );
-                                if let Some(script_steps) =
-                                    super::script_step_index::build_script_step_index_payload(
-                                        &index,
-                                        script_result,
-                                    )
-                                    && let Some(obj) = index.as_object_mut()
-                                {
-                                    obj.insert("script".to_string(), script_steps);
-                                }
-                            }
-                        }
-
-                        let _ = write_json_compact(dir.join("bundle.index.json"), &index);
-                        let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
-                        let _ =
-                            write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
+                    if want_sidecars() {
+                        write_bundle_sidecars(
+                            service,
+                            &dir,
+                            &bundle_json_path,
+                            &bundle.windows,
+                            None,
+                            is_script_dump,
+                        );
                     }
                 }
 
@@ -204,58 +217,16 @@ pub(super) fn dump_bundle_with_options(
                 }
 
                 if !cfg!(target_arch = "wasm32") {
-                    let want_index = std::env::var("FRET_DIAG_BUNDLE_WRITE_INDEX")
-                        .ok()
-                        .map(|v| v.trim().to_ascii_lowercase())
-                        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
-                        .unwrap_or(true);
-                    if want_index {
-                        let label = bundle_json_path.display().to_string();
+                    if want_sidecars() {
                         let semantics_table = bundle.tables.semantics.as_ref();
-                        let mut index = bundle_index::build_bundle_index_json(
-                            &label,
+                        write_bundle_sidecars(
+                            service,
+                            &dir,
+                            &bundle_json_path,
                             &bundle.windows,
                             semantics_table,
+                            is_script_dump,
                         );
-                        let meta = bundle_index::build_bundle_meta_json(
-                            &label,
-                            &bundle.windows,
-                            semantics_table,
-                        );
-                        let test_ids_index = bundle_index::build_test_ids_index_json(
-                            &label,
-                            &bundle.windows,
-                            semantics_table,
-                        );
-
-                        if is_script_dump {
-                            let script_result = std::fs::read(&service.cfg.script_result_path)
-                                .ok()
-                                .and_then(|bytes| {
-                                    serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
-                                })
-                                .filter(|r| r.schema_version == 1);
-                            if let Some(script_result) = &script_result {
-                                let _ = write_json_compact(
-                                    dir.join("script.result.json"),
-                                    script_result,
-                                );
-                                if let Some(script_steps) =
-                                    super::script_step_index::build_script_step_index_payload(
-                                        &index,
-                                        script_result,
-                                    )
-                                    && let Some(obj) = index.as_object_mut()
-                                {
-                                    obj.insert("script".to_string(), script_steps);
-                                }
-                            }
-                        }
-
-                        let _ = write_json_compact(dir.join("bundle.index.json"), &index);
-                        let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
-                        let _ =
-                            write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
                     }
                 }
 
