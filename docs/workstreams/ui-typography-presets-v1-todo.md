@@ -26,8 +26,11 @@ This is a checklist-style tracker. It is **non-normative**.
 - [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
       toasts) to the intent-first stability defaults.
 - [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
-- [ ] `fret-ui-editor` / `fret-code-view`: audit where monospace presets should be used.
-- [ ] `fret-markdown`: decide per-surface default (control vs content) and document it.
+- [x] `fret-code-view`: audit where monospace presets should be used.
+  - Evidence: `ecosystem/fret-code-view/src/code_block.rs`, `ecosystem/fret-code-view/src/copy_button.rs`
+- [ ] `fret-ui-editor`: audit where monospace presets should be used.
+- [x] `fret-markdown`: decide per-surface default (control vs content) and document it.
+  - Evidence: `ecosystem/fret-markdown/src/lib.rs`, `ecosystem/fret-markdown/src/pulldown_render.rs`
 
 ## Regression gates
 

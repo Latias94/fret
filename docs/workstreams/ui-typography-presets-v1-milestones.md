@@ -62,3 +62,22 @@ Exit criteria:
 Evidence:
 - `ecosystem/fret-ui-kit/src/typography.rs` (`TextIntent`, `TypographyPreset`, `with_intent`)
 - `ecosystem/fret-ui-material3/src/lib.rs` (token + shaping gates)
+
+## M4 — Markdown + code-view adoption
+
+Status: Partial.
+
+Exit criteria:
+
+- `fret-code-view` monospace line-aligned rows use control-intent helpers.
+- `fret-markdown` defaults (content for prose; control for fixed chrome labels) are implemented and
+  recorded in this workstream.
+
+Notes:
+
+- `fret-ui-editor` audit remains pending; track in `docs/workstreams/ui-typography-presets-v1-todo.md`.
+
+Evidence:
+
+- `ecosystem/fret-code-view/src/code_block.rs`
+- `ecosystem/fret-markdown/src/lib.rs`

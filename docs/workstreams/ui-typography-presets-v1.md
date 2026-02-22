@@ -48,6 +48,12 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
   - Prefer `ExpandToFit` if clipping is unacceptable.
   - Keep wrap policy surface-specific (`Word`, `WordBreak`, `Grapheme`).
 
+### Surface defaults (current)
+
+- `fret-code-view`: treat monospace line-aligned rows as **control intent** (stable fixed line boxes).
+- `fret-markdown`: default to **content intent** for prose; use **control intent** for fixed-height
+  chrome labels (e.g. code fence headers).
+
 ## Evidence anchors
 
 - Mechanism policies:
@@ -62,6 +68,8 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
     - `ecosystem/fret-ui-kit/src/declarative/text_field.rs`
     - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (toasts)
     - `ecosystem/fret-ui-shadcn/src/button_group.rs`
+    - `ecosystem/fret-code-view/src/code_block.rs`
+    - `ecosystem/fret-markdown/src/lib.rs`
 - Regression gate:
   - `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
   - `ecosystem/fret-ui-material3/src/lib.rs` (tokens and real shaping gates: `material3_control_typography_tokens_use_stable_line_boxes`, `material3_control_text_keeps_metrics_stable_across_fallback_runs`)
@@ -73,7 +81,7 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
 
 ## Plan (phased)
 
-### Phase 2 (current) — Helpers + shadcn migration
+### Phase 2 — Helpers + shadcn migration
 
 Ship:
 
@@ -83,7 +91,7 @@ Ship:
 Goal: reduce drift (no more ad-hoc `TextStyle { line_height: Some(..) }` that forgets the policy)
 and make future refactors safer.
 
-### Phase 3 — Intent-first API (recommended next)
+### Phase 3 — Intent-first API
 
 Problem: helpers still require component authors to choose *which* helper and sometimes still
 compose `TextStyle` manually.
@@ -100,6 +108,6 @@ layer (ADR 0066).
 
 Deliverables:
 
-- `fret-ui-kit`: intent-first API and docs.
-- `fret-ui-material3`: adopt the same stability defaults for control typography.
+- `fret-ui-kit`: intent-first API and docs. (Done)
+- `fret-ui-material3`: adopt the same stability defaults for control typography. (Done)
 - Cleanup: remove remaining per-component “font size/line height” helper functions.
