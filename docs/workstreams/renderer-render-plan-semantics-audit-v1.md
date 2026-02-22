@@ -60,6 +60,41 @@ Guardrail:
 - Degradation decisions (budget pressure, target exhaustion) must produce deterministic pass sequences for identical inputs.
 - Degradations must be recorded in `RenderPlan.degradations` with enough data to reproduce/debug.
 
+## Pass semantics summary (v1)
+
+This section is intentionally terse: it is meant to be a checklist for refactors.
+
+- `SceneDrawRange`
+  - Writes a color target (`Intermediate*` or `Output`) with an explicit `load`.
+  - Uses absolute (render-space) draw scissors that are mapped against `target_origin`/`target_size`.
+- `PathMsaaBatch`
+  - Clears an internal MSAA intermediate, then composites into its `target` using `LoadOp::Load`.
+  - Therefore requires `target` to be initialized earlier in the frame.
+  - Uses absolute (render-space) scissors mapped against `target_origin`/`target_size`.
+- `PathClipMask`
+  - Writes a mask target (`Mask*`) with an explicit `load`.
+  - Uses an absolute (render-space) `scissor` that must intersect `dst_origin`/`dst_size`.
+- `ClipMask`
+  - Writes a mask target and always clears to transparent.
+  - `dst_scissor` is local to the mask target.
+- `FullscreenBlit`
+  - Reads `src`, writes `dst` with an explicit `load`.
+  - `dst_scissor` is local to the destination target.
+- `CompositePremul`
+  - Reads `src`, writes `dst` with an explicit `load`.
+  - `dst_scissor` is absolute (render-space), intersected against `dst_origin`/`dst_size`.
+  - When present, `mask.viewport_rect` is local to `dst_size` and `mask.size` must match the target tier.
+- `ScaleNearest`
+  - Reads `src`, writes `dst` with an explicit `load`.
+  - `dst_scissor` is local to the destination target.
+  - When `mask` is present, it must be an upscale pass and `mask_uniform_index` must be set.
+- `Blur`, `BackdropWarp`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `DropShadow`
+  - Read `src`, write `dst` with an explicit `load`.
+  - `dst_scissor` is local to the destination target.
+  - When present, `mask.viewport_rect` is local to `dst_size` and `mask.size` must match the target tier.
+- `ReleaseTarget`
+  - Ends the lifetime of an intermediate/mask target; future reads/writes must not assume the previous contents.
+
 ## Evidence / gates
 
 Minimum gates to keep green during refactors:
