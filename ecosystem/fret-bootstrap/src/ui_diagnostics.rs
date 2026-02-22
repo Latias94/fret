@@ -57,6 +57,7 @@ mod script_runner;
 mod script_steps;
 mod script_steps_input;
 mod script_steps_menu;
+mod script_steps_pointer;
 mod script_steps_scroll;
 mod script_steps_visibility;
 
@@ -3792,123 +3793,23 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
-            UiActionStepV2::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-wheel-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    push_script_event_log(
-                        &mut active,
-                        &self.cfg,
-                        UiScriptEventLogEntryV1 {
-                            unix_ms: unix_ms_now(),
-                            kind: "script_failed".to_string(),
-                            step_index: Some(step_index as u32),
-                            note: Some("no_semantics_snapshot".to_string()),
-                            bundle_dir: None,
-                            window: Some(window.data().as_ffi()),
-                            tick_id: Some(app.tick_id().0),
-                            frame_id: Some(app.frame_id().0),
-                            window_snapshot_seq: None,
-                        },
-                    );
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason_code: Some("semantics.missing".to_string()),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        evidence: script_evidence_for_active(&active),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node_with_trace(
-                    snapshot,
+            step @ UiActionStepV2::Wheel { .. } => {
+                let should_return = script_steps_pointer::handle_wheel_step(
+                    self,
+                    app,
                     window,
+                    window_bounds,
+                    step_index,
+                    step,
                     element_runtime,
-                    &target,
-                    step_index as u32,
-                    self.cfg.redact_text,
-                    &mut active.selector_resolution_trace,
-                ) else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    push_script_event_log(
-                        &mut active,
-                        &self.cfg,
-                        UiScriptEventLogEntryV1 {
-                            unix_ms: unix_ms_now(),
-                            kind: "script_failed".to_string(),
-                            step_index: Some(step_index as u32),
-                            note: Some("wheel_no_semantics_match".to_string()),
-                            bundle_dir: None,
-                            window: Some(window.data().as_ffi()),
-                            tick_id: Some(app.tick_id().0),
-                            frame_id: Some(app.frame_id().0),
-                            window_snapshot_seq: None,
-                        },
-                    );
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason_code: Some("selector.not_found".to_string()),
-                        reason: Some("wheel_no_semantics_match".to_string()),
-                        evidence: script_evidence_for_active(&active),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
+                    semantics_snapshot,
+                    ui.as_deref_mut(),
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                );
+                if should_return {
                     return output;
-                };
-
-                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                if let Some(ui) = ui.as_deref_mut() {
-                    let note = format!("wheel dx={delta_x} dy={delta_y}");
-                    record_hit_test_trace_for_selector(
-                        &mut active.hit_test_trace,
-                        ui,
-                        element_runtime,
-                        window,
-                        Some(snapshot),
-                        &target,
-                        step_index as u32,
-                        pos,
-                        Some(node),
-                        Some(note.as_str()),
-                        self.cfg.max_debug_string_bytes,
-                    );
-                }
-                output.events.push(wheel_event(pos, delta_x, delta_y));
-
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
                 }
             }
             UiActionStepV2::WaitBoundsStable {
