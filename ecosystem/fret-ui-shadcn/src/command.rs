@@ -47,6 +47,9 @@ type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnOpenChangeWithReason =
     Arc<dyn Fn(bool, CommandDialogOpenChangeReason) + Send + Sync + 'static>;
 
+type CommandPaletteFilter = dyn Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static;
+pub type CommandPaletteFilterFn = Arc<CommandPaletteFilter>;
+
 /// Open-change reasons aligned with Base UI dialog semantics for command dialog usage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandDialogOpenChangeReason {
@@ -1335,6 +1338,8 @@ pub struct CommandPalette {
     model: Model<String>,
     entries: Vec<CommandEntry>,
     disabled: bool,
+    should_filter: bool,
+    filter: Option<CommandPaletteFilterFn>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -1369,9 +1374,11 @@ enum CommandPaletteRenderRow {
     Item(usize),
 }
 
-fn command_palette_render_rows_for_query(
+fn command_palette_render_rows_for_query_with_options(
     entries: Vec<CommandEntry>,
     query: &str,
+    should_filter: bool,
+    filter: Option<&CommandPaletteFilter>,
 ) -> (
     Vec<CommandPaletteRenderRow>,
     Vec<CommandItem>,
@@ -1387,8 +1394,9 @@ fn command_palette_render_rows_for_query(
         },
     }
 
+    let query_for_filter = if should_filter { query } else { "" };
     let score_item = |item: &CommandItem| -> f32 {
-        if query.is_empty() {
+        if query_for_filter.is_empty() {
             return 1.0;
         }
 
@@ -1400,12 +1408,16 @@ fn command_palette_render_rows_for_query(
             aliases.push(kw.as_ref());
         }
 
-        cmdk_score::command_score(item.label.as_ref(), query, &aliases)
+        if let Some(filter) = filter {
+            filter(item.label.as_ref(), query_for_filter, &aliases)
+        } else {
+            cmdk_score::command_score(item.label.as_ref(), query_for_filter, &aliases)
+        }
     };
 
     let mut pending_rows: Vec<PendingRow> = Vec::new();
     let mut next_group_id: u32 = 0;
-    if query.is_empty() {
+    if query_for_filter.is_empty() {
         for entry in entries {
             match entry {
                 CommandEntry::Item(item) => {
@@ -1575,6 +1587,8 @@ impl std::fmt::Debug for CommandPalette {
         f.debug_struct("CommandPalette")
             .field("entries_len", &self.entries.len())
             .field("disabled", &self.disabled)
+            .field("should_filter", &self.should_filter)
+            .field("filter", &self.filter.is_some())
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -1604,6 +1618,9 @@ impl CommandPalette {
             model,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             disabled: false,
+            // cmdk default: should filter/sort when search is non-empty.
+            should_filter: true,
+            filter: None,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -1666,6 +1683,23 @@ impl CommandPalette {
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
         self.group_next_top_pad_zero = true;
+        self
+    }
+
+    /// cmdk: `shouldFilter` (default true). When false, the palette does not filter or sort items
+    /// based on the query.
+    pub fn should_filter(mut self, should_filter: bool) -> Self {
+        self.should_filter = should_filter;
+        self
+    }
+
+    /// cmdk: `filter`. Overrides the scoring function used for filtering/sorting when
+    /// `should_filter` is true.
+    pub fn filter<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static,
+    {
+        self.filter = Some(Arc::new(filter));
         self
     }
 
@@ -1809,6 +1843,8 @@ impl CommandPalette {
             let group_next_top_pad_zero = self.group_next_top_pad_zero;
 
             let disabled = self.disabled;
+            let should_filter = self.should_filter;
+            let filter = self.filter.clone();
             let wrap = self.wrap;
             let vim_bindings = self.vim_bindings;
             let disable_pointer_selection = self.disable_pointer_selection;
@@ -1825,7 +1861,12 @@ impl CommandPalette {
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
             let (render_rows, items, item_groups) =
-                command_palette_render_rows_for_query(self.entries, query.as_str());
+                command_palette_render_rows_for_query_with_options(
+                    self.entries,
+                    query.as_str(),
+                    should_filter,
+                    filter.as_deref(),
+                );
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -2663,6 +2704,8 @@ pub struct CommandDialog {
     entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
     disabled: bool,
+    should_filter: bool,
+    filter: Option<CommandPaletteFilterFn>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2681,6 +2724,8 @@ impl std::fmt::Debug for CommandDialog {
             .field("entries_len", &self.entries.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("disabled", &self.disabled)
+            .field("should_filter", &self.should_filter)
+            .field("filter", &self.filter.is_some())
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -2711,6 +2756,8 @@ impl CommandDialog {
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
             disabled: false,
+            should_filter: true,
+            filter: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -2752,6 +2799,8 @@ impl CommandDialog {
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
             disabled: false,
+            should_filter: true,
+            filter: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -2835,6 +2884,23 @@ impl CommandDialog {
         self
     }
 
+    /// cmdk: `shouldFilter` (default true). When false, the dialog's internal palette does not
+    /// filter or sort items based on the query.
+    pub fn should_filter(mut self, should_filter: bool) -> Self {
+        self.should_filter = should_filter;
+        self
+    }
+
+    /// cmdk: `filter`. Overrides the scoring function used for filtering/sorting when
+    /// `should_filter` is true.
+    pub fn filter<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static,
+    {
+        self.filter = Some(Arc::new(filter));
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
@@ -2864,6 +2930,8 @@ impl CommandDialog {
             .a11y_label
             .unwrap_or_else(|| Arc::from("Command palette"));
         let disabled = self.disabled;
+        let should_filter = self.should_filter;
+        let filter = self.filter;
         let wrap = self.wrap;
         let vim_bindings = self.vim_bindings;
         let disable_pointer_selection = self.disable_pointer_selection;
@@ -2977,17 +3045,25 @@ impl CommandDialog {
                     entries
                 };
 
-                let palette = CommandPalette::new(query, Vec::new())
+                let mut palette = CommandPalette::new(query, Vec::new())
                     .command_dialog_defaults()
                     .entries(entries)
                     .a11y_label(a11y_label.clone())
                     .disabled(disabled)
+                    .should_filter(should_filter)
                     .wrap(wrap)
                     .vim_bindings(vim_bindings)
                     .disable_pointer_selection(disable_pointer_selection)
                     .empty_text(empty_text)
-                    .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
-                    .into_element(cx);
+                    .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h));
+
+                if let Some(filter) = filter.as_ref() {
+                    let filter = filter.clone();
+                    palette = palette
+                        .filter(move |value, search, keywords| filter(value, search, keywords));
+                }
+
+                let palette = palette.into_element(cx);
 
                 DialogContent::new(vec![palette])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
@@ -4426,7 +4502,8 @@ mod tests {
             CommandItem::new("Gamma").into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
         assert_eq!(items.len(), 3);
         assert_eq!(
             row_signatures(&rows, &items),
@@ -4453,7 +4530,8 @@ mod tests {
             CommandSeparator::new().into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "gam");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "gam", true, None);
         assert_eq!(items.len(), 1);
         assert_eq!(
             row_signatures(&rows, &items),
@@ -4468,7 +4546,8 @@ mod tests {
             CommandItem::new("alpha").into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
         assert_eq!(
             row_signatures(&rows, &items),
             vec!["I:alpha".to_string(), "I:pal".to_string()]
@@ -4486,7 +4565,8 @@ mod tests {
                 .into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
         assert_eq!(
             row_signatures(&rows, &items),
             vec![
@@ -4508,7 +4588,8 @@ mod tests {
             CommandItem::new("alpha").into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
         assert_eq!(
             row_signatures(&rows, &items),
             vec![
@@ -4529,11 +4610,61 @@ mod tests {
             CommandSeparator::new().into(),
         ];
 
-        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "");
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
         assert_eq!(
             row_signatures(&rows, &items),
             vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
         );
+    }
+
+    #[test]
+    fn cmdk_should_filter_false_shows_all_items_even_when_query_non_empty() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().into(),
+            CommandItem::new("Beta").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "zzz", false, None);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
+        );
+    }
+
+    #[test]
+    fn cmdk_should_filter_false_preserves_entry_order_instead_of_sorting() {
+        let entries = vec![
+            CommandItem::new("pal").into(),
+            CommandItem::new("alpha").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", false, None);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["I:pal".to_string(), "I:alpha".to_string()]
+        );
+    }
+
+    #[test]
+    fn cmdk_filter_callback_controls_visibility_and_score() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandItem::new("Beta").into(),
+        ];
+        let filter: CommandPaletteFilterFn =
+            Arc::new(|value, _search, _keywords| if value == "Beta" { 1.0 } else { 0.0 });
+
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query_with_options(
+            entries,
+            "x",
+            true,
+            Some(filter.as_ref()),
+        );
+        assert_eq!(row_signatures(&rows, &items), vec!["I:Beta".to_string()]);
     }
 
     #[test]

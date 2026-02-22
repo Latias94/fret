@@ -17,6 +17,8 @@ pub(super) fn preview_command_palette(
         groups_query: Option<Model<String>>,
         scroll_query: Option<Model<String>>,
         rtl_query: Option<Model<String>>,
+        demo_filter_query: Option<Model<String>>,
+        demo_disable_filtering: Option<Model<bool>>,
     }
 
     let (
@@ -27,6 +29,8 @@ pub(super) fn preview_command_palette(
         groups_query,
         scroll_query,
         rtl_query,
+        demo_filter_query,
+        demo_disable_filtering,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
             st.basic_open.clone(),
@@ -36,6 +40,8 @@ pub(super) fn preview_command_palette(
             st.groups_query.clone(),
             st.scroll_query.clone(),
             st.rtl_query.clone(),
+            st.demo_filter_query.clone(),
+            st.demo_disable_filtering.clone(),
         )
     });
 
@@ -47,6 +53,8 @@ pub(super) fn preview_command_palette(
         groups_query,
         scroll_query,
         rtl_query,
+        demo_filter_query,
+        demo_disable_filtering,
     ) = match (
         basic_open,
         basic_query,
@@ -55,6 +63,8 @@ pub(super) fn preview_command_palette(
         groups_query,
         scroll_query,
         rtl_query,
+        demo_filter_query,
+        demo_disable_filtering,
     ) {
         (
             Some(basic_open),
@@ -64,6 +74,8 @@ pub(super) fn preview_command_palette(
             Some(groups_query),
             Some(scroll_query),
             Some(rtl_query),
+            Some(demo_filter_query),
+            Some(demo_disable_filtering),
         ) => (
             basic_open,
             basic_query,
@@ -72,6 +84,8 @@ pub(super) fn preview_command_palette(
             groups_query,
             scroll_query,
             rtl_query,
+            demo_filter_query,
+            demo_disable_filtering,
         ),
         _ => {
             let basic_open = cx.app.models_mut().insert(false);
@@ -81,6 +95,8 @@ pub(super) fn preview_command_palette(
             let groups_query = cx.app.models_mut().insert(String::new());
             let scroll_query = cx.app.models_mut().insert(String::new());
             let rtl_query = cx.app.models_mut().insert(String::new());
+            let demo_filter_query = cx.app.models_mut().insert(String::new());
+            let demo_disable_filtering = cx.app.models_mut().insert(false);
             cx.with_state(CommandPageModels::default, |st| {
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
@@ -90,6 +106,8 @@ pub(super) fn preview_command_palette(
                 st.groups_query = Some(groups_query.clone());
                 st.scroll_query = Some(scroll_query.clone());
                 st.rtl_query = Some(rtl_query.clone());
+                st.demo_filter_query = Some(demo_filter_query.clone());
+                st.demo_disable_filtering = Some(demo_disable_filtering.clone());
             });
             (
                 basic_open,
@@ -99,6 +117,8 @@ pub(super) fn preview_command_palette(
                 groups_query,
                 scroll_query,
                 rtl_query,
+                demo_filter_query,
+                demo_disable_filtering,
             )
         }
     };
@@ -134,6 +154,8 @@ pub(super) fn preview_command_palette(
             .keywords(["math", "calc"])
             .on_select_action(on_select(Arc::from("command.basic.calculator"))),
     ];
+    let demo_filter_entries: Vec<shadcn::CommandEntry> =
+        basic_items.clone().into_iter().map(Into::into).collect();
 
     let basic_dialog =
         shadcn::CommandDialog::new(basic_open.clone(), basic_query.clone(), basic_items)
@@ -340,10 +362,49 @@ pub(super) fn preview_command_palette(
             .gap(Space::N2)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+        move |cx| {
+            let demo_disable_filtering_value = cx
+                .app
+                .models()
+                .get_cloned(&demo_disable_filtering)
+                .unwrap_or(false);
+            let demo_disable_filtering_for_toggle = demo_disable_filtering.clone();
+
+            let toggle_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Checkbox::new(demo_disable_filtering_for_toggle)
+                            .control_id("demo-disable-filtering")
+                            .a11y_label("Disable filtering (shouldFilter=false) (demo-only)")
+                            .test_id("ui-gallery-command-demo-disable-filtering")
+                            .into_element(cx),
+                        shadcn::FieldLabel::new(
+                            "Disable filtering (shouldFilter=false) (demo-only)",
+                        )
+                        .for_control("demo-disable-filtering")
+                        .into_element(cx),
+                    ]
+                },
+            );
+
+            let palette = shadcn::CommandPalette::new(demo_filter_query.clone(), Vec::new())
+                .placeholder("Type a command or search... (demo-only)")
+                .a11y_label("Command shouldFilter demo")
+                .entries(demo_filter_entries.clone())
+                .should_filter(!demo_disable_filtering_value)
+                .test_id_input("ui-gallery-command-demo-filter-input")
+                .list_test_id("ui-gallery-command-demo-filter-listbox")
+                .test_id_item_prefix("ui-gallery-command-demo-filter-item-")
+                .into_element(cx)
+                .test_id("ui-gallery-command-demo-filter");
+
             vec![
                 cx.text("This section is demo-only (not part of shadcn docs)."),
                 cx.text(format!("last action: {last}")),
+                toggle_row,
+                palette,
             ]
         },
     );
