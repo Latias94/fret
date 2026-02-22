@@ -22,9 +22,9 @@ See also:
 ## Next
 
 - [x] Apply target selection helpers across remaining recorders (scene-draw, path-msaa, etc.).
-- [ ] Decide the final ownership shape for `SceneDrawRange`:
-  - keep as a `Renderer` method with explicit args (status quo), or
-  - migrate to an executor-based recorder function (more churn; higher uniformity)
+- [x] Decide the final ownership shape for `SceneDrawRange`:
+  - v1 decision: keep as a `Renderer` method with explicit args (`SceneDrawRangePassArgs`)
+  - follow-up: revisit recorder migration only if we need uniformity for shared recorder tooling
 - [x] Reduce remaining argument surface area where practical (batch args into focused structs).
 
 ## Gates (must stay green)
