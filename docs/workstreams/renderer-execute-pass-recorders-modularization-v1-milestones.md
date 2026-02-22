@@ -10,12 +10,11 @@ Exit criteria:
 
 Exit criteria:
 
-- Effect passes live under `render_scene/recorders/` with a shared `ExecuteCtx`.
+- Effect passes live under `render_scene/recorders/`.
 - `execute.rs` remains an orchestration-only executor loop.
 
 Evidence anchors:
 
-- `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
 - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
 
 ## M2 — All pass recorders file-separated
@@ -36,3 +35,4 @@ Exit criteria:
 Evidence anchors:
 
 - Design: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
+- Executor: `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs`

@@ -12,7 +12,7 @@ Related:
 Primary code anchors:
 
 - Executor loop today: `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
-- Shared pass inputs: `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
+- Per-frame executor: `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs`
 - Recorder modules (partial): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/*`
 
 ## 0) What problem this refactor solves
@@ -122,4 +122,3 @@ Prefer `cargo nextest` when available.
   `recorders/*`.
 - Per-frame mutable state is isolated, making refactors mechanical and reviewable.
 - No public semantics drift (proved by conformance anchors).
-

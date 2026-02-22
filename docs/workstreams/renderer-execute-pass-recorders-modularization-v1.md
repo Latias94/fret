@@ -1,6 +1,6 @@
 # Renderer Execute Pass Recorder Modularization v1
 
-Status: Draft (ready to start Option C)
+Status: In progress (Option C landed; cleanup remaining)
 
 Related:
 
@@ -38,9 +38,10 @@ Make `RenderPlanPass` recording:
 
 This workstream proceeds via small, landable steps:
 
-- A shared per-pass input bundle (`ExecuteCtx`) lives in `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`.
-- Effect passes (color adjust/matrix, alpha threshold, drop shadow, composite premul, clip mask)
-  are implemented in `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`.
+- A per-frame executor object (`RenderSceneExecutor`) holds shared inputs (encoder, targets, perf, cursors).
+- Most pass recorders are executor-based functions in `crates/fret-render-wgpu/src/renderer/render_scene/recorders/*`.
+- `SceneDrawRange` recording is still implemented as a `Renderer` method for now, but no longer requires a
+  shared `ExecuteCtx`.
 
 The executor loop remains in `execute.rs` and calls these recorders.
 
@@ -91,7 +92,8 @@ We are now ready to start staging Option C via the design in:
 ## 6) Evidence anchors
 
 - Executor orchestration: `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
-- Shared per-pass inputs: `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
+- Per-frame executor: `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs`
+- Scene-draw recorder: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`
 - Effect pass recorders: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
 - Conformance anchors:
   - `crates/fret-render-wgpu/tests/affine_clip_conformance.rs`
