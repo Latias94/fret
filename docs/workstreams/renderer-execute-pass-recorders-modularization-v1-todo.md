@@ -11,11 +11,11 @@
 - [x] Extract scissor mapping helpers out of `execute.rs`.
 - [x] Extract uniform bind-group picking out of `execute.rs`.
 - [x] Centralize plan-pass trace/render-space helpers out of `execute.rs`.
+- [x] Extract target selection helpers (output vs intermediate vs mask) into `render_scene/helpers.rs`.
 
 ## Next
 
-- [ ] Extract target selection helpers (output vs intermediate vs mask) into a dedicated helper
-      surface to reduce per-pass boilerplate.
+- [ ] Apply target selection helpers across remaining recorders (blit/blur/backdrop-warp, etc.).
 - [ ] Decide the final ownership shape for `SceneDrawRange`:
   - keep as a `Renderer` method with explicit args (status quo), or
   - migrate to an executor-based recorder function (more churn; higher uniformity)
