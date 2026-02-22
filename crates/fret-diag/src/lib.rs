@@ -30,6 +30,7 @@ mod commands;
 mod compare;
 pub mod devtools;
 mod diag_simple_dispatch;
+mod diag_suite_scripts;
 mod frames_index;
 mod gates;
 mod hotspots_lite;
@@ -3727,7 +3728,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let (scripts, suite_name): (Vec<PathBuf>, Option<String>) =
                 if rest.len() == 1 && rest[0] == "ui-gallery" {
                     (
-                        ui_gallery_suite_scripts()
+                        diag_suite_scripts::ui_gallery_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -4866,7 +4867,7 @@ See: `docs/tracy.md`.\n";
                     // bounds against captured PNGs.
                     push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
-                        ui_gallery_suite_scripts()
+                        diag_suite_scripts::ui_gallery_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -10730,7 +10731,7 @@ See: `docs/tracy.md`.\n";
                 );
             };
 
-            let scripts: Vec<PathBuf> = ui_gallery_suite_scripts()
+            let scripts: Vec<PathBuf> = diag_suite_scripts::ui_gallery_suite_scripts()
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect();
@@ -12531,68 +12532,6 @@ fn wait_for_bundle_json_in_dir(
         std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
     }
     None
-}
-
-fn ui_gallery_suite_scripts() -> [&'static str; 57] {
-    [
-        "tools/diag-scripts/ui-gallery-overlay-torture.json",
-        "tools/diag-scripts/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json",
-        "tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-settings-change.json",
-        "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
-        "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
-        "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
-        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-        "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
-        "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-        "tools/diag-scripts/ui-gallery-slider-set-value.json",
-        "tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json",
-        "tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json",
-        "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
-        "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-        "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-        "tools/diag-scripts/ui-gallery-table-smoke.json",
-        "tools/diag-scripts/ui-gallery-data-table-smoke.json",
-        "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json",
-        "tools/diag-scripts/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-read-only-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-read-only-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
-        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
-    ]
 }
 
 fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 43] {

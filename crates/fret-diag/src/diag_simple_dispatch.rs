@@ -61,28 +61,27 @@ pub(crate) fn dispatch_simple(
             if pack_after_run {
                 return Some(Err("--pack is only supported with `diag run`".to_string()));
             }
-            let Some(src) = rest.first().cloned() else {
-                return Some(Err(
-                    "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)"
-                        .to_string(),
-                ));
-            };
-            if rest.len() != 1 {
-                return Some(Err(format!(
-                    "unexpected arguments: {}",
-                    rest[1..].join(" ")
-                )));
-            }
+            (|| -> Result<(), String> {
+                let Some(src) = rest.first().cloned() else {
+                    return Err(
+                        "missing bundle path (try: fretboard diag trace ./target/fret-diag/1234/bundle.json)"
+                            .to_string(),
+                    );
+                };
+                if rest.len() != 1 {
+                    return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+                }
 
-            let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-            let bundle_path = crate::resolve_bundle_json_path(&src);
-            let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
-            let out = trace_out
-                .map(|p| crate::resolve_path(workspace_root, p))
-                .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
-            crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
-            println!("{}", out.display());
-            Ok(())
+                let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+                let bundle_path = crate::resolve_bundle_json_path(&src);
+                let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
+                let out = trace_out
+                    .map(|p| crate::resolve_path(workspace_root, p))
+                    .unwrap_or_else(|| bundle_dir.join("trace.chrome.json"));
+                crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &out)?;
+                println!("{}", out.display());
+                Ok(())
+            })()
         }
         "pack" => commands::artifacts::cmd_pack(
             rest,
