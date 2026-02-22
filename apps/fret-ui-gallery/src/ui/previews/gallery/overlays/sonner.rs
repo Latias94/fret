@@ -468,11 +468,11 @@ pub(in crate::ui) fn preview_sonner(
                 let on_activate: fret_ui::action::OnActivate =
                     Arc::new(move |host, action_cx, _reason| {
                         let _ = host.models_mut().update(&position_model, |v| *v = target);
-                        sonner.toast_message(
+                        sonner.toast(
                             host,
                             action_cx.window,
-                            "Event has been created",
-                            shadcn::ToastMessageOptions::new()
+                            shadcn::ToastRequest::new("Event has been created")
+                                .position(target)
                                 .description(format!("position: {}", sonner_position_key(target))),
                         );
                         let _ = host.models_mut().update(&last_action_model, |v| {
