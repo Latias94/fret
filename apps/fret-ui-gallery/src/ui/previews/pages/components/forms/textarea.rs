@@ -235,7 +235,7 @@ pub(in crate::ui) fn preview_textarea(
         [
             "Preview follows shadcn Textarea demo (new-york-v4).",
             "Placeholder text is rendered when the model is empty.",
-            "Drag the bottom-right corner to resize the textarea.",
+            "Drag the bottom-right corner to resize the textarea height.",
         ],
     );
 

@@ -180,9 +180,9 @@ pub fn textarea<H: UiHost>(
 ) -> AnyElement {
     let show_resize_handle = resizable && !disabled;
 
-    let theme = Theme::global(&*cx.app);
+    let theme = Theme::global(&*cx.app).clone();
 
-    let resolved = resolve_input_chrome(theme, size, &chrome, InputTokenKeys::none());
+    let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
@@ -210,7 +210,7 @@ pub fn textarea<H: UiHost>(
     chrome.caret_color = resolved.text_color;
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
     chrome.preedit_underline_color = resolved.selection_color;
-    chrome.focus_ring = Some(decl_style::focus_ring(theme, resolved.radius));
+    chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
 
     if aria_invalid {
         let border_color = theme.color_token("destructive");
@@ -229,7 +229,7 @@ pub fn textarea<H: UiHost>(
         }
     }
 
-    let root_layout = decl_style::layout_style(theme, layout.relative().w_full());
+    let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
 
     let mut props = TextAreaProps::new(model);
     props.enabled = !disabled;
@@ -257,7 +257,7 @@ pub fn textarea<H: UiHost>(
 
     let outer_layout = props.layout;
     let size_style = props.layout.size;
-    let mut inner_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+    let mut inner_layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
     inner_layout.size = size_style;
     props.layout = inner_layout;
 
@@ -317,7 +317,7 @@ pub fn textarea<H: UiHost>(
 
                         host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                         host.capture_pointer();
-                        host.set_cursor_icon(CursorIcon::NwseResize);
+                        host.set_cursor_icon(CursorIcon::RowResize);
 
                         let start = down.position_window.unwrap_or(down.position);
                         let start_height = host
@@ -343,7 +343,7 @@ pub fn textarea<H: UiHost>(
                 cx.pressable_on_pointer_move_for(
                     id,
                     Arc::new(move |host, action_cx, mv| {
-                        host.set_cursor_icon(CursorIcon::NwseResize);
+                        host.set_cursor_icon(CursorIcon::RowResize);
 
                         if !mv.buttons.left {
                             let _ = host.models_mut().update(&drag_move, |v| *v = None);
@@ -391,17 +391,38 @@ pub fn textarea<H: UiHost>(
                         padding: Edges::all(Px(0.0)),
                         background: None,
                         shadow: None,
-                        border: Edges {
-                            top: Px(0.0),
-                            right: Px(1.0),
-                            bottom: Px(1.0),
-                            left: Px(0.0),
-                        },
-                        border_color: Some(grip_border_color),
+                        border: Edges::all(Px(0.0)),
+                        border_color: None,
                         corner_radii: Corners::all(Px(0.0)),
                         ..Default::default()
                     },
-                    |_| Vec::new(),
+                    move |cx| {
+                        let bar = |cx: &mut ElementContext<'_, H>, bottom: f32, width: f32| {
+                            cx.container(
+                                ContainerProps {
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default()
+                                            .absolute()
+                                            .right_px(Px(1.0))
+                                            .bottom_px(Px(bottom))
+                                            .w_px(Px(width))
+                                            .h_px(Px(1.0)),
+                                    ),
+                                    padding: Edges::all(Px(0.0)),
+                                    background: Some(grip_border_color),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: Corners::all(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                |_| Vec::new(),
+                            )
+                        };
+
+                        vec![bar(cx, 2.0, 10.0), bar(cx, 5.0, 7.0), bar(cx, 8.0, 4.0)]
+                    },
                 );
 
                 (pressable, [grip])
