@@ -75,11 +75,22 @@ fn write_pretty_json(path: &Path, payload: &Value) -> Result<(), String> {
 
 fn try_read_script_result_json(bundle_path: &Path) -> Option<Value> {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-    let path = dir.join("script.result.json");
-    if !path.is_file() {
+    let direct = dir.join("script.result.json");
+    let from_parent = if dir.file_name().and_then(|s| s.to_str()) == Some("_root") {
+        dir.parent().map(|p| p.join("script.result.json"))
+    } else {
+        None
+    };
+
+    let v = if direct.is_file() {
+        read_json_value(&direct)?
+    } else if let Some(from_parent) = from_parent
+        && from_parent.is_file()
+    {
+        read_json_value(&from_parent)?
+    } else {
         return None;
-    }
-    let v = read_json_value(&path)?;
+    };
     if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
         return None;
     }
