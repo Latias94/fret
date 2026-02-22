@@ -46,6 +46,7 @@ use crate::{Dialog, DialogContent, ScrollArea};
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnOpenChangeWithReason =
     Arc<dyn Fn(bool, CommandDialogOpenChangeReason) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 type OnSelectValueAction = Arc<
     dyn Fn(
             &mut dyn fret_ui::action::UiActionHost,
@@ -1445,6 +1446,7 @@ pub struct CommandPalette {
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
+    on_value_change: Option<OnValueChange>,
     input_wrapper_h: MetricRef,
     input_h: MetricRef,
     input_icon_size: MetricRef,
@@ -1726,6 +1728,7 @@ impl std::fmt::Debug for CommandPalette {
                 "default_value",
                 &self.default_value.as_ref().map(|s| s.as_ref()),
             )
+            .field("on_value_change", &self.on_value_change.is_some())
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -1733,6 +1736,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
             .field("input_expanded", &self.input_expanded)
+            .field("on_value_change", &self.on_value_change.is_some())
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("scroll", &self.scroll)
@@ -1778,6 +1782,7 @@ impl CommandPalette {
             input_test_id: None,
             list_test_id: None,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
+            on_value_change: None,
             input_wrapper_h: Px(36.0).into(),
             input_h: Px(40.0).into(),
             input_icon_size: Px(16.0).into(),
@@ -1866,6 +1871,12 @@ impl CommandPalette {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// cmdk: `onValueChange(value)`. Called when the palette's active (highlighted) `value` changes.
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
         self
     }
 
@@ -2027,6 +2038,7 @@ impl CommandPalette {
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
+            let on_value_change = self.on_value_change.clone();
             let test_id_input = self.test_id_input;
             let test_id_item_prefix = self.test_id_item_prefix;
             let test_id_heading_prefix = self.test_id_heading_prefix;
@@ -2153,6 +2165,16 @@ impl CommandPalette {
                     .app
                     .models_mut()
                     .update(&active, |v| *v = next_active.clone());
+            }
+
+            if let Some(handler) = on_value_change.as_ref() {
+                let change = cx
+                    .with_state(CommandPaletteValueChangeCallbackState::default, |state| {
+                        command_palette_value_change_event(state, next_active.clone())
+                    });
+                if let Some(value) = change {
+                    handler(value);
+                }
             }
 
             let mut row_ids: Vec<fret_ui::elements::GlobalElementId> =
@@ -2927,6 +2949,7 @@ pub struct CommandDialog {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    on_value_change: Option<OnValueChange>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2986,6 +3009,7 @@ impl CommandDialog {
             filter: None,
             value: None,
             default_value: None,
+            on_value_change: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -3031,6 +3055,7 @@ impl CommandDialog {
             filter: None,
             value: None,
             default_value: None,
+            on_value_change: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -3143,6 +3168,13 @@ impl CommandDialog {
         self
     }
 
+    /// cmdk: `onValueChange(value)`. Called when the dialog's internal palette changes its active
+    /// (highlighted) `value`.
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// cmdk: `defaultValue` (initial selected item value).
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
         self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
@@ -3182,6 +3214,7 @@ impl CommandDialog {
         let filter = self.filter;
         let value = self.value;
         let default_value = self.default_value;
+        let on_value_change = self.on_value_change;
         let wrap = self.wrap;
         let vim_bindings = self.vim_bindings;
         let disable_pointer_selection = self.disable_pointer_selection;
@@ -3302,6 +3335,7 @@ impl CommandDialog {
                     .disabled(disabled)
                     .should_filter(should_filter)
                     .value(value.clone())
+                    .on_value_change(on_value_change.clone())
                     .wrap(wrap)
                     .vim_bindings(vim_bindings)
                     .disable_pointer_selection(disable_pointer_selection)
@@ -3333,6 +3367,30 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
+#[derive(Default)]
+struct CommandPaletteValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn command_palette_value_change_event(
+    state: &mut CommandPaletteValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
+        return None;
+    }
+
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
+    }
+
+    None
+}
+
 pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -3346,6 +3404,7 @@ mod tests {
     use super::*;
 
     use std::cell::RefCell;
+    use std::sync::Mutex;
 
     use fret_app::App;
     use fret_core::{
@@ -4134,6 +4193,36 @@ mod tests {
         root
     }
 
+    fn render_frame_with_value_and_on_value_change(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<String>,
+        value: Model<Option<Arc<str>>>,
+        on_value_change: Option<OnValueChange>,
+        items: Vec<CommandItem>,
+    ) -> fret_core::NodeId {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
+                vec![
+                    CommandPalette::new(model, items)
+                        .value(Some(value.clone()))
+                        .on_value_change(on_value_change.clone())
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_disable_pointer_selection(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -4274,6 +4363,95 @@ mod tests {
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
+        );
+    }
+
+    #[test]
+    fn cmdk_on_value_change_emits_active_value_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let seen: Arc<Mutex<Vec<Option<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_value_change: OnValueChange = Arc::new({
+            let seen = seen.clone();
+            move |value| {
+                seen.lock().unwrap_or_else(|e| e.into_inner()).push(value);
+            }
+        });
+        let on_value_change_opt = Some(on_value_change.clone());
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+        ];
+
+        let root = render_frame_with_value_and_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            value.clone(),
+            on_value_change_opt.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        assert!(
+            seen.lock().unwrap_or_else(|e| e.into_inner()).is_empty(),
+            "expected initial mount to not emit on_value_change"
+        );
+
+        // Move highlight down.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_with_value_and_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            value.clone(),
+            on_value_change_opt,
+            items,
+        );
+
+        let seen = seen.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        assert_eq!(
+            seen.last().and_then(|v| v.as_deref()),
+            Some("Beta"),
+            "expected ArrowDown to emit the active cmdk value"
+        );
+        assert_eq!(
+            app.models().get_cloned(&value).flatten().as_deref(),
+            Some("Beta"),
+            "expected ArrowDown to update the active value model"
         );
     }
 
