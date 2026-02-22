@@ -209,10 +209,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] REN-VNEXT-refactor-001 Add a renderer-internals refactor design doc (staged plan + gates).
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
-- [~] REN-VNEXT-refactor-002 Add an ADR that codifies internal ownership boundaries + always-run gates for refactors.
-  - Target: “encode/compile/execute” ownership and regression discipline without contract changes.
-  - Evidence: `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`,
-    `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row + summary update).
+- [x] REN-VNEXT-refactor-002 Add an ADR that codifies internal ownership boundaries + always-run gates for refactors.
+  - Landed: “encode/compile/execute” ownership and regression discipline without contract changes.
+  - Evidence:
+    - `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
+    - `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row update)
 - [~] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
   - Landed (step 1): reduce bind-group rebuild churn by making “stable sampler + linear/nearest pair” explicit and reusing renderer-owned globals
     in uniform bind groups.
