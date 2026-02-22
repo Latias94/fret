@@ -1,6 +1,5 @@
 use super::super::frame_targets::FrameTargets;
 use super::super::*;
-use super::ctx::ExecuteCtx;
 use super::recorders::{
     record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
     record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
@@ -94,25 +93,29 @@ impl<'a> RenderSceneExecutor<'a> {
                 );
             }
             RenderPlanPass::SceneDrawRange(scene_pass) => {
-                let mut ctx = ExecuteCtx {
-                    device: self.device,
-                    queue: self.queue,
-                    frame_index: self.frame_index,
-                    format: self.format,
-                    target_view: self.target_view,
-                    viewport_size: self.viewport_size,
-                    usage: self.usage,
-                    encoder: self.encoder,
-                    frame_targets: self.frame_targets,
-                    encoding: self.encoding,
+                let device = self.device;
+                let format = self.format;
+                let target_view = self.target_view;
+                let usage = self.usage;
+                let encoding = self.encoding;
+                let perf_enabled = self.perf_enabled;
+
+                let renderer = &mut *self.renderer;
+                let encoder = &mut *self.encoder;
+                let frame_targets = &mut *self.frame_targets;
+                let frame_perf = &mut *self.frame_perf;
+
+                renderer.record_scene_draw_range_pass(
+                    device,
+                    format,
+                    target_view,
+                    usage,
+                    encoder,
+                    frame_targets,
+                    encoding,
                     render_space_offset_u32,
-                    quad_vertex_size: self.quad_vertex_size,
-                    quad_vertex_bases: self.quad_vertex_bases,
-                    perf_enabled: self.perf_enabled,
-                    frame_perf: self.frame_perf,
-                };
-                self.renderer.record_scene_draw_range_pass(
-                    &mut ctx,
+                    perf_enabled,
+                    frame_perf,
                     plan,
                     scene_pass,
                     viewport_vertex_buffer,
