@@ -8,9 +8,9 @@ This is a checklist-style tracker. It is **non-normative**.
   - [x] control vs content intent
   - [x] ui vs monospace family
   - [x] xs/sm/base/prose sizes (token-backed)
-- [ ] Document when to use `BoundsAsLineBox` placement for fixed-height controls.
+- [x] Document when to use `BoundsAsLineBox` placement for fixed-height controls.
 - [x] Provide helpers for widgets that take `TextStyle` directly (e.g. text inputs).
-- [ ] Add an intent-first entry point (e.g. `TypographyPreset` / `TextIntent`) so components can
+- [x] Add an intent-first entry point (e.g. `TypographyPreset` / `TextIntent`) so components can
       declare “control vs content” without manually composing `TextStyle`.
 
 ## Migrations

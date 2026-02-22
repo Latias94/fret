@@ -1,4 +1,4 @@
-use fret_core::{FontId, Px, TextLineHeightPolicy, TextStyle};
+use fret_core::{FontId, Px, TextLineHeightPolicy, TextStyle, TextVerticalPlacement};
 use fret_ui::Theme;
 
 use crate::theme_tokens;
@@ -15,6 +15,52 @@ pub enum UiTextSize {
 pub enum UiTextFamily {
     Ui,
     Monospace,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextIntent {
+    Control,
+    Content,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypographyPreset {
+    pub intent: TextIntent,
+    pub family: UiTextFamily,
+    pub size: UiTextSize,
+}
+
+impl TypographyPreset {
+    pub const fn new(intent: TextIntent, family: UiTextFamily, size: UiTextSize) -> Self {
+        Self {
+            intent,
+            family,
+            size,
+        }
+    }
+
+    pub const fn control_ui(size: UiTextSize) -> Self {
+        Self::new(TextIntent::Control, UiTextFamily::Ui, size)
+    }
+
+    pub const fn content_ui(size: UiTextSize) -> Self {
+        Self::new(TextIntent::Content, UiTextFamily::Ui, size)
+    }
+
+    pub const fn control_monospace(size: UiTextSize) -> Self {
+        Self::new(TextIntent::Control, UiTextFamily::Monospace, size)
+    }
+
+    pub const fn content_monospace(size: UiTextSize) -> Self {
+        Self::new(TextIntent::Content, UiTextFamily::Monospace, size)
+    }
+
+    pub fn resolve(self, theme: &Theme) -> TextStyle {
+        match self.intent {
+            TextIntent::Control => control_text_style_with_family(theme, self.size, self.family),
+            TextIntent::Content => content_text_style_with_family(theme, self.size, self.family),
+        }
+    }
 }
 
 fn font_size(theme: &Theme) -> Px {
@@ -53,8 +99,36 @@ pub fn fixed_line_box_style(font: FontId, size: Px, line_height: Px) -> TextStyl
         size,
         line_height: Some(line_height),
         line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+        vertical_placement: TextVerticalPlacement::BoundsAsLineBox,
         ..Default::default()
     }
+}
+
+/// Applies a high-level intent to an existing `TextStyle`.
+///
+/// Notes:
+/// - `TextIntent::Control` only produces stable fixed line boxes when the style has an explicit
+///   `line_height` or `line_height_em` (see `TextLineHeightPolicy` contract).
+pub fn with_intent(mut style: TextStyle, intent: TextIntent) -> TextStyle {
+    match intent {
+        TextIntent::Control => {
+            style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
+            style.vertical_placement = TextVerticalPlacement::BoundsAsLineBox;
+        }
+        TextIntent::Content => {
+            style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+            style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
+        }
+    }
+    style
+}
+
+pub fn as_control_text(style: TextStyle) -> TextStyle {
+    with_intent(style, TextIntent::Control)
+}
+
+pub fn as_content_text(style: TextStyle) -> TextStyle {
+    with_intent(style, TextIntent::Content)
 }
 
 /// Returns a control-text style intended for UI components (stable line box).
@@ -122,6 +196,7 @@ pub fn control_text_style_with_family(
 pub fn content_text_style(theme: &Theme, size: UiTextSize) -> TextStyle {
     let mut style = control_text_style(theme, size);
     style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+    style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
     style
 }
 
@@ -133,6 +208,7 @@ pub fn content_text_style_with_family(
 ) -> TextStyle {
     let mut style = control_text_style_with_family(theme, size, family);
     style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+    style.vertical_placement = TextVerticalPlacement::CenterMetricsBox;
     style
 }
 
@@ -159,6 +235,72 @@ pub fn control_text_style_for_font_size(theme: &Theme, font: FontId, size: Px) -
 mod tests {
     use super::*;
     use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn with_intent_updates_line_height_policy() {
+        let base = TextStyle {
+            font: FontId::ui(),
+            size: Px(12.0),
+            line_height: Some(Px(16.0)),
+            ..Default::default()
+        };
+
+        let control = with_intent(base.clone(), TextIntent::Control);
+        assert_eq!(
+            control.line_height_policy,
+            TextLineHeightPolicy::FixedFromStyle
+        );
+        assert_eq!(
+            control.vertical_placement,
+            TextVerticalPlacement::BoundsAsLineBox
+        );
+
+        let content = with_intent(base, TextIntent::Content);
+        assert_eq!(
+            content.line_height_policy,
+            TextLineHeightPolicy::ExpandToFit
+        );
+        assert_eq!(
+            content.vertical_placement,
+            TextVerticalPlacement::CenterMetricsBox
+        );
+    }
+
+    #[test]
+    fn typography_preset_resolves_to_intended_policy() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 10.0),
+                    ("font.line_height".to_string(), 15.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+
+        let control = TypographyPreset::control_ui(UiTextSize::Sm).resolve(&theme);
+        assert_eq!(
+            control.line_height_policy,
+            TextLineHeightPolicy::FixedFromStyle
+        );
+        assert_eq!(
+            control.vertical_placement,
+            TextVerticalPlacement::BoundsAsLineBox
+        );
+
+        let content = TypographyPreset::content_ui(UiTextSize::Sm).resolve(&theme);
+        assert_eq!(
+            content.line_height_policy,
+            TextLineHeightPolicy::ExpandToFit
+        );
+        assert_eq!(
+            content.vertical_placement,
+            TextVerticalPlacement::CenterMetricsBox
+        );
+    }
 
     #[test]
     fn control_text_styles_use_fixed_line_boxes() {
