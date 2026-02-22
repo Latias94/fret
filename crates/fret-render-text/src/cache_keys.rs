@@ -22,6 +22,13 @@ pub struct TextBlobKey {
     pub line_height_bits: Option<u32>,
     pub line_height_em_bits: Option<u32>,
     pub line_height_policy: u8,
+    pub leading_distribution: u8,
+    pub strut_force: u8,
+    pub strut_font: Option<fret_core::FontId>,
+    pub strut_size_bits: Option<u32>,
+    pub strut_line_height_bits: Option<u32>,
+    pub strut_line_height_em_bits: Option<u32>,
+    pub strut_leading_distribution: Option<u8>,
     pub letter_spacing_bits: Option<u32>,
     pub max_width_bits: Option<u32>,
     pub wrap: TextWrap,
@@ -48,6 +55,33 @@ impl TextBlobKey {
             },
             _ => constraints.max_width.map(|w| w.0.to_bits()),
         };
+        let leading_distribution = match style.leading_distribution {
+            fret_core::text::TextLeadingDistribution::Even => 0,
+            fret_core::text::TextLeadingDistribution::Proportional => 1,
+        };
+        let (
+            strut_force,
+            strut_font,
+            strut_size_bits,
+            strut_line_height_bits,
+            strut_line_height_em_bits,
+            strut_leading_distribution,
+        ) = if let Some(strut) = style.strut_style.as_ref() {
+            (
+                if strut.force { 1 } else { 0 },
+                strut.font.clone(),
+                strut.size.map(|px| px.0.to_bits()),
+                strut.line_height.map(|px| px.0.to_bits()),
+                strut.line_height_em.map(|v| v.to_bits()),
+                strut.leading_distribution.map(|d| match d {
+                    fret_core::text::TextLeadingDistribution::Even => 0,
+                    fret_core::text::TextLeadingDistribution::Proportional => 1,
+                }),
+            )
+        } else {
+            (0, None, None, None, None, None)
+        };
+
         Self {
             text: Arc::<str>::from(text),
             spans_shaping_key: 0,
@@ -68,6 +102,13 @@ impl TextBlobKey {
                 fret_core::TextLineHeightPolicy::ExpandToFit => 0,
                 fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
             },
+            leading_distribution,
+            strut_force,
+            strut_font,
+            strut_size_bits,
+            strut_line_height_bits,
+            strut_line_height_em_bits,
+            strut_leading_distribution,
             letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
             wrap: constraints.wrap,
@@ -108,6 +149,13 @@ pub struct TextShapeKey {
     pub line_height_bits: Option<u32>,
     pub line_height_em_bits: Option<u32>,
     pub line_height_policy: u8,
+    pub leading_distribution: u8,
+    pub strut_force: u8,
+    pub strut_font: Option<fret_core::FontId>,
+    pub strut_size_bits: Option<u32>,
+    pub strut_line_height_bits: Option<u32>,
+    pub strut_line_height_em_bits: Option<u32>,
+    pub strut_leading_distribution: Option<u8>,
     pub letter_spacing_bits: Option<u32>,
     pub max_width_bits: Option<u32>,
     pub wrap: TextWrap,
@@ -130,6 +178,13 @@ impl TextShapeKey {
             line_height_bits: key.line_height_bits,
             line_height_em_bits: key.line_height_em_bits,
             line_height_policy: key.line_height_policy,
+            leading_distribution: key.leading_distribution,
+            strut_force: key.strut_force,
+            strut_font: key.strut_font.clone(),
+            strut_size_bits: key.strut_size_bits,
+            strut_line_height_bits: key.strut_line_height_bits,
+            strut_line_height_em_bits: key.strut_line_height_em_bits,
+            strut_leading_distribution: key.strut_leading_distribution,
             letter_spacing_bits: key.letter_spacing_bits,
             max_width_bits: key.max_width_bits,
             wrap: key.wrap,
@@ -151,6 +206,13 @@ pub struct TextMeasureKey {
     pub line_height_bits: Option<u32>,
     pub line_height_em_bits: Option<u32>,
     pub line_height_policy: u8,
+    pub leading_distribution: u8,
+    pub strut_force: u8,
+    pub strut_font: Option<fret_core::FontId>,
+    pub strut_size_bits: Option<u32>,
+    pub strut_line_height_bits: Option<u32>,
+    pub strut_line_height_em_bits: Option<u32>,
+    pub strut_leading_distribution: Option<u8>,
     pub letter_spacing_bits: Option<u32>,
     pub max_width_bits: Option<u32>,
     pub wrap: TextWrap,
@@ -169,6 +231,33 @@ impl TextMeasureKey {
                 constraints.max_width.map(|w| w.0.to_bits())
             }
         };
+        let leading_distribution = match style.leading_distribution {
+            fret_core::text::TextLeadingDistribution::Even => 0,
+            fret_core::text::TextLeadingDistribution::Proportional => 1,
+        };
+        let (
+            strut_force,
+            strut_font,
+            strut_size_bits,
+            strut_line_height_bits,
+            strut_line_height_em_bits,
+            strut_leading_distribution,
+        ) = if let Some(strut) = style.strut_style.as_ref() {
+            (
+                if strut.force { 1 } else { 0 },
+                strut.font.clone(),
+                strut.size.map(|px| px.0.to_bits()),
+                strut.line_height.map(|px| px.0.to_bits()),
+                strut.line_height_em.map(|v| v.to_bits()),
+                strut.leading_distribution.map(|d| match d {
+                    fret_core::text::TextLeadingDistribution::Even => 0,
+                    fret_core::text::TextLeadingDistribution::Proportional => 1,
+                }),
+            )
+        } else {
+            (0, None, None, None, None, None)
+        };
+
         Self {
             font: style.font.clone(),
             font_stack_key,
@@ -185,6 +274,13 @@ impl TextMeasureKey {
                 fret_core::TextLineHeightPolicy::ExpandToFit => 0,
                 fret_core::TextLineHeightPolicy::FixedFromStyle => 1,
             },
+            leading_distribution,
+            strut_force,
+            strut_font,
+            strut_size_bits,
+            strut_line_height_bits,
+            strut_line_height_em_bits,
+            strut_leading_distribution,
             letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
             wrap: constraints.wrap,
@@ -208,6 +304,13 @@ pub struct TextMeasureShapingKey {
     pub line_height_bits: Option<u32>,
     pub line_height_em_bits: Option<u32>,
     pub line_height_policy: u8,
+    pub leading_distribution: u8,
+    pub strut_force: u8,
+    pub strut_font: Option<fret_core::FontId>,
+    pub strut_size_bits: Option<u32>,
+    pub strut_line_height_bits: Option<u32>,
+    pub strut_line_height_em_bits: Option<u32>,
+    pub strut_leading_distribution: Option<u8>,
     pub letter_spacing_bits: Option<u32>,
     pub scale_bits: u32,
 }

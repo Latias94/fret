@@ -1,3 +1,4 @@
+use fret_core::text::TextLeadingDistribution;
 use fret_core::{
     FontId, TextInputRef, TextLineHeightPolicy, TextShapingStyle, TextSlant, TextSpan, TextStyle,
 };
@@ -37,13 +38,21 @@ fn env_disables_font_catalog_monospace_probe() -> bool {
 }
 
 fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
-    let ascent = ascent.max(0.0);
+    let ascent = normalize_ascent(ascent);
     let descent_mag = if descent.is_sign_negative() {
         (-descent).max(0.0)
     } else {
         descent.max(0.0)
     };
     ascent + descent_mag
+}
+
+fn normalize_ascent(ascent: f32) -> f32 {
+    if ascent.is_sign_negative() {
+        (-ascent).max(0.0)
+    } else {
+        ascent.max(0.0)
+    }
 }
 
 fn normalize_descent(descent: f32) -> f32 {
@@ -65,12 +74,83 @@ fn requested_line_height_logical_px(style: &TextStyle) -> Option<f32> {
     Some((style.size.0 * em).max(0.0))
 }
 
-fn baseline_for_fixed_line_box(ascent_px: f32, descent_px: f32, line_height_px: f32) -> f32 {
-    let ascent_px = ascent_px.max(0.0);
+fn requested_line_height_logical_px_with_strut(style: &TextStyle) -> Option<f32> {
+    if let Some(px) = requested_line_height_logical_px(style) {
+        return Some(px);
+    }
+
+    let Some(strut) = style.strut_style.as_ref() else {
+        return None;
+    };
+
+    if let Some(px) = strut.line_height {
+        return Some(px.0.max(0.0));
+    }
+
+    let em = strut.line_height_em?;
+    if !em.is_finite() || em <= 0.0 {
+        return None;
+    }
+
+    let size = strut.size.unwrap_or(style.size).0;
+    Some((size * em).max(0.0))
+}
+
+fn leading_distribution_top_factor(
+    dist: TextLeadingDistribution,
+    ascent_px: f32,
+    descent_px: f32,
+) -> f32 {
+    match dist {
+        TextLeadingDistribution::Even => 0.5,
+        TextLeadingDistribution::Proportional => {
+            let total = ascent_px.max(0.0) + descent_px.max(0.0);
+            if total > 0.0 {
+                (ascent_px.max(0.0) / total).clamp(0.0, 1.0)
+            } else {
+                0.5
+            }
+        }
+    }
+}
+
+fn baseline_for_fixed_line_box(
+    ascent_px: f32,
+    descent_px: f32,
+    line_height_px: f32,
+    dist: TextLeadingDistribution,
+) -> f32 {
+    let ascent_px = normalize_ascent(ascent_px);
     let descent_px = descent_px.max(0.0);
     let line_height_px = line_height_px.max(0.0);
-    let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+    let extra_leading_px = (line_height_px - ascent_px - descent_px).max(0.0);
+    let padding_top_px =
+        extra_leading_px * leading_distribution_top_factor(dist, ascent_px, descent_px);
     (padding_top_px + ascent_px).clamp(0.0, line_height_px.max(0.0))
+}
+
+fn effective_leading_distribution(style: &TextStyle) -> TextLeadingDistribution {
+    style
+        .strut_style
+        .as_ref()
+        .and_then(|s| s.leading_distribution)
+        .unwrap_or(style.leading_distribution)
+}
+
+fn style_for_strut_metrics(style: &TextStyle) -> Option<TextStyle> {
+    let strut = style.strut_style.as_ref()?;
+    if strut.font.is_none() && strut.size.is_none() {
+        return None;
+    }
+
+    let mut out = style.clone();
+    if let Some(font) = strut.font.clone() {
+        out.font = font;
+    }
+    if let Some(size) = strut.size {
+        out.size = size;
+    }
+    Some(out)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -529,68 +609,26 @@ impl ParleyShaper {
         hasher.finish()
     }
 
-    fn parley_first_line_metrics(
-        &mut self,
-        input: TextInputRef<'_>,
-        scale: f32,
-    ) -> Option<parley::layout::LineMetrics> {
-        let (text, base_style, spans) = match input {
-            TextInputRef::Plain { text, style } => (text, style, &[][..]),
-            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
-        };
-
-        let root_style = ParleyTextStyle::default();
-        let mut builder = self
-            .lcx
-            .tree_builder(&mut self.fcx, scale, true, &root_style);
-
-        builder.push_style_span(base_parley_style(
-            base_style,
-            self.default_locale.as_deref(),
-            &self.common_fallback_stack_suffix,
-        ));
-
-        if let Some(span_ranges) = resolve_span_ranges(text, spans) {
-            for (range, span) in span_ranges {
-                let chunk = &text[range.clone()];
-                if let Some(props) = shaping_properties_for_span(
-                    base_style,
-                    span,
-                    &self.common_fallback_stack_suffix,
-                ) {
-                    builder.push_style_modification_span(props.iter());
-                    builder.push_text(chunk);
-                    builder.pop_style_span();
-                } else {
-                    builder.push_text(chunk);
-                }
-            }
-        } else {
-            builder.push_text(text);
-        }
-
-        builder.pop_style_span();
-
-        let mut tmp_layout: Layout<[u8; 4]> = Layout::default();
-        let _built_text = builder.build_into(&mut tmp_layout);
-        tmp_layout.break_all_lines(None);
-        let line = tmp_layout.lines().next()?;
-        Some(*line.metrics())
-    }
-
     fn base_ascent_descent_px_for_style(
         &mut self,
         style: &TextStyle,
         scale: f32,
     ) -> Option<(f32, f32)> {
-        let key = self.base_line_metrics_cache_key(style, scale);
+        let mut metrics_style = style.clone();
+        metrics_style.line_height = None;
+        metrics_style.line_height_em = None;
+        metrics_style.line_height_policy = TextLineHeightPolicy::ExpandToFit;
+        metrics_style.leading_distribution = TextLeadingDistribution::Even;
+        metrics_style.strut_style = None;
+
+        let key = self.base_line_metrics_cache_key(&metrics_style, scale);
         if let Some(hit) = self.base_line_metrics_cache.get(&key).copied() {
             return Some(hit);
         }
 
-        let metrics = self.parley_first_line_metrics(TextInputRef::plain(" ", style), scale)?;
-        let ascent = metrics.ascent.max(0.0);
-        let descent = normalize_descent(metrics.descent);
+        let line = self.shape_single_line_metrics(TextInputRef::plain("Hg", &metrics_style), scale);
+        let ascent = normalize_ascent(line.ascent);
+        let descent = line.descent.max(0.0);
         self.base_line_metrics_cache.insert(key, (ascent, descent));
         Some((ascent, descent))
     }
@@ -602,11 +640,16 @@ impl ParleyShaper {
         };
 
         let requested_line_height_px =
-            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
-        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
-            && requested_line_height_px.is_some();
+            requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
+        let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
+        let fixed_line_box = (base_style.line_height_policy
+            == TextLineHeightPolicy::FixedFromStyle
+            || strut_forces_fixed)
+            && (requested_line_height_px.is_some() || strut_forces_fixed);
         let fixed_ascent_descent = if fixed_line_box {
-            self.base_ascent_descent_px_for_style(base_style, scale)
+            let style_for_metrics = style_for_strut_metrics(base_style);
+            let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
+            self.base_ascent_descent_px_for_style(style_for_metrics, scale)
         } else {
             None
         };
@@ -675,22 +718,32 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
-        let ink_ascent = metrics.ascent.max(0.0);
+        let ink_ascent = normalize_ascent(metrics.ascent);
         let ink_descent = normalize_descent(metrics.descent);
+        let leading_distribution = effective_leading_distribution(base_style);
         let (ascent, descent, line_height, baseline) = if base_style.line_height_policy
             == TextLineHeightPolicy::FixedFromStyle
-            && let Some(fixed_line_height_px) = requested_line_height_px
+            || strut_forces_fixed
         {
-            let (ascent, descent) = fixed_ascent_descent
-                .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
+            let (ascent, descent) = fixed_ascent_descent.unwrap_or((
+                normalize_ascent(metrics.ascent),
+                normalize_descent(metrics.descent),
+            ));
+            let fixed_line_height_px = requested_line_height_px
+                .unwrap_or_else(|| min_line_height_for_metrics(ascent, descent));
             (
                 ascent,
                 descent,
                 fixed_line_height_px,
-                baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
+                baseline_for_fixed_line_box(
+                    ascent,
+                    descent,
+                    fixed_line_height_px,
+                    leading_distribution,
+                ),
             )
         } else {
-            let ascent = metrics.ascent.max(0.0);
+            let ascent = normalize_ascent(metrics.ascent);
             let descent = normalize_descent(metrics.descent);
             let base_line_height = metrics.line_height.max(0.0);
             let mut line_height = metrics.line_height.max(0.0);
@@ -698,9 +751,10 @@ impl ParleyShaper {
             if let Some(requested) = requested_line_height_px {
                 line_height = line_height.max(requested.max(0.0));
             }
-            let baseline = (metrics.baseline.max(0.0)
-                + ((line_height - base_line_height).max(0.0) * 0.5))
-                .clamp(0.0, line_height.max(0.0));
+            let extra = (line_height - base_line_height).max(0.0);
+            let top_factor = leading_distribution_top_factor(leading_distribution, ascent, descent);
+            let baseline =
+                (metrics.baseline.max(0.0) + (extra * top_factor)).clamp(0.0, line_height.max(0.0));
             (ascent, descent, line_height, baseline)
         };
 
@@ -845,11 +899,16 @@ impl ParleyShaper {
         };
 
         let requested_line_height_px =
-            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
-        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
-            && requested_line_height_px.is_some();
+            requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
+        let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
+        let fixed_line_box = (base_style.line_height_policy
+            == TextLineHeightPolicy::FixedFromStyle
+            || strut_forces_fixed)
+            && (requested_line_height_px.is_some() || strut_forces_fixed);
         let fixed_ascent_descent = if fixed_line_box {
-            self.base_ascent_descent_px_for_style(base_style, scale)
+            let style_for_metrics = style_for_strut_metrics(base_style);
+            let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
+            self.base_ascent_descent_px_for_style(style_for_metrics, scale)
         } else {
             None
         };
@@ -919,22 +978,32 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
-        let ink_ascent = metrics.ascent.max(0.0);
+        let ink_ascent = normalize_ascent(metrics.ascent);
         let ink_descent = normalize_descent(metrics.descent);
+        let leading_distribution = effective_leading_distribution(base_style);
         let (ascent, descent, line_height, baseline) = if base_style.line_height_policy
             == TextLineHeightPolicy::FixedFromStyle
-            && let Some(fixed_line_height_px) = requested_line_height_px
+            || strut_forces_fixed
         {
-            let (ascent, descent) = fixed_ascent_descent
-                .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
+            let (ascent, descent) = fixed_ascent_descent.unwrap_or((
+                normalize_ascent(metrics.ascent),
+                normalize_descent(metrics.descent),
+            ));
+            let fixed_line_height_px = requested_line_height_px
+                .unwrap_or_else(|| min_line_height_for_metrics(ascent, descent));
             (
                 ascent,
                 descent,
                 fixed_line_height_px,
-                baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
+                baseline_for_fixed_line_box(
+                    ascent,
+                    descent,
+                    fixed_line_height_px,
+                    leading_distribution,
+                ),
             )
         } else {
-            let ascent = metrics.ascent.max(0.0);
+            let ascent = normalize_ascent(metrics.ascent);
             let descent = normalize_descent(metrics.descent);
             let base_line_height = metrics.line_height.max(0.0);
             let mut line_height = metrics.line_height.max(0.0);
@@ -942,9 +1011,10 @@ impl ParleyShaper {
             if let Some(requested) = requested_line_height_px {
                 line_height = line_height.max(requested.max(0.0));
             }
-            let baseline = (metrics.baseline.max(0.0)
-                + ((line_height - base_line_height).max(0.0) * 0.5))
-                .clamp(0.0, line_height.max(0.0));
+            let extra = (line_height - base_line_height).max(0.0);
+            let top_factor = leading_distribution_top_factor(leading_distribution, ascent, descent);
+            let baseline =
+                (metrics.baseline.max(0.0) + (extra * top_factor)).clamp(0.0, line_height.max(0.0));
             (ascent, descent, line_height, baseline)
         };
 
@@ -1062,11 +1132,16 @@ impl ParleyShaper {
         let mut out: Vec<(Range<usize>, ShapedLineLayout)> = Vec::new();
 
         let requested_line_height_px =
-            requested_line_height_logical_px(base_style).map(|v| (v * scale).max(0.0));
-        let fixed_line_box = base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
-            && requested_line_height_px.is_some();
+            requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
+        let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
+        let fixed_line_box = (base_style.line_height_policy
+            == TextLineHeightPolicy::FixedFromStyle
+            || strut_forces_fixed)
+            && (requested_line_height_px.is_some() || strut_forces_fixed);
         let fixed_ascent_descent = if fixed_line_box {
-            self.base_ascent_descent_px_for_style(base_style, scale)
+            let style_for_metrics = style_for_strut_metrics(base_style);
+            let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
+            self.base_ascent_descent_px_for_style(style_for_metrics, scale)
         } else {
             None
         };
@@ -1076,32 +1151,43 @@ impl ParleyShaper {
             let line_start = line_range.start;
             let metrics = *line.metrics();
 
-            let ink_ascent = metrics.ascent.max(0.0);
+            let ink_ascent = normalize_ascent(metrics.ascent);
             let ink_descent = normalize_descent(metrics.descent);
-            let (ascent, descent, line_height, baseline) =
-                if fixed_line_box && let Some(fixed_line_height_px) = requested_line_height_px {
-                    let (ascent, descent) = fixed_ascent_descent
-                        .unwrap_or((metrics.ascent.max(0.0), normalize_descent(metrics.descent)));
-                    (
+            let leading_distribution = effective_leading_distribution(base_style);
+            let (ascent, descent, line_height, baseline) = if fixed_line_box {
+                let (ascent, descent) = fixed_ascent_descent.unwrap_or((
+                    normalize_ascent(metrics.ascent),
+                    normalize_descent(metrics.descent),
+                ));
+                let fixed_line_height_px = requested_line_height_px
+                    .unwrap_or_else(|| min_line_height_for_metrics(ascent, descent));
+                (
+                    ascent,
+                    descent,
+                    fixed_line_height_px,
+                    baseline_for_fixed_line_box(
                         ascent,
                         descent,
                         fixed_line_height_px,
-                        baseline_for_fixed_line_box(ascent, descent, fixed_line_height_px),
-                    )
-                } else {
-                    let ascent = metrics.ascent.max(0.0);
-                    let descent = normalize_descent(metrics.descent);
-                    let base_line_height = metrics.line_height.max(0.0);
-                    let mut line_height = metrics.line_height.max(0.0);
-                    line_height = line_height.max(min_line_height_for_metrics(ascent, descent));
-                    if let Some(requested) = requested_line_height_px {
-                        line_height = line_height.max(requested.max(0.0));
-                    }
-                    let baseline = (metrics.baseline.max(0.0)
-                        + ((line_height - base_line_height).max(0.0) * 0.5))
-                        .clamp(0.0, line_height.max(0.0));
-                    (ascent, descent, line_height, baseline)
-                };
+                        leading_distribution,
+                    ),
+                )
+            } else {
+                let ascent = normalize_ascent(metrics.ascent);
+                let descent = normalize_descent(metrics.descent);
+                let base_line_height = metrics.line_height.max(0.0);
+                let mut line_height = metrics.line_height.max(0.0);
+                line_height = line_height.max(min_line_height_for_metrics(ascent, descent));
+                if let Some(requested) = requested_line_height_px {
+                    line_height = line_height.max(requested.max(0.0));
+                }
+                let extra = (line_height - base_line_height).max(0.0);
+                let top_factor =
+                    leading_distribution_top_factor(leading_distribution, ascent, descent);
+                let baseline = (metrics.baseline.max(0.0) + (extra * top_factor))
+                    .clamp(0.0, line_height.max(0.0));
+                (ascent, descent, line_height, baseline)
+            };
 
             let mut glyphs: Vec<ParleyGlyph> = Vec::new();
             let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -1783,6 +1869,94 @@ mod tests {
             b.baseline,
             b.line_height
         );
+    }
+
+    #[test]
+    fn proportional_leading_distribution_increases_baseline_shift() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(14.0),
+            line_height: Some(Px(40.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            ..Default::default()
+        };
+
+        let even = shaper.shape_single_line_metrics(TextInputRef::plain("Hello", &base), 1.0);
+
+        let proportional_style = TextStyle {
+            leading_distribution: TextLeadingDistribution::Proportional,
+            ..base
+        };
+        let proportional = shaper
+            .shape_single_line_metrics(TextInputRef::plain("Hello", &proportional_style), 1.0);
+        let factor_even = leading_distribution_top_factor(
+            TextLeadingDistribution::Even,
+            even.ascent,
+            even.descent,
+        );
+        let factor_prop = leading_distribution_top_factor(
+            TextLeadingDistribution::Proportional,
+            proportional.ascent,
+            proportional.descent,
+        );
+
+        assert!(
+            proportional.baseline > even.baseline + 0.01,
+            "expected proportional leading to bias extra leading upward; even.baseline={} proportional.baseline={} line_height={} even(ascent={},descent={},factor={}) proportional(ascent={},descent={},factor={})",
+            even.baseline,
+            proportional.baseline,
+            proportional.line_height,
+            even.ascent,
+            even.descent,
+            factor_even,
+            proportional.ascent,
+            proportional.descent,
+            factor_prop
+        );
+        assert!(
+            proportional.baseline <= proportional.line_height + 0.001,
+            "expected baseline to remain within the line box; baseline={} line_height={}",
+            proportional.baseline,
+            proportional.line_height
+        );
+    }
+
+    #[test]
+    fn strut_force_keeps_metrics_stable_without_explicit_line_height() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            strut_style: Some(fret_core::TextStrutStyle {
+                force: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let latin = shaper.shape_single_line_metrics(TextInputRef::plain("Hello", &style), 1.0);
+        let latin_line_height = latin.line_height;
+        let latin_baseline = latin.baseline;
+        let emoji = shaper.shape_single_line_metrics(TextInputRef::plain("😀", &style), 1.0);
+        let cjk = shaper.shape_single_line_metrics(TextInputRef::plain("你好", &style), 1.0);
+
+        for (name, line) in [("latin", latin), ("emoji", emoji), ("cjk", cjk)] {
+            assert!(
+                (line.line_height - latin_line_height).abs() < 0.01,
+                "expected strut-forced line height to be stable; {name} line_height={} latin={}",
+                line.line_height,
+                latin_line_height
+            );
+            assert!(
+                (line.baseline - latin_baseline).abs() < 0.01,
+                "expected strut-forced baseline to be stable; {name} baseline={} latin={}",
+                line.baseline,
+                latin_baseline
+            );
+        }
     }
 
     #[test]

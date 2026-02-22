@@ -20,29 +20,41 @@ Evidence:
 
 ## M1 — Core mechanism types exist
 
-Status: Not started.
+Status: Done.
 
 Exit criteria:
 
 - `crates/fret-core` exports the v1 types.
 - Types are wired into `TextStyle`/paragraph style without breaking existing callsites.
 
+Evidence:
+- `crates/fret-core/src/text/mod.rs`
+- `crates/fret-core/src/lib.rs`
+
 ## M2 — Render-text implementation complete
 
-Status: Not started.
+Status: Partial.
 
 Exit criteria:
 
 - Parley shaping/layout enforces strut metrics when enabled.
 - Cache keys include strut fields.
 
+Evidence:
+- `crates/fret-render-text/src/parley_shaper.rs`
+- `crates/fret-render-text/src/cache_keys.rs`
+- `crates/fret-render-text/src/measure.rs`
+
 ## M3 — Regression gates in place
 
-Status: Not started.
+Status: Partial.
 
 Exit criteria:
 
 - A bundled-font regression test covers multiline stability with emoji/fallback runs.
+
+Evidence:
+- `crates/fret-render-text/src/parley_shaper.rs`
 
 ## M4 — Ecosystem opt-in adopted for text areas
 

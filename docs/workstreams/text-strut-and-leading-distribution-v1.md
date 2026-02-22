@@ -45,7 +45,7 @@ Evidence (repo snapshot under `repo-ref/`):
 
 ## Proposed mechanism surface (draft)
 
-Add a paragraph-level mechanism style (names TBD) that can be fed into shaping/layout:
+Add a paragraph-level mechanism style that can be fed into shaping/layout:
 
 - `TextStrutStyle`:
   - family (ui/mono or explicit `FontId`),
@@ -53,11 +53,11 @@ Add a paragraph-level mechanism style (names TBD) that can be fed into shaping/l
   - line height (px or multiplier),
   - leading distribution:
     - `Even` (half-leading) vs `Proportional`,
-  - optional explicit `leading` override,
   - `force` (enforce strut for every line).
-- `TextHeightBehavior`:
-  - default (include ascent+descent),
-  - optionally disable first ascent / last descent adjustments for tighter blocks.
+
+Optional follow-up (not yet implemented):
+
+- `TextHeightBehavior` (disable first ascent / last descent adjustments for tighter blocks).
 
 Design constraints:
 
@@ -71,7 +71,7 @@ In scope:
 
 - Mechanism types in `crates/fret-core` (no ecosystem policy baked in).
 - Render-text implementation path (Parley) to enforce strut/leading distribution.
-- At least one regression gate that exercises multiline content with emoji + fallback runs.
+- At least one regression gate that exercises strut stability under emoji + fallback runs.
 
 Out of scope (v1):
 

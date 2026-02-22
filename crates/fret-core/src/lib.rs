@@ -100,9 +100,9 @@ pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
     StrikethroughStyle, TextAlign, TextCommonFallbackInjection, TextConstraints,
     TextFontAxisSetting, TextFontFamilyConfig, TextFontFeatureSetting, TextInkMetrics, TextInput,
-    TextInputRef, TextLineHeightPolicy, TextLineMetrics, TextMetrics, TextOverflow, TextPaintStyle,
-    TextService, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextVerticalPlacement, TextWrap,
-    UnderlineStyle,
+    TextInputRef, TextLeadingDistribution, TextLineHeightPolicy, TextLineMetrics, TextMetrics,
+    TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
+    TextStrutStyle, TextStyle, TextVerticalPlacement, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
