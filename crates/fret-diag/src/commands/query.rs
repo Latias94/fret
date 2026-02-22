@@ -58,6 +58,30 @@ fn try_read_bundle_index_json(path: &Path) -> Option<serde_json::Value> {
     Some(v)
 }
 
+fn bundle_index_has_script_markers(v: &serde_json::Value) -> bool {
+    v.get("script")
+        .and_then(|v| v.get("steps"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|steps| !steps.is_empty())
+}
+
+fn bundle_index_matches_request(
+    v: &serde_json::Value,
+    warmup_frames: u64,
+    require_script_markers: bool,
+) -> bool {
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return false;
+    }
+    if v.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
+        return false;
+    }
+    if require_script_markers && !bundle_index_has_script_markers(v) {
+        return false;
+    }
+    true
+}
+
 fn resolve_test_ids_index_from_src(
     src: &Path,
     warmup_frames: u64,
@@ -121,29 +145,34 @@ fn resolve_test_ids_index_from_src(
 fn resolve_bundle_index_from_src(
     src: &Path,
     warmup_frames: u64,
+    require_script_markers: bool,
 ) -> Result<(String, PathBuf, serde_json::Value), String> {
     if src.is_dir() {
         let direct = src.join("bundle.index.json");
         if direct.is_file() {
             if let Some(v) = try_read_bundle_index_json(&direct) {
-                let bundle = v
-                    .get("bundle")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| direct.display().to_string());
-                return Ok((bundle, direct, v));
+                if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
+                    let bundle = v
+                        .get("bundle")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| direct.display().to_string());
+                    return Ok((bundle, direct, v));
+                }
             }
         }
 
         let root = src.join("_root").join("bundle.index.json");
         if root.is_file() {
             if let Some(v) = try_read_bundle_index_json(&root) {
-                let bundle = v
-                    .get("bundle")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| root.display().to_string());
-                return Ok((bundle, root, v));
+                if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
+                    let bundle = v
+                        .get("bundle")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| root.display().to_string());
+                    return Ok((bundle, root, v));
+                }
             }
         }
 
@@ -163,6 +192,42 @@ fn resolve_bundle_index_from_src(
     {
         let v = try_read_bundle_index_json(src)
             .ok_or_else(|| format!("invalid bundle.index.json: {}", src.display()))?;
+        if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
+            let bundle = v
+                .get("bundle")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| src.display().to_string());
+            return Ok((bundle, src.to_path_buf(), v));
+        }
+
+        if require_script_markers {
+            let mut candidates: Vec<PathBuf> = Vec::new();
+            if let Some(parent) = src.parent() {
+                candidates.push(parent.join("bundle.json"));
+                if parent.file_name().and_then(|s| s.to_str()) == Some("_root") {
+                    if let Some(grandparent) = parent.parent() {
+                        candidates.push(grandparent.join("bundle.json"));
+                    }
+                }
+            }
+            for candidate in candidates {
+                if !candidate.is_file() {
+                    continue;
+                }
+                let index_path =
+                    crate::bundle_index::ensure_bundle_index_json(&candidate, warmup_frames)?;
+                let v = try_read_bundle_index_json(&index_path)
+                    .ok_or_else(|| "invalid bundle.index.json".to_string())?;
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| candidate.display().to_string());
+                return Ok((bundle, index_path, v));
+            }
+        }
+
         let bundle = v
             .get("bundle")
             .and_then(|v| v.as_str())
@@ -322,7 +387,7 @@ fn cmd_query_snapshots(
 
     let (bundle_label, index_path, index) = if let Some(bundle_src) = positionals.first() {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
-        resolve_bundle_index_from_src(&src, warmup_frames)?
+        resolve_bundle_index_from_src(&src, warmup_frames, step_index.is_some())?
     } else {
         let bundle_path = resolve_latest_bundle_json_path(out_dir)?;
         let index_path =

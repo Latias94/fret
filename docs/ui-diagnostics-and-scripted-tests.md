@@ -55,6 +55,93 @@ Implementation pointers (where the code lives today):
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
+## Bundle schema defaults (v1 vs v2, semantics mode)
+
+The runtime can export two bundle schema versions:
+
+- `bundle.json` schema v1: inline-only semantics (no tables).
+- `bundle.json` schema v2: semantics tables (`tables.semantics`) + per-snapshot fingerprints.
+
+Defaults:
+
+- Manual dumps default to schema v1 and semantics mode `all`.
+- Script dumps default to schema v2 and semantics mode `last` (to keep bundles smaller while still preserving at least one full semantics snapshot).
+
+Overrides (for both manual and script dumps):
+
+- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
+- `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
+
+## Sidecars (index/meta/test-id index)
+
+On native filesystem dumps, the runtime also writes bounded sidecars next to `bundle.json`:
+
+- `bundle.meta.json`: compact per-window counts (snapshots, semantics inline vs table, test-id totals for a considered snapshot).
+- `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
+- `test_ids.index.json`: a per-window `test_id` index (items + duplicate hints) derived from the last snapshot with resolved semantics.
+- `script.result.json` (script dumps only): the most recent script result snapshot (stage/reason + bounded evidence traces).
+
+These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
+
+To disable sidecar writing (native-only):
+
+- `FRET_DIAG_BUNDLE_WRITE_INDEX=0`
+
+Notes:
+
+- `bundle.index.json` includes `test_id_bloom_hex` only for a bounded tail window (currently the last 64 snapshots per window) so that
+  `diag query snapshots --test-id <id>` can quickly prioritize likely-matching snapshots without scanning `bundle.json`.
+- `bundle.index.json` also includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` so that
+  `--test-id` queries can still filter/sort older snapshots that do not carry a per-snapshot `test_id_bloom_hex`.
+- When `script.result.json` is present in the bundle directory, `bundle.index.json` also includes an additive `script.steps` section that
+  maps script `step_index` values to the nearest snapshot selector (resolved by `frame_id` first, then by timestamp when needed).
+
+## Recommended env presets (AI loops)
+
+When you expect large bundles (or want fast AI/CLI iteration), keep bundles small and indexes rich:
+
+Minimal “AI triage” preset (portable defaults; copy/paste in PowerShell):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
+$env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="last"
+$env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=30
+$env:FRET_DIAG_BUNDLE_JSON_FORMAT="compact"
+```
+
+More aggressive “small bundles” preset (trade off semantics richness; best for test-id driven workflows):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
+$env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="changed"
+$env:FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1
+$env:FRET_DIAG_MAX_SEMANTICS_NODES=20000
+$env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=20
+```
+
+Authoring scripts / selectors preset (reduce friction while iterating):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_REDACT_TEXT=0
+```
+
+## AI-first triage recipe (avoid sharing full `bundle.json`)
+
+When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
+
+1. Get quick context:
+   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
+2. Find a stable selector (usually `test_id`):
+   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json> <pattern> --top 50`
+   - Optional: find the best snapshot quickly:
+     - `cargo run -p fretboard -- diag index <bundle_dir|bundle.json> --json`
+     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id>`
+3. Export a compact packet for AI / code review:
+   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+
 ## Optional: dump a frame screenshot alongside the bundle
 
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
@@ -93,7 +180,7 @@ Workflow tip:
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
-- To generate a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
+- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
 - To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)

@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
-use fret_runtime::CommandId;
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
-use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
+use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -50,6 +50,29 @@ impl ButtonStyle {
         }
         self
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum ButtonRender {
+    Link {
+        href: Arc<str>,
+        target: Option<Arc<str>>,
+        rel: Option<Arc<str>>,
+    },
+}
+
+fn open_url_on_activate(
+    url: Arc<str>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
+) -> OnActivate {
+    Arc::new(move |host, _acx, _reason| {
+        host.push_effect(Effect::OpenUrl {
+            url: url.to_string(),
+            target: target.as_ref().map(|v| v.to_string()),
+            rel: rel.as_ref().map(|v| v.to_string()),
+        });
+    })
 }
 
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
@@ -300,6 +323,7 @@ pub struct Button {
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
     test_id: Option<Arc<str>>,
+    render: Option<ButtonRender>,
     variant: ButtonVariant,
     size: ButtonSize,
     chrome: ChromeRefinement,
@@ -329,6 +353,7 @@ impl std::fmt::Debug for Button {
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id)
+            .field("render", &self.render)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -353,6 +378,7 @@ impl Button {
             toggle_model: None,
             disabled: false,
             test_id: None,
+            render: None,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
@@ -381,6 +407,11 @@ impl Button {
 
     pub fn on_hover_change(mut self, on_hover_change: OnHoverChange) -> Self {
         self.on_hover_change = Some(on_hover_change);
+        self
+    }
+
+    pub fn render(mut self, render: ButtonRender) -> Self {
+        self.render = Some(render);
         self
     }
 
@@ -538,6 +569,15 @@ impl Button {
             let on_activate = self.on_activate;
             let on_hover_change = self.on_hover_change;
             let toggle_model = self.toggle_model;
+            let should_fallback_open_url = command.is_none() && on_activate.is_none();
+            let (render_role, render_key_activation, render_on_activate) = match self.render {
+                Some(ButtonRender::Link { href, target, rel }) => (
+                    Some(SemanticsRole::Link),
+                    PressableKeyActivation::EnterOnly,
+                    should_fallback_open_url.then(|| open_url_on_activate(href, target, rel)),
+                ),
+                None => (None, PressableKeyActivation::EnterAndSpace, None),
+            };
             let a11y_label = self.label.clone();
             let disabled_explicit = self.disabled;
             let disabled = disabled_explicit
@@ -565,6 +605,8 @@ impl Button {
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
                 if let Some(on_activate) = on_activate.clone() {
+                    cx.pressable_on_activate(on_activate);
+                } else if let Some(on_activate) = render_on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 }
                 if let Some(on_hover_change) = on_hover_change.clone() {
@@ -666,7 +708,9 @@ impl Button {
                     enabled: !disabled,
                     focusable: true,
                     focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
+                    key_activation: render_key_activation,
                     a11y: PressableA11y {
+                        role: render_role,
                         label: Some(a11y_label.clone()),
                         test_id: test_id.clone(),
                         ..Default::default()

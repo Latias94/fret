@@ -1,0 +1,534 @@
+use super::*;
+
+pub(super) fn handle_pointer_down_step(
+    svc: &mut UiDiagnosticsService,
+    window: AppWindowId,
+    window_bounds: Rect,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::PointerDown {
+        window: target_window,
+        target,
+        button: button_ui,
+        modifiers,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    output.request_redraw = true;
+
+    if active.pointer_session.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-pointer_down-pointer-session-already-active"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("pointer_session_already_active".to_string());
+        output.request_redraw = true;
+    }
+
+    if !*stop_script {
+        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if target_window != window {
+                *handoff_to = Some(target_window);
+                output
+                    .effects
+                    .push(Effect::RequestAnimationFrame(target_window));
+                output.request_redraw = true;
+            }
+        } else if target_window.is_some() {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-pointer_down-window-not-found"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("window_target_unresolved".to_string());
+            output.request_redraw = true;
+        }
+    }
+
+    if *stop_script {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+    } else if handoff_to.is_some() {
+        // Window-targeted: migrate to the target window before resolving semantics.
+    } else {
+        if let Some(snapshot) = semantics_snapshot {
+            if let Some(node) = select_semantics_node_with_trace(
+                snapshot,
+                window,
+                element_runtime,
+                &target,
+                step_index as u32,
+                svc.cfg.redact_text,
+                &mut active.selector_resolution_trace,
+            ) {
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui.as_deref_mut() {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        element_runtime,
+                        window,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some("pointer_down"),
+                        svc.cfg.max_debug_string_bytes,
+                    );
+                }
+
+                let modifiers = core_modifiers_from_ui(modifiers);
+                let pointer_id = PointerId(0);
+                let pointer_type = PointerType::Mouse;
+                let button = match button_ui {
+                    UiMouseButtonV1::Left => MouseButton::Left,
+                    UiMouseButtonV1::Right => MouseButton::Right,
+                    UiMouseButtonV1::Middle => MouseButton::Middle,
+                };
+
+                output.events.push(Event::Pointer(PointerEvent::Move {
+                    pointer_id,
+                    position: pos,
+                    buttons: MouseButtons::default(),
+                    modifiers,
+                    pointer_type,
+                }));
+                output.events.push(Event::Pointer(PointerEvent::Down {
+                    pointer_id,
+                    position: pos,
+                    button,
+                    modifiers,
+                    click_count: 1,
+                    pointer_type,
+                }));
+                let _ = write_cursor_override_window_client_logical(
+                    &svc.cfg.out_dir,
+                    window,
+                    pos.x.0,
+                    pos.y.0,
+                );
+                let _ = write_mouse_buttons_override_window_v1(
+                    &svc.cfg.out_dir,
+                    window,
+                    match button_ui {
+                        UiMouseButtonV1::Left => Some(true),
+                        _ => None,
+                    },
+                    match button_ui {
+                        UiMouseButtonV1::Right => Some(true),
+                        _ => None,
+                    },
+                    match button_ui {
+                        UiMouseButtonV1::Middle => Some(true),
+                        _ => None,
+                    },
+                );
+
+                active.pointer_session = Some(V2PointerSessionState {
+                    window,
+                    button: button_ui,
+                    modifiers,
+                    position: pos,
+                });
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if svc.cfg.script_auto_dump {
+                    *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_down"));
+                }
+            } else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_down-no-semantics-match"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("selector.not_found".to_string());
+                output.request_redraw = true;
+            }
+        } else {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-pointer_down-no-semantics"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("no_semantics_snapshot".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+        }
+    }
+
+    true
+}
+
+pub(super) fn handle_pointer_move_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::PointerMove {
+        window: target_window,
+        delta_x,
+        delta_y,
+        steps,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    output.request_redraw = true;
+
+    if let Some(mut session) = active.pointer_session.clone() {
+        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if target_window != window {
+                if target_window == session.window {
+                    *handoff_to = Some(target_window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(target_window));
+                    output.request_redraw = true;
+                } else {
+                    // Pointer sessions are window-local. If the script resolves a window target
+                    // that doesn't match the active pointer session, prefer continuing the session
+                    // in its owning window rather than failing the entire run. This makes
+                    // `last_seen`-targeted scripts more resilient under multi-window
+                    // occlusion/migration.
+                    push_script_event_log(
+                        active,
+                        &svc.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "diag.pointer_move_window_redirect".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some(format!(
+                                "pointer_move window mismatch: current={} target={} session={}; redirecting to session window",
+                                window.data().as_ffi(),
+                                target_window.data().as_ffi(),
+                                session.window.data().as_ffi(),
+                            )),
+                            bundle_dir: None,
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
+                        },
+                    );
+                    if session.window != window {
+                        *handoff_to = Some(session.window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(session.window));
+                        output.request_redraw = true;
+                    }
+                }
+            }
+        } else if target_window.is_some() {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-pointer_move-window-not-found"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("window_target_unresolved".to_string());
+            output.request_redraw = true;
+        } else if session.window != window {
+            // The script migrated away from the window that owns the pointer session.
+            *handoff_to = Some(session.window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(session.window));
+            output.request_redraw = true;
+        }
+
+        if *stop_script {
+            active.v2_step_state = None;
+        } else if handoff_to.is_some() {
+            // Window-targeted: migrate to the target window before continuing the session.
+            active.v2_step_state = None;
+        } else {
+            let mut state = match active.v2_step_state.take() {
+                Some(V2StepState::PointerMove(state)) if state.step_index == step_index => state,
+                _ => {
+                    let steps = steps.max(1);
+                    let start = session.position;
+                    let end = Point::new(
+                        fret_core::Px(start.x.0 + delta_x),
+                        fret_core::Px(start.y.0 + delta_y),
+                    );
+                    V2PointerMoveState {
+                        step_index,
+                        steps,
+                        start,
+                        end,
+                        frame: 1,
+                    }
+                }
+            };
+
+            let pressed_buttons = match session.button {
+                UiMouseButtonV1::Left => MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                UiMouseButtonV1::Right => MouseButtons {
+                    right: true,
+                    ..Default::default()
+                },
+                UiMouseButtonV1::Middle => MouseButtons {
+                    middle: true,
+                    ..Default::default()
+                },
+            };
+
+            let pointer_id = PointerId(0);
+            let pointer_type = PointerType::Mouse;
+
+            if state.frame == 0 {
+                state.frame = 1;
+            }
+
+            if state.frame <= state.steps {
+                let t = state.frame as f32 / state.steps as f32;
+                let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+
+                output.events.push(Event::Pointer(PointerEvent::Move {
+                    pointer_id,
+                    position,
+                    buttons: pressed_buttons,
+                    modifiers: session.modifiers,
+                    pointer_type,
+                }));
+                output
+                    .events
+                    .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                        pointer_id,
+                        position,
+                        kind: fret_core::InternalDragKind::Over,
+                        modifiers: session.modifiers,
+                    }));
+
+                session.position = position;
+                active.pointer_session = Some(session);
+                let _ = write_cursor_override_window_client_logical(
+                    &svc.cfg.out_dir,
+                    window,
+                    position.x.0,
+                    position.y.0,
+                );
+
+                state.frame = state.frame.saturating_add(1);
+                active.v2_step_state = Some(V2StepState::PointerMove(state));
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                output.request_redraw = true;
+            } else {
+                session.position = state.end;
+                active.pointer_session = Some(session);
+                let _ = write_cursor_override_window_client_logical(
+                    &svc.cfg.out_dir,
+                    window,
+                    state.end.x.0,
+                    state.end.y.0,
+                );
+
+                active.v2_step_state = None;
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if svc.cfg.script_auto_dump {
+                    *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_move"));
+                }
+            }
+        }
+    } else {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-pointer_move-no-session"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("pointer_session_missing".to_string());
+        output.request_redraw = true;
+        active.v2_step_state = None;
+    }
+
+    true
+}
+
+pub(super) fn handle_pointer_up_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::PointerUp {
+        window: target_window,
+        button: want_button,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    output.request_redraw = true;
+
+    if let Some(session) = active.pointer_session.clone() {
+        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if target_window != window {
+                if target_window == session.window {
+                    *handoff_to = Some(target_window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(target_window));
+                    output.request_redraw = true;
+                } else {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_up-window-mismatch"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some("pointer_session_cross_window_unsupported".to_string());
+                    output.request_redraw = true;
+                }
+            }
+        } else if target_window.is_some() {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-pointer_up-window-not-found"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("window_target_unresolved".to_string());
+            output.request_redraw = true;
+        } else if session.window != window {
+            // The script migrated away from the window that owns the pointer session.
+            *handoff_to = Some(session.window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(session.window));
+            output.request_redraw = true;
+        }
+
+        if *stop_script {
+            active.v2_step_state = None;
+        } else if handoff_to.is_some() {
+            // Window-targeted: migrate to the target window before releasing the session.
+        } else {
+            if let Some(want) = want_button
+                && want != session.button
+            {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-button-mismatch"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("pointer_up_button_mismatch".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
+            } else {
+                let pointer_id = PointerId(0);
+                let pointer_type = PointerType::Mouse;
+                let button = match session.button {
+                    UiMouseButtonV1::Left => MouseButton::Left,
+                    UiMouseButtonV1::Right => MouseButton::Right,
+                    UiMouseButtonV1::Middle => MouseButton::Middle,
+                };
+
+                output.events.push(Event::Pointer(PointerEvent::Up {
+                    pointer_id,
+                    position: session.position,
+                    button,
+                    modifiers: session.modifiers,
+                    is_click: false,
+                    click_count: 1,
+                    pointer_type,
+                }));
+                output
+                    .events
+                    .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                        pointer_id,
+                        position: session.position,
+                        kind: fret_core::InternalDragKind::Drop,
+                        modifiers: session.modifiers,
+                    }));
+                let _ = write_cursor_override_window_client_logical(
+                    &svc.cfg.out_dir,
+                    window,
+                    session.position.x.0,
+                    session.position.y.0,
+                );
+                let _ = write_mouse_buttons_override_all_windows_v1(
+                    &svc.cfg.out_dir,
+                    match session.button {
+                        UiMouseButtonV1::Left => Some(false),
+                        _ => None,
+                    },
+                    match session.button {
+                        UiMouseButtonV1::Right => Some(false),
+                        _ => None,
+                    },
+                    match session.button {
+                        UiMouseButtonV1::Middle => Some(false),
+                        _ => None,
+                    },
+                );
+                active.pending_cancel_cross_window_drag =
+                    Some(PendingCancelCrossWindowDrag::new(pointer_id));
+                push_script_event_log(
+                    active,
+                    &svc.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "diag.pending_cancel_drag".to_string(),
+                        step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                        note: Some(format!("pointer_id={}", pointer_id.0)),
+                        bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
+                    },
+                );
+
+                active.pointer_session = None;
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if svc.cfg.script_auto_dump {
+                    *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up"));
+                }
+            }
+        }
+    } else {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up-no-session"));
+        *stop_script = true;
+        *failure_reason = Some("pointer_session_missing".to_string());
+        output.request_redraw = true;
+        active.v2_step_state = None;
+    }
+
+    true
+}

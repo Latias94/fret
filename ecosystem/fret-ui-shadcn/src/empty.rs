@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, TextOverflow, TextWrap};
+use fret_core::{Edges, Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -272,6 +272,7 @@ impl EmptyTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_medium()
+            .text_align(TextAlign::Center)
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }
@@ -306,6 +307,9 @@ impl EmptyDescription {
             .font_normal()
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
+            .text_align(TextAlign::Center)
+            .max_w(Px(384.0))
+            .min_w_0()
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }

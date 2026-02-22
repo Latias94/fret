@@ -35,6 +35,25 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .test_id("ui-gallery-button-variants")
     };
 
+    let link_render = {
+        doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
+            vec![
+                shadcn::Button::new("Dashboard")
+                    .render(shadcn::ButtonRender::Link {
+                        href: Arc::<str>::from("https://example.com/dashboard"),
+                        target: None,
+                        rel: None,
+                    })
+                    // Keep the gallery deterministic: demonstrate link semantics without opening
+                    // the browser during scripted runs.
+                    .on_click(CMD_APP_OPEN)
+                    .test_id("ui-gallery-button-render-link")
+                    .into_element(cx),
+            ]
+        })
+        .test_id("ui-gallery-button-render-link-row")
+    };
+
     let size = {
         let row = |cx: &mut ElementContext<'_, App>,
                    label: &'static str,
@@ -167,6 +186,7 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "Preview aims to match shadcn Button docs order so you can visually compare variants quickly.",
             "Prefer icon-only buttons to use explicit `ButtonSize::Icon*` to keep square chrome.",
             "For long-running actions, combine a disabled button with a spinner + label.",
+            "Use `ButtonRender::Link` when you want link semantics (`role=link`, Enter-only activation) on the pressable root.",
         ],
     );
 
@@ -180,6 +200,14 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     "rust",
                     r#"shadcn::Button::new("Secondary")
     .variant(shadcn::ButtonVariant::Secondary)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Link (render)", link_render)
+                .description("Render the button with link semantics (shadcn `asChild`-style composition).")
+                .code(
+                    "rust",
+                    r#"shadcn::Button::new("Dashboard")
+    .render(shadcn::ButtonRender::Link { href: Arc::from("..."), target: None, rel: None })
     .into_element(cx);"#,
                 ),
             DocSection::new("Size", size)

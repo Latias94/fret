@@ -54,6 +54,11 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                     ],
                 )
                 .expect("web empty header");
+                let web_description = web_find_by_class_tokens(
+                    &theme.root,
+                    &["text-muted-foreground", "text-sm/relaxed"],
+                )
+                .expect("web empty description");
 
                 let mut services = StyleAwareServices::default();
                 let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
@@ -70,10 +75,28 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                         .into_element(cx);
 
                     let title = EmptyTitle::new("No Projects Yet").into_element(cx);
+                    let title = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Text,
+                            label: Some(Arc::from("Golden:empty-demo:title")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![title],
+                    );
+
                     let desc = EmptyDescription::new(
                         "You haven't created any projects yet. Get started by creating your first project.",
                     )
                     .into_element(cx);
+                    let desc = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Text,
+                            label: Some(Arc::from("Golden:empty-demo:description")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![desc],
+                    );
+
                     let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
                     let header = cx.semantics(
                         fret_ui::element::SemanticsProps {
@@ -131,6 +154,12 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                     Some("Golden:empty-demo:header"),
                 )
                 .expect("fret empty header");
+                let description = find_semantics(
+                    &snap,
+                    SemanticsRole::Text,
+                    Some("Golden:empty-demo:description"),
+                )
+                .expect("fret empty description");
 
                 assert_close_px(
                     "empty-demo root x",
@@ -157,6 +186,12 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                     6.0,
                 );
                 assert_rect_close_px("empty-demo header", header.bounds, web_header.rect, 2.0);
+                assert_rect_close_px(
+                    "empty-demo description",
+                    description.bounds,
+                    web_description.rect,
+                    6.0,
+                );
             }
             LayoutEmptyRecipe::Background => {
                 let web_empty = web_find_by_class_tokens(

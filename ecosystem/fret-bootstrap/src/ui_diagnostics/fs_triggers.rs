@@ -1,11 +1,23 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiInspectConfigV1,
-    UiScriptResultV1, UiScriptStageV1,
+    UiScriptEventLogEntryV1, UiScriptResultV1, UiScriptStageV1,
 };
 
-use super::{PendingScript, UiDiagnosticsService, display_path, read_touch_stamp, unix_ms_now};
+use super::{
+    PendingScript, UiDiagnosticsService, display_path, push_script_event_log, read_touch_stamp,
+    sanitize_label, unix_ms_now,
+};
+
+#[derive(Debug, Clone)]
+pub(super) struct PendingForceDumpRequest {
+    pub(super) label: String,
+    pub(super) dump_max_snapshots: Option<usize>,
+    pub(super) script_run_id: Option<u64>,
+    pub(super) script_step_index: Option<u32>,
+    pub(super) request_id: Option<u64>,
+}
 
 fn warn_fs_once(
     warned: &mut bool,
@@ -28,6 +40,92 @@ fn warn_fs_once(
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn request_force_dump(
+        &mut self,
+        label: String,
+        dump_max_snapshots: Option<usize>,
+        script_run_id: Option<u64>,
+        script_step_index: Option<u32>,
+        request_id: Option<u64>,
+    ) {
+        self.pending_force_dump = Some(PendingForceDumpRequest {
+            label: sanitize_label(&label),
+            dump_max_snapshots,
+            script_run_id,
+            script_step_index,
+            request_id,
+        });
+    }
+
+    pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        self.poll_ws_inbox();
+
+        if let Some(pending) = self.pending_force_dump.take() {
+            let dumped = self.dump_bundle_with_options(
+                Some(&pending.label),
+                pending.dump_max_snapshots,
+                pending.request_id,
+            );
+            if let (Some(script_run_id), Some(dir)) = (pending.script_run_id, dumped.as_ref()) {
+                let bundle_dir = display_path(&self.cfg.out_dir, dir);
+                for active in self
+                    .active_scripts
+                    .values_mut()
+                    .filter(|active| active.run_id == script_run_id)
+                {
+                    push_script_event_log(
+                        active,
+                        &self.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "bundle_dumped".to_string(),
+                            step_index: pending.script_step_index,
+                            note: Some(pending.label.clone()),
+                            bundle_dir: Some(bundle_dir.clone()),
+                            window: None,
+                            tick_id: None,
+                            frame_id: None,
+                            window_snapshot_seq: None,
+                        },
+                    );
+                }
+            }
+            return dumped;
+        }
+
+        if self.is_wasm_ws_only() {
+            return None;
+        }
+
+        let Some(stamp) = read_touch_stamp(&self.cfg.trigger_path) else {
+            if let Some(dir) = self.cfg.trigger_path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            // Prime the trigger file with a baseline stamp so external drivers can reliably
+            // advance it (Windows mtime resolution is not always sufficient for edge detection).
+            let _ = std::fs::write(&self.cfg.trigger_path, b"0\n");
+            self.last_trigger_stamp = Some(0);
+            return None;
+        };
+
+        // Treat the first observed value as a baseline, not a trigger (avoids dumping stale runs
+        // when the diagnostics directory is reused between launches).
+        let Some(prev) = self.last_trigger_stamp else {
+            self.last_trigger_stamp = Some(stamp);
+            return None;
+        };
+        if prev == stamp {
+            return None;
+        }
+        self.last_trigger_stamp = Some(stamp);
+
+        self.dump_bundle(None)
+    }
+
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;

@@ -278,9 +278,14 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                 vec![
                     shadcn::Button::new("Documentation")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .render(shadcn::ButtonRender::Link {
+                            href: Arc::<str>::from("https://example.com/docs"),
+                            target: None,
+                            rel: None,
+                        })
                         .on_click(CMD_APP_OPEN)
                         .into_element(cx),
-                    ui::text(cx, "TODO: `Button::render` / `asChild` composition is not implemented yet in fret-ui-shadcn. For now, use `variant=Link` or a dedicated link component.")
+                    ui::text(cx, "`ButtonRender::Link` models shadcn `asChild` anchors by applying link semantics to the pressable root.")
                         .text_color(muted_fg.clone())
                         .into_element(cx),
                 ]

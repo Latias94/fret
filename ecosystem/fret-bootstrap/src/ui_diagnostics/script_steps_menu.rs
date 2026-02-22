@@ -198,3 +198,150 @@ pub(super) fn handle_menu_select_step(
 
     true
 }
+
+pub(super) fn handle_menu_select_path_step(
+    svc: &mut UiDiagnosticsService,
+    window: AppWindowId,
+    window_bounds: Rect,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::MenuSelectPath {
+        path,
+        timeout_frames,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    if path.len() < 2 {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-menu_select_path-invalid"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("menu_select_path_invalid".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+        // Let the common failure handler persist the result.
+    } else if let Some(snapshot) = semantics_snapshot {
+        let mut state = match active.v2_step_state.take() {
+            Some(V2StepState::MenuSelectPath(mut state)) if state.step_index == step_index => {
+                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                state
+            }
+            _ => V2MenuSelectPathState {
+                step_index,
+                remaining_frames: timeout_frames,
+                phase: 0,
+                next_index: 0,
+            },
+        };
+
+        if state.next_index >= path.len() {
+            active.v2_step_state = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            if svc.cfg.script_auto_dump {
+                *force_dump_label = Some(format!("script-step-{step_index:04}-menu_select_path"));
+            }
+        } else {
+            match state.phase {
+                0 => {
+                    if select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &path[state.next_index],
+                        step_index as u32,
+                        svc.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    )
+                    .is_some()
+                    {
+                        state.phase = 1;
+                        active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                        output.request_redraw = true;
+                    } else if state.remaining_frames == 0 {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-menu_select_path-timeout"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some("menu_select_path_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                        output.request_redraw = true;
+                    }
+                }
+                _ => {
+                    let selector = &path[state.next_index];
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        selector,
+                        step_index as u32,
+                        svc.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
+                        let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        if let Some(ui) = ui.as_deref_mut() {
+                            let note = format!("menu_select_path.click index={}", state.next_index);
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                element_runtime,
+                                window,
+                                Some(snapshot),
+                                selector,
+                                step_index as u32,
+                                pos,
+                                Some(node),
+                                Some(note.as_str()),
+                                svc.cfg.max_debug_string_bytes,
+                            );
+                        }
+                        output
+                            .events
+                            .extend(click_events(pos, UiMouseButtonV1::Left, 1));
+                        state.next_index = state.next_index.saturating_add(1);
+                        state.phase = 0;
+                        active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                        output.request_redraw = true;
+                    } else {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-menu_select_path-no-match"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some("menu_select_path_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                }
+            }
+        }
+    } else {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-menu_select_path-no-semantics"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("no_semantics_snapshot".to_string());
+        active.v2_step_state = None;
+        output.request_redraw = true;
+    }
+
+    true
+}

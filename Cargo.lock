@@ -1770,6 +1770,7 @@ dependencies = [
 name = "fret-bootstrap"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "fret-app",
  "fret-canvas",
  "fret-core",

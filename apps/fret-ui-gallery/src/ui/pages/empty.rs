@@ -35,7 +35,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     .into_element(cx),
                 shadcn::empty::EmptyTitle::new("No Projects Yet").into_element(cx),
                 shadcn::empty::EmptyDescription::new(
-                    "You have not created any projects yet. Start by creating your first project.",
+                    "You haven't created any projects yet. Get started by creating your first project.",
                 )
                 .into_element(cx),
             ])

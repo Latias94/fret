@@ -48,22 +48,59 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
   - [x] Extract click step (`click`) with window handoff + fail-fast behavior:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
-- [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
+  - [x] Extract move pointer step (`move_pointer`) with fail-fast behavior:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+- [x] Extract stable click steps (`click_stable`, `click_selectable_text_span_stable`):
+  - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+- [x] Extract assert step (`assert`):
+  - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_assert.rs`
+- [x] Extract pointer session steps (`pointer_down`, `pointer_move`, `pointer_up`):
+  - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_session.rs`
+  - [x] Extract drag steps (`drag_pointer`, `drag_pointer_until`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+  - [x] Extract drag-to step (`drag_to`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+  - [x] Extract pointer sweep step (`move_pointer_sweep`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_sweep.rs`
+  - [x] Extract wait step (`wait_bounds_stable`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`
+  - [x] Extract menu path step (`menu_select_path`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_menu.rs`
+  - [x] Extract slider step (`set_slider_value`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_slider.rs`
+- [x] Extract “inspect/pick state machine” into modules (keep UI/UX policy out of `fret-ui`).
+  - [x] Inspect-mode state + shortcuts + hover/focus details:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
+  - [x] Pick flow (run ids + result export + pending resolution):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
 ## Bundle size & AI loops (Plan 1)
 
-- [ ] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime.
+- [x] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime:
+  - `docs/ui-diagnostics-and-scripted-tests.md` (AI presets)
 - [ ] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
-- [ ] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
+  - [x] Runtime writes canonical sidecars on dump (native filesystem):
+    - [x] `bundle.index.json`
+    - [x] `bundle.meta.json`
+    - [x] `test_ids.index.json`
+    - [x] Tail `test_id` bloom (`test_id_bloom_hex`) in `bundle.index.json` for fast `--test-id` queries.
+    - [x] Script markers in `bundle.index.json` (`script.steps`) when `script.result.json` is present.
+    - [x] Bounded `semantics_blooms` in `bundle.index.json` for `--test-id` filtering beyond the tail snapshots.
+  - [x] Tooling consumes sidecars for fast queries (avoid reparsing `bundle.json` when possible):
+    - [x] `diag meta` reads `bundle.meta.json` when present
+    - [x] `diag query test-id` reads `test_ids.index.json` when present
+    - [x] `diag query snapshots` / `diag slice` read `bundle.index.json` when present (selection + semantics presence)
+- [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
 
 ## Schema migration hygiene
 
 - [ ] Decide the migration policy for schema v1 → v2:
-  - target dates for flipping defaults for manual dumps,
-  - how long v1 stays supported by tooling,
-  - criteria for deprecating v1-only fields.
+  - [x] Document a conservative draft policy (phases + exit criteria):
+    - `docs/workstreams/diag-fearless-refactor-v1.md`
+  - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
+  - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
 - [ ] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
 
 ## Plan 2 (defer until Plan 1 is solid)

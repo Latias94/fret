@@ -28,8 +28,8 @@ Definition of done:
 
 ### M1: Bundle export modularization
 
-- [ ] Extract bundle schema selection + JSON writing into a cohesive module.
-- [ ] Make schema v2 + semantics-mode defaults explicit and documented.
+- [x] Extract bundle schema selection + JSON writing into a cohesive module (`bundle_dump.rs`).
+- [x] Make schema v2 + semantics-mode defaults explicit and documented.
 
 Definition of done:
 
@@ -39,6 +39,8 @@ Definition of done:
 ### M2: Script runner modularization
 
 - [ ] Extract the scripted interaction runner (v1/v2 parsing, step loop, evidence capture) into its own module.
+  - [x] Extract runner helpers (`script_runner.rs`).
+  - [x] Extract step handlers into dedicated modules (pointer sessions, drag playback, menu, scroll, visibility, etc.).
 
 Definition of done:
 
@@ -49,6 +51,15 @@ Definition of done:
 - [ ] Extract inspect/pick trigger polling + state into modules.
 - [ ] Keep transport concerns isolated (filesystem vs DevTools WS).
 
+Progress:
+
+- [x] Filesystem trigger polling extracted (`poll_pick_trigger`, `poll_inspect_trigger`):
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+- [x] Inspect-mode state + shortcuts extracted:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
+- [x] Pick flow extracted (pending resolution + result writing):
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
+
 Definition of done:
 
 - Inspect/pick code paths are independently editable without touching bundle/schema code.
@@ -58,6 +69,11 @@ Definition of done:
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
   in pack/repro flows.
+  - [x] Runtime writes canonical sidecars on native dumps.
+  - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
+  - [x] Runtime `bundle.index.json` includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to support `--test-id` triage beyond the tail snapshots.
+  - [x] Runtime `bundle.index.json` may include additive script step markers (`script.steps`) when `script.result.json` is present.
+  - [x] `diag pack --include-all` includes sidecars under `_root/` (even when the bundle dir is relocated).
 
 Definition of done:
 
@@ -70,4 +86,3 @@ Definition of done:
 Definition of done:
 
 - At least one workflow produces a manifest bundle and can materialize `bundle.json` on demand.
-
