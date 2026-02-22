@@ -15,6 +15,7 @@ It is generated from `bundle.json` via:
 - `fretboard diag frames-index <bundle_dir|bundle.json> --warmup-frames <n>`
 - or indirectly via `fretboard diag doctor --fix-sidecars ...`
 - and is included in `fretboard diag ai-packet ...` (subject to packet budgets).
+- and is used by `fretboard diag triage --lite ...` to avoid loading full `bundle.json` into memory.
 
 ## What it contains
 
@@ -76,5 +77,4 @@ Current columns:
 ## Notes
 
 - `warmup_frames` is interpreted as a **frame_id threshold** (consistent with existing warmup handling).
-- To avoid unbounded memory usage, generators may keep only the tail of frames per window and report clipping metadata.
-
+- To avoid unbounded memory usage, generators keep only a tail of frames per window and report clipping metadata.

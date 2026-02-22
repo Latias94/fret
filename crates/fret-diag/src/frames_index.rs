@@ -9,7 +9,7 @@ const FRAMES_INDEX_SCHEMA_VERSION: u64 = 1;
 
 // Guardrail: building a frames index that is larger than this is unlikely to be useful for agentic
 // triage. Keep the tail to avoid unbounded memory usage.
-const FRAMES_INDEX_MAX_ROWS_PER_WINDOW: usize = 200_000;
+const FRAMES_INDEX_MAX_ROWS_PER_WINDOW: usize = 50_000;
 
 pub(crate) fn default_frames_index_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
@@ -90,7 +90,7 @@ pub(crate) fn ensure_frames_index_json(
 ) -> Result<PathBuf, String> {
     let out = default_frames_index_path(bundle_path);
     if out.is_file() {
-        if let Some(existing) = crate::util::read_json_value(&out) {
+        if let Some(existing) = read_frames_index_json_v1(&out, warmup_frames) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some(FRAMES_INDEX_KIND);
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64())
                 == Some(FRAMES_INDEX_SCHEMA_VERSION);
@@ -103,8 +103,31 @@ pub(crate) fn ensure_frames_index_json(
     }
 
     let payload = build_frames_index_payload_streaming(bundle_path, warmup_frames)?;
-    crate::util::write_json_value(&out, &payload)?;
+    write_compact_json(&out, &payload)?;
     Ok(out)
+}
+
+pub(crate) fn read_frames_index_json_v1(path: &Path, warmup_frames: u64) -> Option<Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let v: Value = serde_json::from_slice(&bytes).ok()?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some(FRAMES_INDEX_KIND) {
+        return None;
+    }
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(FRAMES_INDEX_SCHEMA_VERSION) {
+        return None;
+    }
+    if v.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
+        return None;
+    }
+    Some(v)
+}
+
+fn write_compact_json(path: &Path, v: &Value) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let bytes = serde_json::to_vec(v).map_err(|e| e.to_string())?;
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
 fn build_frames_index_payload_streaming(
@@ -732,6 +755,271 @@ fn build_frames_index_payload_streaming(
         "windows_total": windows_total,
         "snapshots_total": snapshots_total,
         "frames_total": frames_total,
+        "windows": windows_out,
+    }))
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum TriageLiteMetric {
+    TotalTimeUs,
+    LayoutTimeUs,
+    PaintTimeUs,
+}
+
+pub(crate) fn triage_lite_json_from_frames_index(
+    bundle_path: &Path,
+    frames_index_path: &Path,
+    frames_index: &Value,
+    warmup_frames: u64,
+    top: usize,
+    metric: TriageLiteMetric,
+) -> Result<Value, String> {
+    fn col_index(columns: &[Value], name: &str) -> Option<usize> {
+        columns
+            .iter()
+            .position(|c| c.as_str().is_some_and(|s| s == name))
+    }
+
+    fn row_u64(row: &[Value], idx: Option<usize>) -> Option<u64> {
+        let idx = idx?;
+        row.get(idx)?.as_u64()
+    }
+
+    fn row_metric(
+        row: &[Value],
+        metric: TriageLiteMetric,
+        idx_total: Option<usize>,
+        idx_layout: Option<usize>,
+        idx_paint: Option<usize>,
+    ) -> u64 {
+        match metric {
+            TriageLiteMetric::TotalTimeUs => row_u64(row, idx_total).unwrap_or(0),
+            TriageLiteMetric::LayoutTimeUs => row_u64(row, idx_layout).unwrap_or(0),
+            TriageLiteMetric::PaintTimeUs => row_u64(row, idx_paint).unwrap_or(0),
+        }
+    }
+
+    if frames_index.get("kind").and_then(|v| v.as_str()) != Some(FRAMES_INDEX_KIND) {
+        return Err("invalid frames.index.json: kind mismatch".to_string());
+    }
+    if frames_index.get("schema_version").and_then(|v| v.as_u64())
+        != Some(FRAMES_INDEX_SCHEMA_VERSION)
+    {
+        return Err("invalid frames.index.json: schema_version mismatch".to_string());
+    }
+    if frames_index.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
+        return Err("invalid frames.index.json: warmup_frames mismatch".to_string());
+    }
+
+    let columns = frames_index
+        .get("columns")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing columns".to_string())?;
+
+    let idx_frame_id = col_index(columns, "frame_id");
+    let idx_seq = col_index(columns, "window_snapshot_seq");
+    let idx_ts = col_index(columns, "timestamp_unix_ms");
+    let idx_total = col_index(columns, "total_time_us");
+    let idx_layout = col_index(columns, "layout_time_us");
+    let idx_paint = col_index(columns, "paint_time_us");
+    let idx_fp = col_index(columns, "semantics_fingerprint");
+    let idx_sem_tag = col_index(columns, "semantics_source_tag");
+
+    let windows = frames_index
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing windows".to_string())?;
+
+    let top = top.max(1).min(1000);
+    let metric_name = match metric {
+        TriageLiteMetric::TotalTimeUs => "total_time_us",
+        TriageLiteMetric::LayoutTimeUs => "layout_time_us",
+        TriageLiteMetric::PaintTimeUs => "paint_time_us",
+    };
+
+    #[derive(Debug, Clone)]
+    struct Entry {
+        metric: u64,
+        frame_id: Option<u64>,
+        window_snapshot_seq: Option<u64>,
+        timestamp_unix_ms: Option<u64>,
+        total_time_us: Option<u64>,
+        layout_time_us: Option<u64>,
+        paint_time_us: Option<u64>,
+        semantics_fingerprint: Option<u64>,
+        semantics_source_tag: Option<u64>,
+    }
+
+    let mut windows_out: Vec<Value> = Vec::new();
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let frames_total = w.get("frames_total").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snapshots_total = w
+            .get("snapshots_total")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        let rows = w
+            .get("rows")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let mut sum_total: u64 = 0;
+        let mut sum_layout: u64 = 0;
+        let mut sum_paint: u64 = 0;
+        let mut count_total: u64 = 0;
+        let mut count_layout: u64 = 0;
+        let mut count_paint: u64 = 0;
+
+        let mut best: Vec<Entry> = Vec::new();
+
+        for row in rows {
+            let Some(row) = row.as_array() else {
+                continue;
+            };
+            let total = row_u64(row, idx_total);
+            let layout = row_u64(row, idx_layout);
+            let paint = row_u64(row, idx_paint);
+
+            if let Some(v) = total {
+                sum_total = sum_total.saturating_add(v);
+                count_total = count_total.saturating_add(1);
+            }
+            if let Some(v) = layout {
+                sum_layout = sum_layout.saturating_add(v);
+                count_layout = count_layout.saturating_add(1);
+            }
+            if let Some(v) = paint {
+                sum_paint = sum_paint.saturating_add(v);
+                count_paint = count_paint.saturating_add(1);
+            }
+
+            let score = row_metric(row, metric, idx_total, idx_layout, idx_paint);
+            if score == 0 {
+                continue;
+            }
+
+            let e = Entry {
+                metric: score,
+                frame_id: row_u64(row, idx_frame_id),
+                window_snapshot_seq: row_u64(row, idx_seq),
+                timestamp_unix_ms: row_u64(row, idx_ts),
+                total_time_us: total,
+                layout_time_us: layout,
+                paint_time_us: paint,
+                semantics_fingerprint: row_u64(row, idx_fp),
+                semantics_source_tag: row_u64(row, idx_sem_tag),
+            };
+
+            if best.len() < top {
+                best.push(e);
+                continue;
+            }
+            let mut min_idx: usize = 0;
+            for i in 1..best.len() {
+                if best[i].metric < best[min_idx].metric {
+                    min_idx = i;
+                }
+            }
+            if e.metric > best[min_idx].metric {
+                best[min_idx] = e;
+            }
+        }
+
+        best.sort_by(|a, b| b.metric.cmp(&a.metric));
+        let worst_frames: Vec<Value> = best
+            .into_iter()
+            .map(|e| {
+                let mut suggestions: Vec<String> = Vec::new();
+                if let Some(fid) = e.frame_id {
+                    suggestions.push(format!(
+                        "fretboard diag slice {} --test-id <test_id> --window {} --frame-id {} --warmup-frames {}",
+                        bundle_path.display(),
+                        window_id,
+                        fid,
+                        warmup_frames
+                    ));
+                } else if let Some(seq) = e.window_snapshot_seq {
+                    suggestions.push(format!(
+                        "fretboard diag slice {} --test-id <test_id> --window {} --snapshot-seq {} --warmup-frames {}",
+                        bundle_path.display(),
+                        window_id,
+                        seq,
+                        warmup_frames
+                    ));
+                }
+                json!({
+                    "window": window_id,
+                    "frame_id": e.frame_id,
+                    "window_snapshot_seq": e.window_snapshot_seq,
+                    "timestamp_unix_ms": e.timestamp_unix_ms,
+                    "metric": { metric_name: e.metric },
+                    "stats": {
+                        "total_time_us": e.total_time_us,
+                        "layout_time_us": e.layout_time_us,
+                        "paint_time_us": e.paint_time_us,
+                    },
+                    "semantics": {
+                        "fingerprint": e.semantics_fingerprint,
+                        "source_tag": e.semantics_source_tag,
+                    },
+                    "suggestions": suggestions,
+                })
+            })
+            .collect();
+
+        let avg_total = if count_total == 0 {
+            None
+        } else {
+            Some(sum_total / count_total)
+        };
+        let avg_layout = if count_layout == 0 {
+            None
+        } else {
+            Some(sum_layout / count_layout)
+        };
+        let avg_paint = if count_paint == 0 {
+            None
+        } else {
+            Some(sum_paint / count_paint)
+        };
+
+        windows_out.push(json!({
+            "window": window_id,
+            "snapshots_total": snapshots_total,
+            "frames_total": frames_total,
+            "frames_index_rows_total": rows.len() as u64,
+            "metric": metric_name,
+            "stats_avg_us": {
+                "total_time_us": avg_total,
+                "layout_time_us": avg_layout,
+                "paint_time_us": avg_paint,
+            },
+            "worst_frames": worst_frames,
+            "clipped": w.get("clipped").cloned(),
+            "warmup_fallback": w.get("warmup_fallback").cloned(),
+        }));
+    }
+
+    Ok(json!({
+        "schema_version": 1,
+        "kind": "triage_lite",
+        "bundle": bundle_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "source": {
+            "kind": FRAMES_INDEX_KIND,
+            "schema_version": FRAMES_INDEX_SCHEMA_VERSION,
+            "path": frames_index_path.display().to_string(),
+        },
+        "metric": {
+            "name": metric_name,
+            "top": top,
+        },
+        "notes": [
+            "triage_lite is generated from frames.index.json; it is intended for agent-friendly first-pass triage.",
+            "semantics_source_tag: 0=none 1=inline 2=table",
+        ],
         "windows": windows_out,
     }))
 }
