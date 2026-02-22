@@ -236,8 +236,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 2): make uniform-resource invalidation explicit and versioned (uniform buffers ↔ mask-image override bind groups).
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)
-    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups` mixes revisions)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
   - Landed (step 3): extract uniform/clip/mask/render-space buffers into a dedicated `UniformResources` subsystem.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
@@ -254,6 +254,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
+  - Landed (step 3): codify cache key/invalidation contract and provide an explicit full invalidation entrypoint.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
 ## M7 — Post-v1 semantic expansions (deferred backlog)
