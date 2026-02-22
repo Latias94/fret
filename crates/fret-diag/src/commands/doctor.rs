@@ -39,6 +39,15 @@ fn normalize_bundle_dir(dir: &Path) -> PathBuf {
     dir.to_path_buf()
 }
 
+fn resolve_bundle_dir_for_report(src: &Path) -> PathBuf {
+    let dir = if src.is_file() {
+        src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
+    } else {
+        src.to_path_buf()
+    };
+    normalize_bundle_dir(&dir)
+}
+
 fn candidate_paths_for_sidecar(bundle_dir: &Path, file_name: &str) -> Vec<PathBuf> {
     let dir = bundle_dir;
     let mut out: Vec<PathBuf> = Vec::new();
@@ -155,15 +164,10 @@ pub(crate) fn cmd_doctor(
 
     let mut bundle_dir = if let Some(src) = rest.first().cloned() {
         let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-        if src.is_file() {
-            src.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
-        } else {
-            src
-        }
+        resolve_bundle_dir_for_report(&src)
     } else {
         resolve_latest_bundle_dir_path(out_dir)?
     };
-    bundle_dir = normalize_bundle_dir(&bundle_dir);
 
     // If the user points at an out-dir root (no bundle artifacts directly), prefer the latest
     // bundle directory so `doctor` produces a useful report without requiring another argument.
@@ -199,6 +203,23 @@ pub(crate) fn cmd_doctor(
     println!("warmup_frames: {}", warmup_frames);
     println!("required_ok: {required_ok}");
     println!("ok: {ok}");
+    let report = doctor_report_json(&bundle_dir, warmup_frames);
+    let repairs = report
+        .get("repairs")
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    for r in repairs {
+        let code = r.get("code").and_then(|v| v.as_str()).unwrap_or("");
+        let command = r.get("command").and_then(|v| v.as_str());
+        let note = r.get("note").and_then(|v| v.as_str()).unwrap_or("");
+        if let Some(command) = command {
+            println!("repair: {code} ({note})");
+            println!("  command: {command}");
+        } else if !note.is_empty() {
+            println!("repair: {code} ({note})");
+        }
+    }
     for it in &items {
         match it.status {
             DoctorStatus::Ok => {
@@ -370,7 +391,7 @@ fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) ->
 }
 
 pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value {
-    let normalized = normalize_bundle_dir(bundle_dir);
+    let normalized = resolve_bundle_dir_for_report(bundle_dir);
     let bundle_dir = normalized.as_path();
 
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
@@ -408,6 +429,48 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         .as_ref()
         .and_then(|m| manifest_bundle_json_chunks_summary(manifest_dir, m));
 
+    let mut repairs: Vec<Value> = Vec::new();
+    for it in &items {
+        if it.status != DoctorStatus::Ok {
+            repairs.push(json!({
+                "code": "regen_sidecar",
+                "kind": it.kind,
+                "file": it.file_name,
+                "command": it.suggest,
+            }));
+        }
+    }
+
+    if bundle_json.is_none() {
+        if let Some(chunks) = &manifest_chunks {
+            let missing = chunks
+                .get("chunks_missing")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let bytes_mismatch = chunks
+                .get("chunks_bytes_mismatch")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if missing == 0 && bytes_mismatch == 0 {
+                repairs.push(json!({
+                    "code": "materialize_bundle_json",
+                    "note": "bundle.json is missing but manifest chunks look complete; running a command that resolves bundle.json from chunks should restore it",
+                    "command": format!("fretboard diag index {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                }));
+            } else {
+                repairs.push(json!({
+                    "code": "incomplete_chunks",
+                    "note": "bundle.json is missing and manifest chunks are incomplete; re-extract the share zip or re-capture the bundle",
+                }));
+            }
+        } else {
+            repairs.push(json!({
+                "code": "missing_bundle_json",
+                "note": "bundle.json is missing and no manifest chunks were found; re-capture the bundle",
+            }));
+        }
+    }
+
     json!({
         "ok": ok,
         "required_ok": required_ok,
@@ -419,6 +482,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "script_result": script_result,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,
+        "repairs": repairs,
         "items": items.iter().map(|it| {
             json!({
                 "label": it.label,
