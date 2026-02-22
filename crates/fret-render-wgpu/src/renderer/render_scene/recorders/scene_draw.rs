@@ -126,10 +126,7 @@ impl Renderer {
                 let _ = self.quad_pipeline(device, format, draw.pipeline);
             }
 
-            let viewport_pipeline = self
-                .viewport_pipeline
-                .as_ref()
-                .expect("viewport pipeline must exist");
+            let viewport_pipeline = self.viewport_pipeline_ref();
             let text_pipeline = self
                 .text_pipeline
                 .as_ref()
@@ -241,10 +238,7 @@ impl Renderer {
                             continue;
                         }
 
-                        let quad_pipeline = self
-                            .quad_pipelines
-                            .get(&draw.pipeline)
-                            .expect("quad pipeline must exist");
+                        let quad_pipeline = self.quad_pipeline_ref(&draw.pipeline);
                         if !matches!(active_pipeline, ActivePipeline::Quad)
                             || active_quad_pipeline != Some(draw.pipeline)
                         {

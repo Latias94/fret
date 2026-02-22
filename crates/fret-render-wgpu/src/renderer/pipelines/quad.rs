@@ -3,12 +3,7 @@ use super::super::*;
 
 impl Renderer {
     pub(in crate::renderer) fn ensure_quad_pipelines(&mut self, format: wgpu::TextureFormat) {
-        if self.quad_pipeline_format == Some(format) {
-            return;
-        }
-
-        self.quad_pipeline_format = Some(format);
-        self.quad_pipelines.clear();
+        self.pipelines.ensure_quad_pipelines(format);
     }
 
     pub(in crate::renderer) fn quad_pipeline(
@@ -18,7 +13,7 @@ impl Renderer {
         key: QuadPipelineKey,
     ) -> &wgpu::RenderPipeline {
         self.ensure_quad_pipelines(format);
-        if !self.quad_pipelines.contains_key(&key) {
+        if self.pipelines.quad_pipeline_ref(&key).is_none() {
             let create_span = tracing::enabled!(tracing::Level::TRACE)
                 .then(|| {
                     tracing::trace_span!(
@@ -113,11 +108,20 @@ impl Renderer {
                 cache: None,
             });
 
-            self.quad_pipelines.insert(key, pipeline);
+            return self.pipelines.quad_pipeline_inserted(key, pipeline);
         }
 
-        self.quad_pipelines
-            .get(&key)
+        self.pipelines
+            .quad_pipeline_ref(&key)
+            .expect("quad pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn quad_pipeline_ref(
+        &self,
+        key: &QuadPipelineKey,
+    ) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .quad_pipeline_ref(key)
             .expect("quad pipeline must exist")
     }
 }

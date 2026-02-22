@@ -16,6 +16,7 @@ mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
 mod gpu_globals;
+mod gpu_pipelines;
 mod gpu_textures;
 mod path;
 mod revisioned_cache;
@@ -45,6 +46,7 @@ use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
 use gpu_globals::GpuGlobals;
+use gpu_pipelines::GpuPipelines;
 use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
@@ -74,12 +76,7 @@ pub struct Renderer {
     uniforms: UniformResources,
     globals: GpuGlobals,
     textures: GpuTextures,
-
-    quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
-
-    viewport_pipeline_format: Option<wgpu::TextureFormat>,
-    viewport_pipeline: Option<wgpu::RenderPipeline>,
+    pipelines: GpuPipelines,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 

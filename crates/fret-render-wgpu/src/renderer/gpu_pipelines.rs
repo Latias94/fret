@@ -1,10 +1,55 @@
-use super::super::shaders::*;
-use super::super::*;
+use super::Renderer;
+use super::gpu_globals::GpuGlobals;
+use super::types::QuadPipelineKey;
 
-impl Renderer {
-    pub(in crate::renderer) fn ensure_viewport_pipeline(
+pub(super) struct GpuPipelines {
+    quad_pipeline_format: Option<wgpu::TextureFormat>,
+    quad_pipelines: std::collections::HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
+
+    viewport_pipeline_format: Option<wgpu::TextureFormat>,
+    viewport_pipeline: Option<wgpu::RenderPipeline>,
+}
+
+impl Default for GpuPipelines {
+    fn default() -> Self {
+        Self {
+            quad_pipeline_format: None,
+            quad_pipelines: std::collections::HashMap::new(),
+            viewport_pipeline_format: None,
+            viewport_pipeline: None,
+        }
+    }
+}
+
+impl GpuPipelines {
+    pub(super) fn ensure_quad_pipelines(&mut self, format: wgpu::TextureFormat) {
+        if self.quad_pipeline_format == Some(format) {
+            return;
+        }
+
+        self.quad_pipeline_format = Some(format);
+        self.quad_pipelines.clear();
+    }
+
+    pub(super) fn quad_pipeline_ref(&self, key: &QuadPipelineKey) -> Option<&wgpu::RenderPipeline> {
+        self.quad_pipelines.get(key)
+    }
+
+    pub(super) fn quad_pipeline_inserted(
+        &mut self,
+        key: QuadPipelineKey,
+        pipeline: wgpu::RenderPipeline,
+    ) -> &wgpu::RenderPipeline {
+        self.quad_pipelines.insert(key, pipeline);
+        self.quad_pipelines
+            .get(&key)
+            .expect("quad pipeline must exist")
+    }
+
+    pub(super) fn ensure_viewport_pipeline(
         &mut self,
         device: &wgpu::Device,
+        globals: &GpuGlobals,
         format: wgpu::TextureFormat,
     ) {
         if self.viewport_pipeline_format == Some(format) && self.viewport_pipeline.is_some() {
@@ -29,19 +74,19 @@ impl Renderer {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret viewport shader"),
-            source: wgpu::ShaderSource::Wgsl(VIEWPORT_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(super::shaders::VIEWPORT_SHADER.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret viewport pipeline layout"),
             bind_group_layouts: &[
-                &self.globals.uniform_bind_group_layout,
-                &self.globals.viewport_bind_group_layout,
+                &globals.uniform_bind_group_layout,
+                &globals.viewport_bind_group_layout,
             ],
             immediate_size: 0,
         });
 
-        let vertex_stride = std::mem::size_of::<ViewportVertex>() as wgpu::BufferAddress;
+        let vertex_stride = std::mem::size_of::<super::ViewportVertex>() as wgpu::BufferAddress;
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret viewport pipeline"),
             layout: Some(&pipeline_layout),
@@ -103,5 +148,26 @@ impl Renderer {
 
         self.viewport_pipeline_format = Some(format);
         self.viewport_pipeline = Some(pipeline);
+    }
+
+    pub(super) fn viewport_pipeline_ref(&self) -> Option<&wgpu::RenderPipeline> {
+        self.viewport_pipeline.as_ref()
+    }
+}
+
+impl Renderer {
+    pub(in crate::renderer) fn ensure_viewport_pipeline(
+        &mut self,
+        device: &wgpu::Device,
+        format: wgpu::TextureFormat,
+    ) {
+        self.pipelines
+            .ensure_viewport_pipeline(device, &self.globals, format);
+    }
+
+    pub(in crate::renderer) fn viewport_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .viewport_pipeline_ref()
+            .expect("viewport pipeline must exist")
     }
 }
