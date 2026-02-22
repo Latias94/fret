@@ -3,7 +3,7 @@ use super::super::*;
 
 impl Renderer {
     pub(in crate::renderer) fn ensure_path_clip_mask_pipeline(&mut self, device: &wgpu::Device) {
-        if self.path_clip_mask_pipeline.is_some() {
+        if self.pipelines.path_clip_mask_pipeline.is_some() {
             return;
         }
 
@@ -66,6 +66,13 @@ impl Renderer {
             cache: None,
         });
 
-        self.path_clip_mask_pipeline = Some(pipeline);
+        self.pipelines.path_clip_mask_pipeline = Some(pipeline);
+    }
+
+    pub(in crate::renderer) fn path_clip_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .path_clip_mask_pipeline
+            .as_ref()
+            .expect("path clip-mask pipeline must exist")
     }
 }

@@ -9,6 +9,9 @@ pub(super) struct GpuPipelines {
     pub(super) viewport_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) viewport_pipeline: Option<wgpu::RenderPipeline>,
 
+    pub(super) mask_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) mask_pipeline: Option<wgpu::RenderPipeline>,
+
     pub(super) text_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) text_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) text_outline_pipeline: Option<wgpu::RenderPipeline>,
@@ -19,6 +22,15 @@ pub(super) struct GpuPipelines {
     pub(super) text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) text_subpixel_outline_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) path_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) path_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) path_msaa_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) path_msaa_pipeline_sample_count: Option<u32>,
+
+    pub(super) path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 }
 
 impl Default for GpuPipelines {
@@ -28,6 +40,8 @@ impl Default for GpuPipelines {
             quad_pipelines: std::collections::HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
+            mask_pipeline_format: None,
+            mask_pipeline: None,
             text_pipeline_format: None,
             text_pipeline: None,
             text_outline_pipeline: None,
@@ -36,6 +50,12 @@ impl Default for GpuPipelines {
             text_subpixel_pipeline_format: None,
             text_subpixel_pipeline: None,
             text_subpixel_outline_pipeline: None,
+            path_pipeline_format: None,
+            path_pipeline: None,
+            path_msaa_pipeline_format: None,
+            path_msaa_pipeline: None,
+            path_msaa_pipeline_sample_count: None,
+            path_clip_mask_pipeline: None,
         }
     }
 }

@@ -86,19 +86,7 @@ pub struct Renderer {
 
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
-    mask_pipeline_format: Option<wgpu::TextureFormat>,
-    mask_pipeline: Option<wgpu::RenderPipeline>,
-
     text_vertices: buffers::RingBuffer<TextVertex>,
-
-    path_pipeline_format: Option<wgpu::TextureFormat>,
-    path_pipeline: Option<wgpu::RenderPipeline>,
-
-    path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
-    path_msaa_pipeline: Option<wgpu::RenderPipeline>,
-    path_msaa_pipeline_sample_count: Option<u32>,
-
-    path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],

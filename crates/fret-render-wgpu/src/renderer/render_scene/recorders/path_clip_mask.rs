@@ -69,10 +69,7 @@ pub(in super::super) fn record_path_clip_mask_pass(
             multiview_mask: None,
         });
 
-        let pipeline = renderer
-            .path_clip_mask_pipeline
-            .as_ref()
-            .expect("path clip-mask pipeline must exist");
+        let pipeline = renderer.path_clip_mask_pipeline_ref();
         rp.set_pipeline(pipeline);
         let mask_image = encoding
             .uniform_mask_images

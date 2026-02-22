@@ -7,13 +7,15 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.path_pipeline_format == Some(format) && self.path_pipeline.is_some() {
+        if self.pipelines.path_pipeline_format == Some(format)
+            && self.pipelines.path_pipeline.is_some()
+        {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.path_pipeline.is_none() {
+                let reason = if self.pipelines.path_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -87,8 +89,8 @@ impl Renderer {
             cache: None,
         });
 
-        self.path_pipeline_format = Some(format);
-        self.path_pipeline = Some(pipeline);
+        self.pipelines.path_pipeline_format = Some(format);
+        self.pipelines.path_pipeline = Some(pipeline);
     }
 
     pub(in crate::renderer) fn ensure_path_msaa_pipeline(
@@ -97,18 +99,18 @@ impl Renderer {
         format: wgpu::TextureFormat,
         sample_count: u32,
     ) {
-        if self.path_msaa_pipeline_format == Some(format)
-            && self.path_msaa_pipeline.is_some()
-            && self.path_msaa_pipeline_sample_count == Some(sample_count)
+        if self.pipelines.path_msaa_pipeline_format == Some(format)
+            && self.pipelines.path_msaa_pipeline.is_some()
+            && self.pipelines.path_msaa_pipeline_sample_count == Some(sample_count)
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.path_msaa_pipeline.is_none() {
+                let reason = if self.pipelines.path_msaa_pipeline.is_none() {
                     "missing"
-                } else if self.path_msaa_pipeline_format != Some(format) {
+                } else if self.pipelines.path_msaa_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "sample_count_changed"
@@ -191,8 +193,19 @@ impl Renderer {
             cache: None,
         });
 
-        self.path_msaa_pipeline_format = Some(format);
-        self.path_msaa_pipeline_sample_count = Some(sample_count);
-        self.path_msaa_pipeline = Some(pipeline);
+        self.pipelines.path_msaa_pipeline_format = Some(format);
+        self.pipelines.path_msaa_pipeline_sample_count = Some(sample_count);
+        self.pipelines.path_msaa_pipeline = Some(pipeline);
+    }
+
+    pub(in crate::renderer) fn path_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .path_pipeline
+            .as_ref()
+            .expect("path pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn path_msaa_pipeline_ref(&self) -> Option<&wgpu::RenderPipeline> {
+        self.pipelines.path_msaa_pipeline.as_ref()
     }
 }

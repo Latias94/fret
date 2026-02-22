@@ -132,14 +132,8 @@ impl Renderer {
             let text_color_pipeline = self.text_color_pipeline_ref();
             let text_subpixel_pipeline = self.text_subpixel_pipeline_ref();
             let text_subpixel_outline_pipeline = self.text_subpixel_outline_pipeline_ref();
-            let mask_pipeline = self
-                .mask_pipeline
-                .as_ref()
-                .expect("mask pipeline must exist");
-            let path_pipeline = self
-                .path_pipeline
-                .as_ref()
-                .expect("path pipeline must exist");
+            let mask_pipeline = self.mask_pipeline_ref();
+            let path_pipeline = self.path_pipeline_ref();
 
             let mut active_pipeline = ActivePipeline::None;
             let mut active_text_page: Option<u16> = None;
