@@ -18,6 +18,36 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [ ] Extract “script runner” responsibilities (step state machine + evidence capture) into a module:
   - [x] Extract pending-script start/bootstrap helper:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract single-active-script migration helper:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract keepalive/heartbeat helper (when current window has no active script):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract active-window heartbeat writer helper:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract progress writer + pending cross-window drag cancel helper:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract per-step evidence scoping + step-state reset helpers:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - [x] Extract window/cursor/mouse/insets effect-only steps:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
+  - [x] Extract non-window “effect-only” steps (reset/wait/clipboard/open-inject):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
+  - [x] Extract capture steps (bundle + screenshot export requests):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
+  - [x] Extract keyboard/text injection steps (press/type/ime):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_input.rs`
+  - [x] Extract selector-driven text input step (`type_text_into`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_input.rs`
+  - [x] Extract menu selection step (`menu_select`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_menu.rs`
+  - [x] Extract scroll-into-view step (`scroll_into_view`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`
+  - [x] Extract ensure-visible step (`ensure_visible`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_visibility.rs`
+  - [x] Extract wheel step (`wheel`):
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+  - [x] Extract click step (`click`) with window handoff + fail-fast behavior:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
 - [ ] Extract “inspect/pick state machine” into a module (keep UI/UX policy out of `fret-ui`).
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
