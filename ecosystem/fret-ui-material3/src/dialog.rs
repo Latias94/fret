@@ -20,6 +20,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
     merge_override_slot, resolve_override_slot_with,
@@ -244,9 +245,11 @@ impl DialogAction {
                             .unwrap_or_else(|| {
                                 let mut style = TextStyle::default();
                                 style.size = Px(14.0);
+                                style.line_height = Some(Px(style.size.0 * 1.2));
                                 style.weight = fret_core::FontWeight::MEDIUM;
                                 style
                             });
+                        let label_style = typography::with_intent(label_style, TextIntent::Control);
 
                         (
                             label_color,
@@ -553,6 +556,8 @@ impl Dialog {
                             style.size = Px(24.0);
                             style
                         });
+                    let headline_style =
+                        typography::with_intent(headline_style, TextIntent::Content);
                     let supporting_style = theme
                         .text_style_by_key("md.sys.typescale.body-medium")
                         .unwrap_or_else(|| {
@@ -560,6 +565,8 @@ impl Dialog {
                             style.size = Px(14.0);
                             style
                         });
+                    let supporting_style =
+                        typography::with_intent(supporting_style, TextIntent::Content);
 
                     let action_cfg = DialogActionConfig {
                         height: dialog_tokens::action_height(theme),

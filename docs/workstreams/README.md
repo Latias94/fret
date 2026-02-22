@@ -27,6 +27,9 @@ Active workstreams:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-todo.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-milestones.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1-todo.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1-milestones.md`

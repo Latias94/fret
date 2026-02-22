@@ -532,8 +532,8 @@ impl ItemTitle {
 
         ui::text(cx, self.text)
             .text_size_px(px)
-            .line_height_px(line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(line_height)
+            .line_box_in_bounds()
             .font_medium()
             .text_color(ColorRef::Color(fg))
             .truncate()

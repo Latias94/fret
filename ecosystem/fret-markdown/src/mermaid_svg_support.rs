@@ -14,6 +14,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::typography;
 
 use super::CodeBlockInfo;
 
@@ -179,16 +180,15 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
                 vec![cx.text_props(TextProps {
                     layout: Default::default(),
                     text: Arc::<str>::from("Mermaid"),
-                    style: Some(TextStyle {
+                    style: Some(typography::as_control_text(TextStyle {
                         font: FontId::monospace(),
                         size: theme.metric_token("metric.font.mono_size"),
                         weight: FontWeight::SEMIBOLD,
                         slant: TextSlant::Normal,
                         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
-                    }),
+                    })),
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,

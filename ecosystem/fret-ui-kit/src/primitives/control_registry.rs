@@ -103,8 +103,15 @@ impl ControlRegistry {
         let entry = self.windows.entry(window).or_default();
         if entry.frame_id != Some(frame_id) {
             entry.frame_id = Some(frame_id);
-            entry.controls.clear();
-            entry.labels.clear();
+            // Do not clear `controls`/`labels` on a new frame.
+            //
+            // Some app shells use view caching (GPUI-style reuse) where a subtree may be reused
+            // without re-running the declarative builder for every child. Clearing the whole
+            // registry would require *all* controls/labels to re-register on every frame, which
+            // breaks label -> control forwarding for cached subtrees.
+            //
+            // Policy note: callers should treat `ControlId` as a stable, unique identifier within
+            // a window. Reusing the same id for unrelated controls can lead to stale forwarding.
         }
         entry
     }

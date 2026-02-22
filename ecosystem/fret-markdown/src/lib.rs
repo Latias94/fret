@@ -19,6 +19,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::typography;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
@@ -309,16 +310,15 @@ fn render_rich_text_inline<H: UiHost>(
 
     let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;
-    props.style = Some(TextStyle {
+    props.style = Some(typography::as_content_text(TextStyle {
         font: base.font.clone(),
         size: base.size,
         weight: base.weight,
         slant: TextSlant::Normal,
         line_height: base.line_height,
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    });
+    }));
     props.color = Some(base.color);
     // Markdown prose frequently contains long tokens (URLs, paths, identifiers). Default to a
     // break-words policy to prevent horizontal overflow in narrow surfaces.
@@ -509,16 +509,15 @@ fn render_math_block_builtin<H: UiHost>(
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: latex,
-                style: Some(TextStyle {
+                style: Some(typography::as_content_text(TextStyle {
                     font: FontId::monospace(),
                     size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
-                }),
+                })),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
@@ -1078,7 +1077,7 @@ fn render_inline_text_token<H: UiHost>(
         return cx.text_props(TextProps {
             layout: Default::default(),
             text,
-            style: Some(TextStyle {
+            style: Some(typography::as_content_text(TextStyle {
                 font,
                 size,
                 weight,
@@ -1086,7 +1085,7 @@ fn render_inline_text_token<H: UiHost>(
                 line_height,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(color),
             wrap,
             overflow: TextOverflow::Clip,
@@ -1107,7 +1106,7 @@ fn render_inline_text_token<H: UiHost>(
         let text_el = cx.text_props(TextProps {
             layout: Default::default(),
             text,
-            style: Some(TextStyle {
+            style: Some(typography::as_content_text(TextStyle {
                 font,
                 size,
                 weight,
@@ -1115,7 +1114,7 @@ fn render_inline_text_token<H: UiHost>(
                 line_height,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(color),
             wrap,
             overflow: TextOverflow::Clip,
@@ -1198,16 +1197,15 @@ fn render_image_placeholder<H: UiHost>(
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: display_text.clone(),
-                style: Some(TextStyle {
+                style: Some(typography::as_content_text(TextStyle {
                     font: FontId::default(),
                     size: theme.metric_token("metric.font.size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
-                }),
+                })),
                 color: Some(markdown_theme.link),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
@@ -1221,16 +1219,15 @@ fn render_image_placeholder<H: UiHost>(
     cx.text_props(TextProps {
         layout: Default::default(),
         text: label,
-        style: Some(TextStyle {
+        style: Some(typography::as_content_text(TextStyle {
             font: FontId::default(),
             size: theme.metric_token("metric.font.size"),
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        }),
+        })),
         color: Some(markdown_theme.muted),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
@@ -1284,16 +1281,15 @@ fn render_inline_math_builtin<H: UiHost>(
         vec![cx.text_props(TextProps {
             layout: Default::default(),
             text: info.latex,
-            style: Some(TextStyle {
+            style: Some(typography::as_content_text(TextStyle {
                 font: FontId::monospace(),
                 size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(markdown_theme.inline_math_fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,

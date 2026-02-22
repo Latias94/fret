@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::typography;
 
 use super::*;
 
@@ -735,16 +736,15 @@ fn render_task_list_marker<H: UiHost>(
     let el = cx.text_props(TextProps {
         layout: Default::default(),
         text: Arc::<str>::from(text.to_string()),
-        style: Some(TextStyle {
+        style: Some(typography::as_content_text(TextStyle {
             font: FontId::default(),
             size: theme.metric_token("metric.font.size"),
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        }),
+        })),
         color: Some(color),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,

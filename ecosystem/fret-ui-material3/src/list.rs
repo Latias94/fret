@@ -20,6 +20,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::context::{
     MaterialDesignVariant, resolved_design_variant, theme_default_design_variant,
@@ -467,7 +468,8 @@ fn list_item<H: UiHost>(
 
                     let label_style = theme
                         .text_style_by_key("md.sys.typescale.body-large")
-                        .unwrap_or_else(TextStyle::default);
+                        .unwrap_or_default();
+                    let label_style = typography::with_intent(label_style, TextIntent::Control);
 
                     (
                         label_color,

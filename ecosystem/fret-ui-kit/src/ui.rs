@@ -5,7 +5,7 @@ pub use crate::children;
 
 use smallvec::SmallVec;
 
-use fret_core::{Axis, Edges, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+use fret_core::{Axis, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
@@ -898,6 +898,7 @@ pub struct TextBox {
     pub(crate) layout: LayoutRefinement,
     pub(crate) text: Arc<str>,
     pub(crate) preset: TextPreset,
+    pub(crate) font_override: Option<FontId>,
     pub(crate) size_override: Option<Px>,
     pub(crate) line_height_override: Option<Px>,
     pub(crate) line_height_em_override: Option<f32>,
@@ -925,6 +926,7 @@ impl TextBox {
             layout: LayoutRefinement::default(),
             text: text.into(),
             preset,
+            font_override: None,
             size_override: None,
             line_height_override: None,
             line_height_em_override: None,
@@ -956,6 +958,7 @@ impl UiIntoElement for TextBox {
             layout: layout_refinement,
             text,
             preset,
+            font_override,
             size_override,
             line_height_override,
             line_height_em_override,
@@ -1000,6 +1003,9 @@ impl UiIntoElement for TextBox {
             (style, layout, label_line_height, resolved_color)
         };
 
+        if let Some(font) = font_override {
+            style.font = font;
+        }
         if let Some(size) = size_override {
             style.size = size;
         }

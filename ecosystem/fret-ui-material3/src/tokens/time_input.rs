@@ -4,6 +4,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
@@ -62,10 +63,11 @@ pub(crate) fn time_input_field_focus_outline_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn time_input_field_label_text_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key("time-input-field.label-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.display-medium"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn time_input_field_label_color(theme: &Theme, focused: bool, hovered: bool) -> Color {
@@ -100,10 +102,11 @@ pub(crate) fn time_input_field_state_layer_opacity(theme: &Theme) -> f32 {
 }
 
 pub(crate) fn time_input_field_separator_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key("time-input-field.separator"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.display-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn time_input_field_separator_color(theme: &Theme) -> Color {
@@ -114,10 +117,11 @@ pub(crate) fn time_input_field_separator_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn time_input_field_supporting_text_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key("time-input-field.supporting-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Content)
 }
 
 pub(crate) fn time_input_field_supporting_text_color(theme: &Theme) -> Color {
@@ -167,10 +171,11 @@ pub(crate) fn period_selector_selected_container_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn period_selector_label_text_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key("period-selector.label-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn period_selector_label_color(

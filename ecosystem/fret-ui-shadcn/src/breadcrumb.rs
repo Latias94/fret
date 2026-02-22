@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -118,13 +119,8 @@ fn breadcrumb_with_patch<H: UiHost>(
         let fg = theme.color_token("foreground");
         let muted = theme.color_token("muted-foreground");
 
-        let style = TextStyle {
-            font: FontId::default(),
-            size: text_px,
-            weight: FontWeight::NORMAL,
-            line_height: Some(line_height),
-            ..Default::default()
-        };
+        let mut style = typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
+        style.weight = FontWeight::NORMAL;
 
         let props = decl_style::container_props(theme, chrome, layout);
         (gap, style, fg, muted, props)
@@ -398,13 +394,9 @@ pub mod primitives {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        TextStyle {
-            font: FontId::default(),
-            size: text_px,
-            weight: FontWeight::NORMAL,
-            line_height: Some(line_height),
-            ..Default::default()
-        }
+        let mut style = typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
+        style.weight = FontWeight::NORMAL;
+        style
     }
 
     fn colors(theme: &Theme) -> (Color, Color) {

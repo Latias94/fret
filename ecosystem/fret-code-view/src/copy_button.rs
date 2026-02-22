@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::typography;
 use fret_ui_kit::{MetricRef, Space};
 
 #[derive(Debug, Default)]
@@ -154,16 +155,15 @@ pub(crate) fn render_copy_button<H: UiHost>(
                     layout
                 },
                 text: Arc::<str>::from(label),
-                style: Some(TextStyle {
+                style: Some(typography::as_control_text(TextStyle {
                     font: FontId::default(),
                     size: font_size,
                     weight: FontWeight::SEMIBOLD,
                     slant: Default::default(),
                     line_height: Some(line_height),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
-                }),
+                })),
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,

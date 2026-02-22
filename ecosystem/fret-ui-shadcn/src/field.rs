@@ -761,8 +761,23 @@ impl FieldLabel {
                 );
             });
 
+            // Best-effort snapshot of the target control entry at render time.
+            //
+            // This is used as a fallback for label forwarding when the per-window registry is
+            // temporarily missing the control entry at action time (for example due to view-cache
+            // reuse or ordering in the declarative tree).
+            let control_snapshot = cx
+                .app
+                .models()
+                .read(&control_registry, |reg| {
+                    reg.control_for(cx.window, &for_control).cloned()
+                })
+                .ok()
+                .flatten();
+
             let control_registry_on_pointer = control_registry.clone();
             let for_control_on_pointer = for_control.clone();
+            let control_snapshot_on_pointer = control_snapshot.clone();
             cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, _down| {
                 let target = host
                     .models_mut()
@@ -772,6 +787,11 @@ impl FieldLabel {
                     })
                     .ok()
                     .flatten();
+                let target = target.or_else(|| {
+                    control_snapshot_on_pointer
+                        .as_ref()
+                        .map(|c| (c.enabled, c.element))
+                });
                 if let Some((true, element)) = target {
                     host.request_focus(element);
                 }
@@ -780,6 +800,7 @@ impl FieldLabel {
 
             let control_registry_on_activate = control_registry.clone();
             let for_control_on_activate = for_control.clone();
+            let control_snapshot_on_activate = control_snapshot.clone();
             cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
                 let control = host
                     .models_mut()
@@ -789,23 +810,25 @@ impl FieldLabel {
                     })
                     .ok()
                     .flatten();
-                let Some(control) = control else {
+                let Some(control) = control.or_else(|| control_snapshot_on_activate.clone()) else {
                     return;
                 };
                 if !control.enabled {
                     return;
                 }
                 control.action.invoke(host);
+                host.request_redraw(acx.window);
             }));
 
-            let controls_element = cx
-                .app
-                .models()
-                .read(&control_registry, |reg| {
-                    reg.control_for(cx.window, &for_control).map(|c| c.element)
-                })
-                .ok()
-                .flatten();
+            let controls_element = control_snapshot.as_ref().map(|c| c.element).or_else(|| {
+                cx.app
+                    .models()
+                    .read(&control_registry, |reg| {
+                        reg.control_for(cx.window, &for_control).map(|c| c.element)
+                    })
+                    .ok()
+                    .flatten()
+            });
 
             let mut a11y = PressableA11y {
                 role: Some(SemanticsRole::Text),

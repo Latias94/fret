@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextLineHeightPolicy,
-    TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnKeyDown;
@@ -17,6 +16,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -333,14 +333,8 @@ impl InputGroup {
             let compact_px = fret_ui_kit::MetricRef::space(Space::N2).resolve(theme);
             let textarea_py = fret_ui_kit::MetricRef::space(Space::N3).resolve(theme);
 
-            let font_line_height = theme.metric_token("font.line_height");
-            let text_style = TextStyle {
-                font: FontId::default(),
-                size: resolved.text_px,
-                line_height: Some(font_line_height),
-                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-                ..Default::default()
-            };
+            let text_style =
+                typography::control_text_style_scaled(theme, FontId::ui(), resolved.text_px);
 
             let root_layout = decl_style::layout_style(theme, {
                 let mut root = self.layout.relative().w_full().min_w_0();
@@ -903,17 +897,13 @@ impl InputGroupText {
             InputGroupTextSize::Xs => (Px(12.0), Px(16.0)),
         };
 
+        let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+        style.weight = FontWeight::NORMAL;
+
         cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, self.layout.h_px(line_height)),
             text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                line_height: Some(line_height),
-                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-                ..Default::default()
-            }),
+            style: Some(style),
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -1143,6 +1133,9 @@ impl InputGroupButton {
                 let content = move |cx: &mut ElementContext<'_, H>| {
                     let mut row = Vec::new();
                     if !label.is_empty() {
+                        let mut style =
+                            typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
+                        style.weight = FontWeight::MEDIUM;
                         row.push(cx.text_props(TextProps {
                             layout: LayoutStyle {
                                 size: fret_ui::element::SizeStyle {
@@ -1153,14 +1146,7 @@ impl InputGroupButton {
                                 ..Default::default()
                             },
                             text: label,
-                            style: Some(TextStyle {
-                                font: FontId::default(),
-                                size: text_px,
-                                weight: FontWeight::MEDIUM,
-                                line_height: Some(line_height),
-                                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-                                ..Default::default()
-                            }),
+                            style: Some(style),
                             color: Some(fg),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Clip,

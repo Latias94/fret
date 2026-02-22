@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
@@ -13,6 +13,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, Weekday};
 
@@ -332,13 +333,13 @@ fn hijri_day_cell<H: UiHost>(
                 },
                 move |cx| {
                     let mut props = TextProps::new(Arc::clone(&day_text));
-                    props.style = Some(TextStyle {
-                        font: Default::default(),
-                        size: text_sm_px,
-                        weight: FontWeight::NORMAL,
-                        line_height: Some(text_sm_line_height),
-                        ..Default::default()
-                    });
+                    let mut style = typography::fixed_line_box_style(
+                        fret_core::FontId::ui(),
+                        text_sm_px,
+                        text_sm_line_height,
+                    );
+                    style.weight = FontWeight::NORMAL;
+                    props.style = Some(style);
                     props.color = Some(fg);
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Clip;
@@ -429,13 +430,12 @@ impl CalendarHijri {
                 .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-            let grid_text_style = TextStyle {
-                font: Default::default(),
-                size: text_sm_px,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(text_sm_line_height),
-                ..Default::default()
-            };
+            let mut grid_text_style = typography::fixed_line_box_style(
+                fret_core::FontId::ui(),
+                text_sm_px,
+                text_sm_line_height,
+            );
+            grid_text_style.weight = FontWeight::MEDIUM;
 
             let day_size = self.cell_size.unwrap_or_else(|| {
                 theme
@@ -516,13 +516,15 @@ impl CalendarHijri {
                         );
 
                         let mut title_props = TextProps::new(title.clone());
-                        title_props.style = Some(TextStyle {
-                            font: Default::default(),
-                            size: theme_header.metric_token("font.size"),
-                            weight: FontWeight::MEDIUM,
-                            line_height: Some(theme_header.metric_token("font.line_height")),
-                            ..Default::default()
-                        });
+                        let size = theme_header.metric_token("font.size");
+                        let line_height = theme_header.metric_token("font.line_height");
+                        let mut style = typography::fixed_line_box_style(
+                            fret_core::FontId::ui(),
+                            size,
+                            line_height,
+                        );
+                        style.weight = FontWeight::MEDIUM;
+                        title_props.style = Some(style);
                         title_props.wrap = TextWrap::None;
                         title_props.overflow = TextOverflow::Clip;
                         let title_el = cx.text_props(title_props);

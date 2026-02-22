@@ -45,6 +45,11 @@ clear ownership:
 
 These are **internal implementation details** and must not leak into `fret-core`/`fret-ui`.
 
+For the wgpu backend executor specifically, prefer an explicit per-frame boundary object (e.g.
+`RenderSceneExecutor`) that isolates per-frame mutable state (encoder/targets/cursors/perf) from
+`Renderer`’s long-lived GPU resources. This keeps refactors mechanical and reduces diff-spread
+across unrelated subsystems.
+
 ### 2) Codify the refactor invariants as always-run gates
 
 Any refactor step that changes internal structure must keep the following invariant set true:
@@ -74,6 +79,7 @@ the exact commands used to validate the change. Workstream notes live in:
 
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1.md`
 
 ## Non-goals
 
@@ -96,10 +102,12 @@ Cons:
 
 ## Evidence anchors (implementation)
 
-To be filled as the workstream progresses. Initial expected anchors:
+Initial anchors (as the workstream progresses):
 
 - Encode: `crates/fret-render-wgpu/src/renderer/render_scene/encode/*`
 - Compile: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
 - Execute: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs`
+- Execute (pass inputs): `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
+- Execute (effect recorders): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
+- Execute (executor refactor design): `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
 - Gates: `crates/fret-render-wgpu/tests/*_conformance.rs`
-

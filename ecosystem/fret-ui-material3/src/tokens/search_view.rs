@@ -4,6 +4,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
@@ -70,8 +71,9 @@ pub(crate) fn header_supporting_text_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn header_input_text_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key("md.comp.search-view.header.input-text")
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }

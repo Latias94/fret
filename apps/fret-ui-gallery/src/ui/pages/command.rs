@@ -150,6 +150,9 @@ pub(super) fn preview_command_palette(
         .placeholder("Type a command or search...")
         .a11y_label("Command shortcuts")
         .entries(shortcuts_entries)
+        .test_id_input("ui-gallery-command-shortcuts-input")
+        .list_test_id("ui-gallery-command-shortcuts-listbox")
+        .test_id_item_prefix("ui-gallery-command-shortcuts-item-")
         .into_element(cx)
         .test_id("ui-gallery-command-shortcuts");
 
@@ -186,6 +189,9 @@ pub(super) fn preview_command_palette(
         .placeholder("Search grouped commands...")
         .a11y_label("Command groups")
         .entries(groups_entries)
+        .test_id_input("ui-gallery-command-groups-input")
+        .list_test_id("ui-gallery-command-groups-listbox")
+        .test_id_item_prefix("ui-gallery-command-groups-item-")
         .into_element(cx)
         .test_id("ui-gallery-command-groups");
 
@@ -218,6 +224,9 @@ pub(super) fn preview_command_palette(
         .placeholder("Search a long command list...")
         .a11y_label("Scrollable command list")
         .entries(scrollable_entries)
+        .test_id_input("ui-gallery-command-scrollable-input")
+        .list_test_id("ui-gallery-command-scrollable-listbox")
+        .test_id_item_prefix("ui-gallery-command-scrollable-item-")
         .refine_scroll_layout(LayoutRefinement::default().h_px(Px(220.0)).max_h(Px(220.0)))
         .into_element(cx)
         .test_id("ui-gallery-command-scrollable");
@@ -242,6 +251,9 @@ pub(super) fn preview_command_palette(
             .placeholder("Type a command or search...")
             .a11y_label("RTL command list")
             .entries(rtl_entries)
+            .test_id_input("ui-gallery-command-rtl-input")
+            .list_test_id("ui-gallery-command-rtl-listbox")
+            .test_id_item_prefix("ui-gallery-command-rtl-item-")
             .into_element(cx)
             .test_id("ui-gallery-command-rtl")
     });
@@ -262,13 +274,18 @@ pub(super) fn preview_command_palette(
         ],
     );
 
-    let state_content = stack::vstack(
+    let demo_state_content = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| vec![cx.text(format!("last action: {last}"))],
+        |cx| {
+            vec![
+                cx.text("This section is demo-only (not part of shadcn docs)."),
+                cx.text(format!("last action: {last}")),
+            ]
+        },
     );
 
     let body = doc_layout::render_doc_page(
@@ -277,18 +294,6 @@ pub(super) fn preview_command_palette(
             "Preview follows shadcn Command docs order: Basic, Shortcuts, Groups, Scrollable, RTL.",
         ),
         vec![
-            DocSection::new("State", state_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"let last = cx
-    .app
-    .models()
-    .get_cloned(&last_action)
-    .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-cx.text(format!("last action: {last}")).into_element(cx);"#,
-                ),
             DocSection::new("Basic", basic_dialog)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-basic")
@@ -361,6 +366,18 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
 );"#,
             ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
+            DocSection::new("Demo state", demo_state_content)
+                .max_w(Px(760.0))
+                .code(
+                    "rust",
+                    r#"let last = cx
+    .app
+    .models()
+    .get_cloned(&last_action)
+    .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+cx.text(format!("last action: {last}")).into_element(cx);"#,
+                ),
         ],
     );
 

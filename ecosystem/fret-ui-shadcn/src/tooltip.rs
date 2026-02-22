@@ -12,6 +12,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
 };
@@ -79,13 +80,9 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.tooltip.line_height")
         .unwrap_or(Px((base_line_height.0 - 4.0).max(12.0)));
 
-    TextStyle {
-        font: fret_core::FontId::default(),
-        size: px,
-        weight: fret_core::FontWeight::NORMAL,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(fret_core::FontId::ui(), px, line_height);
+    style.weight = fret_core::FontWeight::NORMAL;
+    style
 }
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {

@@ -9,8 +9,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
-    TextWrap, Transform2D,
+    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextWrap,
+    Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -22,6 +22,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
@@ -724,14 +725,16 @@ impl TextField {
                                 props.controls_element = controls_element;
                                 props.expanded = expanded;
                                 props.chrome = chrome;
-                                props.text_style =
+                                let base_style =
                                     crate::foundation::context::inherited_text_style(cx)
                                         .unwrap_or_else(|| {
                                             let theme = Theme::global(&*cx.app);
                                             theme
                                                 .text_style_by_key("md.sys.typescale.body-large")
-                                                .unwrap_or(TextStyle::default())
+                                                .unwrap_or_default()
                                         });
+                                props.text_style =
+                                    typography::with_intent(base_style, TextIntent::Control);
 
                                 props
                             });
@@ -1051,7 +1054,8 @@ fn text_field_label<H: UiHost>(
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
+            .map(|style| typography::with_intent(style, TextIntent::Control));
 
         let color = resolve_override_slot_with(
             style_override.label_color.as_ref(),
@@ -1133,7 +1137,9 @@ fn text_field_supporting_text<H: UiHost>(
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let style = theme.text_style_by_key("md.sys.typescale.body-small");
+        let style = theme
+            .text_style_by_key("md.sys.typescale.body-small")
+            .map(|style| typography::with_intent(style, TextIntent::Content));
         let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,

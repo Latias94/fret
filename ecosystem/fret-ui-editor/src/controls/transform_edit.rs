@@ -16,6 +16,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 
 use crate::controls::{Checkbox, CheckboxOptions, Vec3Edit};
 use crate::controls::{NumericFormatFn, NumericParseFn, NumericValidateFn};
@@ -396,13 +397,12 @@ fn section_row<H: UiHost>(
                             ..Default::default()
                         },
                         text: Arc::from(short),
-                        style: Some(TextStyle {
+                        style: Some(typography::as_control_text(TextStyle {
                             size: Px(11.0),
                             weight: FontWeight::SEMIBOLD,
                             line_height: Some(density.row_height),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
-                        }),
+                        })),
                         color: Some(label_fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -455,13 +455,11 @@ fn section_row<H: UiHost>(
                                         ..Default::default()
                                     },
                                     text: Arc::from("Link"),
-                                    style: Some(TextStyle {
+                                    style: Some(typography::as_control_text(TextStyle {
                                         size: Px(11.0),
                                         line_height: Some(density.row_height),
-                                        line_height_policy:
-                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
                                         ..Default::default()
-                                    }),
+                                    })),
                                     color: Some(label_fg),
                                     wrap: TextWrap::None,
                                     overflow: TextOverflow::Clip,
@@ -520,13 +518,12 @@ fn section_col<H: UiHost>(
                         ..Default::default()
                     },
                     text: Arc::from(label),
-                    style: Some(TextStyle {
+                    style: Some(typography::as_control_text(TextStyle {
                         size: Px(11.0),
                         weight: FontWeight::SEMIBOLD,
                         line_height: Some(Px(14.0)),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..Default::default()
-                    }),
+                    })),
                     color: Some(label_fg),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
@@ -617,13 +614,11 @@ fn section_col_with_link<H: UiHost>(
                                     ..Default::default()
                                 },
                                 text: Arc::from("Uniform"),
-                                style: Some(TextStyle {
+                                style: Some(typography::as_control_text(TextStyle {
                                     size: Px(10.0),
                                     line_height: Some(Px(12.0)),
-                                    line_height_policy:
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     ..Default::default()
-                                }),
+                                })),
                                 color: Some(label_fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Ellipsis,

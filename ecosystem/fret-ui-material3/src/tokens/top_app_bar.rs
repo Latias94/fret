@@ -4,6 +4,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::top_app_bar::TopAppBarVariant;
@@ -155,7 +156,7 @@ pub(crate) fn headline_color(theme: &Theme, variant: TopAppBarVariant) -> Color 
 
 pub(crate) fn headline_text_style(theme: &Theme, variant: TopAppBarVariant) -> TextStyle {
     if let Some(style) = theme.text_style_by_key(headline_text_style_key(variant)) {
-        return style;
+        return typography::with_intent(style, TextIntent::Control);
     }
 
     let fallback_key = match variant {
@@ -163,9 +164,8 @@ pub(crate) fn headline_text_style(theme: &Theme, variant: TopAppBarVariant) -> T
         TopAppBarVariant::Medium => "md.sys.typescale.headline-small",
         TopAppBarVariant::Large => "md.sys.typescale.headline-medium",
     };
-    theme
-        .text_style_by_key(fallback_key)
-        .unwrap_or_else(TextStyle::default)
+    let style = theme.text_style_by_key(fallback_key).unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn leading_icon_color(theme: &Theme, variant: TopAppBarVariant) -> Color {

@@ -31,6 +31,7 @@ use fret_ui_kit::primitives::active_descendant::{
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
@@ -1046,6 +1047,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                 .text_style_by_key("md.sys.typescale.body-large")
                 .unwrap_or_default()
         });
+        let label_style = typography::with_intent(label_style, TextIntent::Control);
         let label_color = autocomplete_tokens::menu_list_item_label_text_color(
             theme,
             variant.as_text_field_variant(),

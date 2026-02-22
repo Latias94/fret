@@ -26,6 +26,7 @@ use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::icon::svg_source_for_icon;
@@ -403,7 +404,8 @@ fn navigation_rail_item<H: UiHost>(
 
         let label_style_base = theme
             .text_style_by_key("md.sys.typescale.label-medium")
-            .unwrap_or_else(TextStyle::default);
+            .unwrap_or_default();
+        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
         let label_weight_active = rail_tokens::label_weight(theme, true);
         let label_weight_inactive = rail_tokens::label_weight(theme, false);
 

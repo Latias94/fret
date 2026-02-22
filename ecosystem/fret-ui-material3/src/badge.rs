@@ -13,6 +13,7 @@ use fret_core::{
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, InsetStyle, Length, PositionStyle};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::tokens::badge as badge_tokens;
@@ -148,10 +149,13 @@ impl BadgeResolvedTokens {
             large_size: badge_tokens::large_size(theme),
             large_color: badge_tokens::large_color(theme),
             large_shape: badge_tokens::large_shape(theme),
-            large_label_style: theme
-                .text_style_by_key("md.comp.badge.large.label-text")
-                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-small"))
-                .unwrap_or_else(fret_core::TextStyle::default),
+            large_label_style: typography::with_intent(
+                theme
+                    .text_style_by_key("md.comp.badge.large.label-text")
+                    .or_else(|| theme.text_style_by_key("md.sys.typescale.label-small"))
+                    .unwrap_or_default(),
+                TextIntent::Control,
+            ),
             large_label_color: badge_tokens::large_label_color(theme),
         }
     }

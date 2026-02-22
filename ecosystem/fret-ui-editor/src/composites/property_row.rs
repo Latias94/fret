@@ -9,6 +9,7 @@ use fret_ui::element::{
     MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
@@ -267,14 +268,12 @@ impl PropertyRow {
                                     ..Default::default()
                                 },
                                 text: glyph.clone(),
-                                style: Some(TextStyle {
+                                style: Some(typography::as_control_text(TextStyle {
                                     // Keep this conservative: allow the theme's defaults to dominate.
                                     size: Px(12.0),
                                     line_height: Some(density.hit_thickness),
-                                    line_height_policy:
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     ..Default::default()
-                                }),
+                                })),
                                 color: Some(reset_fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,

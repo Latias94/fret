@@ -19,6 +19,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorTokenKeys;
@@ -434,12 +435,11 @@ where
                         ..Default::default()
                     },
                     text: msg,
-                    style: Some(TextStyle {
+                    style: Some(typography::as_content_text(TextStyle {
                         size: text_style.size,
                         line_height: text_style.line_height,
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..Default::default()
-                    }),
+                    })),
                     color: Some(error_color),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,

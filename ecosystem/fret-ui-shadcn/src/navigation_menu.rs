@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverrideSlot, Radius, Space, WidgetState, WidgetStateProperty, WidgetStates,
@@ -76,13 +77,9 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
         .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {

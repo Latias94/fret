@@ -18,6 +18,7 @@ use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::primitives::direction::LayoutDirection;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::overlay_motion;
@@ -38,13 +39,9 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.accordion.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 fn trigger_gap(theme: &Theme) -> Px {

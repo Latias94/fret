@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, FontId, FontWeight, TextAlign, TextLineHeightPolicy, TextOverflow, TextSpan,
-    TextStyle, TextWrap,
+    AttributedText, FontId, FontWeight, TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, Length, SelectableTextProps, SizeStyle, TextInkOverflow, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+
+use crate::typography::{self, TextIntent};
 
 #[derive(Debug, Clone)]
 pub struct Label {
@@ -55,14 +56,16 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
             ..Default::default()
         },
         text,
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size: px,
-            weight: FontWeight::MEDIUM,
-            line_height: Some(line_height),
-            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-            ..Default::default()
-        }),
+        style: Some(typography::with_intent(
+            TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::MEDIUM,
+                line_height: Some(line_height),
+                ..Default::default()
+            },
+            TextIntent::Control,
+        )),
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
@@ -129,14 +132,16 @@ pub fn selectable_label<H: UiHost>(
             ..Default::default()
         },
         rich,
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size: px,
-            weight: FontWeight::MEDIUM,
-            line_height: Some(line_height),
-            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-            ..Default::default()
-        }),
+        style: Some(typography::with_intent(
+            TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::MEDIUM,
+                line_height: Some(line_height),
+                ..Default::default()
+            },
+            TextIntent::Control,
+        )),
         color: Some(fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,

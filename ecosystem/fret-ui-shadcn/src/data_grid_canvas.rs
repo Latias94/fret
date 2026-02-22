@@ -9,9 +9,7 @@ use std::sync::Arc;
 use fret_core::geometry::{Corners, Edges, Point, Rect, Size};
 use fret_core::scene::SceneOp;
 use fret_core::time::Instant;
-use fret_core::{
-    Color, DrawOrder, FontId, Px, TextLineHeightPolicy, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, DrawOrder, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::{
@@ -25,7 +23,7 @@ use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
 };
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography::{UiTextSize, control_text_style};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 fn border_color(theme: &Theme) -> Color {
@@ -40,26 +38,8 @@ fn foreground_color(theme: &Theme) -> Color {
     theme.color_token("foreground")
 }
 
-fn font_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-        .unwrap_or_else(|| theme.metric_token("font.size"))
-}
-
-fn font_line_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        .unwrap_or_else(|| theme.metric_token("font.line_height"))
-}
-
 fn text_style(theme: &Theme) -> TextStyle {
-    TextStyle {
-        font: FontId::default(),
-        size: font_size(theme),
-        line_height: Some(font_line_height(theme)),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    control_text_style(theme, UiTextSize::Sm)
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

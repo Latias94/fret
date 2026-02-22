@@ -15,6 +15,7 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
@@ -332,13 +333,12 @@ impl CalendarRange {
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let grid_text_style = TextStyle {
-            font: Default::default(),
-            size: text_sm_px,
-            weight: FontWeight::MEDIUM,
-            line_height: Some(text_sm_line_height),
-            ..Default::default()
-        };
+        let mut grid_text_style = typography::fixed_line_box_style(
+            fret_core::FontId::ui(),
+            text_sm_px,
+            text_sm_line_height,
+        );
+        grid_text_style.weight = FontWeight::MEDIUM;
 
         let day_size = self.cell_size.unwrap_or_else(|| {
             theme
@@ -534,15 +534,15 @@ impl CalendarRange {
                                     );
 
                                     let mut title_props = TextProps::new(title.clone());
-                                    title_props.style = Some(TextStyle {
-                                        font: Default::default(),
-                                        size: theme_header.metric_token("font.size"),
-                                        weight: FontWeight::MEDIUM,
-                                        line_height: Some(
-                                            theme_header.metric_token("font.line_height"),
-                                        ),
-                                        ..Default::default()
-                                    });
+                                    let size = theme_header.metric_token("font.size");
+                                    let line_height = theme_header.metric_token("font.line_height");
+                                    let mut style = typography::fixed_line_box_style(
+                                        fret_core::FontId::ui(),
+                                        size,
+                                        line_height,
+                                    );
+                                    style.weight = FontWeight::MEDIUM;
+                                    title_props.style = Some(style);
                                     title_props.wrap = TextWrap::None;
                                     title_props.overflow = TextOverflow::Clip;
                                     let title = cx.text_props(title_props);

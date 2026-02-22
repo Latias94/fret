@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
@@ -696,6 +697,8 @@ impl PlainTooltip {
                 .text_style_by_key("md.comp.plain-tooltip.supporting-text")
                 .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
                 .unwrap_or_default();
+            let supporting_text_style =
+                typography::with_intent(supporting_text_style, TextIntent::Content);
             let content_max_width = tooltip_tokens::max_width(theme);
             let container_padding = tooltip_tokens::plain_container_padding(theme);
             let close_grace_frames_default = ms_to_frames(tooltip_tokens::close_duration_ms(theme));
@@ -1291,10 +1294,12 @@ impl RichTooltip {
                 .text_style_by_key("md.comp.rich-tooltip.subhead")
                 .or_else(|| theme.text_style_by_key("md.sys.typescale.title-small"))
                 .unwrap_or_default();
+            let subhead_style = typography::with_intent(subhead_style, TextIntent::Content);
             let supporting_style = theme
                 .text_style_by_key("md.comp.rich-tooltip.supporting-text")
                 .or_else(|| theme.text_style_by_key("md.sys.typescale.body-medium"))
                 .unwrap_or_default();
+            let supporting_style = typography::with_intent(supporting_style, TextIntent::Content);
 
             let content_max_width = tooltip_tokens::max_width(theme);
             let container_padding = tooltip_tokens::rich_container_padding(theme);

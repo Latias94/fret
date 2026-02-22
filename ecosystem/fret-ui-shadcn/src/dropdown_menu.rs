@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
@@ -551,8 +552,8 @@ impl DropdownMenuShortcut {
         ui::text(cx, self.text)
             .layout(LayoutRefinement::default().ml_auto())
             .text_size_px(font_size)
-            .line_height_px(font_line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(font_line_height)
+            .line_box_in_bounds()
             .font_normal()
             .letter_spacing_em(0.10)
             .nowrap()
@@ -984,9 +985,7 @@ fn checkable_menu_row_children<H: UiHost>(
                 }));
 
             if let Some(line_height) = style.line_height {
-                text = text
-                    .line_height_px(line_height)
-                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
             }
 
             if let Some(letter_spacing_em) = style.letter_spacing_em {
@@ -1752,13 +1751,12 @@ impl DropdownMenu {
                                                             alpha_mul(destructive_fg, destructive_bg_alpha)
                                                         });
 
-                                                    let text_style = TextStyle {
-                                                        font: fret_core::FontId::default(),
-                                                        size: font_size,
-                                                        weight: fret_core::FontWeight::NORMAL,
-                                                        line_height: Some(font_line_height),
-                                                        ..Default::default()
-                                                    };
+                                                    let mut text_style = typography::fixed_line_box_style(
+                                                        fret_core::FontId::ui(),
+                                                        font_size,
+                                                        font_line_height,
+                                                    );
+                                                    text_style.weight = fret_core::FontWeight::NORMAL;
 
                                                     let mut item_ix: usize = 0;
 
@@ -2665,13 +2663,12 @@ impl DropdownMenu {
                                                 });
                                             let label_fg = theme.color_token("muted-foreground");
 
-                                            let text_style = TextStyle {
-                                                font: FontId::default(),
-                                                size: font_size,
-                                                weight: FontWeight::NORMAL,
-                                                line_height: Some(font_line_height),
-                                                ..Default::default()
-                                            };
+                                            let mut text_style = typography::fixed_line_box_style(
+                                                FontId::ui(),
+                                                font_size,
+                                                font_line_height,
+                                            );
+                                            text_style.weight = FontWeight::NORMAL;
 
                                             let mut submenu_labels: Vec<Arc<str>> =
                                                 Vec::with_capacity(item_count);

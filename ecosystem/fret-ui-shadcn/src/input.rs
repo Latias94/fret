@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Corners, FontId, KeyCode, NodeId, Px, SemanticsRole, TextLineHeightPolicy, TextStyle,
-};
+use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
@@ -10,6 +8,7 @@ use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -383,16 +382,7 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border.left = border;
     }
 
-    let font_line_height = theme
-        .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    let text_style = TextStyle {
-        font: FontId::default(),
-        size: resolved.text_px,
-        line_height: Some(font_line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    };
+    let text_style = typography::control_text_style_scaled(theme, FontId::ui(), resolved.text_px);
 
     let mut props = TextInputProps::new(model);
     props.enabled = !disabled;

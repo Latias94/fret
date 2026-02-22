@@ -29,6 +29,7 @@ use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
@@ -311,8 +312,8 @@ impl MenubarShortcut {
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
             .ml_auto()
             .text_size_px(font_size)
-            .line_height_px(font_line_height)
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .fixed_line_box_px(font_line_height)
+            .line_box_in_bounds()
             .font_normal()
             .letter_spacing_em(0.12)
             .text_color(ColorRef::Color(fg))
@@ -657,9 +658,9 @@ fn menu_row_children<H: UiHost>(
                 .text_color(ColorRef::Color(fg))
                 .nowrap();
             if let Some(line_height) = text_style.line_height {
-                label_text = label_text.line_height_px(line_height);
-                label_text =
-                    label_text.line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
+                label_text = label_text
+                    .fixed_line_box_px(line_height)
+                    .line_box_in_bounds();
             }
             if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                 label_text = label_text.letter_spacing_em(letter_spacing_em);
@@ -1223,13 +1224,9 @@ impl MenubarMenuEntries {
 
             let font_size = theme.metric_token("font.size");
             let font_line_height = theme.metric_token("font.line_height");
-            let text_style = TextStyle {
-                font: FontId::default(),
-                size: font_size,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(font_line_height),
-                ..Default::default()
-            };
+            let mut text_style =
+                typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+            text_style.weight = FontWeight::MEDIUM;
 
             let label = self.menu.label.clone();
             let test_id = self.menu.test_id.clone();

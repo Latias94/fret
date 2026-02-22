@@ -20,6 +20,7 @@ use fret_ui_kit::declarative::motion_value::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
@@ -117,13 +118,9 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.tabs.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 fn tabs_trigger_radius(theme: &Theme) -> Px {

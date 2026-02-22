@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
@@ -524,7 +525,9 @@ impl SegmentedButtonSegment {
                             let label_style = theme
                                 .text_style_by_key("md.comp.outlined-segmented-button.label-text")
                                 .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-                                .unwrap_or_else(fret_core::TextStyle::default);
+                                .unwrap_or_default();
+                            let label_style =
+                                typography::with_intent(label_style, TextIntent::Control);
 
                             (
                                 container_height,

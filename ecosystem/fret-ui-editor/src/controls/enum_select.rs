@@ -19,6 +19,7 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::popper;
+use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
@@ -267,12 +268,11 @@ impl EnumSelect {
                                 ..Default::default()
                             },
                             text: trigger_text.clone(),
-                            style: Some(TextStyle {
+                            style: Some(typography::as_control_text(TextStyle {
                                 size: Px(12.0),
                                 line_height: Some(density.row_height),
-                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 ..Default::default()
-                            }),
+                            })),
                             color: Some(visuals.fg),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
@@ -724,12 +724,11 @@ fn enum_select_row<H: UiHost>(
                             ..Default::default()
                         },
                         text: item.label.clone(),
-                        style: Some(TextStyle {
+                        style: Some(typography::as_control_text(TextStyle {
                             size: Px(12.0),
                             line_height: Some(density.row_height),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
-                        }),
+                        })),
                         color: Some(text_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,

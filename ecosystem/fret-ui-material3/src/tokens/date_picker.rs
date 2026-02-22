@@ -4,6 +4,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
@@ -57,10 +58,11 @@ pub(crate) fn weekdays_label_text_style(
     theme: &Theme,
     variant: DatePickerTokenVariant,
 ) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key(variant, "weekdays.label-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn weekdays_label_text_color(theme: &Theme, variant: DatePickerTokenVariant) -> Color {
@@ -71,10 +73,11 @@ pub(crate) fn weekdays_label_text_color(theme: &Theme, variant: DatePickerTokenV
 }
 
 pub(crate) fn header_headline_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key("md.comp.date-picker.modal.header.headline")
         .or_else(|| theme.text_style_by_key("md.sys.typescale.headline-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn header_headline_color(theme: &Theme) -> Color {
@@ -117,10 +120,11 @@ pub(crate) fn date_today_outline_color(theme: &Theme, variant: DatePickerTokenVa
 }
 
 pub(crate) fn date_label_text_style(theme: &Theme, variant: DatePickerTokenVariant) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key(&token_key(variant, "date.label-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn date_unselected_label_text_color(

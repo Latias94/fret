@@ -26,6 +26,7 @@ use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
@@ -416,7 +417,8 @@ fn navigation_bar_item<H: UiHost>(
 
         let label_style_base = theme
             .text_style_by_key("md.sys.typescale.label-medium")
-            .unwrap_or_else(TextStyle::default);
+            .unwrap_or_default();
+        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
         let label_weight_active = nav_tokens::label_weight(theme, true);
         let label_weight_inactive = nav_tokens::label_weight(theme, false);
 
@@ -648,7 +650,8 @@ fn navigation_bar_active_indicator<H: UiHost>(
             let corner_radii = nav_tokens::active_indicator_shape(theme);
             let label_style = theme
                 .text_style_by_key("md.sys.typescale.label-medium")
-                .unwrap_or_else(TextStyle::default);
+                .unwrap_or_default();
+            let label_style = typography::with_intent(label_style, TextIntent::Control);
             let label_h = label_style
                 .line_height
                 .unwrap_or(Px(label_style.size.0 * 1.2))

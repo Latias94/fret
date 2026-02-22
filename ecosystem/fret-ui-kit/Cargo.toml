@@ -55,6 +55,8 @@ recipes = ["icons", "dep:fret-canvas"]
 
 [dev-dependencies]
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-fonts = { version = "0.1.0", path = "../../crates/fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-render-text = { version = "0.1.0", path = "../../crates/fret-render-text" }
 serde.workspace = true
 serde_json.workspace = true
 slotmap.workspace = true

@@ -11,6 +11,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, SizeStyle, SpacerProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 
 use crate::primitives::icons::editor_icon;
 use crate::primitives::visuals::hover_overlay_bg;
@@ -246,13 +247,12 @@ impl PropertyGroup {
                                 },
                                 move |cx| {
                                     let mut out = Vec::new();
-                                    let header_text_style = TextStyle {
-                                        size: Px(12.0),
-                                        line_height: Some(header_height),
-                                        line_height_policy:
-                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                        ..Default::default()
-                                    };
+                                    let header_text_style =
+                                        typography::as_control_text(TextStyle {
+                                            size: Px(12.0),
+                                            line_height: Some(header_height),
+                                            ..Default::default()
+                                        });
                                     if let Some(icon) = disclosure_icon.clone() {
                                         out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
                                     }

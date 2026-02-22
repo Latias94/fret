@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::{
 };
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::SeparatorOrientation;
@@ -234,13 +235,9 @@ fn menu_button_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.sidebar.menu_button_line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    TextStyle {
-        font: FontId::default(),
-        size,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), size, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 fn menu_sub_button_style(theme: &Theme, size: SidebarMenuSubButtonSize) -> TextStyle {
@@ -262,13 +259,9 @@ fn menu_sub_button_style(theme: &Theme, size: SidebarMenuSubButtonSize) -> TextS
     let text_px = theme.metric_by_key(size_key).unwrap_or(size_fallback);
     let line_height = theme.metric_by_key(line_key).unwrap_or(line_fallback);
 
-    TextStyle {
-        font: FontId::default(),
-        size: text_px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -11,6 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
     TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
 };
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 
 use fret_ui_headless::table::{
@@ -37,13 +38,9 @@ fn table_text_style(theme: &Theme) -> TextStyle {
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::NORMAL;
+    style
 }
 
 fn mixed_revision(a: u64, b: u64) -> u64 {

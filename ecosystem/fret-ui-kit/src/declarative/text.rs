@@ -1,103 +1,26 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, Px, TextAlign, TextLineHeightPolicy, TextOverflow, TextStyle, TextWrap};
+use fret_core::{FontId, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, TextInkOverflow, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::theme_tokens;
-
-fn font_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("font.size")
-        .unwrap_or_else(|| theme.metric_token("font.size"))
-}
-
-fn font_line_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_token("font.line_height"))
-}
+use crate::typography as ui_typography;
+use crate::typography::UiTextSize;
 
 pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
-        .unwrap_or(Px(12.0));
-    let line_height = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
-        .unwrap_or(Px(16.0));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    ui_typography::control_text_style(theme, UiTextSize::Xs)
 }
 
 pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
-        .unwrap_or_else(|| font_size(theme));
-    let line_height = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
-        .unwrap_or_else(|| font_line_height(theme));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    ui_typography::control_text_style(theme, UiTextSize::Sm)
 }
 
 pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)
-        .unwrap_or_else(|| Px(font_size(theme).0 + 1.0));
-    let line_height = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_LINE_HEIGHT)
-        .unwrap_or_else(|| {
-            let base_size_px = font_size(theme).0;
-            let base_line_height_px = font_line_height(theme).0;
-            let ratio = if base_size_px.is_finite()
-                && base_line_height_px.is_finite()
-                && base_size_px > 0.0
-                && base_line_height_px > 0.0
-            {
-                base_line_height_px / base_size_px
-            } else {
-                1.25
-            };
-
-            Px((size.0 * ratio).max(size.0))
-        });
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    ui_typography::control_text_style(theme, UiTextSize::Base)
 }
 
 pub(crate) fn text_prose_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_PROSE_PX)
-        .unwrap_or_else(|| Px(font_size(theme).0 + 2.0));
-    let line_height = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT)
-        .unwrap_or_else(|| Px(font_line_height(theme).0 + 4.0));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    ui_typography::control_text_style(theme, UiTextSize::Prose)
 }
 
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
@@ -299,17 +222,9 @@ pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    (
-        TextStyle {
-            font: FontId::default(),
-            size: px,
-            weight: fret_core::FontWeight::MEDIUM,
-            line_height: Some(line_height),
-            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-            ..Default::default()
-        },
-        line_height,
-    )
+    let mut style = ui_typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = fret_core::FontWeight::MEDIUM;
+    (style, line_height)
 }
 
 /// Declarative helper intended for code-like inline text.
@@ -323,13 +238,11 @@ pub fn text_code_wrap<H: UiHost>(
 ) -> AnyElement {
     let style = {
         let theme = Theme::global(&*cx.app);
-        TextStyle {
-            font: FontId::monospace(),
-            size: theme.metric_token("metric.font.mono_size"),
-            line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-            ..Default::default()
-        }
+        ui_typography::fixed_line_box_style(
+            FontId::monospace(),
+            theme.metric_token("metric.font.mono_size"),
+            theme.metric_token("metric.font.mono_line_height"),
+        )
     };
 
     cx.text_props(TextProps {
