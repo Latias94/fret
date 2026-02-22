@@ -31,6 +31,12 @@ pub(super) struct GpuPipelines {
     pub(super) path_msaa_pipeline_sample_count: Option<u32>,
 
     pub(super) path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) composite_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) composite_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
+    pub(super) composite_mask_pipelines:
+        [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
+    pub(super) composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -56,6 +62,10 @@ impl Default for GpuPipelines {
             path_msaa_pipeline: None,
             path_msaa_pipeline_sample_count: None,
             path_clip_mask_pipeline: None,
+            composite_pipeline_format: None,
+            composite_pipelines: [const { None }; fret_core::BlendMode::COUNT],
+            composite_mask_pipelines: [const { None }; fret_core::BlendMode::COUNT],
+            composite_mask_bind_group_layout: None,
         }
     }
 }

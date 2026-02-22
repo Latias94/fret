@@ -249,6 +249,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (mask/path pipeline cache fields)
     - `crates/fret-render-wgpu/src/renderer/pipelines/{mask,path,path_clip_mask}.rs` (ensure + `*_pipeline_ref`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scene_draw,path_clip_mask,path_msaa}.rs` (uses `*_pipeline_ref`)
+  - Landed (step 7): move composite pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (composite pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/composite.rs` (`ensure_composite_pipeline`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{effects,path_msaa}.rs` (call sites)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

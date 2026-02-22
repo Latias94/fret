@@ -789,8 +789,6 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let renderer = &mut *exec.renderer;
 
-    let pipeline_ix = pass.blend_mode.pipeline_index();
-
     let Some(src_view) =
         require_color_src_view(frame_targets, pass.src, pass.src_size, "CompositePremul")
     else {
@@ -824,10 +822,7 @@ pub(in super::super) fn record_composite_premul_pass(
         else {
             return;
         };
-        let layout = renderer
-            .composite_mask_bind_group_layout
-            .as_ref()
-            .expect("composite mask bind group layout must exist");
+        let layout = renderer.composite_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret composite premul mask bind group"),
             layout,
@@ -848,9 +843,7 @@ pub(in super::super) fn record_composite_premul_pass(
         });
 
         (
-            renderer.composite_mask_pipelines[pipeline_ix]
-                .as_ref()
-                .expect("composite mask pipeline must exist"),
+            renderer.composite_mask_pipeline_ref(pass.blend_mode),
             bind_group,
         )
     } else {
@@ -868,12 +861,7 @@ pub(in super::super) fn record_composite_premul_pass(
                 },
             ],
         });
-        (
-            renderer.composite_pipelines[pipeline_ix]
-                .as_ref()
-                .expect("composite pipeline must exist"),
-            bind_group,
-        )
+        (renderer.composite_pipeline_ref(pass.blend_mode), bind_group)
     };
     let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
