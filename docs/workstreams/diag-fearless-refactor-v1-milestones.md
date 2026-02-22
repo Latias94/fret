@@ -72,7 +72,7 @@ Definition of done:
   - [x] Runtime writes canonical sidecars on native dumps.
   - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
   - [x] Runtime `bundle.index.json` may include additive script step markers (`script.steps`) when `script.result.json` is present.
-  - [ ] Ensure `diag pack --include-all` always includes sidecars under `_root/` (even when the bundle dir is relocated).
+  - [x] `diag pack --include-all` includes sidecars under `_root/` (even when the bundle dir is relocated).
 
 Definition of done:
 
