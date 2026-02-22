@@ -56,6 +56,8 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
 - Ecosystem authoring:
   - `ecosystem/fret-ui-kit/src/ui.rs` (`TextPreset`, `TextBox`)
   - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`line_height_px`, `line_box_in_bounds`)
+- Regression gate:
+  - `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
 
 ## Tracking
 

@@ -25,11 +25,12 @@ This is a checklist-style tracker. It is **non-normative**.
 
 ## Regression gates
 
-- [ ] Add a “first-line jump” targeted gate for control text with **real shaping** (Parley + bundled
+- [x] Add a “first-line jump” targeted gate for control text with **real shaping** (Parley + bundled
       fonts), not a fake `TextService`, covering:
   - emoji + mixed scripts
   - same widget height across frames
   - stable metrics snapshot (line height / baseline)
+  - Evidence: `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
 - [ ] Add at least one UI Gallery screenshot gate that includes the above control.
 
 ## Cleanup
