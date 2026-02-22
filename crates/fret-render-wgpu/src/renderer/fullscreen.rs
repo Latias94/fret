@@ -3,10 +3,11 @@ pub(super) fn run_fullscreen_triangle_pass(
     label: &str,
     pipeline: &wgpu::RenderPipeline,
     dst_view: &wgpu::TextureView,
+    dst_size: (u32, u32),
     load: wgpu::LoadOp<wgpu::Color>,
     bind_group0: &wgpu::BindGroup,
     bind_group0_offsets: &[u32],
-    dst_scissor: Option<super::ScissorRect>,
+    dst_scissor: Option<super::LocalScissorRect>,
     perf: Option<&mut super::RenderPerfStats>,
 ) {
     let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -28,11 +29,22 @@ pub(super) fn run_fullscreen_triangle_pass(
     rp.set_pipeline(pipeline);
     rp.set_bind_group(0, bind_group0, bind_group0_offsets);
     let has_scissor = dst_scissor.is_some();
-    if let Some(scissor) = dst_scissor
+    if dst_size.0 != 0
+        && dst_size.1 != 0
+        && let Some(scissor) = dst_scissor.map(|s| s.0)
         && scissor.w != 0
         && scissor.h != 0
     {
-        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+        let x0 = scissor.x.min(dst_size.0);
+        let y0 = scissor.y.min(dst_size.1);
+        let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
+        let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
+
+        let w = x1.saturating_sub(x0);
+        let h = y1.saturating_sub(y0);
+        if w != 0 && h != 0 {
+            rp.set_scissor_rect(x0, y0, w, h);
+        }
     }
     rp.draw(0..3, 0..1);
 

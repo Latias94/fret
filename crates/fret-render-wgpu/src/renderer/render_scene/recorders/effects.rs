@@ -180,10 +180,11 @@ pub(in super::super) fn record_color_adjust_pass(
             "fret color-adjust pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -363,10 +364,11 @@ pub(in super::super) fn record_alpha_threshold_pass(
             "fret alpha-threshold pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -555,10 +557,11 @@ pub(in super::super) fn record_color_matrix_pass(
             "fret color-matrix pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -748,10 +751,11 @@ pub(in super::super) fn record_drop_shadow_pass(
             "fret drop-shadow pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }

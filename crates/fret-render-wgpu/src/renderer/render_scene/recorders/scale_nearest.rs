@@ -214,10 +214,11 @@ pub(in super::super) fn record_scale_nearest_pass(
             label,
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[scale_param_offset_u32],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             if perf_enabled { Some(frame_perf) } else { None },
         );
     }

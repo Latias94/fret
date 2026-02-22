@@ -322,10 +322,11 @@ pub(in super::super) fn record_backdrop_warp_pass(
             "fret backdrop-warp pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }

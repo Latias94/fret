@@ -185,10 +185,11 @@ pub(in super::super) fn record_blur_pass(
             label,
             blur_pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor.map(|s| s.0),
+            pass.dst_scissor,
             if perf_enabled { Some(frame_perf) } else { None },
         );
     }

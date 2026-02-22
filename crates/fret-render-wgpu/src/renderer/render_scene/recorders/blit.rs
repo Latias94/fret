@@ -51,10 +51,11 @@ pub(in super::super) fn record_fullscreen_blit_pass(
         "fret blit pass",
         blit_pipeline,
         dst_view,
+        pass.dst_size,
         pass.load,
         &blit_bind_group,
         &[],
-        pass.dst_scissor.map(|s| s.0),
+        pass.dst_scissor,
         perf_enabled.then_some(frame_perf),
     );
 }
