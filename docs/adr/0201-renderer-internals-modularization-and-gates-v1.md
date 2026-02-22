@@ -1,6 +1,6 @@
 # ADR 0201: Renderer Internals Modularization and Refactor Gates v1
 
-Status: Draft
+Status: Accepted
 
 ## Context
 
@@ -37,8 +37,9 @@ clear ownership:
 - **Encode**: `Scene` → `SceneEncoding` (ordered draws + sequence markers)
 - **Compile**: `SceneEncoding` → `RenderPlan` (budgeting + deterministic degradations)
 - **Execute**: `RenderPlan` → `wgpu::CommandBuffer` (pass recording + resource lifetimes)
-- **GPU globals**: stable GPU handles used across many subsystems (e.g. material catalog view/sampler)
-- **GPU buffers**: capacity growth, per-frame rotation, and upload helpers for buffers/uniforms
+- **GPU globals**: stable GPU handles used across many subsystems (layouts/samplers/views)
+- **GPU textures**: renderer-owned textures + upload-once state (e.g. identity mask image, material catalog)
+- **GPU buffers**: capacity growth, per-frame rotation, and upload helpers for buffers/uniforms (including revisioning)
 - **Caches**: SVG raster cache, clip-path mask cache, intermediate pool (budget enforcement)
 - **Registries**: image + render target registries and their bind group caches
 - **Observability**: perf snapshot and diagnostics capture surfaces
@@ -59,15 +60,13 @@ Any refactor step that changes internal structure must keep the following invari
 3. **Portability remains first-class** (WebGPU validation continues to pass).
 4. **No new cross-layer leakage** (no `wgpu` in contract crates; preserve crate boundaries).
 
-Minimal always-run gates for this ADR:
+Minimal always-run gates for this ADR (anchor set v1):
 
 - Layering: `python3 tools/check_layering.py`
+- Unit tests: `cargo test -p fret-render-wgpu --lib`
 - WebGPU shader validation: `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
-- Renderer conformance anchors (representative):
-  - `cargo test -p fret-render-wgpu --test affine_clip_conformance`
-  - `cargo test -p fret-render-wgpu --test viewport_surface_metadata_conformance`
-  - `cargo test -p fret-render-wgpu --test mask_image_conformance`
-  - `cargo test -p fret-render-wgpu --test composite_group_conformance`
+- Renderer conformance anchors:
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
 The exact “anchor set” may evolve, but must remain small and stable enough that contributors
 can run it before/after a change.

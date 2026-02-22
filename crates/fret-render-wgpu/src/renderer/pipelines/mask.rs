@@ -7,13 +7,15 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.mask_pipeline_format == Some(format) && self.mask_pipeline.is_some() {
+        if self.pipelines.mask_pipeline_format == Some(format)
+            && self.pipelines.mask_pipeline.is_some()
+        {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.mask_pipeline.is_none() {
+                let reason = if self.pipelines.mask_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -31,8 +33,8 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret mask pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
-                &self.viewport_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
+                &self.globals.viewport_bind_group_layout,
             ],
             immediate_size: 0,
         });
@@ -92,7 +94,14 @@ impl Renderer {
             cache: None,
         });
 
-        self.mask_pipeline_format = Some(format);
-        self.mask_pipeline = Some(pipeline);
+        self.pipelines.mask_pipeline_format = Some(format);
+        self.pipelines.mask_pipeline = Some(pipeline);
+    }
+
+    pub(in crate::renderer) fn mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .mask_pipeline
+            .as_ref()
+            .expect("mask pipeline must exist")
     }
 }

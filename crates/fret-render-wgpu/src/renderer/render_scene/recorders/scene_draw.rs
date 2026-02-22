@@ -126,38 +126,14 @@ impl Renderer {
                 let _ = self.quad_pipeline(device, format, draw.pipeline);
             }
 
-            let viewport_pipeline = self
-                .viewport_pipeline
-                .as_ref()
-                .expect("viewport pipeline must exist");
-            let text_pipeline = self
-                .text_pipeline
-                .as_ref()
-                .expect("text pipeline must exist");
-            let text_outline_pipeline = self
-                .text_outline_pipeline
-                .as_ref()
-                .expect("text outline pipeline must exist");
-            let text_color_pipeline = self
-                .text_color_pipeline
-                .as_ref()
-                .expect("text color pipeline must exist");
-            let text_subpixel_pipeline = self
-                .text_subpixel_pipeline
-                .as_ref()
-                .expect("text subpixel pipeline must exist");
-            let text_subpixel_outline_pipeline = self
-                .text_subpixel_outline_pipeline
-                .as_ref()
-                .expect("text subpixel outline pipeline must exist");
-            let mask_pipeline = self
-                .mask_pipeline
-                .as_ref()
-                .expect("mask pipeline must exist");
-            let path_pipeline = self
-                .path_pipeline
-                .as_ref()
-                .expect("path pipeline must exist");
+            let viewport_pipeline = self.viewport_pipeline_ref();
+            let text_pipeline = self.text_pipeline_ref();
+            let text_outline_pipeline = self.text_outline_pipeline_ref();
+            let text_color_pipeline = self.text_color_pipeline_ref();
+            let text_subpixel_pipeline = self.text_subpixel_pipeline_ref();
+            let text_subpixel_outline_pipeline = self.text_subpixel_outline_pipeline_ref();
+            let mask_pipeline = self.mask_pipeline_ref();
+            let path_pipeline = self.path_pipeline_ref();
 
             let mut active_pipeline = ActivePipeline::None;
             let mut active_text_page: Option<u16> = None;
@@ -241,10 +217,7 @@ impl Renderer {
                             continue;
                         }
 
-                        let quad_pipeline = self
-                            .quad_pipelines
-                            .get(&draw.pipeline)
-                            .expect("quad pipeline must exist");
+                        let quad_pipeline = self.quad_pipeline_ref(&draw.pipeline);
                         if !matches!(active_pipeline, ActivePipeline::Quad)
                             || active_quad_pipeline != Some(draw.pipeline)
                         {

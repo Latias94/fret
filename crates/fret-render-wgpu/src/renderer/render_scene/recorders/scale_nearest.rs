@@ -95,10 +95,7 @@ pub(in super::super) fn record_scale_nearest_pass(
         else {
             return;
         };
-        let mask_layout = renderer
-            .scale_mask_bind_group_layout
-            .as_ref()
-            .expect("scale mask bind group layout must exist");
+        let mask_layout = renderer.scale_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret scale-nearest mask bind group"),
             layout: mask_layout,
@@ -118,10 +115,7 @@ pub(in super::super) fn record_scale_nearest_pass(
             ],
         });
 
-        let pipeline = renderer
-            .upscale_mask_pipeline
-            .as_ref()
-            .expect("upscale mask pipeline must exist");
+        let pipeline = renderer.upscale_mask_pipeline_ref();
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
             "fret upscale-nearest mask pass",
@@ -144,17 +138,11 @@ pub(in super::super) fn record_scale_nearest_pass(
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
-        let pipeline = renderer
-            .upscale_masked_pipeline
-            .as_ref()
-            .expect("upscale masked pipeline must exist");
+        let pipeline = renderer.upscale_masked_pipeline_ref();
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
-        let layout = renderer
-            .scale_bind_group_layout
-            .as_ref()
-            .expect("scale bind group layout must exist");
+        let layout = renderer.scale_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret scale-nearest bind group",
@@ -184,10 +172,7 @@ pub(in super::super) fn record_scale_nearest_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .scale_bind_group_layout
-            .as_ref()
-            .expect("scale bind group layout must exist");
+        let layout = renderer.scale_bind_group_layout_ref();
         let bind_group = create_texture_uniform_bind_group(
             device,
             "fret scale-nearest bind group",
@@ -195,21 +180,10 @@ pub(in super::super) fn record_scale_nearest_pass(
             &src_view,
             scale_param_binding,
         );
-        let (pipeline, label) = match pass.mode {
-            ScaleMode::Downsample => (
-                renderer
-                    .downsample_pipeline
-                    .as_ref()
-                    .expect("downsample pipeline must exist"),
-                "fret downsample-nearest pass",
-            ),
-            ScaleMode::Upscale => (
-                renderer
-                    .upscale_pipeline
-                    .as_ref()
-                    .expect("upscale pipeline must exist"),
-                "fret upscale-nearest pass",
-            ),
+        let pipeline = renderer.scale_nearest_pipeline_ref(pass.mode);
+        let label = match pass.mode {
+            ScaleMode::Downsample => "fret downsample-nearest pass",
+            ScaleMode::Upscale => "fret upscale-nearest pass",
         };
         run_fullscreen_triangle_pass(
             encoder,

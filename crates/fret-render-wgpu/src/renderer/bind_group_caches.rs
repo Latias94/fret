@@ -21,6 +21,12 @@ impl SamplingBindGroups {
     }
 }
 
+/// Renderer-internal bind group caches.
+///
+/// Cache key contract:
+/// - Viewport sampler+texture bind groups are keyed by render target revision.
+/// - Image sampler+texture bind groups are keyed by image revision.
+/// - Uniform mask-image override bind groups are keyed by `(image_revision, uniforms_revision)`.
 #[derive(Default)]
 pub(super) struct BindGroupCaches {
     viewport: RevisionedCache<fret_core::RenderTargetId, wgpu::BindGroup>,
@@ -117,6 +123,13 @@ impl BindGroupCaches {
     }
 
     pub(super) fn invalidate_uniform_mask_image_override_bind_groups(&mut self) {
+        self.uniform_mask_images.clear();
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn invalidate_all(&mut self) {
+        self.viewport.clear();
+        self.images.clear();
         self.uniform_mask_images.clear();
     }
 

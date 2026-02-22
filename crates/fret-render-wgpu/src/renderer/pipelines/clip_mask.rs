@@ -3,7 +3,7 @@ use super::super::*;
 
 impl Renderer {
     pub(in crate::renderer) fn ensure_clip_mask_pipeline(&mut self, device: &wgpu::Device) {
-        if self.clip_mask_pipeline.is_some() {
+        if self.pipelines.clip_mask_pipeline.is_some() {
             return;
         }
 
@@ -21,7 +21,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret clip-mask pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 &self.clip_mask_param_bind_group_layout,
             ],
             immediate_size: 0,
@@ -61,6 +61,13 @@ impl Renderer {
             cache: None,
         });
 
-        self.clip_mask_pipeline = Some(pipeline);
+        self.pipelines.clip_mask_pipeline = Some(pipeline);
+    }
+
+    pub(in crate::renderer) fn clip_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .clip_mask_pipeline
+            .as_ref()
+            .expect("clip mask pipeline must exist")
     }
 }

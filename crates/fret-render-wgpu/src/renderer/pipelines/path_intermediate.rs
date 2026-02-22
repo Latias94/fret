@@ -84,11 +84,11 @@ impl Renderer {
         let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret path intermediate bind group"),
-            layout: &self.viewport_bind_group_layout,
+            layout: &self.globals.viewport_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                    resource: wgpu::BindingResource::Sampler(&self.globals.viewport_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,

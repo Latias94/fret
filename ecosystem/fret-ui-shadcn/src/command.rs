@@ -1088,7 +1088,7 @@ impl CommandEmpty {
                         align: CrossAlign::Center,
                     },
                     move |cx| {
-                        let mut text = ui::text(cx, self.text)
+                        let mut text = ui::text(cx, self.text.clone())
                             .text_size_px(text_style.size)
                             .font_weight(text_style.weight)
                             .nowrap()
@@ -1112,16 +1112,142 @@ impl CommandEmpty {
     }
 }
 
+/// cmdk `Command.Loading` (list row).
+#[derive(Clone)]
+pub struct CommandLoading {
+    text: Arc<str>,
+    test_id: Option<Arc<str>>,
+    progress: Option<u8>,
+}
+
+impl std::fmt::Debug for CommandLoading {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandLoading")
+            .field("text", &self.text.as_ref())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .field("progress", &self.progress)
+            .finish()
+    }
+}
+
+impl CommandLoading {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            test_id: None,
+            progress: None,
+        }
+    }
+
+    /// Installs a stable `test_id` on the loading row (for automation).
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    /// Optional progress percent (0..=100). When absent, the loading row is indeterminate.
+    pub fn progress(mut self, progress: u8) -> Self {
+        self.progress = Some(progress.min(100));
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let text_for_semantics = self.text.clone();
+        let text_for_render = self.text.clone();
+        let test_id = self.test_id.clone();
+        let progress = self.progress;
+
+        let (fg, text_style) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_token("muted-foreground");
+            let text_style = item_text_style(theme);
+            (fg, text_style)
+        };
+
+        let mut row = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                // new-york-v4: keep parity with `CommandEmpty` spacing.
+                padding: Edges {
+                    top: Px(24.0),
+                    right: Px(0.0),
+                    bottom: Px(24.0),
+                    left: Px(0.0),
+                },
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.row(
+                    RowProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                    },
+                    move |cx| {
+                        let mut text = ui::text(cx, text_for_render.clone())
+                            .text_size_px(text_style.size)
+                            .font_weight(text_style.weight)
+                            .nowrap()
+                            .text_color(ColorRef::Color(fg));
+
+                        if let Some(line_height) = text_style.line_height {
+                            text = text.line_height_px(line_height).line_height_policy(
+                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                            );
+                        }
+
+                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+
+                        vec![text.into_element(cx)]
+                    },
+                )]
+            },
+        );
+
+        let mut a11y = SemanticsDecoration::default()
+            .role(SemanticsRole::ProgressBar)
+            .label(text_for_semantics);
+        if let Some(progress) = progress {
+            a11y = a11y.value(Arc::<str>::from(format!("{progress}%")));
+        }
+        row = row.attach_semantics(a11y);
+        if let Some(test_id) = test_id {
+            row = row.test_id(test_id);
+        }
+        row
+    }
+}
+
 #[derive(Clone)]
 pub enum CommandEntry {
     Item(CommandItem),
     Group(CommandGroup),
     Separator(CommandSeparator),
+    Loading(CommandLoading),
 }
 
 impl From<CommandItem> for CommandEntry {
     fn from(value: CommandItem) -> Self {
         Self::Item(value)
+    }
+}
+
+impl From<CommandLoading> for CommandEntry {
+    fn from(value: CommandLoading) -> Self {
+        Self::Loading(value)
     }
 }
 
@@ -1581,6 +1707,7 @@ enum CommandPaletteRenderRow {
     Heading(Arc<str>),
     GroupPad,
     Separator(Option<Arc<str>>),
+    Loading(CommandLoading),
     Item(usize),
 }
 
@@ -1598,6 +1725,7 @@ fn command_palette_render_rows_for_query_with_options(
     enum PendingRow {
         Heading(Arc<str>),
         Separator(CommandSeparator),
+        Loading(CommandLoading),
         Item {
             group: Option<u32>,
             item: CommandItem,
@@ -1644,6 +1772,9 @@ fn command_palette_render_rows_for_query_with_options(
                         pending_rows.push(PendingRow::Separator(sep));
                     }
                 }
+                CommandEntry::Loading(loading) => {
+                    pending_rows.push(PendingRow::Loading(loading));
+                }
                 CommandEntry::Group(group) => {
                     if group.items.is_empty() {
                         continue;
@@ -1673,7 +1804,8 @@ fn command_palette_render_rows_for_query_with_options(
             bool,
             Vec<(usize, f32, CommandItem)>,
         )> = Vec::new();
-        let mut always_render_separators: Vec<CommandSeparator> = Vec::new();
+        let mut always_render_separators: Vec<(usize, CommandSeparator)> = Vec::new();
+        let mut loading_rows: Vec<(usize, CommandLoading)> = Vec::new();
 
         for (entry_idx, entry) in entries.into_iter().enumerate() {
             match entry {
@@ -1685,8 +1817,11 @@ fn command_palette_render_rows_for_query_with_options(
                 }
                 CommandEntry::Separator(sep) => {
                     if sep.always_render {
-                        always_render_separators.push(sep);
+                        always_render_separators.push((entry_idx, sep));
                     }
+                }
+                CommandEntry::Loading(loading) => {
+                    loading_rows.push((entry_idx, loading));
                 }
                 CommandEntry::Group(group) => {
                     if group.items.is_empty() && !(group.force_mount && group.heading.is_some()) {
@@ -1738,10 +1873,18 @@ fn command_palette_render_rows_for_query_with_options(
             b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
         });
 
+        loading_rows.sort_by_key(|(idx, _)| *idx);
+        always_render_separators.sort_by_key(|(idx, _)| *idx);
+
+        pending_rows.extend(
+            loading_rows
+                .into_iter()
+                .map(|(_, row)| PendingRow::Loading(row)),
+        );
         pending_rows.extend(
             always_render_separators
                 .into_iter()
-                .map(PendingRow::Separator),
+                .map(|(_, sep)| PendingRow::Separator(sep)),
         );
         pending_rows.extend(
             root_items
@@ -1787,6 +1930,10 @@ fn command_palette_render_rows_for_query_with_options(
                 prev_is_sep = true;
                 filtered_rows.push(PendingRow::Separator(sep));
             }
+            PendingRow::Loading(loading) => {
+                prev_is_sep = false;
+                filtered_rows.push(PendingRow::Loading(loading));
+            }
             PendingRow::Item { group, item } => {
                 seen_item_before = true;
                 prev_is_sep = false;
@@ -1816,6 +1963,9 @@ fn command_palette_render_rows_for_query_with_options(
             }
             PendingRow::Separator(sep) => {
                 vec![CommandPaletteRenderRow::Separator(sep.test_id.clone())]
+            }
+            PendingRow::Loading(loading) => {
+                vec![CommandPaletteRenderRow::Loading(loading)]
             }
             PendingRow::Item { group, item } => {
                 let idx = items.len();
@@ -2194,6 +2344,16 @@ impl CommandPalette {
                         CommandPaletteRenderRow::Separator(_) => {
                             "separator".hash(&mut hasher);
                         }
+                        CommandPaletteRenderRow::Loading(loading) => {
+                            "loading".hash(&mut hasher);
+                            loading.text.as_ref().hash(&mut hasher);
+                            loading
+                                .test_id
+                                .as_ref()
+                                .map(|s| s.as_ref())
+                                .unwrap_or("")
+                                .hash(&mut hasher);
+                        }
                         CommandPaletteRenderRow::Item(idx) => {
                             "item".hash(&mut hasher);
                             if let Some(item) = items.get(idx) {
@@ -2425,6 +2585,7 @@ impl CommandPalette {
                         }
                         sep
                     }
+                    CommandPaletteRenderRow::Loading(loading) => loading.into_element(cx),
                     CommandPaletteRenderRow::Item(idx) => {
                         let Some(item) = items.get(idx).cloned() else {
                             return cx.container(ContainerProps::default(), |_cx| Vec::new());
@@ -2996,7 +3157,7 @@ impl CommandPalette {
             }
 
             let scroll_layout = self.scroll.w_full().min_w_0();
-            let list = if row_ids.is_empty() {
+            let list = if rows.is_empty() {
                 let empty = self.empty_text;
                 CommandEmpty::new(empty).into_element(cx)
             } else {
@@ -3447,6 +3608,7 @@ impl CommandDialog {
                                 CommandEntry::Group(group)
                             }
                             CommandEntry::Separator(sep) => CommandEntry::Separator(sep),
+                            CommandEntry::Loading(loading) => CommandEntry::Loading(loading),
                         })
                         .collect()
                 } else {
@@ -4382,6 +4544,7 @@ mod tests {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
                 CommandPaletteRenderRow::GroupPad => "P".to_string(),
                 CommandPaletteRenderRow::Separator(_) => "S".to_string(),
+                CommandPaletteRenderRow::Loading(_) => "L".to_string(),
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
                         .get(*idx)
@@ -4391,6 +4554,74 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn command_palette_loading_row_is_preserved_in_render_rows() {
+        let entries = vec![
+            CommandLoading::new("Hang on…").into(),
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["L".to_string(), "I:Alpha".to_string()]
+        );
+    }
+
+    #[test]
+    fn cmdk_loading_row_renders_when_no_items() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "cmdk",
+            |cx| {
+                vec![
+                    CommandPalette::new(query.clone(), Vec::<CommandItem>::new())
+                        .entries(vec![
+                            CommandLoading::new("Fetching…")
+                                .progress(50)
+                                .test_id("cmdk-loading")
+                                .into(),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let loading = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("cmdk-loading"))
+            .expect("loading row node");
+        assert_eq!(loading.role, SemanticsRole::ProgressBar);
+        assert_eq!(loading.label.as_deref(), Some("Fetching…"));
+        assert_eq!(loading.value.as_deref(), Some("50%"));
     }
 
     #[test]

@@ -216,22 +216,6 @@ impl Renderer {
         let mask_image_identity_view =
             mask_image_identity_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let uniform_bind_group = super::bind_group_builders::UniformBindGroupGlobals {
-            layout: &uniform_bind_group_layout,
-            material_catalog_view: &material_catalog_view,
-            material_catalog_sampler: &material_catalog_sampler,
-            mask_image_sampler: &mask_image_sampler,
-            mask_image_identity_view: &mask_image_identity_view,
-        }
-        .create(
-            device,
-            "fret quad uniforms bind group",
-            &uniforms.uniform_buffer,
-            &uniforms.clip_buffer,
-            &uniforms.mask_buffer,
-            &uniforms.render_space_buffer,
-        );
-
         let viewport_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret viewport texture bind group layout"),
@@ -275,6 +259,35 @@ impl Renderer {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
+
+        let textures = GpuTextures::new(mask_image_identity_texture, material_catalog_texture);
+        let globals = GpuGlobals {
+            uniform_bind_group_layout,
+            viewport_bind_group_layout,
+            viewport_sampler,
+            image_sampler_nearest,
+            material_catalog_view,
+            material_catalog_sampler,
+            mask_image_sampler,
+            mask_image_sampler_nearest,
+            mask_image_identity_view,
+        };
+
+        let uniform_bind_group = super::bind_group_builders::UniformBindGroupGlobals {
+            layout: &globals.uniform_bind_group_layout,
+            material_catalog_view: &globals.material_catalog_view,
+            material_catalog_sampler: &globals.material_catalog_sampler,
+            mask_image_sampler: &globals.mask_image_sampler,
+            mask_image_identity_view: &globals.mask_image_identity_view,
+        }
+        .create(
+            device,
+            "fret quad uniforms bind group",
+            &uniforms.uniform_buffer,
+            &uniforms.clip_buffer,
+            &uniforms.mask_buffer,
+            &uniforms.render_space_buffer,
+        );
 
         let clip_mask_param_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -461,85 +474,21 @@ impl Renderer {
         Self {
             adapter: adapter.clone(),
             uniform_bind_group,
-            uniform_bind_group_layout,
-            mask_image_sampler,
-            mask_image_sampler_nearest,
-            _mask_image_identity_texture: mask_image_identity_texture,
-            mask_image_identity_view,
-            mask_image_identity_uploaded: false,
             uniforms,
-            material_catalog_texture,
-            material_catalog_view,
-            material_catalog_sampler,
-            material_catalog_uploaded: false,
-            quad_pipeline_format: None,
-            quad_pipelines: HashMap::new(),
-            viewport_pipeline_format: None,
-            viewport_pipeline: None,
-            viewport_bind_group_layout,
-            viewport_sampler,
-            image_sampler_nearest,
+            globals,
+            textures,
+            pipelines: GpuPipelines::default(),
             quad_instances,
             path_paints,
             text_paints,
             viewport_vertices,
-            text_pipeline_format: None,
-            text_pipeline: None,
-            text_outline_pipeline: None,
-            text_color_pipeline_format: None,
-            text_color_pipeline: None,
-            text_subpixel_pipeline_format: None,
-            text_subpixel_pipeline: None,
-            text_subpixel_outline_pipeline: None,
-            mask_pipeline_format: None,
-            mask_pipeline: None,
             text_vertices,
-            path_pipeline_format: None,
-            path_pipeline: None,
-            path_msaa_pipeline_format: None,
-            path_msaa_pipeline: None,
-            path_msaa_pipeline_sample_count: None,
-            path_clip_mask_pipeline: None,
-            composite_pipeline_format: None,
-            composite_pipelines: [const { None }; fret_core::BlendMode::COUNT],
-            composite_mask_pipelines: [const { None }; fret_core::BlendMode::COUNT],
-            composite_mask_bind_group_layout: None,
-            clip_mask_pipeline: None,
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
             clip_mask_param_bind_group_layout,
-            blit_pipeline_format: None,
-            blit_pipeline: None,
-            blit_bind_group_layout: None,
-            blit_mask_bind_group_layout: None,
-            blur_pipeline_format: None,
-            blur_h_pipeline: None,
-            blur_v_pipeline: None,
-            blur_h_masked_pipeline: None,
-            blur_v_masked_pipeline: None,
-            blur_h_mask_pipeline: None,
-            blur_v_mask_pipeline: None,
-            scale_pipeline_format: None,
-            downsample_pipeline: None,
-            upscale_pipeline: None,
-            upscale_masked_pipeline: None,
-            upscale_mask_pipeline: None,
-            scale_bind_group_layout: None,
-            scale_mask_bind_group_layout: None,
             scale_param_buffer,
             scale_param_stride,
             scale_param_capacity,
-            backdrop_warp_pipeline_format: None,
-            backdrop_warp_pipeline: None,
-            backdrop_warp_masked_pipeline: None,
-            backdrop_warp_mask_pipeline: None,
-            backdrop_warp_bind_group_layout: None,
-            backdrop_warp_mask_bind_group_layout: None,
-            backdrop_warp_image_pipeline: None,
-            backdrop_warp_image_masked_pipeline: None,
-            backdrop_warp_image_mask_pipeline: None,
-            backdrop_warp_image_bind_group_layout: None,
-            backdrop_warp_image_mask_bind_group_layout: None,
             backdrop_warp_param_buffer,
             color_adjust_pipeline_format: None,
             color_adjust_pipeline: None,
@@ -838,117 +787,10 @@ impl Renderer {
     }
 
     pub(super) fn ensure_mask_image_identity_uploaded(&mut self, queue: &wgpu::Queue) {
-        if self.mask_image_identity_uploaded {
-            return;
-        }
-
-        // Use a 1x1 `R8Unorm` texture filled with 1.0 coverage as the default mask-image source.
-        // This keeps `Mask::Image` deterministic even if an image source disappears between
-        // encoding and rendering.
-        let bytes_per_row = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-        let mut bytes = vec![0u8; bytes_per_row as usize];
-        bytes[0] = 255;
-
-        queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &self._mask_image_identity_texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            &bytes,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(bytes_per_row),
-                rows_per_image: Some(1),
-            },
-            wgpu::Extent3d {
-                width: 1,
-                height: 1,
-                depth_or_array_layers: 1,
-            },
-        );
-
-        self.mask_image_identity_uploaded = true;
+        self.textures.ensure_mask_image_identity_uploaded(queue);
     }
 
     pub(super) fn ensure_material_catalog_uploaded(&mut self, queue: &wgpu::Queue) {
-        if self.material_catalog_uploaded {
-            return;
-        }
-
-        // Layer 0: hash noise (portable and deterministic).
-        // Layer 1: Bayer 8x8 repeated (portable and deterministic).
-        let w = 64u32;
-        let h = 64u32;
-        let bytes_per_pixel = 4usize;
-        let bytes_per_row = (w as usize) * bytes_per_pixel;
-
-        fn bayer8x8(x: u32, y: u32) -> u8 {
-            const M: [[u8; 8]; 8] = [
-                [0, 48, 12, 60, 3, 51, 15, 63],
-                [32, 16, 44, 28, 35, 19, 47, 31],
-                [8, 56, 4, 52, 11, 59, 7, 55],
-                [40, 24, 36, 20, 43, 27, 39, 23],
-                [2, 50, 14, 62, 1, 49, 13, 61],
-                [34, 18, 46, 30, 33, 17, 45, 29],
-                [10, 58, 6, 54, 9, 57, 5, 53],
-                [42, 26, 38, 22, 41, 25, 37, 21],
-            ];
-            M[(y & 7) as usize][(x & 7) as usize]
-        }
-
-        fn hash_noise_u8(x: u32, y: u32) -> u8 {
-            let mut v = x ^ (y.wrapping_mul(0x9e3779b9));
-            v ^= v >> 16;
-            v = v.wrapping_mul(0x7feb352d);
-            v ^= v >> 15;
-            v = v.wrapping_mul(0x846ca68b);
-            v ^= v >> 16;
-            (v & 0xff) as u8
-        }
-
-        for layer in 0..2u32 {
-            let mut rgba = vec![0u8; (w as usize) * (h as usize) * bytes_per_pixel];
-            for yy in 0..h {
-                for xx in 0..w {
-                    let v = match layer {
-                        0 => hash_noise_u8(xx, yy),
-                        _ => bayer8x8(xx, yy).saturating_mul(4),
-                    };
-                    let i = (yy as usize) * bytes_per_row + (xx as usize) * bytes_per_pixel;
-                    rgba[i] = v;
-                    rgba[i + 1] = v;
-                    rgba[i + 2] = v;
-                    rgba[i + 3] = 255;
-                }
-            }
-
-            queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &self.material_catalog_texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: 0,
-                        y: 0,
-                        z: layer,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &rgba,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some((w as usize * bytes_per_pixel) as u32),
-                    rows_per_image: Some(h),
-                },
-                wgpu::Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-            );
-        }
-
-        self.material_catalog_uploaded = true;
+        self.textures.ensure_material_catalog_uploaded(queue);
     }
 }

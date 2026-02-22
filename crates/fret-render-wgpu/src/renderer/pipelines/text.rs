@@ -7,16 +7,16 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.text_pipeline_format == Some(format)
-            && self.text_pipeline.is_some()
-            && self.text_outline_pipeline.is_some()
+        if self.pipelines.text_pipeline_format == Some(format)
+            && self.pipelines.text_pipeline.is_some()
+            && self.pipelines.text_outline_pipeline.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.text_pipeline.is_none() {
+                let reason = if self.pipelines.text_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -42,7 +42,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],
@@ -179,9 +179,9 @@ impl Renderer {
             cache: None,
         });
 
-        self.text_pipeline_format = Some(format);
-        self.text_pipeline = Some(pipeline);
-        self.text_outline_pipeline = Some(outline_pipeline);
+        self.pipelines.text_pipeline_format = Some(format);
+        self.pipelines.text_pipeline = Some(pipeline);
+        self.pipelines.text_outline_pipeline = Some(outline_pipeline);
     }
 
     pub(in crate::renderer) fn ensure_text_color_pipeline(
@@ -189,13 +189,15 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.text_color_pipeline_format == Some(format) && self.text_color_pipeline.is_some() {
+        if self.pipelines.text_color_pipeline_format == Some(format)
+            && self.pipelines.text_color_pipeline.is_some()
+        {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.text_color_pipeline.is_none() {
+                let reason = if self.pipelines.text_color_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -217,7 +219,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret color text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],
@@ -289,8 +291,8 @@ impl Renderer {
             cache: None,
         });
 
-        self.text_color_pipeline_format = Some(format);
-        self.text_color_pipeline = Some(pipeline);
+        self.pipelines.text_color_pipeline_format = Some(format);
+        self.pipelines.text_color_pipeline = Some(pipeline);
     }
 
     pub(in crate::renderer) fn ensure_text_subpixel_pipeline(
@@ -298,16 +300,16 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.text_subpixel_pipeline_format == Some(format)
-            && self.text_subpixel_pipeline.is_some()
-            && self.text_subpixel_outline_pipeline.is_some()
+        if self.pipelines.text_subpixel_pipeline_format == Some(format)
+            && self.pipelines.text_subpixel_pipeline.is_some()
+            && self.pipelines.text_subpixel_outline_pipeline.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.text_subpixel_pipeline.is_none() {
+                let reason = if self.pipelines.text_subpixel_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -337,7 +339,7 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret subpixel text pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 self.text_system.atlas_bind_group_layout(),
                 self.text_paints.layout(),
             ],
@@ -473,8 +475,43 @@ impl Renderer {
             cache: None,
         });
 
-        self.text_subpixel_pipeline_format = Some(format);
-        self.text_subpixel_pipeline = Some(pipeline);
-        self.text_subpixel_outline_pipeline = Some(outline_pipeline);
+        self.pipelines.text_subpixel_pipeline_format = Some(format);
+        self.pipelines.text_subpixel_pipeline = Some(pipeline);
+        self.pipelines.text_subpixel_outline_pipeline = Some(outline_pipeline);
+    }
+
+    pub(in crate::renderer) fn text_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .text_pipeline
+            .as_ref()
+            .expect("text pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn text_outline_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .text_outline_pipeline
+            .as_ref()
+            .expect("text outline pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn text_color_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .text_color_pipeline
+            .as_ref()
+            .expect("text color pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn text_subpixel_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .text_subpixel_pipeline
+            .as_ref()
+            .expect("text subpixel pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn text_subpixel_outline_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .text_subpixel_outline_pipeline
+            .as_ref()
+            .expect("text subpixel outline pipeline must exist")
     }
 }

@@ -48,10 +48,12 @@ pub(in super::super) fn record_path_msaa_batch_pass(
     let Some(intermediate) = &renderer.path_intermediate else {
         return;
     };
-    let Some(path_msaa_pipeline) = renderer.path_msaa_pipeline.as_ref() else {
+    let Some(path_msaa_pipeline) = renderer.path_msaa_pipeline_ref() else {
         return;
     };
-    let Some(composite_pipeline) = renderer.composite_pipelines[0].as_ref() else {
+    let Some(composite_pipeline) = renderer.pipelines.composite_pipelines
+        [fret_core::BlendMode::Over.pipeline_index()]
+    .as_ref() else {
         return;
     };
 

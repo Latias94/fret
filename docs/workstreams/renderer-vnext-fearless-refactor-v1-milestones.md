@@ -246,7 +246,7 @@ Progress record (Bind group + uniform-resource lifecycle tightening):
 - Evidence anchors:
   - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)
   - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
-  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_mask_image_override_bind_groups`)
   - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
 - Gates run:
   - `cargo test -p fret-render-wgpu --lib`
@@ -260,6 +260,126 @@ Progress record (UniformResources subsystem extraction):
   - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
   - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::uniforms`)
   - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (uniform/clip/mask/render-space uploads via `uniforms.*`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuGlobals extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_globals.rs` (`GpuGlobals`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::globals`)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/` (pipeline layouts bind `globals.*_bind_group_layout`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuTextures extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_textures.rs` (`GpuTextures`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::textures`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`ensure_material_catalog_uploaded`, `ensure_mask_image_identity_uploaded`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuPipelines extraction, quad+viewport):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 4)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (`GpuPipelines`, viewport pipeline creation)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/quad.rs` (quad pipeline creation stored in `pipelines`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (pipeline refs used during pass recording)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Text pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 5)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (text pipeline cache fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (`ensure_text_*`, `*_pipeline_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (uses `*_pipeline_ref`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Mask/Path pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 6)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (mask/path pipeline cache fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/{mask,path,path_clip_mask}.rs` (ensure + `*_pipeline_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scene_draw,path_clip_mask,path_msaa}.rs` (uses `*_pipeline_ref`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Composite pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 7)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (composite pipeline cache fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/composite.rs` (`ensure_composite_pipeline`, `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{effects,path_msaa}.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Clip-mask pipeline cache moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 8)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (clip-mask pipeline cache field)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (`ensure_clip_mask_pipeline`, `clip_mask_pipeline_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (`record_clip_mask_pass`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Blit/Blur pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 9)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (blit/blur fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/{blit,blur}.rs` (`ensure_*`, `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{blit,blur}.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Scale-nearest pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 10)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (scale-nearest fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/scale_nearest.rs` (`ensure_scale_nearest_pipelines`, `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Backdrop-warp pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 11)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (backdrop-warp pipeline cache fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (`ensure_backdrop_warp_pipeline`, `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` (uses `*_ref`)
 - Gates run:
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

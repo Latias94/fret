@@ -7,20 +7,20 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.scale_pipeline_format == Some(format)
-            && self.downsample_pipeline.is_some()
-            && self.upscale_pipeline.is_some()
-            && self.upscale_masked_pipeline.is_some()
-            && self.upscale_mask_pipeline.is_some()
-            && self.scale_bind_group_layout.is_some()
-            && self.scale_mask_bind_group_layout.is_some()
+        if self.pipelines.scale_pipeline_format == Some(format)
+            && self.pipelines.downsample_pipeline.is_some()
+            && self.pipelines.upscale_pipeline.is_some()
+            && self.pipelines.upscale_masked_pipeline.is_some()
+            && self.pipelines.upscale_mask_pipeline.is_some()
+            && self.pipelines.scale_bind_group_layout.is_some()
+            && self.pipelines.scale_mask_bind_group_layout.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.scale_pipeline_format != Some(format) {
+                let reason = if self.pipelines.scale_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -104,12 +104,15 @@ impl Renderer {
         });
         let masked_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret scale-nearest masked pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &bind_group_layout],
+            bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &bind_group_layout],
             immediate_size: 0,
         });
         let mask_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret scale-nearest mask pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &mask_bind_group_layout],
+            bind_group_layouts: &[
+                &self.globals.uniform_bind_group_layout,
+                &mask_bind_group_layout,
+            ],
             immediate_size: 0,
         });
 
@@ -280,12 +283,58 @@ impl Renderer {
                 cache: None,
             });
 
-        self.scale_pipeline_format = Some(format);
-        self.scale_bind_group_layout = Some(bind_group_layout);
-        self.scale_mask_bind_group_layout = Some(mask_bind_group_layout);
-        self.downsample_pipeline = Some(downsample_pipeline);
-        self.upscale_pipeline = Some(upscale_pipeline);
-        self.upscale_masked_pipeline = Some(upscale_masked_pipeline);
-        self.upscale_mask_pipeline = Some(upscale_mask_pipeline);
+        self.pipelines.scale_pipeline_format = Some(format);
+        self.pipelines.scale_bind_group_layout = Some(bind_group_layout);
+        self.pipelines.scale_mask_bind_group_layout = Some(mask_bind_group_layout);
+        self.pipelines.downsample_pipeline = Some(downsample_pipeline);
+        self.pipelines.upscale_pipeline = Some(upscale_pipeline);
+        self.pipelines.upscale_masked_pipeline = Some(upscale_masked_pipeline);
+        self.pipelines.upscale_mask_pipeline = Some(upscale_mask_pipeline);
+    }
+
+    pub(in crate::renderer) fn scale_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .scale_bind_group_layout
+            .as_ref()
+            .expect("scale bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn scale_mask_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .scale_mask_bind_group_layout
+            .as_ref()
+            .expect("scale mask bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn scale_nearest_pipeline_ref(
+        &self,
+        mode: ScaleMode,
+    ) -> &wgpu::RenderPipeline {
+        match mode {
+            ScaleMode::Downsample => self
+                .pipelines
+                .downsample_pipeline
+                .as_ref()
+                .expect("downsample pipeline must exist"),
+            ScaleMode::Upscale => self
+                .pipelines
+                .upscale_pipeline
+                .as_ref()
+                .expect("upscale pipeline must exist"),
+        }
+    }
+
+    pub(in crate::renderer) fn upscale_masked_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .upscale_masked_pipeline
+            .as_ref()
+            .expect("upscale masked pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn upscale_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .upscale_mask_pipeline
+            .as_ref()
+            .expect("upscale mask pipeline must exist")
     }
 }

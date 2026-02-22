@@ -789,8 +789,6 @@ pub(in super::super) fn record_composite_premul_pass(
 
     let renderer = &mut *exec.renderer;
 
-    let pipeline_ix = pass.blend_mode.pipeline_index();
-
     let Some(src_view) =
         require_color_src_view(frame_targets, pass.src, pass.src_size, "CompositePremul")
     else {
@@ -824,17 +822,14 @@ pub(in super::super) fn record_composite_premul_pass(
         else {
             return;
         };
-        let layout = renderer
-            .composite_mask_bind_group_layout
-            .as_ref()
-            .expect("composite mask bind group layout must exist");
+        let layout = renderer.composite_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret composite premul mask bind group"),
             layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
+                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -848,19 +843,17 @@ pub(in super::super) fn record_composite_premul_pass(
         });
 
         (
-            renderer.composite_mask_pipelines[pipeline_ix]
-                .as_ref()
-                .expect("composite mask pipeline must exist"),
+            renderer.composite_mask_pipeline_ref(pass.blend_mode),
             bind_group,
         )
     } else {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret composite premul bind group"),
-            layout: &renderer.viewport_bind_group_layout,
+            layout: &renderer.globals.viewport_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
+                    resource: wgpu::BindingResource::Sampler(&renderer.globals.viewport_sampler),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -868,12 +861,7 @@ pub(in super::super) fn record_composite_premul_pass(
                 },
             ],
         });
-        (
-            renderer.composite_pipelines[pipeline_ix]
-                .as_ref()
-                .expect("composite pipeline must exist"),
-            bind_group,
-        )
+        (renderer.composite_pipeline_ref(pass.blend_mode), bind_group)
     };
     let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
@@ -959,10 +947,7 @@ pub(in super::super) fn record_clip_mask_pass(
         return;
     };
 
-    let pipeline = renderer
-        .clip_mask_pipeline
-        .as_ref()
-        .expect("clip mask pipeline must exist");
+    let pipeline = renderer.clip_mask_pipeline_ref();
     let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
     run_clip_mask_triangle_pass(

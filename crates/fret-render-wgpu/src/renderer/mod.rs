@@ -15,6 +15,9 @@ use std::sync::Arc;
 mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
+mod gpu_globals;
+mod gpu_pipelines;
+mod gpu_textures;
 mod path;
 mod revisioned_cache;
 mod types;
@@ -42,6 +45,9 @@ mod tests;
 use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
+use gpu_globals::GpuGlobals;
+use gpu_pipelines::GpuPipelines;
+use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
@@ -67,27 +73,10 @@ impl Default for ClearColor {
 pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
-    uniform_bind_group_layout: wgpu::BindGroupLayout,
-    mask_image_sampler: wgpu::Sampler,
-    mask_image_sampler_nearest: wgpu::Sampler,
-    _mask_image_identity_texture: wgpu::Texture,
-    mask_image_identity_view: wgpu::TextureView,
-    mask_image_identity_uploaded: bool,
     uniforms: UniformResources,
-
-    material_catalog_texture: wgpu::Texture,
-    material_catalog_view: wgpu::TextureView,
-    material_catalog_sampler: wgpu::Sampler,
-    material_catalog_uploaded: bool,
-
-    quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
-
-    viewport_pipeline_format: Option<wgpu::TextureFormat>,
-    viewport_pipeline: Option<wgpu::RenderPipeline>,
-    viewport_bind_group_layout: wgpu::BindGroupLayout,
-    viewport_sampler: wgpu::Sampler,
-    image_sampler_nearest: wgpu::Sampler,
+    globals: GpuGlobals,
+    textures: GpuTextures,
+    pipelines: GpuPipelines,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 
@@ -97,77 +86,16 @@ pub struct Renderer {
 
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
-    text_pipeline_format: Option<wgpu::TextureFormat>,
-    text_pipeline: Option<wgpu::RenderPipeline>,
-    text_outline_pipeline: Option<wgpu::RenderPipeline>,
-
-    text_color_pipeline_format: Option<wgpu::TextureFormat>,
-    text_color_pipeline: Option<wgpu::RenderPipeline>,
-
-    text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
-    text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
-    text_subpixel_outline_pipeline: Option<wgpu::RenderPipeline>,
-
-    mask_pipeline_format: Option<wgpu::TextureFormat>,
-    mask_pipeline: Option<wgpu::RenderPipeline>,
-
     text_vertices: buffers::RingBuffer<TextVertex>,
 
-    path_pipeline_format: Option<wgpu::TextureFormat>,
-    path_pipeline: Option<wgpu::RenderPipeline>,
-
-    path_msaa_pipeline_format: Option<wgpu::TextureFormat>,
-    path_msaa_pipeline: Option<wgpu::RenderPipeline>,
-    path_msaa_pipeline_sample_count: Option<u32>,
-
-    path_clip_mask_pipeline: Option<wgpu::RenderPipeline>,
-
-    composite_pipeline_format: Option<wgpu::TextureFormat>,
-    composite_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
-    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
-    composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-
-    clip_mask_pipeline: Option<wgpu::RenderPipeline>,
     clip_mask_param_buffer: wgpu::Buffer,
     clip_mask_param_bind_group: wgpu::BindGroup,
     clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
 
-    blit_pipeline_format: Option<wgpu::TextureFormat>,
-    blit_pipeline: Option<wgpu::RenderPipeline>,
-    blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-
-    blur_pipeline_format: Option<wgpu::TextureFormat>,
-    blur_h_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_pipeline: Option<wgpu::RenderPipeline>,
-    blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
-    blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
-
-    scale_pipeline_format: Option<wgpu::TextureFormat>,
-    downsample_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
-    upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
-    scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
     scale_param_stride: u64,
     scale_param_capacity: usize,
 
-    backdrop_warp_pipeline_format: Option<wgpu::TextureFormat>,
-    backdrop_warp_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_masked_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_mask_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    backdrop_warp_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-
-    backdrop_warp_image_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_image_masked_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_image_mask_pipeline: Option<wgpu::RenderPipeline>,
-    backdrop_warp_image_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    backdrop_warp_image_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     backdrop_warp_param_buffer: wgpu::Buffer,
 
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,

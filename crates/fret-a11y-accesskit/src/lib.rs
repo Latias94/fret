@@ -59,6 +59,7 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Checkbox => Role::CheckBox,
         SemanticsRole::Switch => Role::Switch,
         SemanticsRole::Slider => Role::Slider,
+        SemanticsRole::ProgressBar => Role::ProgressIndicator,
         SemanticsRole::ComboBox => Role::ComboBox,
         SemanticsRole::RadioGroup => Role::RadioGroup,
         SemanticsRole::RadioButton => Role::RadioButton,
@@ -523,6 +524,10 @@ mod tests {
         assert_eq!(
             super::map_role(SemanticsRole::AlertDialog),
             Role::AlertDialog
+        );
+        assert_eq!(
+            super::map_role(SemanticsRole::ProgressBar),
+            Role::ProgressIndicator
         );
         assert_eq!(super::map_role(SemanticsRole::RadioGroup), Role::RadioGroup);
         assert_eq!(

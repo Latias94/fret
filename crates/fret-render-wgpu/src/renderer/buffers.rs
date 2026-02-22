@@ -192,11 +192,11 @@ impl Renderer {
         render_space_buffer: &wgpu::Buffer,
     ) -> wgpu::BindGroup {
         super::bind_group_builders::UniformBindGroupGlobals {
-            layout: &self.uniform_bind_group_layout,
-            material_catalog_view: &self.material_catalog_view,
-            material_catalog_sampler: &self.material_catalog_sampler,
-            mask_image_sampler: &self.mask_image_sampler,
-            mask_image_identity_view: &self.mask_image_identity_view,
+            layout: &self.globals.uniform_bind_group_layout,
+            material_catalog_view: &self.globals.material_catalog_view,
+            material_catalog_sampler: &self.globals.material_catalog_sampler,
+            mask_image_sampler: &self.globals.mask_image_sampler,
+            mask_image_identity_view: &self.globals.mask_image_identity_view,
         }
         .create(
             device,

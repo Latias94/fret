@@ -85,17 +85,25 @@ impl Renderer {
             }
         }
 
-        if self.composite_pipeline_format == Some(format)
-            && self.composite_pipelines.iter().all(|p| p.is_some())
-            && self.composite_mask_pipelines.iter().all(|p| p.is_some())
-            && self.composite_mask_bind_group_layout.is_some()
+        if self.pipelines.composite_pipeline_format == Some(format)
+            && self
+                .pipelines
+                .composite_pipelines
+                .iter()
+                .all(|p| p.is_some())
+            && self
+                .pipelines
+                .composite_mask_pipelines
+                .iter()
+                .all(|p| p.is_some())
+            && self.pipelines.composite_mask_bind_group_layout.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.composite_pipeline_format != Some(format) {
+                let reason = if self.pipelines.composite_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -154,15 +162,15 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret composite premul pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
-                &self.viewport_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
+                &self.globals.viewport_bind_group_layout,
             ],
             immediate_size: 0,
         });
         let mask_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret composite premul mask pipeline layout"),
             bind_group_layouts: &[
-                &self.uniform_bind_group_layout,
+                &self.globals.uniform_bind_group_layout,
                 &composite_mask_bind_group_layout,
             ],
             immediate_size: 0,
@@ -262,11 +270,38 @@ impl Renderer {
                 cache: None,
             });
 
-            self.composite_pipelines[ix] = Some(pipeline);
-            self.composite_mask_pipelines[ix] = Some(mask_pipeline);
+            self.pipelines.composite_pipelines[ix] = Some(pipeline);
+            self.pipelines.composite_mask_pipelines[ix] = Some(mask_pipeline);
         }
 
-        self.composite_pipeline_format = Some(format);
-        self.composite_mask_bind_group_layout = Some(composite_mask_bind_group_layout);
+        self.pipelines.composite_pipeline_format = Some(format);
+        self.pipelines.composite_mask_bind_group_layout = Some(composite_mask_bind_group_layout);
+    }
+
+    pub(in crate::renderer) fn composite_pipeline_ref(
+        &self,
+        mode: fret_core::BlendMode,
+    ) -> &wgpu::RenderPipeline {
+        self.pipelines.composite_pipelines[mode.pipeline_index()]
+            .as_ref()
+            .expect("composite pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn composite_mask_pipeline_ref(
+        &self,
+        mode: fret_core::BlendMode,
+    ) -> &wgpu::RenderPipeline {
+        self.pipelines.composite_mask_pipelines[mode.pipeline_index()]
+            .as_ref()
+            .expect("composite mask pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn composite_mask_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .composite_mask_bind_group_layout
+            .as_ref()
+            .expect("composite mask bind group layout must exist")
     }
 }

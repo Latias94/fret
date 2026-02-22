@@ -7,24 +7,33 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.backdrop_warp_pipeline_format == Some(format)
-            && self.backdrop_warp_pipeline.is_some()
-            && self.backdrop_warp_masked_pipeline.is_some()
-            && self.backdrop_warp_bind_group_layout.is_some()
-            && self.backdrop_warp_mask_pipeline.is_some()
-            && self.backdrop_warp_mask_bind_group_layout.is_some()
-            && self.backdrop_warp_image_pipeline.is_some()
-            && self.backdrop_warp_image_masked_pipeline.is_some()
-            && self.backdrop_warp_image_bind_group_layout.is_some()
-            && self.backdrop_warp_image_mask_pipeline.is_some()
-            && self.backdrop_warp_image_mask_bind_group_layout.is_some()
+        if self.pipelines.backdrop_warp_pipeline_format == Some(format)
+            && self.pipelines.backdrop_warp_pipeline.is_some()
+            && self.pipelines.backdrop_warp_masked_pipeline.is_some()
+            && self.pipelines.backdrop_warp_bind_group_layout.is_some()
+            && self.pipelines.backdrop_warp_mask_pipeline.is_some()
+            && self
+                .pipelines
+                .backdrop_warp_mask_bind_group_layout
+                .is_some()
+            && self.pipelines.backdrop_warp_image_pipeline.is_some()
+            && self.pipelines.backdrop_warp_image_masked_pipeline.is_some()
+            && self
+                .pipelines
+                .backdrop_warp_image_bind_group_layout
+                .is_some()
+            && self.pipelines.backdrop_warp_image_mask_pipeline.is_some()
+            && self
+                .pipelines
+                .backdrop_warp_image_mask_bind_group_layout
+                .is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.backdrop_warp_pipeline_format != Some(format) {
+                let reason = if self.pipelines.backdrop_warp_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -218,12 +227,15 @@ impl Renderer {
         let masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp masked pipeline layout"),
-                bind_group_layouts: &[&self.uniform_bind_group_layout, &bind_group_layout],
+                bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &bind_group_layout],
                 immediate_size: 0,
             });
         let mask_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret backdrop-warp mask pipeline layout"),
-            bind_group_layouts: &[&self.uniform_bind_group_layout, &mask_bind_group_layout],
+            bind_group_layouts: &[
+                &self.globals.uniform_bind_group_layout,
+                &mask_bind_group_layout,
+            ],
             immediate_size: 0,
         });
 
@@ -236,14 +248,17 @@ impl Renderer {
         let image_masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp image masked pipeline layout"),
-                bind_group_layouts: &[&self.uniform_bind_group_layout, &image_bind_group_layout],
+                bind_group_layouts: &[
+                    &self.globals.uniform_bind_group_layout,
+                    &image_bind_group_layout,
+                ],
                 immediate_size: 0,
             });
         let image_mask_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp image mask pipeline layout"),
                 bind_group_layouts: &[
-                    &self.uniform_bind_group_layout,
+                    &self.globals.uniform_bind_group_layout,
                     &image_mask_bind_group_layout,
                 ],
                 immediate_size: 0,
@@ -466,17 +481,100 @@ impl Renderer {
             cache: None,
         });
 
-        self.backdrop_warp_pipeline_format = Some(format);
-        self.backdrop_warp_bind_group_layout = Some(bind_group_layout);
-        self.backdrop_warp_mask_bind_group_layout = Some(mask_bind_group_layout);
-        self.backdrop_warp_pipeline = Some(pipeline);
-        self.backdrop_warp_masked_pipeline = Some(masked_pipeline);
-        self.backdrop_warp_mask_pipeline = Some(mask_pipeline);
+        self.pipelines.backdrop_warp_pipeline_format = Some(format);
+        self.pipelines.backdrop_warp_bind_group_layout = Some(bind_group_layout);
+        self.pipelines.backdrop_warp_mask_bind_group_layout = Some(mask_bind_group_layout);
+        self.pipelines.backdrop_warp_pipeline = Some(pipeline);
+        self.pipelines.backdrop_warp_masked_pipeline = Some(masked_pipeline);
+        self.pipelines.backdrop_warp_mask_pipeline = Some(mask_pipeline);
 
-        self.backdrop_warp_image_bind_group_layout = Some(image_bind_group_layout);
-        self.backdrop_warp_image_mask_bind_group_layout = Some(image_mask_bind_group_layout);
-        self.backdrop_warp_image_pipeline = Some(image_pipeline);
-        self.backdrop_warp_image_masked_pipeline = Some(image_masked_pipeline);
-        self.backdrop_warp_image_mask_pipeline = Some(image_mask_pipeline);
+        self.pipelines.backdrop_warp_image_bind_group_layout = Some(image_bind_group_layout);
+        self.pipelines.backdrop_warp_image_mask_bind_group_layout =
+            Some(image_mask_bind_group_layout);
+        self.pipelines.backdrop_warp_image_pipeline = Some(image_pipeline);
+        self.pipelines.backdrop_warp_image_masked_pipeline = Some(image_masked_pipeline);
+        self.pipelines.backdrop_warp_image_mask_pipeline = Some(image_mask_pipeline);
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .backdrop_warp_bind_group_layout
+            .as_ref()
+            .expect("backdrop-warp bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_mask_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .backdrop_warp_mask_bind_group_layout
+            .as_ref()
+            .expect("backdrop-warp mask bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_image_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .backdrop_warp_image_bind_group_layout
+            .as_ref()
+            .expect("backdrop-warp image bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_image_mask_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .backdrop_warp_image_mask_bind_group_layout
+            .as_ref()
+            .expect("backdrop-warp image mask bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_pipeline
+            .as_ref()
+            .expect("backdrop-warp pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_masked_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_masked_pipeline
+            .as_ref()
+            .expect("backdrop-warp masked pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_mask_pipeline
+            .as_ref()
+            .expect("backdrop-warp mask pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_image_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_image_pipeline
+            .as_ref()
+            .expect("backdrop-warp image pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_image_masked_pipeline_ref(
+        &self,
+    ) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_image_masked_pipeline
+            .as_ref()
+            .expect("backdrop-warp image masked pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn backdrop_warp_image_mask_pipeline_ref(
+        &self,
+    ) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .backdrop_warp_image_mask_pipeline
+            .as_ref()
+            .expect("backdrop-warp image mask pipeline must exist")
     }
 }

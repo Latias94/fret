@@ -120,10 +120,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         };
 
         let (label, bind_group, pipeline) = if let Some(warp_view) = warp_view {
-            let layout = renderer
-                .backdrop_warp_image_mask_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp image mask bind group layout must exist");
+            let layout = renderer.backdrop_warp_image_mask_bind_group_layout_ref();
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("fret backdrop-warp image mask bind group"),
                 layout,
@@ -146,16 +143,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                 ],
             });
-            let pipeline = renderer
-                .backdrop_warp_image_mask_pipeline
-                .as_ref()
-                .expect("backdrop-warp image mask pipeline must exist");
+            let pipeline = renderer.backdrop_warp_image_mask_pipeline_ref();
             ("fret backdrop-warp image mask pass", bind_group, pipeline)
         } else {
-            let layout = renderer
-                .backdrop_warp_mask_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp mask bind group layout must exist");
+            let layout = renderer.backdrop_warp_mask_bind_group_layout_ref();
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("fret backdrop-warp mask bind group"),
                 layout,
@@ -174,10 +165,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                 ],
             });
-            let pipeline = renderer
-                .backdrop_warp_mask_pipeline
-                .as_ref()
-                .expect("backdrop-warp mask pipeline must exist");
+            let pipeline = renderer.backdrop_warp_mask_pipeline_ref();
             ("fret backdrop-warp mask pass", bind_group, pipeline)
         };
 
@@ -203,10 +191,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
-            let layout = renderer
-                .backdrop_warp_image_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp image bind group layout must exist");
+            let layout = renderer.backdrop_warp_image_bind_group_layout_ref();
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("fret backdrop-warp image masked bind group"),
                 layout,
@@ -225,16 +210,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                 ],
             });
-            let pipeline = renderer
-                .backdrop_warp_image_masked_pipeline
-                .as_ref()
-                .expect("backdrop-warp image masked pipeline must exist");
+            let pipeline = renderer.backdrop_warp_image_masked_pipeline_ref();
             (bind_group, pipeline)
         } else {
-            let layout = renderer
-                .backdrop_warp_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp bind group layout must exist");
+            let layout = renderer.backdrop_warp_bind_group_layout_ref();
             let bind_group = create_texture_uniform_bind_group(
                 device,
                 "fret backdrop-warp bind group",
@@ -242,10 +221,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
                 &src_view,
                 renderer.backdrop_warp_param_buffer.as_entire_binding(),
             );
-            let pipeline = renderer
-                .backdrop_warp_masked_pipeline
-                .as_ref()
-                .expect("backdrop-warp masked pipeline must exist");
+            let pipeline = renderer.backdrop_warp_masked_pipeline_ref();
             (bind_group, pipeline)
         };
         let uniform_offset =
@@ -273,10 +249,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         );
     } else {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
-            let layout = renderer
-                .backdrop_warp_image_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp image bind group layout must exist");
+            let layout = renderer.backdrop_warp_image_bind_group_layout_ref();
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("fret backdrop-warp image bind group"),
                 layout,
@@ -295,16 +268,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                 ],
             });
-            let pipeline = renderer
-                .backdrop_warp_image_pipeline
-                .as_ref()
-                .expect("backdrop-warp image pipeline must exist");
+            let pipeline = renderer.backdrop_warp_image_pipeline_ref();
             (bind_group, pipeline)
         } else {
-            let layout = renderer
-                .backdrop_warp_bind_group_layout
-                .as_ref()
-                .expect("backdrop-warp bind group layout must exist");
+            let layout = renderer.backdrop_warp_bind_group_layout_ref();
             let bind_group = create_texture_uniform_bind_group(
                 device,
                 "fret backdrop-warp bind group",
@@ -312,10 +279,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
                 &src_view,
                 renderer.backdrop_warp_param_buffer.as_entire_binding(),
             );
-            let pipeline = renderer
-                .backdrop_warp_pipeline
-                .as_ref()
-                .expect("backdrop-warp pipeline must exist");
+            let pipeline = renderer.backdrop_warp_pipeline_ref();
             (bind_group, pipeline)
         };
 

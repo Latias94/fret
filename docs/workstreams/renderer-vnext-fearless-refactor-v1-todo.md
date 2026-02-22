@@ -209,10 +209,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] REN-VNEXT-refactor-001 Add a renderer-internals refactor design doc (staged plan + gates).
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
-- [~] REN-VNEXT-refactor-002 Add an ADR that codifies internal ownership boundaries + always-run gates for refactors.
-  - Target: “encode/compile/execute” ownership and regression discipline without contract changes.
-  - Evidence: `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`,
-    `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row + summary update).
+- [x] REN-VNEXT-refactor-002 Add an ADR that codifies internal ownership boundaries + always-run gates for refactors.
+  - Landed: “encode/compile/execute” ownership and regression discipline without contract changes.
+  - Evidence:
+    - `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
+    - `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row update)
 - [~] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
   - Landed (step 1): reduce bind-group rebuild churn by making “stable sampler + linear/nearest pair” explicit and reusing renderer-owned globals
     in uniform bind groups.
@@ -222,6 +223,57 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
     - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
+  - Landed (step 2): extract stable bind-group layouts/samplers/views into `GpuGlobals` and migrate call sites.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_globals.rs` (`GpuGlobals`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::globals`)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/` (pipeline layouts bind `globals.*_bind_group_layout`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (prepares via `globals` samplers/layouts)
+  - Landed (step 3): extract texture ownership + upload-once state into `GpuTextures`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_textures.rs` (`GpuTextures`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::textures`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`ensure_material_catalog_uploaded`, `ensure_mask_image_identity_uploaded`)
+  - Landed (step 4): extract quad/viewport pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (`GpuPipelines`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::pipelines`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (`quad_pipeline_ref`, `viewport_pipeline_ref`)
+  - Landed (step 5): move text pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (text pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (`ensure_text_*`, `*_pipeline_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (uses `*_pipeline_ref`)
+  - Landed (step 6): move mask/path pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (mask/path pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/{mask,path,path_clip_mask}.rs` (ensure + `*_pipeline_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scene_draw,path_clip_mask,path_msaa}.rs` (uses `*_pipeline_ref`)
+  - Landed (step 7): move composite pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (composite pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/composite.rs` (`ensure_composite_pipeline`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{effects,path_msaa}.rs` (call sites)
+  - Landed (step 8): move clip-mask pipeline cache into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (clip-mask pipeline cache field)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (`ensure_clip_mask_pipeline`, `clip_mask_pipeline_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (`record_clip_mask_pass`)
+  - Landed (step 9): move blit/blur pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (blit/blur fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/{blit,blur}.rs` (`ensure_*`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{blit,blur}.rs` (call sites)
+  - Landed (step 10): move scale-nearest pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (scale-nearest fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/scale_nearest.rs` (`ensure_scale_nearest_pipelines`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scale_nearest.rs` (call sites)
+  - Landed (step 11): move backdrop-warp pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (backdrop-warp pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (`ensure_backdrop_warp_pipeline`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` (uses `*_ref`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
@@ -236,8 +288,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 2): make uniform-resource invalidation explicit and versioned (uniform buffers ↔ mask-image override bind groups).
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)
-    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups` mixes revisions)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
   - Landed (step 3): extract uniform/clip/mask/render-space buffers into a dedicated `UniformResources` subsystem.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
@@ -254,6 +306,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
+  - Landed (step 3): codify cache key/invalidation contract and provide an explicit full invalidation entrypoint.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
 ## M7 — Post-v1 semantic expansions (deferred backlog)
