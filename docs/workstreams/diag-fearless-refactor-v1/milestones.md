@@ -45,6 +45,8 @@ Exit criteria:
   - `fretboard diag triage --lite ...` works from `frames.index.json`.
   - `fretboard diag hotspots --lite ...` reports slow frames from `frames.index.json`.
 - `fretboard diag ai-packet ...` includes lite reports (`triage.lite.json`, `hotspots.lite.json`) for agent-first workflows.
+- A documented migration plan exists and stays in sync with implementation:
+  - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Evidence anchors in docs stay in sync with the implementation.
 
 ## Milestone 4: Debt is removed (no redundant code paths)

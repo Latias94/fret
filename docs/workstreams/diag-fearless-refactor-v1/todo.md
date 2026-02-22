@@ -77,6 +77,8 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
 - [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
+- [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
+  - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
 - [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
 
@@ -94,6 +96,9 @@ diagnostics stack stays easy to evolve.
   - avoid “forwarder wrappers” that exist only because of historical file layout.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
+- [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
+  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
+  - Tooling: `diag doctor` should warn when bundles are produced with legacy-only knobs or unexpected schema versions.
 - [ ] Reduce “stats mega-module” churn permanently:
   - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
   - large check families stay in `crates/fret-diag/src/stats/*.rs`.
