@@ -1337,6 +1337,7 @@ pub struct CommandPalette {
     disabled: bool,
     wrap: bool,
     vim_bindings: bool,
+    disable_pointer_selection: bool,
     empty_text: Arc<str>,
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
@@ -1576,6 +1577,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
+            .field("disable_pointer_selection", &self.disable_pointer_selection)
             .field("empty_text", &self.empty_text.as_ref())
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
@@ -1606,6 +1608,8 @@ impl CommandPalette {
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
             vim_bindings: true,
+            // cmdk default: pointer selection enabled unless explicitly disabled.
+            disable_pointer_selection: false,
             empty_text: Arc::from("No results."),
             a11y_label: Arc::from("Command input"),
             placeholder: None,
@@ -1678,6 +1682,12 @@ impl CommandPalette {
     /// Enables cmdk-style "vim bindings" (Ctrl+N/J/P/K) for selection navigation.
     pub fn vim_bindings(mut self, vim_bindings: bool) -> Self {
         self.vim_bindings = vim_bindings;
+        self
+    }
+
+    /// Disables cmdk-style pointer-based highlight changes (hover does not move the active item).
+    pub fn disable_pointer_selection(mut self, disable_pointer_selection: bool) -> Self {
+        self.disable_pointer_selection = disable_pointer_selection;
         self
     }
 
@@ -1801,6 +1811,7 @@ impl CommandPalette {
             let disabled = self.disabled;
             let wrap = self.wrap;
             let vim_bindings = self.vim_bindings;
+            let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
@@ -2112,7 +2123,7 @@ impl CommandPalette {
                                     if let Some(on_select) = on_select.clone() {
                                         cx.pressable_add_on_activate(on_select);
                                     }
-                                    if enabled {
+                                    if enabled && !disable_pointer_selection {
                                         let active = active_for_row.clone();
                                         cx.pressable_on_hover_change(Arc::new(
                                             move |host, action_cx, hovered| {
@@ -2654,6 +2665,7 @@ pub struct CommandDialog {
     disabled: bool,
     wrap: bool,
     vim_bindings: bool,
+    disable_pointer_selection: bool,
     close_on_select: bool,
     empty_text: Arc<str>,
     on_open_change: Option<OnOpenChange>,
@@ -2671,6 +2683,7 @@ impl std::fmt::Debug for CommandDialog {
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
+            .field("disable_pointer_selection", &self.disable_pointer_selection)
             .field("close_on_select", &self.close_on_select)
             .field("empty_text", &self.empty_text.as_ref())
             .field("on_open_change", &self.on_open_change.is_some())
@@ -2700,6 +2713,7 @@ impl CommandDialog {
             disabled: false,
             wrap: false,
             vim_bindings: true,
+            disable_pointer_selection: false,
             close_on_select: true,
             empty_text: Arc::from("No results."),
             on_open_change: None,
@@ -2740,6 +2754,7 @@ impl CommandDialog {
             disabled: false,
             wrap: false,
             vim_bindings: true,
+            disable_pointer_selection: false,
             close_on_select: true,
             empty_text: Arc::from("No results."),
             on_open_change: None,
@@ -2771,6 +2786,12 @@ impl CommandDialog {
     /// Enables cmdk-style "vim bindings" (Ctrl+N/J/P/K) for selection navigation.
     pub fn vim_bindings(mut self, vim_bindings: bool) -> Self {
         self.vim_bindings = vim_bindings;
+        self
+    }
+
+    /// Disables cmdk-style pointer-based highlight changes (hover does not move the active item).
+    pub fn disable_pointer_selection(mut self, disable_pointer_selection: bool) -> Self {
+        self.disable_pointer_selection = disable_pointer_selection;
         self
     }
 
@@ -2845,6 +2866,7 @@ impl CommandDialog {
         let disabled = self.disabled;
         let wrap = self.wrap;
         let vim_bindings = self.vim_bindings;
+        let disable_pointer_selection = self.disable_pointer_selection;
         let close_on_select = self.close_on_select;
         let empty_text = self.empty_text;
         let on_open_change = self.on_open_change;
@@ -2962,6 +2984,7 @@ impl CommandDialog {
                     .disabled(disabled)
                     .wrap(wrap)
                     .vim_bindings(vim_bindings)
+                    .disable_pointer_selection(disable_pointer_selection)
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
                     .into_element(cx);
@@ -3682,6 +3705,34 @@ mod tests {
         root
     }
 
+    fn render_frame_disable_pointer_selection(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<String>,
+        items: Vec<CommandItem>,
+        disable_pointer_selection: bool,
+    ) -> fret_core::NodeId {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
+                vec![
+                    CommandPalette::new(model, items)
+                        .disable_pointer_selection(disable_pointer_selection)
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn row_signatures(rows: &[CommandPaletteRenderRow], items: &[CommandItem]) -> Vec<String> {
         rows.iter()
             .map(|row| match row {
@@ -4129,6 +4180,99 @@ mod tests {
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(3));
+    }
+
+    #[test]
+    fn cmdk_disable_pointer_selection_prevents_hover_highlight() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+        ];
+
+        let root = render_frame_disable_pointer_selection(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            items.clone(),
+            true,
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
+            .expect("Beta row bounds");
+        let beta_bounds = beta.bounds;
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(
+                    Px(beta_bounds.origin.x.0 + 1.0),
+                    Px(beta_bounds.origin.y.0 + 1.0),
+                ),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame_disable_pointer_selection(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            items,
+            true,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
+
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+        assert_eq!(active_node.label.as_deref(), Some("Alpha"));
     }
 
     #[test]

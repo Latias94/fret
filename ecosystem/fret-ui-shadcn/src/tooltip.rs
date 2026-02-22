@@ -1373,7 +1373,6 @@ impl TooltipContent {
                     .line_height
                     .unwrap_or_else(|| theme.metric_token("font.line_height")),
             )
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_weight(text_style.weight)
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)

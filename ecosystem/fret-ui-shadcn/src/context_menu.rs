@@ -1390,7 +1390,6 @@ impl ContextMenuContentRenderEnv {
                     ui::text(cx, text)
                         .text_size_px(font_size)
                         .line_height_px(font_line_height)
-                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .font_medium()
                         .nowrap()
                         .text_color(ColorRef::Color(label_fg))
