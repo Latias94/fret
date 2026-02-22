@@ -13,27 +13,45 @@ pub(super) fn preview_command_palette(
         basic_open: Option<Model<bool>>,
         basic_query: Option<Model<String>>,
         shortcuts_query: Option<Model<String>>,
+        shortcuts_disable_pointer_selection: Option<Model<bool>>,
         groups_query: Option<Model<String>>,
         scroll_query: Option<Model<String>>,
         rtl_query: Option<Model<String>>,
     }
 
-    let (basic_open, basic_query, shortcuts_query, groups_query, scroll_query, rtl_query) = cx
-        .with_state(CommandPageModels::default, |st| {
-            (
-                st.basic_open.clone(),
-                st.basic_query.clone(),
-                st.shortcuts_query.clone(),
-                st.groups_query.clone(),
-                st.scroll_query.clone(),
-                st.rtl_query.clone(),
-            )
-        });
-
-    let (basic_open, basic_query, shortcuts_query, groups_query, scroll_query, rtl_query) = match (
+    let (
         basic_open,
         basic_query,
         shortcuts_query,
+        shortcuts_disable_pointer_selection,
+        groups_query,
+        scroll_query,
+        rtl_query,
+    ) = cx.with_state(CommandPageModels::default, |st| {
+        (
+            st.basic_open.clone(),
+            st.basic_query.clone(),
+            st.shortcuts_query.clone(),
+            st.shortcuts_disable_pointer_selection.clone(),
+            st.groups_query.clone(),
+            st.scroll_query.clone(),
+            st.rtl_query.clone(),
+        )
+    });
+
+    let (
+        basic_open,
+        basic_query,
+        shortcuts_query,
+        shortcuts_disable_pointer_selection,
+        groups_query,
+        scroll_query,
+        rtl_query,
+    ) = match (
+        basic_open,
+        basic_query,
+        shortcuts_query,
+        shortcuts_disable_pointer_selection,
         groups_query,
         scroll_query,
         rtl_query,
@@ -42,6 +60,7 @@ pub(super) fn preview_command_palette(
             Some(basic_open),
             Some(basic_query),
             Some(shortcuts_query),
+            Some(shortcuts_disable_pointer_selection),
             Some(groups_query),
             Some(scroll_query),
             Some(rtl_query),
@@ -49,6 +68,7 @@ pub(super) fn preview_command_palette(
             basic_open,
             basic_query,
             shortcuts_query,
+            shortcuts_disable_pointer_selection,
             groups_query,
             scroll_query,
             rtl_query,
@@ -57,6 +77,7 @@ pub(super) fn preview_command_palette(
             let basic_open = cx.app.models_mut().insert(false);
             let basic_query = cx.app.models_mut().insert(String::new());
             let shortcuts_query = cx.app.models_mut().insert(String::new());
+            let shortcuts_disable_pointer_selection = cx.app.models_mut().insert(false);
             let groups_query = cx.app.models_mut().insert(String::new());
             let scroll_query = cx.app.models_mut().insert(String::new());
             let rtl_query = cx.app.models_mut().insert(String::new());
@@ -64,6 +85,8 @@ pub(super) fn preview_command_palette(
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
                 st.shortcuts_query = Some(shortcuts_query.clone());
+                st.shortcuts_disable_pointer_selection =
+                    Some(shortcuts_disable_pointer_selection.clone());
                 st.groups_query = Some(groups_query.clone());
                 st.scroll_query = Some(scroll_query.clone());
                 st.rtl_query = Some(rtl_query.clone());
@@ -72,6 +95,7 @@ pub(super) fn preview_command_palette(
                 basic_open,
                 basic_query,
                 shortcuts_query,
+                shortcuts_disable_pointer_selection,
                 groups_query,
                 scroll_query,
                 rtl_query,
@@ -146,15 +170,51 @@ pub(super) fn preview_command_palette(
             .on_select_action(on_select(Arc::from("command.shortcuts.toggle-terminal")))
             .into(),
     ];
-    let shortcuts_palette = shadcn::CommandPalette::new(shortcuts_query.clone(), Vec::new())
-        .placeholder("Type a command or search...")
-        .a11y_label("Command shortcuts")
-        .entries(shortcuts_entries)
-        .test_id_input("ui-gallery-command-shortcuts-input")
-        .list_test_id("ui-gallery-command-shortcuts-listbox")
-        .test_id_item_prefix("ui-gallery-command-shortcuts-item-")
-        .into_element(cx)
-        .test_id("ui-gallery-command-shortcuts");
+    let shortcuts_disable_pointer_selection_value = cx
+        .app
+        .models()
+        .get_cloned(&shortcuts_disable_pointer_selection)
+        .unwrap_or(false);
+    let shortcuts_disable_pointer_selection_for_toggle =
+        shortcuts_disable_pointer_selection.clone();
+    let shortcuts_section = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            let toggle_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Checkbox::new(shortcuts_disable_pointer_selection_for_toggle)
+                            .control_id("shortcuts-disable-pointer-selection")
+                            .a11y_label("Disable pointer selection (demo-only)")
+                            .test_id("ui-gallery-command-shortcuts-disable-pointer-selection")
+                            .into_element(cx),
+                        shadcn::FieldLabel::new("Disable pointer selection (demo-only)")
+                            .for_control("shortcuts-disable-pointer-selection")
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let palette = shadcn::CommandPalette::new(shortcuts_query.clone(), Vec::new())
+                .placeholder("Type a command or search...")
+                .a11y_label("Command shortcuts")
+                .entries(shortcuts_entries)
+                .disable_pointer_selection(shortcuts_disable_pointer_selection_value)
+                .test_id_input("ui-gallery-command-shortcuts-input")
+                .list_test_id("ui-gallery-command-shortcuts-listbox")
+                .test_id_item_prefix("ui-gallery-command-shortcuts-item-")
+                .into_element(cx)
+                .test_id("ui-gallery-command-shortcuts");
+
+            vec![toggle_row, palette]
+        },
+    );
 
     let groups_entries = vec![
         shadcn::CommandGroup::new([
@@ -306,7 +366,7 @@ pub(super) fn preview_command_palette(
         shadcn::Button::new("Open Command Menu").toggle_model(open).into_element(cx)
     });"#,
                 ),
-            DocSection::new("Shortcuts", shortcuts_palette)
+            DocSection::new("Shortcuts", shortcuts_section)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-shortcuts")
                 .code(
