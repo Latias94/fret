@@ -230,3 +230,56 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
 
     direct
 }
+
+pub(crate) fn wait_for_bundle_json_from_script_result(
+    out_dir: &Path,
+    result: &crate::stats::ScriptResultSummary,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    use std::time::{Duration, Instant};
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
+    while Instant::now() < deadline {
+        let run_id_bundle_path =
+            crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
+        if run_id_bundle_path.is_file() {
+            return Some(run_id_bundle_path);
+        }
+
+        let dir = result
+            .last_bundle_dir
+            .as_deref()
+            .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
+            .map(PathBuf::from)
+            .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
+            .or_else(|| crate::compare::read_latest_pointer(out_dir))
+            .or_else(|| crate::compare::find_latest_export_dir(out_dir));
+        if let Some(dir) = dir {
+            let bundle_path = resolve_bundle_json_path(&dir);
+            if bundle_path.is_file() {
+                return Some(bundle_path);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    None
+}
+
+pub(crate) fn wait_for_bundle_json_in_dir(
+    bundle_dir: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    use std::time::{Duration, Instant};
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
+    let bundle_path = resolve_bundle_json_path(bundle_dir);
+    while Instant::now() < deadline {
+        if bundle_path.is_file() {
+            return Some(bundle_path.clone());
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    None
+}

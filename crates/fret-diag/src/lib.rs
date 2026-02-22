@@ -52,7 +52,8 @@ mod util;
 pub(crate) use paths::{
     default_lint_out_path, default_meta_out_path, default_pack_out_path, default_test_ids_out_path,
     default_triage_out_path, expand_script_inputs, resolve_bundle_json_path,
-    resolve_bundle_root_dir, resolve_path,
+    resolve_bundle_root_dir, resolve_path, wait_for_bundle_json_from_script_result,
+    wait_for_bundle_json_in_dir,
 };
 
 use compare::{
@@ -12336,54 +12337,6 @@ fn bundle_paint_cache_hit_test_only_replay_maxes(
     }
 
     Ok((allowed_max, rejected_key_mismatch_max))
-}
-
-fn wait_for_bundle_json_from_script_result(
-    out_dir: &Path,
-    result: &ScriptResultSummary,
-    timeout_ms: u64,
-    poll_ms: u64,
-) -> Option<PathBuf> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
-    while Instant::now() < deadline {
-        let run_id_bundle_path = run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
-        if run_id_bundle_path.is_file() {
-            return Some(run_id_bundle_path);
-        }
-
-        let dir = result
-            .last_bundle_dir
-            .as_deref()
-            .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
-            .map(PathBuf::from)
-            .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
-            .or_else(|| read_latest_pointer(out_dir))
-            .or_else(|| find_latest_export_dir(out_dir));
-        if let Some(dir) = dir {
-            let bundle_path = resolve_bundle_json_path(&dir);
-            if bundle_path.is_file() {
-                return Some(bundle_path);
-            }
-        }
-        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
-    }
-    None
-}
-
-fn wait_for_bundle_json_in_dir(
-    bundle_dir: &Path,
-    timeout_ms: u64,
-    poll_ms: u64,
-) -> Option<PathBuf> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
-    let bundle_path = resolve_bundle_json_path(bundle_dir);
-    while Instant::now() < deadline {
-        if bundle_path.is_file() {
-            return Some(bundle_path.clone());
-        }
-        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
-    }
-    None
 }
 
 fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 43] {
