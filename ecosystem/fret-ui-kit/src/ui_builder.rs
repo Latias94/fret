@@ -3,7 +3,7 @@ use crate::{
     ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
-use fret_core::{FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextWrap};
+use fret_core::{FontId, FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextWrap};
 use fret_ui::element::{AnyElement, ScrollAxis, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
@@ -176,6 +176,19 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn font(mut self, font: FontId) -> Self {
+        self.inner.font_override = Some(font);
+        self
+    }
+
+    pub fn font_ui(self) -> Self {
+        self.font(FontId::ui())
+    }
+
+    pub fn font_monospace(self) -> Self {
+        self.font(FontId::monospace())
+    }
+
     pub fn font_normal(self) -> Self {
         self.font_weight(FontWeight::NORMAL)
     }
@@ -227,6 +240,14 @@ impl UiBuilder<crate::ui::TextBox> {
     pub fn line_height_policy(mut self, policy: TextLineHeightPolicy) -> Self {
         self.inner.line_height_policy_override = Some(policy);
         self
+    }
+
+    pub fn control(self) -> Self {
+        self.line_height_policy(TextLineHeightPolicy::FixedFromStyle)
+    }
+
+    pub fn content(self) -> Self {
+        self.line_height_policy(TextLineHeightPolicy::ExpandToFit)
     }
 
     /// Configures a fixed line box by setting both `line_height_px(height)` and `h_px(height)`.

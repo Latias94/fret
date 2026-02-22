@@ -192,6 +192,7 @@ pub mod recipes;
 pub mod theme_tokens;
 pub mod tooltip_provider;
 pub mod tree;
+pub mod typography;
 pub mod ui;
 pub mod ui_builder;
 pub mod viewport_tooling;

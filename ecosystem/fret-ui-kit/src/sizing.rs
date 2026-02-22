@@ -107,11 +107,11 @@ impl Size {
     }
 
     pub fn control_text_style(self, theme: &Theme) -> TextStyle {
-        TextStyle {
-            font: FontId::default(),
-            size: self.control_text_px(theme),
-            ..Default::default()
-        }
+        crate::typography::control_text_style_scaled(
+            theme,
+            FontId::ui(),
+            self.control_text_px(theme),
+        )
     }
 
     pub fn control_radius(self, theme: &Theme) -> Px {
