@@ -12,4 +12,5 @@ pub(super) use blit::record_fullscreen_blit_pass;
 pub(super) use blur::record_blur_pass;
 pub(super) use effects::record_alpha_threshold_pass;
 pub(super) use effects::record_color_adjust_pass;
+pub(super) use effects::record_color_matrix_pass;
 pub(super) use scale_nearest::record_scale_nearest_pass;
