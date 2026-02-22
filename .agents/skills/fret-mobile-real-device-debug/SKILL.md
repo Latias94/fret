@@ -126,12 +126,26 @@ Archive the JSON snippet under the relevant workstream milestone document.
 - Workstream smoke recipe (example evidence format): `docs/workstreams/mobile-gfx-backend-v1/m3-real-device-smoke-oppo-plg110.md`
 - Android Emulator Vulkan notes: `docs/workstreams/mobile-gfx-backend-v1/android-emulator-vulkan-notes.md`
 
+## Examples
+
+- Example: capture real-device evidence for a bug
+  - User says: "It only reproduces on Android—can we capture diagnostics?"
+  - Actions: run the smallest mobile target, reproduce, export/capture bundles, and archive the evidence.
+  - Result: shareable artifacts for triage and ADRs.
+
 ## Common pitfalls
 
 - `adb: device offline`: toggle USB/Wireless debugging and retry; avoid multi-device installs by passing `-d <serial>`.
 - Emulator “supports Vulkan” but crashes after selecting Vulkan adapter: treat as emulator/driver instability; validate on real device.
 - Forcing `--backend gl`: often fails required `DownlevelFlags::VERTEX_STORAGE` (expected with current contract).
 - Trigger file exists but no bundle appears: the app may not be polling triggers (no frames due to wgpu init failure).
+
+## Troubleshooting
+
+- Symptom: the device is not detected.
+  - Fix: verify platform tooling (adb/xcode) and that the app is built for the target device/arch.
+- Symptom: perf numbers change drastically between devices.
+  - Fix: treat devices as separate baselines; gate within a device class when possible.
 
 ## Related skills
 

@@ -114,6 +114,13 @@ Record 1–3 anchors in the change/PR:
 - Policy primitives (overlays/focus/motion): `ecosystem/fret-ui-kit/src/`
 - Gallery harness: `apps/fret-examples/src/components_gallery.rs`
 
+## Examples
+
+- Example: align a Material 3 component interaction
+  - User says: "Make this switch/ripple/state-layer match Material 3."
+  - Actions: pick a source of truth (spec/MUI/Compose), map to the correct Fret layer, then lock with a diag script.
+  - Result: parity improvement with regression protection.
+
 ## Common pitfalls
 
 - Porting Material policy into `crates/*` (wrong layer, hard-to-change).
@@ -121,6 +128,13 @@ Record 1–3 anchors in the change/PR:
 - Relying on screenshots/goldens for state machines (add a diag script).
 - Missing stable `test_id`, leading to flaky/rotting scripts.
 - Mixing Material and shadcn taxonomies in one recipe layer (keep design systems separate).
+
+## Troubleshooting
+
+- Symptom: spec and implementation references disagree.
+  - Fix: document the chosen source-of-truth ordering and add evidence anchors for the decision.
+- Symptom: visual parity is hard to assess.
+  - Fix: prefer behavior/semantics gates first; add screenshots only where they add signal.
 
 ## Related skills
 

@@ -190,6 +190,20 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
+## Examples
+
+- Example: compose a cohesive settings screen
+  - User says: "Build a settings page with shadcn-style components."
+  - Actions:
+    1. Pick a baseline theme/tokens.
+    2. Compose recipes (forms, toggles, dialogs) and add stable `test_id` anchors early.
+  - Result: a shippable page that is easy to regress-test.
+
+- Example: make a UI look good without redesigning everything
+  - User says: "It works but looks off—polish spacing/typography."
+  - Actions: adjust density, radius, elevation, and hierarchy; keep diffs token-driven.
+  - Result: high-impact polish with low churn.
+
 ## Common pitfalls
 
 - Styling per-component with magic numbers instead of token overrides.
@@ -197,6 +211,13 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Building overlay state machines without leaving a diag script gate.
 - Missing `test_id` targets (scripts rot immediately).
 - Mixing parity work with new design work without gates.
+
+## Troubleshooting
+
+- Symptom: visual tweaks keep regressing.
+  - Fix: push changes into tokens/recipes; avoid one-off per-widget overrides.
+- Symptom: you cannot script the new UI reliably.
+  - Fix: add `test_id` and use `fret-diag-workflow` to lock the flow with a script.
 
 ## Related skills
 

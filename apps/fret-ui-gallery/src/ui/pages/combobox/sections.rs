@@ -189,6 +189,47 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
     content
 }
 
+pub(super) fn popup_trigger(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    let combo = shadcn::Combobox::new(models.popup_value.clone(), models.popup_open.clone())
+        .a11y_label("Combobox popup trigger")
+        .width(Px(256.0))
+        .placeholder("Select a framework")
+        .query_model(models.popup_query.clone())
+        .trigger_variant(shadcn::combobox::ComboboxTriggerVariant::Button)
+        .trigger_test_id("ui-gallery-combobox-popup-trigger")
+        .test_id_prefix("ui-gallery-combobox-popup")
+        .items([
+            shadcn::ComboboxItem::new("next", "Next.js"),
+            shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+            shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+            shadcn::ComboboxItem::new("remix", "Remix"),
+            shadcn::ComboboxItem::new("astro", "Astro"),
+        ])
+        .into_element(cx);
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |cx| {
+            vec![
+                combo,
+                helpers::state_rows(
+                    cx,
+                    &models.popup_value,
+                    &models.popup_query,
+                    "ui-gallery-combobox-popup",
+                ),
+            ]
+        },
+    )
+}
+
 pub(super) fn invalid(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
     let invalid_combo =
         shadcn::Combobox::new(models.invalid_value.clone(), models.invalid_open.clone())

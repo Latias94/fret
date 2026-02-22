@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use super::doctor;
+
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 use std::collections::{HashMap, HashSet};
 
@@ -171,6 +173,11 @@ pub(crate) fn cmd_ai_packet(
         &bundle_dir.join("manifest.json"),
         &packet_dir,
         "manifest.json",
+    )?;
+
+    crate::util::write_json_value(
+        &packet_dir.join("doctor.json"),
+        &doctor::doctor_report_json(&bundle_path, warmup_frames),
     )?;
 
     write_packet_anchors_if_possible(&packet_dir)?;

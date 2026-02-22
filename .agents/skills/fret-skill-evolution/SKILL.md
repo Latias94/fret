@@ -117,11 +117,25 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 - Diagnostics scripts/gates: `tools/diag-scripts/`, `docs/ui-diagnostics-and-scripted-tests.md`
 - Parity harness and goldens (when applicable): `ecosystem/fret-ui-shadcn/tests/`, `goldens/`
 
+## Examples
+
+- Example: turn a tricky fix into a skill update
+  - User says: "We solved it once—how do we make it repeatable?"
+  - Actions: capture the minimal workflow, add evidence anchors + a gate, then link related skills.
+  - Result: institutional memory that prevents regressions.
+
 ## Common pitfalls
 
 - Turning a fix into a long narrative without a repeatable workflow.
 - Landing “the fix” without any gate (regressions return as human-only bugs).
 - Putting large diffs into SKILL bodies; prefer `references/` for long content.
+
+## Troubleshooting
+
+- Symptom: the skill becomes a blog post.
+  - Fix: keep verb-first steps; move deep background into `references/`.
+- Symptom: the update is too specific to one bug.
+  - Fix: generalize triggers and keep examples concrete; avoid overfitting to one repo state.
 
 ## Related skills
 

@@ -7,6 +7,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     #[derive(Default)]
     struct ItemPageModels {
         download_progress: Option<Model<f32>>,
+        dropdown_open: Option<Model<bool>>,
     }
 
     let download_progress =
@@ -22,16 +23,36 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         }
     };
 
+    let dropdown_open = cx.with_state(ItemPageModels::default, |st| st.dropdown_open.clone());
+    let dropdown_open = match dropdown_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ItemPageModels::default, |st| {
+                st.dropdown_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let theme = Theme::global(&*cx.app).snapshot();
 
     let max_w_sm = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(384.0)));
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(MetricRef::Px(Px(448.0)));
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()
         .max_w(MetricRef::Px(Px(520.0)));
+    let max_w_xl = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(MetricRef::Px(Px(576.0)));
 
     let icon = doc_layout::icon;
 
@@ -144,7 +165,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .test_id(test_id)
     };
 
-    let item_team = {
+    let item_team = |cx: &mut ElementContext<'_, App>,
+                     test_id: &'static str,
+                     action_test_id: &'static str| {
         let avatars = stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N1).items_center(),
@@ -171,7 +194,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             cx,
             "lucide.chevron-right",
             shadcn::ButtonVariant::Outline,
-            Arc::<str>::from("ui-gallery-item-team-action"),
+            Arc::<str>::from(action_test_id),
         );
         let actions = shadcn::ItemActions::new([chevron])
             .refine_layout(LayoutRefinement::default().mt(Space::N1))
@@ -181,7 +204,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .on_click(CMD_APP_OPEN)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
-            .test_id("ui-gallery-item-team")
+            .test_id(test_id)
     };
 
     let item_download = {
@@ -385,13 +408,14 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .into_element(cx)
             .test_id("ui-gallery-item-people-group");
 
+        let team = item_team(cx, "ui-gallery-item-team", "ui-gallery-item-team-action");
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N6)
                 .items_start()
                 .layout(max_w_sm.clone()),
-            |_cx| vec![group, item_team, item_download],
+            |_cx| vec![group, team, item_download],
         )
         .test_id("ui-gallery-item-column-people")
     };
@@ -567,17 +591,603 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .test_id("ui-gallery-item-column-issues")
     };
 
-    let demo = doc_layout::wrap_row_snapshot(
+    let docs_demo = {
+        let outline = shadcn::ItemVariant::Outline;
+
+        let item_basic = {
+            let action = shadcn::Button::new("Action")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx);
+            shadcn::Item::new([
+                shadcn::ItemContent::new([
+                    shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                    shadcn::ItemDescription::new("A simple item with title and description.")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::ItemActions::new([action]).into_element(cx),
+            ])
+            .variant(outline)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-docs-demo-basic")
+        };
+
+        let item_sm_link = {
+            let media = shadcn::ItemMedia::new([icon(cx, "lucide.badge-check")])
+                .into_element(cx)
+                .test_id("ui-gallery-item-docs-demo-sm-link-media");
+            let content = shadcn::ItemContent::new([shadcn::ItemTitle::new(
+                "Your profile has been verified.",
+            )
+            .into_element(cx)])
+            .into_element(cx)
+            .test_id("ui-gallery-item-docs-demo-sm-link-content");
+            let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")])
+                .into_element(cx)
+                .test_id("ui-gallery-item-docs-demo-sm-link-actions");
+
+            shadcn::Item::new([media, content, actions])
+                .variant(outline)
+                .size(shadcn::ItemSize::Sm)
+                .render(shadcn::ItemRender::Link {
+                    href: Arc::<str>::from("https://example.com/profile"),
+                    target: None,
+                    rel: None,
+                })
+                // Keep the gallery deterministic: demonstrate link semantics + styling without opening
+                // the browser during scripted runs.
+                .on_click(CMD_APP_OPEN)
+                .a11y_label("Verified profile")
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .test_id("ui-gallery-item-docs-demo-sm-link")
+        };
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |_cx| vec![item_basic, item_sm_link],
+        )
+        .test_id("ui-gallery-item-demo")
+    };
+
+    let docs_variants = {
+        let button = |cx: &mut ElementContext<'_, App>| {
+            shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx)
+        };
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |cx| {
+                vec![
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Default Variant").into_element(cx),
+                            shadcn::ItemDescription::new(
+                                "Standard styling with subtle background and borders.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::ItemActions::new([button(cx)]).into_element(cx),
+                    ])
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-item-variant-default"),
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Outline Variant").into_element(cx),
+                            shadcn::ItemDescription::new(
+                                "Outlined style with clear borders and transparent background.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::ItemActions::new([button(cx)]).into_element(cx),
+                    ])
+                    .variant(shadcn::ItemVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-item-variant-outline"),
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Muted Variant").into_element(cx),
+                            shadcn::ItemDescription::new(
+                                "Subdued appearance with muted colors for secondary content.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::ItemActions::new([button(cx)]).into_element(cx),
+                    ])
+                    .variant(shadcn::ItemVariant::Muted)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id("ui-gallery-item-variant-muted"),
+                ]
+            },
+        )
+        .test_id("ui-gallery-item-variants")
+    };
+
+    let docs_size = {
+        let outline = shadcn::ItemVariant::Outline;
+
+        let item_default = {
+            let action = shadcn::Button::new("Action")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx);
+            shadcn::Item::new([
+                shadcn::ItemContent::new([
+                    shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                    shadcn::ItemDescription::new("A simple item with title and description.")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::ItemActions::new([action]).into_element(cx),
+            ])
+            .variant(outline)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-size-default")
+        };
+
+        let item_sm = {
+            let media = shadcn::ItemMedia::new([icon(cx, "lucide.badge-check")])
+                .into_element(cx)
+                .test_id("ui-gallery-item-size-sm-media");
+            let content = shadcn::ItemContent::new([shadcn::ItemTitle::new(
+                "Your profile has been verified.",
+            )
+            .into_element(cx)])
+            .into_element(cx)
+            .test_id("ui-gallery-item-size-sm-content");
+            let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")])
+                .into_element(cx)
+                .test_id("ui-gallery-item-size-sm-actions");
+
+            shadcn::Item::new([media, content, actions])
+                .variant(outline)
+                .size(shadcn::ItemSize::Sm)
+                .render(shadcn::ItemRender::Link {
+                    href: Arc::<str>::from("https://example.com/profile"),
+                    target: None,
+                    rel: None,
+                })
+                .on_click(CMD_APP_OPEN)
+                .a11y_label("Verified profile")
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .test_id("ui-gallery-item-size-sm")
+        };
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |_cx| vec![item_default, item_sm],
+        )
+        .test_id("ui-gallery-item-size")
+    };
+
+    let docs_icon = {
+        let review = shadcn::Button::new("Review")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx);
+        let item = item_icon(
+            cx,
+            shadcn::ItemVariant::Outline,
+            "lucide.shield-alert",
+            "Security Alert",
+            Some("New login detected from unknown device."),
+            vec![review],
+            "ui-gallery-item-icon",
+        );
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_lg.clone()),
+            |_cx| vec![item],
+        )
+        .test_id("ui-gallery-item-icon-wrapper")
+    };
+
+    let docs_avatar = {
+        let avatar = shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
+            .refine_layout(LayoutRefinement::default().w_px(Px(40.0)).h_px(Px(40.0)))
+            .into_element(cx);
+        let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
+        let content = shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("Evil Rabbit").into_element(cx),
+            shadcn::ItemDescription::new("Last seen 5 months ago").into_element(cx),
+        ])
+        .into_element(cx);
+
+        let invite = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::IconSm)
+            .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+            .children([icon(cx, "lucide.plus")])
+            .into_element(cx)
+            .test_id("ui-gallery-item-avatar-invite");
+        let actions = shadcn::ItemActions::new([invite]).into_element(cx);
+
+        let item_one = shadcn::Item::new([media, content, actions])
+            .variant(shadcn::ItemVariant::Outline)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-avatar-one");
+
+        let item_team = item_team(
+            cx,
+            "ui-gallery-item-avatar-team",
+            "ui-gallery-item-avatar-team-action",
+        );
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_lg.clone()),
+            |_cx| vec![item_one, item_team],
+        )
+        .test_id("ui-gallery-item-avatar")
+    };
+
+    let docs_image = {
+        let music = [
+            (
+                "Midnight City Lights",
+                "Neon Dreams",
+                "Electric Nights",
+                "3:45",
+            ),
+            (
+                "Coffee Shop Conversations",
+                "The Morning Brew",
+                "Urban Stories",
+                "4:05",
+            ),
+            ("Digital Rain", "Cyber Symphony", "Binary Beats", "3:30"),
+        ];
+
+        let mut rows: Vec<AnyElement> = Vec::new();
+        for (idx, (title, artist, album, duration)) in music.iter().copied().enumerate() {
+            let props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(theme.color_token("muted")))
+                    .rounded(Radius::Sm),
+                LayoutRefinement::default().size_full(),
+            );
+            let image = cx
+                .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+                .test_id(format!("ui-gallery-item-image-image-{idx}"));
+            let media = shadcn::ItemMedia::new([image])
+                .variant(shadcn::ItemMediaVariant::Image)
+                .into_element(cx);
+
+            let title_text: Arc<str> = Arc::from(format!("{title} - {album}"));
+            let content = shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(title_text).into_element(cx),
+                shadcn::ItemDescription::new(artist).into_element(cx),
+            ])
+            .into_element(cx);
+
+            let duration =
+                shadcn::ItemContent::new([shadcn::ItemDescription::new(duration).into_element(cx)])
+                    .refine_layout(LayoutRefinement::default().flex_none())
+                    .into_element(cx);
+
+            rows.push(
+                shadcn::Item::new([media, content, duration])
+                    .variant(shadcn::ItemVariant::Outline)
+                    .render(shadcn::ItemRender::Link {
+                        href: Arc::<str>::from("https://example.com/music"),
+                        target: None,
+                        rel: None,
+                    })
+                    .on_click(CMD_APP_OPEN)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id(format!("ui-gallery-item-image-{idx}")),
+            );
+        }
+
+        let group = shadcn::ItemGroup::new(rows)
+            .gap(MetricRef::space(Space::N4).resolve(&theme))
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-image-group");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |_cx| vec![group],
+        )
+        .test_id("ui-gallery-item-image")
+    };
+
+    let docs_group = {
+        let people = [
+            ("shadcn", "shadcn@vercel.com", "S"),
+            ("maxleiter", "maxleiter@vercel.com", "M"),
+            ("evilrabbit", "evilrabbit@vercel.com", "E"),
+        ];
+
+        let mut children: Vec<AnyElement> = Vec::new();
+        for (idx, (username, email, initials)) in people.iter().copied().enumerate() {
+            let avatar =
+                shadcn::Avatar::new([shadcn::AvatarFallback::new(initials).into_element(cx)])
+                    .into_element(cx);
+            let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
+            let content = shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(username).into_element(cx),
+                shadcn::ItemDescription::new(email).into_element(cx),
+            ])
+            .into_element(cx);
+
+            let add = shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::IconSm)
+                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                .children([icon(cx, "lucide.plus")])
+                .into_element(cx)
+                .test_id(format!("ui-gallery-item-group-add-{idx}"));
+            let actions = shadcn::ItemActions::new([add]).into_element(cx);
+
+            children.push(
+                shadcn::Item::new([media, content, actions])
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id(format!("ui-gallery-item-group-item-{idx}")),
+            );
+            if idx + 1 < people.len() {
+                children.push(shadcn::ItemSeparator::new().into_element(cx));
+            }
+        }
+
+        let group = shadcn::ItemGroup::new(children)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-group");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |_cx| vec![group],
+        )
+        .test_id("ui-gallery-item-group-wrapper")
+    };
+
+    let docs_header = {
+        let models = [
+            ("v0-1.5-sm", "Everyday tasks and UI generation."),
+            ("v0-1.5-lg", "Advanced thinking or reasoning."),
+            ("v0-2.0-mini", "Open Source model for everyone."),
+        ];
+
+        let mut children: Vec<AnyElement> = Vec::new();
+        for (idx, (name, description)) in models.iter().copied().enumerate() {
+            let header = {
+                let props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(theme.color_token("muted")))
+                        .rounded(Radius::Sm),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .aspect_ratio(1.0)
+                        .overflow_hidden(),
+                );
+                let image = cx
+                    .container(props, move |cx| vec![shadcn::typography::muted(cx, "IMG")])
+                    .test_id(format!("ui-gallery-item-header-image-{idx}"));
+                shadcn::ItemHeader::new([image]).into_element(cx)
+            };
+
+            let content = shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(name).into_element(cx),
+                shadcn::ItemDescription::new(description).into_element(cx),
+            ])
+            .into_element(cx);
+
+            children.push(
+                shadcn::Item::new([header, content])
+                    .variant(shadcn::ItemVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                    .test_id(format!("ui-gallery-item-header-{idx}")),
+            );
+        }
+
+        let group = shadcn::ItemGroup::new(children)
+            .grid(3)
+            .gap(MetricRef::space(Space::N4).resolve(&theme))
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-item-header-group");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_start()
+                .layout(max_w_xl.clone()),
+            |_cx| vec![group],
+        )
+        .test_id("ui-gallery-item-header")
+    };
+
+    let docs_link = {
+        let row_a = shadcn::Item::new([
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("Visit our documentation").into_element(cx),
+                shadcn::ItemDescription::new("Learn how to get started with our components.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")]).into_element(cx),
+        ])
+        .render(shadcn::ItemRender::Link {
+            href: Arc::<str>::from("https://example.com/docs"),
+            target: None,
+            rel: None,
+        })
+        .on_click(CMD_APP_OPEN)
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .test_id("ui-gallery-item-link-row-a");
+
+        let row_b = shadcn::Item::new([
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("External resource").into_element(cx),
+                shadcn::ItemDescription::new("Opens in a new tab with security attributes.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::ItemActions::new([icon(cx, "lucide.external-link")]).into_element(cx),
+        ])
+        .variant(shadcn::ItemVariant::Outline)
+        .render(shadcn::ItemRender::Link {
+            href: Arc::<str>::from("https://example.com/external"),
+            target: Some(Arc::<str>::from("_blank")),
+            rel: Some(Arc::<str>::from("noopener noreferrer")),
+        })
+        .on_click(CMD_APP_OPEN)
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .test_id("ui-gallery-item-link-row-b");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(max_w_md.clone()),
+            |_cx| vec![row_a, row_b],
+        )
+        .test_id("ui-gallery-item-link")
+    };
+
+    let docs_dropdown = {
+        let people = [
+            ("shadcn", "S", "shadcn@vercel.com"),
+            ("maxleiter", "M", "maxleiter@vercel.com"),
+            ("evilrabbit", "E", "evilrabbit@vercel.com"),
+        ];
+
+        let menu = shadcn::DropdownMenu::new(dropdown_open.clone())
+            .align(shadcn::DropdownMenuAlign::End)
+            .min_width(Px(288.0))
+            .into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Select")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .toggle_model(dropdown_open.clone())
+                        .children([
+                            ui::text(cx, "Select").into_element(cx),
+                            icon(cx, "lucide.chevron-down"),
+                        ])
+                        .test_id("ui-gallery-item-dropdown-trigger")
+                        .into_element(cx)
+                },
+                |cx| {
+                    people
+                        .iter()
+                        .copied()
+                        .enumerate()
+                        .map(|(idx, (username, initials, email))| {
+                            let avatar =
+                                shadcn::Avatar::new([
+                                    shadcn::AvatarFallback::new(initials).into_element(cx)
+                                ])
+                                .refine_layout(
+                                    LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
+                                )
+                                .into_element(cx);
+                            let media = shadcn::ItemMedia::new([avatar]).into_element(cx);
+                            let content = shadcn::ItemContent::new([
+                                shadcn::ItemTitle::new(username).into_element(cx),
+                                shadcn::ItemDescription::new(email).into_element(cx),
+                            ])
+                            .gap(Px(6.0))
+                            .into_element(cx);
+
+                            let item = shadcn::Item::new([media, content])
+                                .size(shadcn::ItemSize::Sm)
+                                .variant(shadcn::ItemVariant::Outline)
+                                .refine_style(
+                                    ChromeRefinement::default().px(Space::N2).py(Space::N2),
+                                )
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx)
+                                .test_id(format!("ui-gallery-item-dropdown-item-{idx}"));
+
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new(username)
+                                    .padding(Edges::all(Px(0.0)))
+                                    .content(item),
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                },
+            );
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .items_center()
+                .layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .min_h(Px(256.0)),
+                ),
+            |_cx| vec![menu],
+        )
+        .test_id("ui-gallery-item-dropdown")
+    };
+
+    let gallery_demo = doc_layout::wrap_row_snapshot(
         cx,
         &theme,
         Space::N6,
         fret_ui::element::CrossAlign::Start,
         |_cx| vec![column_basic, column_people, column_music, column_issues],
     )
-    .test_id("ui-gallery-item-demo");
+    .test_id("ui-gallery-item-gallery-demo");
 
     let link_render = {
-        let media = shadcn::ItemMedia::new([icon(cx, "lucide.home")])
+        let media = shadcn::ItemMedia::new([icon(cx, "lucide.house")])
             .variant(shadcn::ItemMediaVariant::Icon)
             .into_element(cx);
         let content = shadcn::ItemContent::new([
@@ -585,8 +1195,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             shadcn::ItemDescription::new("Overview of your account and activity.").into_element(cx),
         ])
         .into_element(cx);
+        let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")]).into_element(cx);
 
-        shadcn::Item::new([media, content])
+        shadcn::Item::new([media, content, actions])
             .render(shadcn::ItemRender::Link {
                 href: Arc::<str>::from("https://example.com/dashboard"),
                 target: None,
@@ -617,7 +1228,8 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview aligns to shadcn Item demo layout (4 columns).",
+            "Docs sections align to shadcn Item examples (new-york-v4).",
+            "The Gallery section is an extended snapshot used for internal regression coverage.",
             "Upstream uses `render={<a .../>}`; Fret uses `ItemRender::Link` to express link semantics on the pressable root.",
             "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
         ],
@@ -626,29 +1238,64 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Item demo: basic rows, people list, download row, music list, issue list.",
+            "Preview follows shadcn Item docs (new-york-v4) with a few Fret-specific extras.",
         ),
         vec![
-            DocSection::new("Demo", demo)
+            DocSection::new("Demo", docs_demo)
                 .no_shell()
-                .max_w(Px(1100.0))
+                .max_w(Px(720.0))
                 .code(
                     "rust",
-                    r#"// Item columns are laid out with a wrap row.
- doc_layout::wrap_row_snapshot(cx, &theme, Space::N6, CrossAlign::Start, |cx| {
-     vec![/* col 1 */, /* col 2 */, /* col 3 */, /* col 4 */]
- });"#,
+                    r#"let item = shadcn::Item::new([
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Basic Item").into_element(cx),
+        shadcn::ItemDescription::new("A simple item with title and description.").into_element(cx),
+    ]).into_element(cx),
+    shadcn::ItemActions::new([
+        shadcn::Button::new("Action")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx),
+    ]).into_element(cx),
+])
+.variant(shadcn::ItemVariant::Outline)
+.refine_layout(LayoutRefinement::default().w_full())
+.into_element(cx);"#,
                 ),
-            DocSection::new("Link (render)", link_render)
-                .description("shadcn supports rendering Item as an anchor; Fret models this via link semantics on the pressable root.")
+            DocSection::new("Variants", docs_variants)
+                .description("Default, Outline, and Muted variants (new-york-v4).")
                 .no_shell()
                 .max_w(Px(640.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Item::new([/* ... */])
-    .render(shadcn::ItemRender::Link { href: Arc::from("..."), target: None, rel: None })
-    .into_element(cx);"#,
-                ),
+                .code("rust", r#"shadcn::Item::new([/* ... */]).variant(shadcn::ItemVariant::Muted).into_element(cx);"#),
+            DocSection::new("Size", docs_size)
+                .description("Default vs `sm` item sizing (new-york-v4).")
+                .no_shell()
+                .max_w(Px(640.0))
+                .code("rust", r#"shadcn::Item::new([/* ... */]).size(shadcn::ItemSize::Sm).into_element(cx);"#),
+            DocSection::new("Icon", docs_icon)
+                .no_shell()
+                .max_w(Px(640.0))
+                .code("rust", r#"shadcn::ItemMedia::new([doc_layout::icon(cx, "lucide.shield-alert")]).variant(shadcn::ItemMediaVariant::Icon).into_element(cx);"#),
+            DocSection::new("Avatar", docs_avatar).no_shell().max_w(Px(720.0)),
+            DocSection::new("Image", docs_image).no_shell().max_w(Px(640.0)),
+            DocSection::new("Group", docs_group).no_shell().max_w(Px(640.0)),
+            DocSection::new("Header", docs_header).no_shell().max_w(Px(820.0)),
+            DocSection::new("Link", docs_link)
+                .description("Links are modeled via `ItemRender::Link` so the root carries link semantics.")
+                .no_shell()
+                .max_w(Px(640.0)),
+            DocSection::new("Dropdown", docs_dropdown)
+                .description("Item composed inside a DropdownMenu row (new-york-v4).")
+                .no_shell()
+                .max_w(Px(720.0)),
+            DocSection::new("Gallery", gallery_demo)
+                .description("Extended coverage snapshot: columns + mixed compositions.")
+                .no_shell()
+                .max_w(Px(1100.0)),
+            DocSection::new("Link (render)", link_render)
+                .description("Minimal link row with media + chevron (gallery-friendly, deterministic).")
+                .no_shell()
+                .max_w(Px(640.0)),
             DocSection::new("Extras", rtl)
                 .description("RTL smoke check (not present in upstream demo).")
                 .no_shell()

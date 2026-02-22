@@ -111,12 +111,26 @@ Minimum deliverables (3-pack):
 - Diag scripts and workflows: `tools/diag-scripts/`, `.agents/skills/fret-diag-workflow/SKILL.md`
 - Perf gates and baselines: `tools/perf/`, `docs/workstreams/perf-baselines/` (see `.agents/skills/fret-diag-workflow/SKILL.md`)
 
+## Examples
+
+- Example: add a new skill with a durable outcome
+  - User says: "Turn this workflow into a repeatable skill."
+  - Actions: define triggers, keep SKILL.md lean, move deep material into references, and leave the 3-pack (Repro + Gate + Evidence).
+  - Result: a skill that is easy to load and hard to regress.
+
 ## Common pitfalls
 
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui`.
 - Leaving no gate behind (“works on my machine” regressions).
 - Unstable selectors (`test_id` missing/duplicated), leading to flaky scripts.
 - Writing long narratives instead of a small reproducible repro + gate + evidence anchors.
+
+## Troubleshooting
+
+- Symptom: `validate --strict` fails.
+  - Fix: ensure frontmatter has `---` delimiters, `name` matches the folder, and required headings exist.
+- Symptom: anchor checks fail in the mono-repo.
+  - Fix: replace directory-only anchors with stable file paths; avoid `repo-ref/` paths.
 
 ## Related skills
 

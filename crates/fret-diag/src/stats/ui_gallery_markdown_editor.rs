@@ -2,8 +2,8 @@ use std::path::Path;
 
 use crate::util::{now_unix_ms, write_json_value};
 
-use super::{semantics_node_id_for_test_id, semantics_parent_map};
 use super::parse_redacted_len_bytes;
+use super::{semantics_node_id_for_test_id, semantics_parent_map};
 
 pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits(
     bundle_path: &Path,
@@ -4114,4 +4114,3 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_na
         evidence_path.display()
     ))
 }
-

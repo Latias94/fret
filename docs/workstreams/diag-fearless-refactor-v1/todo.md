@@ -37,11 +37,26 @@ scope: diagnostics, automation, tooling, refactor
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),
   - `test_ids.index.json` (test-id catalog / lookup),
   - `script.result.json` + `bundle.index.json.script` (script step → snapshot mapping for fast evidence lookup, script dumps only).
-- [ ] Make sidecars forward-compatible:
-  - versioned schema,
+- [x] Make sidecars forward-compatible:
+  - versioned schema (`kind` + `schema_version`),
   - additive-only evolution,
-  - documented failure behavior when sidecars are missing.
+  - documented failure behavior when sidecars are missing,
+  - CLI-side validation + on-demand regeneration when invalid.
   - `docs/workstreams/diag-fearless-refactor-v1/sidecar-schema-policy.md`
+  - Evidence anchors:
+    - `crates/fret-diag/src/commands/sidecars.rs`
+    - `crates/fret-diag/src/commands/query.rs`
+    - `crates/fret-diag/src/commands/index.rs`
+    - `crates/fret-diag/src/commands/artifacts.rs`
+    - `crates/fret-diag/src/lib.rs`
+
+## M2b: Sidecar access is fully centralized (finish the sweep)
+
+- [x] Migrate remaining commands to the shared sidecar helpers (start with `crates/fret-diag/src/commands/slice.rs`).
+- [x] Add a small “doctor” command that reports missing/invalid sidecars and suggests the exact regen command.
+  - Evidence: `crates/fret-diag/src/commands/doctor.rs`
+  - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
+  - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
 
 ## M3: Tooling + AI loop
 

@@ -10,7 +10,7 @@ use fret_executor::FutureSpawnerHandle;
 use fret_icons::IconId;
 use fret_runtime::{CommandId, DispatcherHandle, Model};
 use fret_ui::action::UiActionHost;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SpacerProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{OverlayController, OverlayRequest, ToastAsyncQueueHandle, ToastStore};
 
@@ -323,6 +323,8 @@ impl Toaster {
             style.show_close_button = self.close_button;
             style.close_button_aria_label = self.close_button_aria_label.clone();
             style.icons = self.icons.clone();
+            let theme = fret_ui::Theme::global(&*cx.app);
+            style.container_radius = Some(theme.metric_token("metric.radius.lg"));
 
             let mut request = OverlayRequest::toast_layer(id, store)
                 .toast_position(self.position)
@@ -358,7 +360,17 @@ impl Toaster {
             }
             OverlayController::request(cx, request);
 
-            cx.stack(|_cx| Vec::new())
+            // This element exists to drive overlay requests; it must not affect layout.
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(0.0));
+            layout.size.height = Length::Px(Px(0.0));
+            layout.flex.grow = 0.0;
+            layout.flex.shrink = 0.0;
+            layout.flex.basis = Length::Px(Px(0.0));
+            cx.spacer(SpacerProps {
+                layout,
+                min: Px(0.0),
+            })
         })
     }
 }

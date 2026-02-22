@@ -1,6 +1,6 @@
 ---
 name: fret-perf-tracy-bridge
-description: "Bridge Fret's perf gates (diag perf + bundles) with Tracy timeline profiling: reproduce worst bundles, capture traces, correlate spans with bundle stats, and add low-overhead instrumentation safely."
+description: "This skill should be used when the user asks to capture Tracy traces, profile a worst-frame hitch, or correlate `diag perf` bundle evidence with a timeline. Bridges Fret's perf gates (diag perf + bundles) with Tracy profiling: reproduce worst bundles, capture traces, map spans to bundle stats, and add low-overhead instrumentation safely."
 ---
 
 # Fret perf + Tracy (end-to-end attribution workflow)
@@ -78,14 +78,21 @@ Then open Tracy and look for the same span taxonomy you see in bundles (`fret.fr
 ## Evidence anchors
 
 - Perf gate evidence: `target/fret-diag/check.perf_thresholds.json`
-- Bundle attribution: `target/release/fretboard.exe diag stats <bundle.json>`
+- Bundle attribution: `cargo run -p fretboard --release -- diag stats <bundle.json>` (or `target/release/fretboard[.exe] ...` if already built)
 - Tracy usage + span taxonomy:
   - `docs/tracy.md`
   - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
   - `docs/adr/0181-ui-automation-and-debug-recipes-v1.md`
 - Layout and cache-root spans:
-  - `crates/fret-ui/src/tree/layout.rs`
-  - `crates/fret-ui/src/tree/paint.rs`
+  - `crates/fret-ui/src/tree/layout/mod.rs`
+  - `crates/fret-ui/src/tree/paint/mod.rs`
+
+## Examples
+
+- Example: correlate a worst frame with a Tracy timeline
+  - User says: "We have the worst bundle—what actually ran on the UI thread?"
+  - Actions: reproduce the same script, capture a Tracy trace, and map spans to the bundle's top phases.
+  - Result: root-cause attribution that survives "it depends" discussions.
 
 ## Common pitfalls
 
@@ -93,9 +100,15 @@ Then open Tracy and look for the same span taxonomy you see in bundles (`fret.fr
 - Capturing Tracy without a script repro: you’ll get a noisy timeline that’s hard to compare.
 - Adding spans that allocate/format on hot paths: prefer IDs and small integers; avoid building debug paths unless diagnostics are on.
 
+## Troubleshooting
+
+- Symptom: traces are noisy and not comparable.
+  - Fix: keep the same script and fixed setup; avoid mixing profiling-only flags with perf gate runs.
+- Symptom: the act of profiling changes perf.
+  - Fix: use profiling as attribution only; confirm improvements with `diag perf` without instrumentation flags.
+
 ## Related skills
 
 - `fret-diag-workflow`: scripts, bundles, triage, and perf baselines/gates.
 - `fret-perf-optimization`: turning hitches into durable perf contracts and landing reversible fixes.
 - `fret-framework-maintainer-guide`: contract-first changes and evidence discipline.
-

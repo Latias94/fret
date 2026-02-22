@@ -2,7 +2,7 @@
 //!
 //! This module provides a small, reusable skeleton for positioning menu content panels:
 //! - `role=menu` semantics
-//! - absolute-positioned panel container clipped to its rect
+//! - absolute-positioned panel container clipped to its rect (rounded clip lives on the container)
 //!
 //! Wrappers (DropdownMenu, ContextMenu, Menubar, etc) should provide styling and inner structure
 //! (scroll, roving focus group, items) via closures.
@@ -120,7 +120,10 @@ where
             height: Length::Px(placed.size.height),
             ..Default::default()
         },
-        overflow: Overflow::Clip,
+        // Do not clip at the semantics wrapper: clipping here is rectangular (no corner radii) and
+        // will truncate rounded shadows on the inner container. The container applies the rounded
+        // clip for its children via `Overflow::Clip`.
+        overflow: Overflow::Visible,
         ..Default::default()
     };
 
@@ -160,7 +163,9 @@ where
             height: Length::Px(placed.size.height),
             ..Default::default()
         },
-        overflow: Overflow::Clip,
+        // See `menu_panel_at`: keep the wrapper unclipped so the container can paint rounded
+        // shadows outside its rect without being cut to a square.
+        overflow: Overflow::Visible,
         ..Default::default()
     };
 

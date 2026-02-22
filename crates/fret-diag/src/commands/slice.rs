@@ -6,6 +6,7 @@ use crate::json_bundle::{
 };
 use crate::test_id_bloom::TestIdBloomV1;
 
+use super::sidecars;
 use super::slice_payload::build_test_id_slice_payload_from_snapshot_and_nodes;
 use super::slice_streaming::{
     try_build_test_id_slice_payload_streaming_inline,
@@ -344,18 +345,7 @@ struct BundleIndexSliceCandidate {
 
 fn try_read_bundle_index(bundle_path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
     let index_path = crate::bundle_index::default_bundle_index_path(bundle_path);
-    let bytes = std::fs::read(index_path).ok()?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
-        return None;
-    }
-    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
-        return None;
-    }
-    if v.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
-        return None;
-    }
-    Some(v)
+    sidecars::try_read_sidecar_json_v1(&index_path, "bundle_index", warmup_frames)
 }
 
 fn bundle_index_has_script_markers(v: &serde_json::Value) -> bool {
@@ -374,12 +364,11 @@ fn read_bundle_index_for_step_index(
         return Ok(v);
     }
     let index_path = crate::bundle_index::ensure_bundle_index_json(bundle_path, warmup_frames)?;
-    let bytes = std::fs::read(&index_path).map_err(|e| e.to_string())?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
-        return Ok(None);
-    }
-    Ok(Some(v))
+    Ok(sidecars::try_read_sidecar_json_v1(
+        &index_path,
+        "bundle_index",
+        warmup_frames,
+    ))
 }
 
 fn find_snapshot_in_bundle_index(
@@ -874,22 +863,16 @@ pub(crate) fn cmd_slice(
     fn try_read_bundle_index_from_dir(dir: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
         let direct = dir.join("bundle.index.json");
         if direct.is_file() {
-            let bytes = std::fs::read(direct).ok()?;
-            let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index")
-                && v.get("schema_version").and_then(|v| v.as_u64()) == Some(1)
-                && v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
+            if let Some(v) =
+                sidecars::try_read_sidecar_json_v1(&direct, "bundle_index", warmup_frames)
             {
                 return Some(v);
             }
         }
         let root = dir.join("_root").join("bundle.index.json");
         if root.is_file() {
-            let bytes = std::fs::read(root).ok()?;
-            let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index")
-                && v.get("schema_version").and_then(|v| v.as_u64()) == Some(1)
-                && v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
+            if let Some(v) =
+                sidecars::try_read_sidecar_json_v1(&root, "bundle_index", warmup_frames)
             {
                 return Some(v);
             }
@@ -922,7 +905,9 @@ pub(crate) fn cmd_slice(
         if src.is_dir() {
             let bundle_path = crate::resolve_bundle_json_path(&src);
             let idx = if bundle_path.is_file() {
-                read_bundle_index_for_step_index(&bundle_path, warmup_frames).ok().flatten()
+                read_bundle_index_for_step_index(&bundle_path, warmup_frames)
+                    .ok()
+                    .flatten()
             } else {
                 try_read_bundle_index_from_dir(&src, warmup_frames)
             };
@@ -931,19 +916,19 @@ pub(crate) fn cmd_slice(
                 && let Some((step_window, step_frame_id, step_seq)) =
                     resolve_step_selector_from_bundle_index(&idx, step_index)
             {
-            if let Some(req) = window_id
-                && req != step_window
-            {
-                return Err(format!(
-                    "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
-                ));
-            }
-            window_id = Some(step_window);
-            if step_seq.is_some() {
-                window_snapshot_seq = step_seq;
-            } else {
-                frame_id = step_frame_id;
-            }
+                if let Some(req) = window_id
+                    && req != step_window
+                {
+                    return Err(format!(
+                        "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
+                    ));
+                }
+                window_id = Some(step_window);
+                if step_seq.is_some() {
+                    window_snapshot_seq = step_seq;
+                } else {
+                    frame_id = step_frame_id;
+                }
             }
         }
     }

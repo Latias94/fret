@@ -60,12 +60,29 @@ pub(in crate::ui) fn preview_sonner(
                        label: &'static str,
                        test_id: &'static str,
                        on_activate: fret_ui::action::OnActivate| {
-        let variant = if current_active.as_ref() == label {
-            shadcn::ButtonVariant::Secondary
-        } else {
-            shadcn::ButtonVariant::Ghost
-        };
-        action_button(cx, label, variant, test_id, on_activate)
+        let active = current_active.as_ref() == label;
+        let mut button = shadcn::Button::new(label)
+            .variant(shadcn::ButtonVariant::Ghost)
+            .on_activate(on_activate)
+            .test_id(test_id);
+
+        if active {
+            let bg = shadcn::ColorRef::Token {
+                key: "accent",
+                fallback: fret_ui_kit::ColorFallback::ThemeHoverBackground,
+            };
+            let fg = shadcn::ColorRef::Token {
+                key: "accent-foreground",
+                fallback: fret_ui_kit::ColorFallback::ThemeTextPrimary,
+            };
+            button = button.style(
+                shadcn::button::ButtonStyle::default()
+                    .background(fret_ui_kit::WidgetStateProperty::new(Some(bg)))
+                    .foreground(fret_ui_kit::WidgetStateProperty::new(Some(fg))),
+            );
+        }
+
+        button.into_element(cx)
     };
 
     let demo = {
@@ -451,11 +468,11 @@ pub(in crate::ui) fn preview_sonner(
                 let on_activate: fret_ui::action::OnActivate =
                     Arc::new(move |host, action_cx, _reason| {
                         let _ = host.models_mut().update(&position_model, |v| *v = target);
-                        sonner.toast_message(
+                        sonner.toast(
                             host,
                             action_cx.window,
-                            "Event has been created",
-                            shadcn::ToastMessageOptions::new()
+                            shadcn::ToastRequest::new("Event has been created")
+                                .position(target)
                                 .description(format!("position: {}", sonner_position_key(target))),
                         );
                         let _ = host.models_mut().update(&last_action_model, |v| {
@@ -611,10 +628,38 @@ pub(in crate::ui) fn preview_sonner(
         },
     );
 
+    let setup = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            vec![
+                doc_layout::muted_full_width(cx, "Mount a `Toaster` once per window."),
+                doc_layout::muted_full_width(
+                    cx,
+                    "This installs the toast overlay layer and drives default styling + icons.",
+                ),
+            ]
+        },
+    );
+
     let body = doc_layout::render_doc_page(
         cx,
         Some("An opinionated toast component (Sonner)."),
         vec![
+            DocSection::new("Setup", setup)
+                .description("Mount a toaster layer in your window root.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"// In your window root view:
+shadcn::Toaster::new()
+    .position(shadcn::ToastPosition::TopCenter)
+    .shadcn_lucide_icons()
+    .into_element(cx);"#,
+                ),
             DocSection::new("Demo", demo)
                 .description("Buttons that fire different toast styles and actions.")
                 .max_w(Px(980.0))
@@ -623,11 +668,46 @@ pub(in crate::ui) fn preview_sonner(
                     r#"let sonner = shadcn::Sonner::global(&mut *cx.app);
 
 sonner.toast_message(host, window, "Event has been created", ToastMessageOptions::new());
+sonner.toast_message(
+    host,
+    window,
+    "Event has been created",
+    ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
+);
 sonner.toast_success_message(host, window, "Event has been created", ToastMessageOptions::new());
-sonner.toast_message(host, window, "Event has been created", ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION));"#,
+sonner.toast_info_message(
+    host,
+    window,
+    "Be at the area 10 minutes before the event time",
+    ToastMessageOptions::new(),
+);
+sonner.toast_warning_message(
+    host,
+    window,
+    "Event start time cannot be earlier than 8am",
+    ToastMessageOptions::new(),
+);
+sonner.toast_error_message(host, window, "Event has not been created", ToastMessageOptions::new());
+sonner.toast_message(
+    host,
+    window,
+    "Event has been created",
+    ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION),
+);
+sonner.toast_message(
+    host,
+    window,
+    "Event has been created",
+    ToastMessageOptions::new().cancel("Cancel", CMD_TOAST_ACTION),
+);
+
+let promise = sonner.toast_promise(host, window, "Loading...");
+promise.success(host, "Sonner toast has been added");"#,
                 ),
             DocSection::new("Position", position)
-                .description("Fret-specific: mutate global toaster position for overlay regression tests.")
+                .description(
+                    "Fret-specific: mutate global toaster position for overlay regression tests.",
+                )
                 .max_w(Px(980.0))
                 .code(
                     "rust",

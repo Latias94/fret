@@ -5,7 +5,7 @@ use fret_runtime::{CommandId, Effect};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, MainAlign,
-    PressableKeyActivation, PressableProps,
+    PressableKeyActivation, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -156,7 +156,7 @@ impl ItemGroup {
         let gap = self.gap.unwrap_or(Px(0.0));
         let children = self.children;
 
-        match self.kind {
+        let el = match self.kind {
             ItemGroupKind::Column => cx.column(
                 ColumnProps {
                     layout,
@@ -174,7 +174,9 @@ impl ItemGroup {
                 },
                 move |_cx| children,
             ),
-        }
+        };
+
+        el.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List))
     }
 }
 
@@ -593,6 +595,7 @@ impl ItemDescription {
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
         };
+        let max_h = Px(line_height.0 * 2.0);
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -601,6 +604,8 @@ impl ItemDescription {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
+            .max_h(max_h)
+            .overflow_hidden()
             .into_element(cx)
     }
 }
@@ -752,6 +757,7 @@ impl Item {
         let (
             gap,
             border_color,
+            focus_border_color,
             base_bg,
             hover_bg,
             pressed_bg,
@@ -763,6 +769,9 @@ impl Item {
             let theme = Theme::global(&*cx.app);
             let gap = item_gap(theme, size);
             let border_color = base_item_border_color(theme, variant).unwrap_or(Color::TRANSPARENT);
+            let focus_border_color = theme
+                .color_by_key("ring")
+                .unwrap_or_else(|| theme.color_token("ring"));
             let base_bg = base_item_background(theme, variant);
             let accent = theme
                 .color_by_key("accent")
@@ -776,6 +785,7 @@ impl Item {
             (
                 gap,
                 border_color,
+                focus_border_color,
                 base_bg,
                 hover_bg,
                 pressed_bg,
@@ -820,6 +830,7 @@ impl Item {
 
                 let hovered = st.hovered && enabled;
                 let pressed = st.pressed && enabled;
+                let focused = st.focused && enabled;
 
                 let bg = if !enabled {
                     base_bg
@@ -841,7 +852,11 @@ impl Item {
                     chrome.background = bg.map(ColorRef::Color);
                 }
                 if !user_border_override {
-                    chrome.border_color = Some(ColorRef::Color(border_color));
+                    chrome.border_color = Some(ColorRef::Color(if focused {
+                        focus_border_color
+                    } else {
+                        border_color
+                    }));
                 }
                 chrome = chrome.merge(user_chrome.clone());
 

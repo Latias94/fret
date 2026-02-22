@@ -133,14 +133,33 @@ Minimal pattern:
 
 ## Evidence anchors
 
-- Fixture examples (when present): `ecosystem/fret-ui-shadcn/tests/` and `goldens/`
-- Diagnostics scripts (for procedural/state-machine cases): `tools/diag-scripts/`
+- Fixture-driven test examples:
+  - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+  - `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs`
+  - `ecosystem/fret-ui-shadcn/tests/resizable_panel_group_layout.rs`
+- Goldens (overview + conventions): `goldens/README.md`
+- Layering boundaries (when moving harnesses across crates): `tools/check_layering.py`
+- Diagnostics scripts (for procedural/state-machine cases): `tools/diag-scripts/ui-gallery-intro-idle-screenshot.json`
+
+## Examples
+
+- Example: replace a growing matrix test with fixtures
+  - User says: "This test file keeps growing—every change adds another case."
+  - Actions: extract cases into `fixtures/*.json`, keep a thin harness, and make failures case-id-addressable.
+  - Result: smaller diffs, fewer conflicts, clearer intent.
 
 ## Common pitfalls
 
 - Using fixtures for procedural state machines (use `fretboard diag` scripts instead).
 - Making fixtures too “clever” (hard to diff; unstable IDs; floats everywhere).
 - Letting the harness grow (keep it parsing + run_case + asserts only).
+
+## Troubleshooting
+
+- Symptom: fixtures depend on `cwd` and fail in CI.
+  - Fix: load with `include_str!` + `env!("CARGO_MANIFEST_DIR")`.
+- Symptom: fixtures are hard to review.
+  - Fix: keep stable `id`s, prefer integers/enums, and split large suites by subsystem.
 
 ## Related skills
 

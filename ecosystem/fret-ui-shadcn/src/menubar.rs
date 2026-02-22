@@ -749,6 +749,10 @@ fn submenu_chevron_right_text<H: UiHost>(
     fg: Color,
     _text_style: TextStyle,
 ) -> AnyElement {
+    let icon = match direction_prim::use_direction_in_scope(cx, None) {
+        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
+        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
+    };
     cx.flex(
         FlexProps {
             layout: {
@@ -768,7 +772,7 @@ fn submenu_chevron_right_text<H: UiHost>(
         move |cx| {
             vec![decl_icon::icon_with(
                 cx,
-                ids::ui::CHEVRON_RIGHT,
+                icon,
                 Some(Px(16.0)),
                 Some(ColorRef::Color(fg)),
             )]
@@ -1609,7 +1613,9 @@ impl MenubarMenuEntries {
                                         height: Length::Px(placed.size.height),
                                         ..Default::default()
                                     },
-                                    overflow: Overflow::Clip,
+                                    // Do not clip at the semantics wrapper: clipping here is rectangular (no corner
+                                    // radii) and will truncate rounded shadows on the inner panel container.
+                                    overflow: Overflow::Visible,
                                     ..Default::default()
                                 },
                                 move |cx| {

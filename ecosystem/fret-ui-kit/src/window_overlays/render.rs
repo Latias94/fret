@@ -2487,6 +2487,20 @@ pub fn render<H: UiHost + 'static>(
                                                                             color: Some(fg),
                                                                             ..Default::default()
                                                                         };
+                                                                    let prefers_reduced_motion =
+                                                                        crate::declarative::reduced_motion_queries::prefers_reduced_motion(
+                                                                            cx,
+                                                                            Invalidation::Paint,
+                                                                            false,
+                                                                        );
+                                                                    let spinner = if prefers_reduced_motion {
+                                                                        fret_ui::element::SpinnerProps {
+                                                                            speed: 0.0,
+                                                                            ..spinner
+                                                                        }
+                                                                    } else {
+                                                                        spinner
+                                                                    };
                                                                     Some(cx.spinner_props(spinner))
                                                                 })
                                                         }

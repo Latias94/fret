@@ -5,6 +5,9 @@ struct ComboboxModelsState {
     clear_value: Option<Model<Option<Arc<str>>>>,
     clear_open: Option<Model<bool>>,
     clear_query: Option<Model<String>>,
+    popup_value: Option<Model<Option<Arc<str>>>>,
+    popup_open: Option<Model<bool>>,
+    popup_query: Option<Model<String>>,
     custom_value: Option<Model<Option<Arc<str>>>>,
     custom_open: Option<Model<bool>>,
     custom_query: Option<Model<String>>,
@@ -33,6 +36,9 @@ pub(super) struct ComboboxModels {
     pub(super) clear_value: Model<Option<Arc<str>>>,
     pub(super) clear_open: Model<bool>,
     pub(super) clear_query: Model<String>,
+    pub(super) popup_value: Model<Option<Arc<str>>>,
+    pub(super) popup_open: Model<bool>,
+    pub(super) popup_query: Model<String>,
     pub(super) custom_value: Model<Option<Arc<str>>>,
     pub(super) custom_open: Model<bool>,
     pub(super) custom_query: Model<String>,
@@ -62,6 +68,9 @@ impl ComboboxModels {
             clear_value: state.clear_value?,
             clear_open: state.clear_open?,
             clear_query: state.clear_query?,
+            popup_value: state.popup_value?,
+            popup_open: state.popup_open?,
+            popup_query: state.popup_query?,
             custom_value: state.custom_value?,
             custom_open: state.custom_open?,
             custom_query: state.custom_query?,
@@ -97,6 +106,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let clear_open = cx.app.models_mut().insert(false);
     let clear_query = cx.app.models_mut().insert(String::new());
 
+    let popup_value = cx.app.models_mut().insert(None);
+    let popup_open = cx.app.models_mut().insert(false);
+    let popup_query = cx.app.models_mut().insert(String::new());
+
     let custom_value = cx.app.models_mut().insert(None);
     let custom_open = cx.app.models_mut().insert(false);
     let custom_query = cx.app.models_mut().insert(String::new());
@@ -129,6 +142,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.clear_value = Some(clear_value.clone());
         st.clear_open = Some(clear_open.clone());
         st.clear_query = Some(clear_query.clone());
+
+        st.popup_value = Some(popup_value.clone());
+        st.popup_open = Some(popup_open.clone());
+        st.popup_query = Some(popup_query.clone());
 
         st.custom_value = Some(custom_value.clone());
         st.custom_open = Some(custom_open.clone());
@@ -163,6 +180,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         clear_value,
         clear_open,
         clear_query,
+        popup_value,
+        popup_open,
+        popup_query,
         custom_value,
         custom_open,
         custom_query,
