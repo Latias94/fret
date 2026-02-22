@@ -7,103 +7,143 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     struct NativeSelectPageModels {
         basic_value: Option<Model<Option<Arc<str>>>>,
         basic_open: Option<Model<bool>>,
+        basic_native_open: Option<Model<bool>>,
         groups_value: Option<Model<Option<Arc<str>>>>,
         groups_open: Option<Model<bool>>,
+        groups_native_open: Option<Model<bool>>,
         disabled_value: Option<Model<Option<Arc<str>>>>,
         disabled_open: Option<Model<bool>>,
+        disabled_native_open: Option<Model<bool>>,
         error_value: Option<Model<Option<Arc<str>>>>,
         error_open: Option<Model<bool>>,
+        error_native_open: Option<Model<bool>>,
     }
 
     let (
         basic_value,
         basic_open,
+        basic_native_open,
         groups_value,
         groups_open,
+        groups_native_open,
         disabled_value,
         disabled_open,
+        disabled_native_open,
         error_value,
         error_open,
+        error_native_open,
     ) = cx.with_state(NativeSelectPageModels::default, |st| {
         (
             st.basic_value.clone(),
             st.basic_open.clone(),
+            st.basic_native_open.clone(),
             st.groups_value.clone(),
             st.groups_open.clone(),
+            st.groups_native_open.clone(),
             st.disabled_value.clone(),
             st.disabled_open.clone(),
+            st.disabled_native_open.clone(),
             st.error_value.clone(),
             st.error_open.clone(),
+            st.error_native_open.clone(),
         )
     });
 
     let (
         basic_value,
         basic_open,
+        basic_native_open,
         groups_value,
         groups_open,
+        groups_native_open,
         disabled_value,
         disabled_open,
+        disabled_native_open,
         error_value,
         error_open,
+        error_native_open,
     ) = match (
         basic_value,
         basic_open,
+        basic_native_open,
         groups_value,
         groups_open,
+        groups_native_open,
         disabled_value,
         disabled_open,
+        disabled_native_open,
         error_value,
         error_open,
+        error_native_open,
     ) {
         (
             Some(basic_value),
             Some(basic_open),
+            Some(basic_native_open),
             Some(groups_value),
             Some(groups_open),
+            Some(groups_native_open),
             Some(disabled_value),
             Some(disabled_open),
+            Some(disabled_native_open),
             Some(error_value),
             Some(error_open),
+            Some(error_native_open),
         ) => (
             basic_value,
             basic_open,
+            basic_native_open,
             groups_value,
             groups_open,
+            groups_native_open,
             disabled_value,
             disabled_open,
+            disabled_native_open,
             error_value,
             error_open,
+            error_native_open,
         ),
         _ => {
             let models = cx.app.models_mut();
             let basic_value = models.insert(None);
             let basic_open = models.insert(false);
+            let basic_native_open = models.insert(false);
             let groups_value = models.insert(None);
             let groups_open = models.insert(false);
+            let groups_native_open = models.insert(false);
             let disabled_value = models.insert(None);
             let disabled_open = models.insert(false);
+            let disabled_native_open = models.insert(false);
             let error_value = models.insert(None);
             let error_open = models.insert(false);
+            let error_native_open = models.insert(false);
             cx.with_state(NativeSelectPageModels::default, |st| {
                 st.basic_value = Some(basic_value.clone());
                 st.basic_open = Some(basic_open.clone());
+                st.basic_native_open = Some(basic_native_open.clone());
                 st.groups_value = Some(groups_value.clone());
                 st.groups_open = Some(groups_open.clone());
+                st.groups_native_open = Some(groups_native_open.clone());
                 st.disabled_value = Some(disabled_value.clone());
                 st.disabled_open = Some(disabled_open.clone());
+                st.disabled_native_open = Some(disabled_native_open.clone());
                 st.error_value = Some(error_value.clone());
                 st.error_open = Some(error_open.clone());
+                st.error_native_open = Some(error_native_open.clone());
             });
             (
                 basic_value,
                 basic_open,
+                basic_native_open,
                 groups_value,
                 groups_open,
+                groups_native_open,
                 disabled_value,
                 disabled_open,
+                disabled_native_open,
                 error_value,
                 error_open,
+                error_native_open,
             )
         }
     };
@@ -146,8 +186,18 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         };
 
     let basic = {
-        let native = shadcn::NativeSelect::new("Select a fruit")
+        let native = shadcn::NativeSelect::new(basic_value.clone(), basic_native_open.clone())
             .a11y_label("Native select: fruit")
+            .placeholder("Select a fruit")
+            .trigger_test_id("ui-gallery-native-select-basic-native-trigger")
+            .test_id_prefix("ui-gallery-native-select-basic-native")
+            .options([
+                shadcn::NativeSelectOption::new("apple", "Apple"),
+                shadcn::NativeSelectOption::new("banana", "Banana"),
+                shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
+                shadcn::NativeSelectOption::new("grapes", "Grapes").disabled(true),
+                shadcn::NativeSelectOption::new("pineapple", "Pineapple"),
+            ])
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-basic-native");
@@ -167,8 +217,29 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let with_groups = {
-        let native = shadcn::NativeSelect::new("Select a food")
+        let native = shadcn::NativeSelect::new(groups_value.clone(), groups_native_open.clone())
             .a11y_label("Native select: food")
+            .placeholder("Select a food")
+            .trigger_test_id("ui-gallery-native-select-groups-native-trigger")
+            .test_id_prefix("ui-gallery-native-select-groups-native")
+            .optgroups([
+                shadcn::NativeSelectOptGroup::new(
+                    "Fruits",
+                    [
+                        shadcn::NativeSelectOption::new("apple", "Apple"),
+                        shadcn::NativeSelectOption::new("banana", "Banana"),
+                        shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
+                    ],
+                ),
+                shadcn::NativeSelectOptGroup::new(
+                    "Vegetables",
+                    [
+                        shadcn::NativeSelectOption::new("carrot", "Carrot"),
+                        shadcn::NativeSelectOption::new("broccoli", "Broccoli"),
+                        shadcn::NativeSelectOption::new("spinach", "Spinach"),
+                    ],
+                ),
+            ])
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-groups-native");
@@ -199,9 +270,16 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let disabled_state = {
-        let native = shadcn::NativeSelect::new("Disabled")
+        let native = shadcn::NativeSelect::new(disabled_value.clone(), disabled_native_open.clone())
             .a11y_label("Native select: disabled")
+            .placeholder("Disabled")
             .disabled(true)
+            .trigger_test_id("ui-gallery-native-select-disabled-native-trigger")
+            .test_id_prefix("ui-gallery-native-select-disabled-native")
+            .options([
+                shadcn::NativeSelectOption::new("apple", "Apple"),
+                shadcn::NativeSelectOption::new("banana", "Banana"),
+            ])
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-disabled-native");
@@ -220,9 +298,16 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let error_state = {
-        let native = shadcn::NativeSelect::new("Error state")
+        let native = shadcn::NativeSelect::new(error_value.clone(), error_native_open.clone())
             .a11y_label("Native select: error")
+            .placeholder("Error state")
             .aria_invalid(true)
+            .trigger_test_id("ui-gallery-native-select-error-native-trigger")
+            .test_id_prefix("ui-gallery-native-select-error-native")
+            .options([
+                shadcn::NativeSelectOption::new("apple", "Apple"),
+                shadcn::NativeSelectOption::new("banana", "Banana"),
+            ])
             .refine_layout(select_width.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-error-native");
@@ -250,7 +335,8 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     .test_id("ui-gallery-native-select-demo");
 
     let rtl = doc_layout::rtl(cx, |cx| {
-        shadcn::NativeSelect::new("Select language")
+        shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+            .placeholder("Select language")
             .a11y_label("RTL native select")
             .refine_layout(select_width.clone())
             .into_element(cx)
@@ -261,7 +347,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
-            "Gallery alignment note: upstream NativeSelect is a real DOM `<select>` with Option/OptGroup nodes; Fret's `NativeSelect` is currently a styled pressable placeholder (no option model yet).",
+            "Gallery alignment note: upstream NativeSelect is a DOM `<select>`; Fret's `NativeSelect` is a popover-backed fallback today (platform-native pickers TBD).",
             "Use `Select` for rich overlays and custom interactions; revisit `NativeSelect` when platform-native select widgets are implemented per backend.",
         ],
     );
@@ -278,8 +364,19 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 .code(
                     "rust",
                     r#"// Basic Select
-shadcn::NativeSelect::new("Select a fruit")
+let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+let open: Model<bool> = cx.app.models_mut().insert(false);
+
+shadcn::NativeSelect::new(value, open)
     .a11y_label("Native select: fruit")
+    .placeholder("Select a fruit")
+    .options([
+        shadcn::NativeSelectOption::new("apple", "Apple"),
+        shadcn::NativeSelectOption::new("banana", "Banana"),
+        shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
+        shadcn::NativeSelectOption::new("grapes", "Grapes").disabled(true),
+        shadcn::NativeSelectOption::new("pineapple", "Pineapple"),
+    ])
     .into_element(cx);
 
 shadcn::Select::new(value, open)
@@ -319,7 +416,9 @@ shadcn::Select::new(value, open)
                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| shadcn::NativeSelect::new("Select language").into_element(cx),
+    |cx| shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+        .placeholder("Select language")
+        .into_element(cx),
 );"#,
                 ),
             DocSection::new("Notes", notes)

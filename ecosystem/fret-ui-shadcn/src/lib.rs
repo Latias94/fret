@@ -234,7 +234,9 @@ pub use menubar::{
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
 };
-pub use native_select::{NativeSelect, NativeSelectSize, native_select};
+pub use native_select::{
+    NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,
+};
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
