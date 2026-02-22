@@ -60,6 +60,24 @@ Guardrail:
   - `PathMsaaBatch.union_scissor`
   - `CompositePremul.dst_scissor`
 
+Scissor mapping rules (v1)
+
+We rely on two mapping helpers during plan compilation to preserve coverage monotonicity when a scissor is carried across resizes:
+
+- `map_scissor_to_size(scissor, src_size, dst_size)`:
+  - Maps a scissor expressed in the `src_size` coordinate space into the `dst_size` coordinate space.
+  - Uses floor for the start edge and ceil for the end edge:
+    - `dst_x0 = floor(src_x0 * dst_w / src_w)`
+    - `dst_x1 = ceil(src_x1 * dst_w / src_w)`
+    - (same for y)
+  - Clamps the result to `0..dst_size` and returns `None` if the mapped rect is empty.
+- `map_scissor_downsample_nearest(scissor, scale, dst_size)`:
+  - Specialized mapping for integer downsample-by-`scale` (nearest-style) steps:
+    - `dst_x0 = floor(src_x0 / scale)`
+    - `dst_x1 = ceil(src_x1 / scale)`
+    - (same for y)
+  - Clamps the result to `0..dst_size` and returns `None` if the mapped rect is empty.
+
 ### 4) Masks and clip targets
 
 - Mask targets are `R8Unorm` and sampled consistently across passes that accept `MaskRef`.

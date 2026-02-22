@@ -31,6 +31,10 @@
     - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Definition: “initialized in the current frame”).
   - [x] Write a small per-pass table for `MaskRef.viewport_rect` mapping rules (dst-local space, tier expectations, downsample/upsample behavior).
     - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (MaskRef mapping matrix).
+  - [x] Document scissor mapping rules used across resize chains (floor start, ceil end; never expand coverage).
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Scissor mapping rules),
+      `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (`map_scissor_to_size`, `map_scissor_downsample_nearest`),
+      `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`downsample_scissor_mapping_does_not_expand_across_steps`).
 - [x] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
     `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
