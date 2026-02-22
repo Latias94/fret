@@ -1,8 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Point, Px, Transform2D};
-use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, Length, SpinnerProps, SvgIconProps};
+use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
+use fret_runtime::Effect;
+use fret_ui::action::OnActivate;
+use fret_ui::element::{
+    AnyElement, ElementKind, LayoutStyle, Length, PressableA11y, PressableKeyActivation,
+    PressableProps, SpinnerProps, SvgIconProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -19,12 +25,53 @@ pub enum BadgeVariant {
 }
 
 #[derive(Debug, Clone)]
+pub enum BadgeRender {
+    Link {
+        href: Arc<str>,
+        target: Option<Arc<str>>,
+        rel: Option<Arc<str>>,
+    },
+}
+
+fn open_url_on_activate(
+    url: Arc<str>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
+) -> OnActivate {
+    Arc::new(move |host, _acx, _reason| {
+        host.push_effect(Effect::OpenUrl {
+            url: url.to_string(),
+            target: target.as_ref().map(|v| v.to_string()),
+            rel: rel.as_ref().map(|v| v.to_string()),
+        });
+    })
+}
+
+#[derive(Clone)]
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
+    render: Option<BadgeRender>,
+    on_activate: Option<OnActivate>,
+    test_id: Option<Arc<str>>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for Badge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Badge")
+            .field("label", &self.label.as_ref())
+            .field("variant", &self.variant)
+            .field("render", &self.render)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
+            .field("children_len", &self.children.len())
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl Badge {
@@ -32,6 +79,9 @@ impl Badge {
         Self {
             label: label.into(),
             variant: BadgeVariant::Default,
+            render: None,
+            on_activate: None,
+            test_id: None,
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -45,6 +95,21 @@ impl Badge {
 
     pub fn variant(mut self, variant: BadgeVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn render(mut self, render: BadgeRender) -> Self {
+        self.render = Some(render);
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -64,6 +129,9 @@ impl Badge {
             cx,
             self.label,
             self.variant,
+            self.render,
+            self.on_activate,
+            self.test_id,
             self.children,
             self.chrome,
             self.layout,
@@ -189,6 +257,9 @@ pub fn badge<H: UiHost>(
         cx,
         label,
         variant,
+        None,
+        None,
+        None,
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -199,12 +270,21 @@ fn badge_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
+    render: Option<BadgeRender>,
+    on_activate: Option<OnActivate>,
+    test_id: Option<Arc<str>>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let label = label.into();
     let theme = Theme::global(&*cx.app).clone();
+
+    let a11y_label = label.clone();
+    let label_for_content = label.clone();
+
+    let pressable_layout =
+        decl_style::layout_style(&theme, LayoutRefinement::default().merge(layout_override));
 
     let mut chrome = ChromeRefinement::default()
         .px(Space::N2)
@@ -228,13 +308,8 @@ fn badge_with_patch<H: UiHost>(
     let theme_fg = theme.color_token("foreground");
     let theme_muted_fg = theme.color_by_key("muted-foreground").unwrap_or(theme_fg);
 
-    let props = decl_style::container_props(
-        &theme,
-        chrome,
-        LayoutRefinement::default()
-            .overflow_hidden()
-            .merge(layout_override),
-    );
+    let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+    chrome_props.layout.size = pressable_layout.size;
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -245,8 +320,8 @@ fn badge_with_patch<H: UiHost>(
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    cx.container(props, |cx| {
-        let label = ui::text(cx, label)
+    let content_children = move |cx: &mut ElementContext<'_, H>| {
+        let label = ui::text(cx, label_for_content.clone())
             .text_size_px(text_px)
             .fixed_line_box_px(line_height)
             .line_box_in_bounds()
@@ -279,5 +354,62 @@ fn badge_with_patch<H: UiHost>(
                 |_cx| content,
             )]
         }
-    })
+    };
+
+    let focus_radius = {
+        let Corners {
+            top_left,
+            top_right,
+            bottom_right,
+            bottom_left,
+        } = chrome_props.corner_radii;
+        Px(top_left
+            .0
+            .max(top_right.0)
+            .max(bottom_right.0)
+            .max(bottom_left.0))
+    };
+
+    let (render_role, render_key_activation, render_on_activate) = match render {
+        Some(BadgeRender::Link { href, target, rel }) => (
+            Some(SemanticsRole::Link),
+            PressableKeyActivation::EnterOnly,
+            on_activate.or_else(|| Some(open_url_on_activate(href, target, rel))),
+        ),
+        None => (None, PressableKeyActivation::EnterAndSpace, on_activate),
+    };
+
+    if render_role.is_some() || render_on_activate.is_some() {
+        return control_chrome_pressable_with_id_props(cx, move |cx, _st, _id| {
+            if let Some(on_activate) = render_on_activate.clone() {
+                cx.pressable_on_activate(on_activate);
+            }
+
+            let pressable_props = PressableProps {
+                layout: pressable_layout,
+                enabled: true,
+                focusable: true,
+                focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
+                key_activation: render_key_activation,
+                a11y: PressableA11y {
+                    role: render_role,
+                    label: Some(a11y_label.clone()),
+                    test_id: test_id.clone(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            let chrome_props = chrome_props;
+            (pressable_props, chrome_props, content_children)
+        });
+    }
+
+    let mut root_props = chrome_props;
+    root_props.layout = pressable_layout;
+    let mut out = cx.container(root_props, content_children);
+    if let Some(test_id) = test_id {
+        out = out.test_id(test_id);
+    }
+    out
 }
