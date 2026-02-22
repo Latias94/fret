@@ -8,6 +8,7 @@ Completion criteria:
 - It detects at least:
   - read-after-release
   - `LoadOp::Load` on uninitialized targets
+  - scissor bounds / intersection mistakes
 
 ## M1 — Invariants documented
 
@@ -26,4 +27,3 @@ Completion criteria:
 Completion criteria:
 - A compact per-pass plan dump exists for trace/debug builds.
 - It is easy to compare plan shapes across refactors and across degradations.
-

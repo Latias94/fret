@@ -352,6 +352,9 @@ impl RenderPlan {
         if let Err(message) = validate_plan_target_lifetimes(&self.passes) {
             panic!("RenderPlan validation failed: {message}");
         }
+        if let Err(message) = validate_plan_scissors(&self.passes) {
+            panic!("RenderPlan validation failed: {message}");
+        }
     }
 
     #[cfg(not(debug_assertions))]
@@ -582,6 +585,196 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             RenderPlanPass::ReleaseTarget(t) => {
                 mark_release(&mut live, &mut initialized, pass_index, t)?;
             }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(debug_assertions)]
+fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
+    fn intersects_absolute(
+        scissor: ScissorRect,
+        dst_origin: (u32, u32),
+        dst_size: (u32, u32),
+    ) -> bool {
+        if scissor.w == 0 || scissor.h == 0 || dst_size.0 == 0 || dst_size.1 == 0 {
+            return false;
+        }
+
+        let sx0 = scissor.x;
+        let sy0 = scissor.y;
+        let sx1 = scissor.x.saturating_add(scissor.w);
+        let sy1 = scissor.y.saturating_add(scissor.h);
+
+        let dx0 = dst_origin.0;
+        let dy0 = dst_origin.1;
+        let dx1 = dst_origin.0.saturating_add(dst_size.0);
+        let dy1 = dst_origin.1.saturating_add(dst_size.1);
+
+        let ix0 = sx0.max(dx0);
+        let iy0 = sy0.max(dy0);
+        let ix1 = sx1.min(dx1);
+        let iy1 = sy1.min(dy1);
+        ix1 > ix0 && iy1 > iy0
+    }
+
+    fn within_local(scissor: ScissorRect, dst_size: (u32, u32)) -> bool {
+        if scissor.w == 0 || scissor.h == 0 || dst_size.0 == 0 || dst_size.1 == 0 {
+            return false;
+        }
+        let x1 = scissor.x.saturating_add(scissor.w);
+        let y1 = scissor.y.saturating_add(scissor.h);
+        x1 <= dst_size.0 && y1 <= dst_size.1
+    }
+
+    for (pass_index, pass) in passes.iter().enumerate() {
+        match pass {
+            RenderPlanPass::PathClipMask(pass) => {
+                if !intersects_absolute(pass.scissor, pass.dst_origin, pass.dst_size) {
+                    return Err(format!(
+                        "pass[{pass_index}] PathClipMask scissor does not intersect destination"
+                    ));
+                }
+            }
+            RenderPlanPass::PathMsaaBatch(pass) => {
+                if !intersects_absolute(pass.union_scissor, pass.target_origin, pass.target_size) {
+                    return Err(format!(
+                        "pass[{pass_index}] PathMsaaBatch union scissor does not intersect target"
+                    ));
+                }
+            }
+            RenderPlanPass::CompositePremul(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !intersects_absolute(scissor, pass.dst_origin, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] CompositePremul dst_scissor does not intersect destination"
+                    ));
+                }
+
+                if let Some(mask) = pass.mask {
+                    if mask.viewport_rect.w == 0 || mask.viewport_rect.h == 0 {
+                        return Err(format!(
+                            "pass[{pass_index}] CompositePremul mask viewport_rect is empty"
+                        ));
+                    }
+                    let vx1 = mask.viewport_rect.x.saturating_add(mask.viewport_rect.w);
+                    let vy1 = mask.viewport_rect.y.saturating_add(mask.viewport_rect.h);
+                    if vx1 > pass.dst_size.0 || vy1 > pass.dst_size.1 {
+                        return Err(format!(
+                            "pass[{pass_index}] CompositePremul mask viewport_rect exceeds destination size"
+                        ));
+                    }
+
+                    let expected = match mask.target {
+                        PlanTarget::Mask0 => {
+                            (mask.viewport_rect.w.max(1), mask.viewport_rect.h.max(1))
+                        }
+                        PlanTarget::Mask1 => downsampled_size(
+                            (mask.viewport_rect.w.max(1), mask.viewport_rect.h.max(1)),
+                            2,
+                        ),
+                        PlanTarget::Mask2 => downsampled_size(
+                            (mask.viewport_rect.w.max(1), mask.viewport_rect.h.max(1)),
+                            4,
+                        ),
+                        _ => {
+                            return Err(format!(
+                                "pass[{pass_index}] CompositePremul mask target is not a mask PlanTarget"
+                            ));
+                        }
+                    };
+                    if mask.size != expected {
+                        return Err(format!(
+                            "pass[{pass_index}] CompositePremul mask size mismatch (expected {:?}, got {:?})",
+                            expected, mask.size
+                        ));
+                    }
+                }
+            }
+            RenderPlanPass::ScaleNearest(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] ScaleNearest dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::Blur(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] Blur dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::BackdropWarp(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] BackdropWarp dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::ColorAdjust(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] ColorAdjust dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::ColorMatrix(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] ColorMatrix dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::AlphaThreshold(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] AlphaThreshold dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::DropShadow(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] DropShadow dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::FullscreenBlit(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] FullscreenBlit dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::ClipMask(pass) => {
+                if let Some(scissor) = pass.dst_scissor
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] ClipMask dst_scissor exceeds destination size"
+                    ));
+                }
+            }
+            RenderPlanPass::SceneDrawRange(_) | RenderPlanPass::ReleaseTarget(_) => {}
         }
     }
 

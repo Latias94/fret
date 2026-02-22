@@ -1,7 +1,9 @@
 use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
 use super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
-use super::helpers::{render_plan_pass_render_space, render_plan_pass_trace_kind};
+use super::helpers::{
+    render_plan_pass_render_space, render_plan_pass_trace_kind, render_plan_pass_trace_meta,
+};
 use super::quad_vertices::upload_plan_quad_vertices;
 use fret_core::time::Instant;
 
@@ -791,11 +793,18 @@ impl Renderer {
                     );
                     let pass_span = if trace_enabled {
                         let kind = render_plan_pass_trace_kind(planned_pass);
+                        let meta = render_plan_pass_trace_meta(planned_pass);
                         tracing::trace_span!(
                             "fret.renderer.pass",
                             frame_index,
                             pass_index = pass_index as u32,
-                            kind
+                            kind,
+                            src = ?meta.src,
+                            dst = ?meta.dst,
+                            load = meta.load.unwrap_or(""),
+                            scissor = ?meta.scissor,
+                            render_origin = ?meta.render_origin,
+                            render_size = ?meta.render_size
                         )
                     } else {
                         tracing::Span::none()

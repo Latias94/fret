@@ -86,6 +86,144 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
     }
 }
 
+pub(super) struct RenderPlanPassTraceMeta {
+    pub(super) src: Option<PlanTarget>,
+    pub(super) dst: Option<PlanTarget>,
+    pub(super) load: Option<&'static str>,
+    pub(super) scissor: Option<ScissorRect>,
+    pub(super) render_origin: Option<(u32, u32)>,
+    pub(super) render_size: Option<(u32, u32)>,
+}
+
+pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPassTraceMeta {
+    fn load_label(load: wgpu::LoadOp<wgpu::Color>) -> &'static str {
+        match load {
+            wgpu::LoadOp::Load => "load",
+            wgpu::LoadOp::Clear(_) => "clear",
+            wgpu::LoadOp::DontCare(_) => "dont_care",
+        }
+    }
+
+    let (render_origin, render_size) = render_plan_pass_render_space(pass)
+        .map(|(origin, size)| (Some(origin), Some(size)))
+        .unwrap_or((None, None));
+
+    match pass {
+        RenderPlanPass::SceneDrawRange(pass) => RenderPlanPassTraceMeta {
+            src: None,
+            dst: Some(pass.target),
+            load: Some(load_label(pass.load)),
+            scissor: None,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::PathMsaaBatch(pass) => RenderPlanPassTraceMeta {
+            src: None,
+            dst: Some(pass.target),
+            load: None,
+            scissor: Some(pass.union_scissor),
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::PathClipMask(pass) => RenderPlanPassTraceMeta {
+            src: None,
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: Some(pass.scissor),
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::FullscreenBlit(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::CompositePremul(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::ScaleNearest(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::Blur(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::BackdropWarp(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::ColorAdjust(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::ColorMatrix(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::AlphaThreshold(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::DropShadow(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::ClipMask(pass) => RenderPlanPassTraceMeta {
+            src: None,
+            dst: Some(pass.dst),
+            load: None,
+            scissor: pass.dst_scissor,
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::ReleaseTarget(target) => RenderPlanPassTraceMeta {
+            src: None,
+            dst: Some(*target),
+            load: None,
+            scissor: None,
+            render_origin,
+            render_size,
+        },
+    }
+}
+
 pub(super) fn render_plan_pass_render_space(
     pass: &RenderPlanPass,
 ) -> Option<((u32, u32), (u32, u32))> {

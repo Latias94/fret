@@ -2,7 +2,7 @@
 
 ## Done
 
-- [x] Add a debug-only `RenderPlan` validator to catch target lifetime and `LoadOp::Load` misuse early.
+- [x] Add a debug-only `RenderPlan` validator to catch target lifetime, `LoadOp::Load`, scissor, and mask shape misuse early.
 
 ## Next
 
@@ -28,4 +28,3 @@
   - intermediate target reuse
   - clip/mask composition rules
   - blend mode degradation strategy
-
