@@ -30,8 +30,10 @@ Related living docs:
 - Internal script runner state types were extracted into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs` to reduce churn.
 - The per-frame script driver (`UiDiagnosticsService::drive_script_for_window`) was extracted into
   `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
-- `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks are being moved into dedicated submodules under
-  `crates/fret-diag/src/stats/`.
+- `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
+  `crates/fret-diag/src/stats/`:
+  - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
 
 ## Goals
 

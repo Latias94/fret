@@ -52,3 +52,6 @@ scope: diagnostics, automation, tooling, refactor
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`
+- `crates/fret-diag/src/stats.rs`
+- `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
+- `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`

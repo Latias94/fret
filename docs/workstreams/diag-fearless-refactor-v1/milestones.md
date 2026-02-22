@@ -16,6 +16,16 @@ Exit criteria:
 - Script runner state types live in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`.
 - `cargo check -p fret-ui-gallery` is green.
 
+## Milestone 1b: CLI stats modularization is underway
+
+Exit criteria:
+
+- UI gallery checks are no longer all implemented inside `crates/fret-diag/src/stats.rs`.
+- Extracted modules exist for large check families:
+  - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+- `cargo check -p fret-diag` is green.
+
 ## Milestone 2: Sidecar indexes reduce day-to-day pain
 
 Exit criteria:
