@@ -8,4 +8,5 @@ mod scale_nearest;
 mod scene_draw;
 
 pub(super) use blit::record_fullscreen_blit_pass;
+pub(super) use blur::record_blur_pass;
 pub(super) use scale_nearest::record_scale_nearest_pass;
