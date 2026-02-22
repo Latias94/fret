@@ -198,7 +198,7 @@ pub(super) fn popup_trigger(
         .width(Px(256.0))
         .placeholder("Select a framework")
         .query_model(models.popup_query.clone())
-        .trigger_variant(shadcn::combobox::ComboboxTriggerVariant::Button)
+        .trigger_variant(shadcn::ComboboxTriggerVariant::Button)
         .trigger_test_id("ui-gallery-combobox-popup-trigger")
         .test_id_prefix("ui-gallery-combobox-popup")
         .items([

@@ -152,7 +152,7 @@ pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
-pub use combobox::{Combobox, ComboboxItem, combobox};
+pub use combobox::{Combobox, ComboboxItem, ComboboxTriggerVariant, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandPalette, CommandSeparator, CommandShortcut, command,
