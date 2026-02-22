@@ -2,17 +2,17 @@
 
 ## M0 — Setup (minimal)
 
-- [ ] Create a single “parity note” template section in this file (copy/paste friendly).
-- [ ] Pick 1 upstream seam to start with (recommended: scissor coordinate spaces).
+- [x] Create a single “parity note” template section in this file (copy/paste friendly).
+- [x] Pick 1 upstream seam to start with (recommended: scissor coordinate spaces).
 
 ## M1 — First parity note (scissor spaces)
 
-- [ ] Zed/GPUI: identify how render-target origin offsets and scissors are represented and applied.
-- [ ] Fret: record current representation and mapping:
+- [x] Zed/GPUI: identify how render-target origin offsets and scissors are represented and applied.
+- [x] Fret: record current representation and mapping:
   - `AbsoluteScissorRect` vs `LocalScissorRect`
   - `RenderSpace` mapping and scissor translation/clamping
-- [ ] Decide: gap vs deliberate difference; record rationale.
-- [ ] If gap: add the smallest guardrail (validator or test) *before* changing implementation.
+- [x] Decide: gap vs deliberate difference; record rationale.
+- [x] If gap: add the smallest guardrail (validator or test) *before* changing implementation.
 
 ## M2 — Clip/mask composition parity
 
@@ -66,5 +66,7 @@ Copy/paste for each seam:
   - Keep the type-level split (`AbsoluteScissorRect` vs `LocalScissorRect`) as a hard refactor constraint.
   - Keep `RenderPlan::debug_validate()` checks that reject out-of-bounds/local scissor misuse.
 - Follow-up refactor steps:
-  - Centralize “apply dst-local scissor to a wgpu render pass” in one helper to avoid recorders re-implementing the same mapping pattern.
-  - Extend trace/meta so it is always obvious whether a pass scissor is absolute or local (debug-only is fine).
+  - [Done] Centralize “apply dst-local scissor to a wgpu render pass” in one helper to avoid recorders re-implementing the same mapping pattern.
+    - Evidence: `crates/fret-render-wgpu/src/renderer/fullscreen.rs` (`run_fullscreen_triangle_pass*`).
+  - [ ] Extend trace/meta so it is always obvious whether a pass scissor is absolute or local (debug-only is fine).
+    - Current limitation: `RenderPlanPassTraceMeta.scissor` erases the scissor-space tag.
