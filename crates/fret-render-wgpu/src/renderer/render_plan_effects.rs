@@ -94,6 +94,7 @@ pub(super) fn apply_chain_in_place(
             dst_size: mask_size,
             dst_scissor: None,
             uniform_index,
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
         }));
         budget_bytes = budget_bytes.saturating_sub(mask_bytes);
         Some(MaskRef {

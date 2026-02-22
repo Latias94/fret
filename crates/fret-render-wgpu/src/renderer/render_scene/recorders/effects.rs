@@ -1228,7 +1228,7 @@ pub(in super::super) fn record_composite_premul_pass(
     let base = u64::from(base) * quad_vertex_size;
     let len = 6 * quad_vertex_size;
     rp.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
-    if let Some(scissor) = pass.dst_scissor
+    if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
         && scissor.w != 0
         && scissor.h != 0
     {
@@ -1291,7 +1291,7 @@ pub(in super::super) fn record_clip_mask_pass(
             depth_slice: None,
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                load: pass.load,
                 store: wgpu::StoreOp::Store,
             },
         })],

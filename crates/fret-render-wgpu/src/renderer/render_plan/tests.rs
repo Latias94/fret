@@ -50,13 +50,14 @@ fn debug_validate_rejects_path_msaa_batch_before_init() {
         target_origin: (0, 0),
         target_size: (64, 64),
         draw_range: 0..1,
-        union_scissor: ScissorRect {
+        union_scissor: AbsoluteScissorRect(ScissorRect {
             x: 0,
             y: 0,
             w: 1,
             h: 1,
-        },
+        }),
         batch_uniform_index: 0,
+        load: wgpu::LoadOp::Load,
     });
 
     let err = validate_plan_target_lifetimes(&[pass]).unwrap_err();
@@ -70,12 +71,12 @@ fn debug_validate_rejects_absolute_scissor_without_intersection() {
         dst: PlanTarget::Mask0,
         dst_origin: (10, 10),
         dst_size: (16, 16),
-        scissor: ScissorRect {
+        scissor: AbsoluteScissorRect(ScissorRect {
             x: 0,
             y: 0,
             w: 5,
             h: 5,
-        },
+        }),
         uniform_index: 0,
         first_vertex: 0,
         vertex_count: 3,

@@ -150,7 +150,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
         }
     }
 
-    let union = path_pass.union_scissor;
+    let union = path_pass.union_scissor.0;
     if union.w == 0 || union.h == 0 {
         return;
     }
@@ -165,7 +165,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
             depth_slice: None,
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Load,
+                load: path_pass.load,
                 store: wgpu::StoreOp::Store,
             },
         })],

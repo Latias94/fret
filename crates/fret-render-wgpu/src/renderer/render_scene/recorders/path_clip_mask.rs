@@ -89,7 +89,7 @@ pub(in super::super) fn record_path_clip_mask_pass(
             rp.set_vertex_buffer(0, resources.path_vertex_buffer.slice(first..first + size));
             let _ = set_scissor_rect_absolute(
                 &mut rp,
-                mask_pass.scissor,
+                mask_pass.scissor.0,
                 mask_pass.dst_origin,
                 mask_pass.dst_size,
             );

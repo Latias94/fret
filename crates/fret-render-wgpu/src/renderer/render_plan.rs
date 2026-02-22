@@ -73,6 +73,9 @@ pub(super) struct MaskRef {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct AbsoluteScissorRect(pub(super) ScissorRect);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DebugPostprocess {
     None,
     OffscreenBlit,
@@ -119,7 +122,7 @@ pub(super) struct PathClipMaskPass {
     pub(super) dst: PlanTarget,
     pub(super) dst_origin: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) scissor: ScissorRect,
+    pub(super) scissor: AbsoluteScissorRect,
     pub(super) uniform_index: u32,
     pub(super) first_vertex: u32,
     pub(super) vertex_count: u32,
@@ -133,6 +136,7 @@ pub(super) struct ClipMaskPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) uniform_index: u32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -251,7 +255,7 @@ pub(super) struct CompositePremulPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_origin: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<AbsoluteScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) blend_mode: fret_core::BlendMode,
@@ -288,8 +292,9 @@ pub(super) struct PathMsaaBatchPass {
     pub(super) target_origin: (u32, u32),
     pub(super) target_size: (u32, u32),
     pub(super) draw_range: Range<usize>,
-    pub(super) union_scissor: ScissorRect,
+    pub(super) union_scissor: AbsoluteScissorRect,
     pub(super) batch_uniform_index: u32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug)]
@@ -474,21 +479,14 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             RenderPlanPass::SceneDrawRange(SceneDrawRangePass { target, load, .. }) => {
                 mark_write(&mut live, &mut initialized, pass_index, target, Some(load))?;
             }
-            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, .. }) => {
-                // Path MSAA batches composite into the target using LoadOp::Load.
-                mark_write(
-                    &mut live,
-                    &mut initialized,
-                    pass_index,
-                    target,
-                    Some(wgpu::LoadOp::Load),
-                )?;
+            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, load, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, target, Some(load))?;
             }
             RenderPlanPass::PathClipMask(PathClipMaskPass { dst, load, .. }) => {
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
-            RenderPlanPass::ClipMask(ClipMaskPass { dst, .. }) => {
-                mark_write(&mut live, &mut initialized, pass_index, dst, None)?;
+            RenderPlanPass::ClipMask(ClipMaskPass { dst, load, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
             RenderPlanPass::FullscreenBlit(FullscreenBlitPass { src, dst, load, .. }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
@@ -720,7 +718,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
             }
             RenderPlanPass::PathClipMask(pass) => {
                 validate_origin_size(pass_index, "PathClipMask", pass.dst_origin, pass.dst_size)?;
-                if !intersects_absolute(pass.scissor, pass.dst_origin, pass.dst_size) {
+                if !intersects_absolute(pass.scissor.0, pass.dst_origin, pass.dst_size) {
                     return Err(format!(
                         "pass[{pass_index}] PathClipMask scissor does not intersect destination"
                     ));
@@ -733,7 +731,8 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     pass.target_origin,
                     pass.target_size,
                 )?;
-                if !intersects_absolute(pass.union_scissor, pass.target_origin, pass.target_size) {
+                if !intersects_absolute(pass.union_scissor.0, pass.target_origin, pass.target_size)
+                {
                     return Err(format!(
                         "pass[{pass_index}] PathMsaaBatch union scissor does not intersect target"
                     ));
@@ -753,7 +752,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     pass.src_size,
                 )?;
                 if let Some(scissor) = pass.dst_scissor
-                    && !intersects_absolute(scissor, pass.dst_origin, pass.dst_size)
+                    && !intersects_absolute(scissor.0, pass.dst_origin, pass.dst_size)
                 {
                     return Err(format!(
                         "pass[{pass_index}] CompositePremul dst_scissor does not intersect destination"
