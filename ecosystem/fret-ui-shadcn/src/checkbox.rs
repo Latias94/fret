@@ -910,6 +910,103 @@ mod tests {
     }
 
     #[test]
+    fn field_label_click_toggles_registered_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(true);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-field-label-click-toggles-control",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+
+                vec![cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(8.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    |cx| {
+                        vec![
+                            Checkbox::new(model.clone())
+                                .control_id("test.checkbox")
+                                .a11y_label("Test checkbox")
+                                .test_id("test.checkbox")
+                                .into_element(cx),
+                            crate::FieldLabel::new("Toggle via label")
+                                .for_control("test.checkbox")
+                                .into_element(cx)
+                                .test_id("test.checkbox.label"),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.checkbox.label"))
+            .expect("label semantics node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(false));
+    }
+
+    #[test]
     fn checkbox_does_not_shrink_when_horizontally_constrained() {
         let window = AppWindowId::default();
         let mut app = App::new();
