@@ -219,8 +219,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`SamplingBindGroups`, `SamplingBindGroups::pick`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
-    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`create_uniform_bind_group` uses renderer-owned mask identity resources)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`UniformMaskImageBindGroupGlobals`)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
