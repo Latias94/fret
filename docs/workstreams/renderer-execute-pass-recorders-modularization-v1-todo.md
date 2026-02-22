@@ -15,7 +15,7 @@
 
 ## Next
 
-- [ ] Apply target selection helpers across remaining recorders (blit/blur/backdrop-warp, etc.).
+- [ ] Apply target selection helpers across remaining recorders (color-adjust/matrix/alpha-threshold/drop-shadow, etc.).
 - [ ] Decide the final ownership shape for `SceneDrawRange`:
   - keep as a `Renderer` method with explicit args (status quo), or
   - migrate to an executor-based recorder function (more churn; higher uniformity)
