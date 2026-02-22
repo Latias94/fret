@@ -13,6 +13,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::typography;
 
 use super::{InlineMathInfo, MarkdownTheme};
 
@@ -81,16 +82,15 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
             MathJaxSvgEntry::Loading => vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: latex.clone(),
-                style: Some(TextStyle {
+                style: Some(typography::as_content_text(TextStyle {
                     font: FontId::monospace(),
                     size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
-                }),
+                })),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
@@ -100,16 +100,15 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
             MathJaxSvgEntry::Error(err) => vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: Arc::<str>::from(format!("{latex} (mathjax error: {err})")),
-                style: Some(TextStyle {
+                style: Some(typography::as_content_text(TextStyle {
                     font: FontId::monospace(),
                     size: theme.metric_token("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
-                }),
+                })),
                 color: Some(markdown_theme.math_block_fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
@@ -196,16 +195,15 @@ fn render_inline_math_source<H: UiHost>(
         vec![cx.text_props(TextProps {
             layout: Default::default(),
             text: Arc::<str>::from(info.latex.trim().to_string()),
-            style: Some(TextStyle {
+            style: Some(typography::as_content_text(TextStyle {
                 font: FontId::monospace(),
                 size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(markdown_theme.inline_math_fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,

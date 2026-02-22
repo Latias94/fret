@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum MermaidDiagramType {
@@ -155,16 +156,15 @@ pub(super) fn render_mermaid_header_label<H: UiHost>(
     cx.text_props(TextProps {
         layout: Default::default(),
         text: Arc::<str>::from(format!("Mermaid · {}", diagram_type.display_name())),
-        style: Some(TextStyle {
+        style: Some(typography::as_control_text(TextStyle {
             font: FontId::monospace(),
             size: theme.metric_token("metric.font.mono_size"),
             weight: FontWeight::SEMIBOLD,
             slant: Default::default(),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        }),
+        })),
         color: Some(theme.color_token("muted-foreground")),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,

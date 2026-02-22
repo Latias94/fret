@@ -19,6 +19,7 @@ use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
@@ -640,16 +641,15 @@ fn render_code_block_header<H: UiHost>(
                     left.push(cx.text_props(TextProps {
                         layout: Default::default(),
                         text: Arc::<str>::from(lang.to_string()),
-                        style: Some(TextStyle {
+                        style: Some(typography::as_control_text(TextStyle {
                             font: FontId::monospace(),
                             size: theme.metric_token("metric.font.mono_size"),
                             weight: FontWeight::SEMIBOLD,
                             slant: Default::default(),
                             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             letter_spacing_em: None,
                             ..Default::default()
-                        }),
+                        })),
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -1036,16 +1036,15 @@ fn render_code_block_line_row<H: UiHost>(
     line_i: usize,
     rich: AttributedText,
 ) -> AnyElement {
-    let text_style = TextStyle {
+    let text_style = typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size: row_theme.mono_size,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    };
+    });
 
     let code = cx.styled_text_props(StyledTextProps {
         layout: {
@@ -1072,16 +1071,15 @@ fn render_code_block_line_row<H: UiHost>(
         .cloned()
         .unwrap_or_else(|| Arc::<str>::from(""));
 
-    let number_style = TextStyle {
+    let number_style = typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size: row_theme.mono_size,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    };
+    });
 
     let number = cx.text_props(TextProps {
         layout: {
@@ -1362,16 +1360,15 @@ fn render_code_block_with_line_numbers<H: UiHost>(
     line_numbers: Arc<str>,
     code: AnyElement,
 ) -> AnyElement {
-    let number_style = TextStyle {
+    let number_style = typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size: theme.metric_token("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    };
+    });
 
     let line_numbers_text = cx.text_props(TextProps {
         layout: {
@@ -1432,16 +1429,15 @@ fn render_code_block_text<H: UiHost>(
     scrollbar_x_right_inset: Px,
     line_count: usize,
 ) -> AnyElement {
-    let text_style = TextStyle {
+    let text_style = typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size: theme.metric_token("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    };
+    });
     let fg = theme.color_token("foreground");
 
     let text_wrap = text_wrap_for_code_block_wrap(wrap);

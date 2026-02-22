@@ -793,6 +793,61 @@ mod tests {
     }
 
     #[test]
+    fn fixed_line_box_baseline_is_stable_across_fallback_glyphs() {
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(14.0),
+            line_height: Some(Px(18.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let baseline_for = |shaper: &mut ParleyShaper, text: &str| -> (Px, Px) {
+            let prepared = prepare_layout_for_test(shaper, text, &style, constraints);
+            assert_eq!(
+                prepared.metrics.size.height,
+                Px(18.0),
+                "expected fixed line box height to remain stable for text={text:?}"
+            );
+            assert!(
+                !prepared.lines.is_empty(),
+                "expected at least one line for text={text:?}"
+            );
+            assert_eq!(
+                prepared.lines[0].layout.height,
+                Px(18.0),
+                "expected first line height to match fixed line box for text={text:?}"
+            );
+            (
+                prepared.metrics.baseline,
+                prepared.lines[0].layout.y_baseline,
+            )
+        };
+
+        let (baseline_ascii, line_baseline_ascii) = baseline_for(&mut shaper, "Settings");
+        let (baseline_emoji, line_baseline_emoji) = baseline_for(&mut shaper, "Settings 😄");
+        let (baseline_cjk, line_baseline_cjk) = baseline_for(&mut shaper, "Settings 漢字");
+        let (baseline_mixed, line_baseline_mixed) = baseline_for(&mut shaper, "😄 漢字");
+
+        assert_eq!(baseline_ascii, baseline_emoji);
+        assert_eq!(baseline_ascii, baseline_cjk);
+        assert_eq!(baseline_ascii, baseline_mixed);
+
+        assert_eq!(line_baseline_ascii, line_baseline_emoji);
+        assert_eq!(line_baseline_ascii, line_baseline_cjk);
+        assert_eq!(line_baseline_ascii, line_baseline_mixed);
+    }
+
+    #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
         let clusters = vec![crate::parley_shaper::ShapedCluster {
             text_range: 0..4,
