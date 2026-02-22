@@ -140,9 +140,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         pack_after_run,
         rest,
         suite_script_inputs,
-        suite_prewarm_scripts,
-        suite_prelude_scripts,
-        suite_prelude_each_run,
+        suite_prewarm_scripts: _suite_prewarm_scripts,
+        suite_prelude_scripts: _suite_prelude_scripts,
+        suite_prelude_each_run: _suite_prelude_each_run,
         workspace_root,
         resolved_out_dir,
         resolved_ready_path,
@@ -152,10 +152,10 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         devtools_session_id,
         timeout_ms,
         poll_ms,
-        stats_top,
+        stats_top: _stats_top,
         stats_json,
         mut warmup_frames,
-        max_test_ids,
+        max_test_ids: _max_test_ids,
         lint_all_test_ids_bounds,
         lint_eps_px,
         suite_lint,
@@ -1200,6 +1200,20 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
 
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
+
+    let resolved_exit_path = {
+        let raw = std::env::var_os("FRET_DIAG_EXIT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| resolved_out_dir.join("exit.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
+    let mut fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
+    fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+
+    let trace_chrome = false;
 
     let suite_summary_path = resolved_out_dir.join("suite.summary.json");
     let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());

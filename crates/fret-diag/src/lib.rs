@@ -74,8 +74,7 @@ use gates::{
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use run_artifacts::{
-    materialize_bundle_json_from_manifest_chunks_if_missing,
-    materialize_run_id_bundle_json_from_chunks_if_missing, refresh_run_id_manifest_file_index,
+    materialize_bundle_json_from_manifest_chunks_if_missing, refresh_run_id_manifest_file_index,
     run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result,
 };
 
@@ -3060,7 +3059,6 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             bundle_doctor_mode,
                             warmup_frames,
                         )?;
-                        bundle_doctor_ran = true;
                     }
                     let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
                     let out = pack_out

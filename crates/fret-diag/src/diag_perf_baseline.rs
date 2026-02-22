@@ -7,7 +7,7 @@ pub(crate) struct PerfBaselineFromBundlesContext {
     pub workspace_root: PathBuf,
     pub sort_override: Option<BundleStatsSort>,
     pub perf_baseline_out: Option<PathBuf>,
-    pub perf_baseline_headroom_pct: f32,
+    pub perf_baseline_headroom_pct: u32,
     pub warmup_frames: u64,
     pub stats_json: bool,
 }
