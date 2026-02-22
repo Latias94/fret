@@ -59,6 +59,7 @@ mod test_id_bloom;
 pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_engine;
+use script_engine::{push_script_event_log, script_evidence_for_active, script_step_kind_name};
 mod script_result;
 mod script_runner;
 mod script_step_index;
@@ -523,7 +524,7 @@ impl UiDiagnosticsService {
 
         self.active_scripts
             .get(&window)
-            .is_some_and(active_script_needs_semantics_snapshot)
+            .is_some_and(script_engine::active_script_needs_semantics_snapshot)
     }
 
     pub fn redact_text(&self) -> bool {
@@ -593,7 +594,7 @@ impl UiDiagnosticsService {
 
         if active.next_step >= active.steps.len() {
             let passed_step_index = active.steps.len().saturating_sub(1) as u32;
-            push_script_event_log(
+            script_engine::push_script_event_log(
                 &mut active,
                 &self.cfg,
                 UiScriptEventLogEntryV1 {
@@ -617,7 +618,7 @@ impl UiDiagnosticsService {
                 step_index: Some(passed_step_index),
                 reason_code: None,
                 reason: None,
-                evidence: script_evidence_for_active(&active),
+                evidence: script_engine::script_evidence_for_active(&active),
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -1187,7 +1188,7 @@ impl UiDiagnosticsService {
         }
 
         if !stop_script && handoff_to.is_none() && active.next_step > prev_next_step {
-            push_script_event_log(
+            script_engine::push_script_event_log(
                 &mut active,
                 &self.cfg,
                 UiScriptEventLogEntryV1 {
@@ -1225,7 +1226,7 @@ impl UiDiagnosticsService {
         }
 
         if stop_script {
-            push_script_event_log(
+            script_engine::push_script_event_log(
                 &mut active,
                 &self.cfg,
                 UiScriptEventLogEntryV1 {
@@ -1242,7 +1243,7 @@ impl UiDiagnosticsService {
             );
             if self.cfg.script_auto_dump {
                 if let Some(label) = force_dump_label.as_deref() {
-                    push_script_event_log(
+                    script_engine::push_script_event_log(
                         &mut active,
                         &self.cfg,
                         UiScriptEventLogEntryV1 {
@@ -1259,7 +1260,7 @@ impl UiDiagnosticsService {
                     );
                     let dumped_dir = self.dump_bundle(Some(label));
                     if let Some(dir) = dumped_dir.as_ref() {
-                        push_script_event_log(
+                        script_engine::push_script_event_log(
                             &mut active,
                             &self.cfg,
                             UiScriptEventLogEntryV1 {
@@ -1277,7 +1278,7 @@ impl UiDiagnosticsService {
                     }
                 }
             } else if let Some(label) = force_dump_label {
-                push_script_event_log(
+                script_engine::push_script_event_log(
                     &mut active,
                     &self.cfg,
                     UiScriptEventLogEntryV1 {
@@ -1305,7 +1306,7 @@ impl UiDiagnosticsService {
                 .as_deref()
                 .and_then(reason_code_for_script_failure)
                 .map(|s| s.to_string());
-            let evidence = script_evidence_for_active(&active);
+            let evidence = script_engine::script_evidence_for_active(&active);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
@@ -1324,7 +1325,7 @@ impl UiDiagnosticsService {
             });
         } else {
             if let Some(label) = force_dump_label {
-                push_script_event_log(
+                script_engine::push_script_event_log(
                     &mut active,
                     &self.cfg,
                     UiScriptEventLogEntryV1 {
@@ -1350,7 +1351,7 @@ impl UiDiagnosticsService {
 
             if active.next_step >= active.steps.len() {
                 let passed_step_index = active.next_step.saturating_sub(1) as u32;
-                push_script_event_log(
+                script_engine::push_script_event_log(
                     &mut active,
                     &self.cfg,
                     UiScriptEventLogEntryV1 {
@@ -1374,7 +1375,7 @@ impl UiDiagnosticsService {
                     step_index: Some(passed_step_index),
                     reason_code: None,
                     reason: None,
-                    evidence: script_evidence_for_active(&active),
+                    evidence: script_engine::script_evidence_for_active(&active),
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -1875,80 +1876,6 @@ impl UiDiagnosticsService {
         }
         self.last_script_run_id = id;
         id
-    }
-}
-
-fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
-    if active.wait_until.is_some() {
-        return true;
-    }
-
-    if let Some(state) = active.v2_step_state.as_ref() {
-        // Multi-frame script steps may still need fresh semantics snapshots to make progress.
-        // In particular, scroll/visibility + "stable" gates must observe updated bounds as the
-        // UI reacts to injected events.
-        return matches!(
-            state,
-            V2StepState::ClickStable(_)
-                | V2StepState::ClickSelectableTextSpanStable(_)
-                | V2StepState::WaitBoundsStable(_)
-                | V2StepState::EnsureVisible(_)
-                | V2StepState::ScrollIntoView(_)
-                | V2StepState::TypeTextInto(_)
-                | V2StepState::MenuSelect(_)
-                | V2StepState::MenuSelectPath(_)
-                | V2StepState::DragPointerUntil(_)
-                | V2StepState::DragTo(_)
-                | V2StepState::SetSliderValue(_)
-        );
-    }
-
-    let Some(step) = active.steps.get(active.next_step) else {
-        return false;
-    };
-
-    match step {
-        UiActionStepV2::Click { .. }
-        | UiActionStepV2::ClickStable { .. }
-        | UiActionStepV2::ClickSelectableTextSpanStable { .. }
-        | UiActionStepV2::WaitBoundsStable { .. }
-        | UiActionStepV2::MovePointer { .. }
-        | UiActionStepV2::PointerDown { .. }
-        | UiActionStepV2::DragPointer { .. }
-        | UiActionStepV2::DragPointerUntil { .. }
-        | UiActionStepV2::MovePointerSweep { .. }
-        | UiActionStepV2::Wheel { .. }
-        | UiActionStepV2::WaitUntil { .. }
-        | UiActionStepV2::WaitOverlayPlacementTrace { .. }
-        | UiActionStepV2::Assert { .. }
-        | UiActionStepV2::EnsureVisible { .. }
-        | UiActionStepV2::ScrollIntoView { .. }
-        | UiActionStepV2::TypeTextInto { .. }
-        | UiActionStepV2::MenuSelect { .. }
-        | UiActionStepV2::MenuSelectPath { .. }
-        | UiActionStepV2::DragTo { .. }
-        | UiActionStepV2::SetSliderValue { .. } => true,
-        UiActionStepV2::ResetDiagnostics
-        | UiActionStepV2::PressKey { .. }
-        | UiActionStepV2::PressShortcut { .. }
-        | UiActionStepV2::TypeText { .. }
-        | UiActionStepV2::Ime { .. }
-        | UiActionStepV2::WaitFrames { .. }
-        | UiActionStepV2::WaitShortcutRoutingTrace { .. }
-        | UiActionStepV2::CaptureBundle { .. }
-        | UiActionStepV2::CaptureScreenshot { .. }
-        | UiActionStepV2::SetWindowInnerSize { .. }
-        | UiActionStepV2::SetWindowInsets { .. }
-        | UiActionStepV2::SetClipboardForceUnavailable { .. }
-        | UiActionStepV2::InjectIncomingOpen { .. }
-        | UiActionStepV2::SetWindowOuterPosition { .. }
-        | UiActionStepV2::SetCursorScreenPos { .. }
-        | UiActionStepV2::SetCursorInWindow { .. }
-        | UiActionStepV2::SetCursorInWindowLogical { .. }
-        | UiActionStepV2::SetMouseButtons { .. }
-        | UiActionStepV2::RaiseWindow { .. }
-        | UiActionStepV2::PointerMove { .. }
-        | UiActionStepV2::PointerUp { .. } => false,
     }
 }
 
@@ -8543,77 +8470,6 @@ fn push_click_stable_trace(
         let extra = trace.len().saturating_sub(MAX_CLICK_STABLE_TRACE_ENTRIES);
         trace.drain(0..extra);
     }
-}
-
-fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
-    match step {
-        UiActionStepV2::Click { .. } => "click",
-        UiActionStepV2::ClickStable { .. } => "click_stable",
-        UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
-        UiActionStepV2::DragPointer { .. } => "drag_pointer",
-        UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
-        UiActionStepV2::DragTo { .. } => "drag_to",
-        UiActionStepV2::Wheel { .. } => "wheel",
-        UiActionStepV2::TypeText { .. } => "type_text",
-        UiActionStepV2::TypeTextInto { .. } => "type_text_into",
-        UiActionStepV2::WaitFrames { .. } => "wait_frames",
-        UiActionStepV2::WaitUntil { .. } => "wait_until",
-        UiActionStepV2::Assert { .. } => "assert",
-        UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
-        UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
-        UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
-        _ => "step",
-    }
-}
-
-fn push_script_event_log(
-    active: &mut ActiveScript,
-    cfg: &UiDiagnosticsConfig,
-    entry: UiScriptEventLogEntryV1,
-) {
-    let max = cfg.max_gating_trace_entries;
-    if max == 0 {
-        active.event_log_dropped = active.event_log_dropped.saturating_add(1);
-        return;
-    }
-
-    active.event_log.push(entry);
-    if active.event_log.len() > max {
-        let extra = active.event_log.len().saturating_sub(max);
-        active.event_log.drain(0..extra);
-        active.event_log_dropped = active.event_log_dropped.saturating_add(extra as u64);
-    }
-}
-
-fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
-    if active.event_log.is_empty()
-        && active.event_log_dropped == 0
-        && active.selector_resolution_trace.is_empty()
-        && active.hit_test_trace.is_empty()
-        && active.click_stable_trace.is_empty()
-        && active.bounds_stable_trace.is_empty()
-        && active.focus_trace.is_empty()
-        && active.shortcut_routing_trace.is_empty()
-        && active.overlay_placement_trace.is_empty()
-        && active.web_ime_trace.is_empty()
-        && active.ime_event_trace.is_empty()
-    {
-        return None;
-    }
-    Some(UiScriptEvidenceV1 {
-        event_log: active.event_log.clone(),
-        event_log_dropped: active.event_log_dropped,
-        capabilities_check: None,
-        selector_resolution_trace: active.selector_resolution_trace.clone(),
-        hit_test_trace: active.hit_test_trace.clone(),
-        click_stable_trace: active.click_stable_trace.clone(),
-        bounds_stable_trace: active.bounds_stable_trace.clone(),
-        focus_trace: active.focus_trace.clone(),
-        shortcut_routing_trace: active.shortcut_routing_trace.clone(),
-        overlay_placement_trace: active.overlay_placement_trace.clone(),
-        web_ime_trace: active.web_ime_trace.clone(),
-        ime_event_trace: active.ime_event_trace.clone(),
-    })
 }
 
 fn focus_trace_entry_eq(a: &UiFocusTraceEntryV1, b: &UiFocusTraceEntryV1) -> bool {
