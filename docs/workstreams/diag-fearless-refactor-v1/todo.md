@@ -52,8 +52,10 @@ scope: diagnostics, automation, tooling, refactor
 
 ## M2b: Sidecar access is fully centralized (finish the sweep)
 
-- [ ] Migrate remaining commands to the shared sidecar helpers (start with `crates/fret-diag/src/commands/slice.rs`).
-- [ ] Add a small “doctor” command that reports missing/invalid sidecars and suggests the exact regen command.
+- [x] Migrate remaining commands to the shared sidecar helpers (start with `crates/fret-diag/src/commands/slice.rs`).
+- [x] Add a small “doctor” command that reports missing/invalid sidecars and suggests the exact regen command.
+  - Evidence: `crates/fret-diag/src/commands/doctor.rs`
+  - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
 
 ## M3: Tooling + AI loop
 

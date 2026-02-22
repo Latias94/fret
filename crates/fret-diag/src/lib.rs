@@ -2182,6 +2182,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             max_test_ids,
             stats_json,
         ),
+        "test-ids-index" => commands::artifacts::cmd_test_ids_index(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            warmup_frames,
+            stats_json,
+        ),
+        "doctor" => commands::doctor::cmd_doctor(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            warmup_frames,
+            stats_json,
+        ),
         "hotspots" => commands::hotspots::cmd_hotspots(
             &rest,
             pack_after_run,
