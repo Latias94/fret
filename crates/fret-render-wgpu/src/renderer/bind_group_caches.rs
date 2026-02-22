@@ -1,5 +1,11 @@
 use super::revisioned_cache::RevisionedCache;
 
+fn mix_revisions(a: u64, b: u64) -> u64 {
+    let hash = 0xcbf2_9ce4_8422_2325u64;
+    let hash = (hash ^ a).wrapping_mul(0x100_0000_01B3);
+    (hash ^ b).wrapping_mul(0x100_0000_01B3)
+}
+
 pub(super) struct SamplingBindGroups {
     pub(super) linear: wgpu::BindGroup,
     pub(super) nearest: wgpu::BindGroup,
@@ -80,8 +86,10 @@ impl BindGroupCaches {
         nearest_sampler: &wgpu::Sampler,
         view: &wgpu::TextureView,
         id: fret_core::ImageId,
-        revision: u64,
+        image_revision: u64,
+        uniforms_revision: u64,
     ) -> &SamplingBindGroups {
+        let revision = mix_revisions(image_revision, uniforms_revision);
         self.uniform_mask_images.ensure(id, revision, || {
             let linear = globals.create(
                 device,
@@ -108,7 +116,7 @@ impl BindGroupCaches {
         self.uniform_mask_images.remove(id);
     }
 
-    pub(super) fn invalidate_uniform_resources(&mut self) {
+    pub(super) fn invalidate_uniform_mask_image_override_bind_groups(&mut self) {
         self.uniform_mask_images.clear();
     }
 

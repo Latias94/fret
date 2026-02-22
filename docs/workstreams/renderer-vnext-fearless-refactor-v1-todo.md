@@ -252,7 +252,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (call sites in `prepare_*_bind_groups`)
   - Landed (step 2): move uniform mask-image override bind group caching behind `BindGroupCaches` methods (no recorder-side closures).
   - Evidence:
-    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
