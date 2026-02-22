@@ -31,6 +31,7 @@ scope: diagnostics, automation, tooling, refactor
 ## M1c: Make `fret-diag` CLI subcommands less monolithic (mechanical moves)
 
 - [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
+- [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
   - `diag run` (context assembly + orchestration),
   - `diag suite` (suite execution + reporting),
