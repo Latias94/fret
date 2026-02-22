@@ -51,6 +51,15 @@ Definition of done:
 - [ ] Extract inspect/pick trigger polling + state into modules.
 - [ ] Keep transport concerns isolated (filesystem vs DevTools WS).
 
+Progress:
+
+- [x] Filesystem trigger polling extracted (`poll_pick_trigger`, `poll_inspect_trigger`):
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+- [x] Inspect-mode state + shortcuts extracted:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
+- [x] Pick flow extracted (pending resolution + result writing):
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
+
 Definition of done:
 
 - Inspect/pick code paths are independently editable without touching bundle/schema code.
