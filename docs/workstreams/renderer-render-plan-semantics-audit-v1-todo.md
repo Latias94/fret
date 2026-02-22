@@ -27,8 +27,10 @@
   - [x] Mechanically verify `ClipMask` clear/load assumptions across all plan pass variants and recorders.
     - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`validate_plan_scissors`: `ClipMask must clear`),
       `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`debug_validate_rejects_clip_mask_load_op_load`).
-  - [ ] Document “initialized within the frame” precisely for `Intermediate*` targets and clarify whether `Output` has any special casing.
-  - [ ] Write a small per-pass table for `MaskRef.viewport_rect` mapping rules (dst-local space, tier expectations, downsample/upsample behavior).
+  - [x] Document “initialized within the frame” precisely for `Intermediate*` targets and clarify whether `Output` has any special casing.
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Definition: “initialized in the current frame”).
+  - [x] Write a small per-pass table for `MaskRef.viewport_rect` mapping rules (dst-local space, tier expectations, downsample/upsample behavior).
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (MaskRef mapping matrix).
 - [x] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
     `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
