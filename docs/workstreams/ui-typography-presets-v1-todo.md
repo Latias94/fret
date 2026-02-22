@@ -39,7 +39,8 @@ This is a checklist-style tracker. It is **non-normative**.
   - Evidence: `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
 - [x] Add at least one Material 3 regression gate that exercises real shaping with bundled fonts.
   - Evidence: `ecosystem/fret-ui-material3/src/lib.rs`
-- [ ] Add at least one UI Gallery screenshot gate that includes the above control.
+- [x] Add at least one UI Gallery screenshot gate that includes the above control.
+  - Evidence: `tools/diag-scripts/ui-gallery-text-mixed-script-fallback-screenshot.json`
 
 ## Cleanup
 
