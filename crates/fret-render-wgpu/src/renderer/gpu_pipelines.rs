@@ -39,6 +39,19 @@ pub(super) struct GpuPipelines {
     pub(super) composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     pub(super) clip_mask_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) blit_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) blit_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) blur_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) blur_h_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blur_v_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -69,6 +82,17 @@ impl Default for GpuPipelines {
             composite_mask_pipelines: [const { None }; fret_core::BlendMode::COUNT],
             composite_mask_bind_group_layout: None,
             clip_mask_pipeline: None,
+            blit_pipeline_format: None,
+            blit_pipeline: None,
+            blit_bind_group_layout: None,
+            blur_pipeline_format: None,
+            blur_h_pipeline: None,
+            blur_v_pipeline: None,
+            blur_h_masked_pipeline: None,
+            blur_v_masked_pipeline: None,
+            blur_h_mask_pipeline: None,
+            blur_v_mask_pipeline: None,
+            blit_mask_bind_group_layout: None,
         }
     }
 }

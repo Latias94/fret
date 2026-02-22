@@ -259,6 +259,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (clip-mask pipeline cache field)
     - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (`ensure_clip_mask_pipeline`, `clip_mask_pipeline_ref`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (`record_clip_mask_pass`)
+  - Landed (step 9): move blit/blur pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (blit/blur fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/{blit,blur}.rs` (`ensure_*`, `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{blit,blur}.rs` (call sites)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

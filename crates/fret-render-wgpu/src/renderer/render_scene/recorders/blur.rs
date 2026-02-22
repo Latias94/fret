@@ -59,10 +59,7 @@ pub(in super::super) fn record_blur_pass(
         else {
             return;
         };
-        let layout = renderer
-            .blit_mask_bind_group_layout
-            .as_ref()
-            .expect("blit mask bind group layout must exist");
+        let layout = renderer.blit_mask_bind_group_layout_ref();
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret blur mask bind group"),
             layout,
@@ -78,21 +75,10 @@ pub(in super::super) fn record_blur_pass(
             ],
         });
 
-        let (pipeline, label) = match pass.axis {
-            BlurAxis::Horizontal => (
-                renderer
-                    .blur_h_mask_pipeline
-                    .as_ref()
-                    .expect("blur-h mask pipeline must exist"),
-                "fret blur-h mask pass",
-            ),
-            BlurAxis::Vertical => (
-                renderer
-                    .blur_v_mask_pipeline
-                    .as_ref()
-                    .expect("blur-v mask pipeline must exist"),
-                "fret blur-v mask pass",
-            ),
+        let pipeline = renderer.blur_mask_pipeline_ref(pass.axis);
+        let label = match pass.axis {
+            BlurAxis::Horizontal => "fret blur-h mask pass",
+            BlurAxis::Vertical => "fret blur-v mask pass",
         };
 
         run_fullscreen_triangle_pass_uniform_texture(
@@ -116,27 +102,13 @@ pub(in super::super) fn record_blur_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer
-            .blit_bind_group_layout
-            .as_ref()
-            .expect("blit bind group layout must exist");
+        let layout = renderer.blit_bind_group_layout_ref();
         let bind_group =
             create_texture_bind_group(device, "fret blur bind group", layout, &src_view);
-        let (pipeline, label) = match pass.axis {
-            BlurAxis::Horizontal => (
-                renderer
-                    .blur_h_masked_pipeline
-                    .as_ref()
-                    .expect("blur-h masked pipeline must exist"),
-                "fret blur-h masked pass",
-            ),
-            BlurAxis::Vertical => (
-                renderer
-                    .blur_v_masked_pipeline
-                    .as_ref()
-                    .expect("blur-v masked pipeline must exist"),
-                "fret blur-v masked pass",
-            ),
+        let pipeline = renderer.blur_masked_pipeline_ref(pass.axis);
+        let label = match pass.axis {
+            BlurAxis::Horizontal => "fret blur-h masked pass",
+            BlurAxis::Vertical => "fret blur-v masked pass",
         };
         let uniform_offset =
             (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
@@ -162,22 +134,10 @@ pub(in super::super) fn record_blur_pass(
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer
-            .blit_bind_group_layout
-            .as_ref()
-            .expect("blit bind group layout must exist");
+        let layout = renderer.blit_bind_group_layout_ref();
         let bind_group =
             create_texture_bind_group(device, "fret blur bind group", layout, &src_view);
-        let blur_pipeline = match pass.axis {
-            BlurAxis::Horizontal => renderer
-                .blur_h_pipeline
-                .as_ref()
-                .expect("blur-h pipeline must exist"),
-            BlurAxis::Vertical => renderer
-                .blur_v_pipeline
-                .as_ref()
-                .expect("blur-v pipeline must exist"),
-        };
+        let blur_pipeline = renderer.blur_pipeline_ref(pass.axis);
         let label = match pass.axis {
             BlurAxis::Horizontal => "fret blur-h pass",
             BlurAxis::Vertical => "fret blur-v pass",

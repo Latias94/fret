@@ -7,21 +7,21 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.blur_pipeline_format == Some(format)
-            && self.blur_h_pipeline.is_some()
-            && self.blur_v_pipeline.is_some()
-            && self.blur_h_masked_pipeline.is_some()
-            && self.blur_v_masked_pipeline.is_some()
-            && self.blur_h_mask_pipeline.is_some()
-            && self.blur_v_mask_pipeline.is_some()
-            && self.blit_mask_bind_group_layout.is_some()
+        if self.pipelines.blur_pipeline_format == Some(format)
+            && self.pipelines.blur_h_pipeline.is_some()
+            && self.pipelines.blur_v_pipeline.is_some()
+            && self.pipelines.blur_h_masked_pipeline.is_some()
+            && self.pipelines.blur_v_masked_pipeline.is_some()
+            && self.pipelines.blur_h_mask_pipeline.is_some()
+            && self.pipelines.blur_v_mask_pipeline.is_some()
+            && self.pipelines.blit_mask_bind_group_layout.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.blur_pipeline_format != Some(format) {
+                let reason = if self.pipelines.blur_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -31,10 +31,7 @@ impl Renderer {
             .unwrap_or_else(tracing::Span::none);
         let _create_guard = create_span.enter();
 
-        let layout = self
-            .blit_bind_group_layout
-            .as_ref()
-            .expect("blit bind group layout must exist");
+        let layout = self.blit_bind_group_layout_ref();
         let mask_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("fret blit mask bind group layout"),
             entries: &[
@@ -263,13 +260,64 @@ impl Renderer {
             cache: None,
         });
 
-        self.blur_pipeline_format = Some(format);
-        self.blur_h_pipeline = Some(blur_h_pipeline);
-        self.blur_v_pipeline = Some(blur_v_pipeline);
-        self.blur_h_masked_pipeline = Some(blur_h_masked_pipeline);
-        self.blur_v_masked_pipeline = Some(blur_v_masked_pipeline);
-        self.blur_h_mask_pipeline = Some(blur_h_mask_pipeline);
-        self.blur_v_mask_pipeline = Some(blur_v_mask_pipeline);
-        self.blit_mask_bind_group_layout = Some(mask_layout);
+        self.pipelines.blur_pipeline_format = Some(format);
+        self.pipelines.blur_h_pipeline = Some(blur_h_pipeline);
+        self.pipelines.blur_v_pipeline = Some(blur_v_pipeline);
+        self.pipelines.blur_h_masked_pipeline = Some(blur_h_masked_pipeline);
+        self.pipelines.blur_v_masked_pipeline = Some(blur_v_masked_pipeline);
+        self.pipelines.blur_h_mask_pipeline = Some(blur_h_mask_pipeline);
+        self.pipelines.blur_v_mask_pipeline = Some(blur_v_mask_pipeline);
+        self.pipelines.blit_mask_bind_group_layout = Some(mask_layout);
+    }
+
+    pub(in crate::renderer) fn blur_pipeline_ref(&self, axis: BlurAxis) -> &wgpu::RenderPipeline {
+        match axis {
+            BlurAxis::Horizontal => self
+                .pipelines
+                .blur_h_pipeline
+                .as_ref()
+                .expect("blur-h pipeline must exist"),
+            BlurAxis::Vertical => self
+                .pipelines
+                .blur_v_pipeline
+                .as_ref()
+                .expect("blur-v pipeline must exist"),
+        }
+    }
+
+    pub(in crate::renderer) fn blur_masked_pipeline_ref(
+        &self,
+        axis: BlurAxis,
+    ) -> &wgpu::RenderPipeline {
+        match axis {
+            BlurAxis::Horizontal => self
+                .pipelines
+                .blur_h_masked_pipeline
+                .as_ref()
+                .expect("blur-h masked pipeline must exist"),
+            BlurAxis::Vertical => self
+                .pipelines
+                .blur_v_masked_pipeline
+                .as_ref()
+                .expect("blur-v masked pipeline must exist"),
+        }
+    }
+
+    pub(in crate::renderer) fn blur_mask_pipeline_ref(
+        &self,
+        axis: BlurAxis,
+    ) -> &wgpu::RenderPipeline {
+        match axis {
+            BlurAxis::Horizontal => self
+                .pipelines
+                .blur_h_mask_pipeline
+                .as_ref()
+                .expect("blur-h mask pipeline must exist"),
+            BlurAxis::Vertical => self
+                .pipelines
+                .blur_v_mask_pipeline
+                .as_ref()
+                .expect("blur-v mask pipeline must exist"),
+        }
     }
 }

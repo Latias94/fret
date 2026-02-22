@@ -92,19 +92,6 @@ pub struct Renderer {
     clip_mask_param_bind_group: wgpu::BindGroup,
     clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
 
-    blit_pipeline_format: Option<wgpu::TextureFormat>,
-    blit_pipeline: Option<wgpu::RenderPipeline>,
-    blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-
-    blur_pipeline_format: Option<wgpu::TextureFormat>,
-    blur_h_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_pipeline: Option<wgpu::RenderPipeline>,
-    blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
-    blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
-    blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
-
     scale_pipeline_format: Option<wgpu::TextureFormat>,
     downsample_pipeline: Option<wgpu::RenderPipeline>,
     upscale_pipeline: Option<wgpu::RenderPipeline>,

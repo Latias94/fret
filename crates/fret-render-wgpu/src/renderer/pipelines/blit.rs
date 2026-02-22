@@ -7,13 +7,15 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.blit_pipeline_format == Some(format) && self.blit_pipeline.is_some() {
+        if self.pipelines.blit_pipeline_format == Some(format)
+            && self.pipelines.blit_pipeline.is_some()
+        {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.blit_pipeline.is_none() {
+                let reason = if self.pipelines.blit_pipeline.is_none() {
                     "missing"
                 } else {
                     "format_changed"
@@ -82,8 +84,29 @@ impl Renderer {
             cache: None,
         });
 
-        self.blit_bind_group_layout = Some(bind_group_layout);
-        self.blit_pipeline_format = Some(format);
-        self.blit_pipeline = Some(pipeline);
+        self.pipelines.blit_bind_group_layout = Some(bind_group_layout);
+        self.pipelines.blit_pipeline_format = Some(format);
+        self.pipelines.blit_pipeline = Some(pipeline);
+    }
+
+    pub(in crate::renderer) fn blit_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .blit_pipeline
+            .as_ref()
+            .expect("blit pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn blit_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .blit_bind_group_layout
+            .as_ref()
+            .expect("blit bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn blit_mask_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .blit_mask_bind_group_layout
+            .as_ref()
+            .expect("blit mask bind group layout must exist")
     }
 }

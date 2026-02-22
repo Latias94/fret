@@ -17,22 +17,11 @@ pub(in super::super) fn record_fullscreen_blit_pass(
 
     let renderer = &mut *exec.renderer;
 
-    let blit_pipeline = renderer
-        .blit_pipeline
-        .as_ref()
-        .expect("blit pipeline must exist");
-
-    let layout = renderer
-        .blit_bind_group_layout
-        .as_ref()
-        .expect("blit bind group layout must exist");
     let Some(src_view) =
         require_color_src_view(frame_targets, pass.src, pass.src_size, "FullscreenBlit")
     else {
         return;
     };
-    let blit_bind_group =
-        create_texture_bind_group(device, "fret blit bind group", layout, &src_view);
 
     let dst_view_owned = ensure_color_dst_view_owned(
         frame_targets,
@@ -45,6 +34,11 @@ pub(in super::super) fn record_fullscreen_blit_pass(
         "FullscreenBlit",
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+    let layout = renderer.blit_bind_group_layout_ref();
+    let blit_bind_group =
+        create_texture_bind_group(device, "fret blit bind group", layout, &src_view);
+    let blit_pipeline = renderer.blit_pipeline_ref();
 
     run_fullscreen_triangle_pass(
         encoder,
