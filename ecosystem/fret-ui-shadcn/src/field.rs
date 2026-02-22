@@ -796,6 +796,7 @@ impl FieldLabel {
                     return;
                 }
                 control.action.invoke(host);
+                host.request_redraw(acx.window);
             }));
 
             let controls_element = cx

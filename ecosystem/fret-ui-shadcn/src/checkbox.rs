@@ -277,6 +277,11 @@ impl Checkbox {
             let layout = LayoutRefinement::default()
                 .w_px(size)
                 .h_px(size)
+                .min_w(size)
+                .min_h(size)
+                // shadcn/ui sets `shrink-0` so the checkbox keeps its 16px affordance when
+                // horizontally constrained (e.g. in tables or dense control rows).
+                .flex_shrink_0()
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
@@ -902,6 +907,80 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(true));
+    }
+
+    #[test]
+    fn checkbox_does_not_shrink_when_horizontally_constrained() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        // Constrain the row so flex shrink would otherwise squeeze fixed-size affordances.
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(30.0), Px(40.0)),
+        );
+        let mut services = FakeServices;
+
+        // Use a checked checkbox so the indicator subtree is present (matches the reported regression).
+        let model = app.models_mut().insert(true);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-does-not-shrink",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+
+                let row = cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Start,
+                        wrap: false,
+                    },
+                    |cx| {
+                        let checkbox = Checkbox::new(model.clone())
+                            .test_id("shadcn-checkbox-shrink-0")
+                            .into_element(cx);
+
+                        let mut filler_layout = LayoutStyle::default();
+                        filler_layout.size.width = Length::Px(Px(24.0));
+                        filler_layout.size.height = Length::Px(Px(16.0));
+                        let filler = cx.container(
+                            fret_ui::element::ContainerProps {
+                                layout: filler_layout,
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        );
+
+                        vec![checkbox, filler]
+                    },
+                );
+
+                vec![row]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let row_node = ui.children(root)[0];
+        let checkbox_node = ui.children(row_node)[0];
+        let checkbox_bounds = ui
+            .debug_node_bounds(checkbox_node)
+            .expect("checkbox bounds");
+
+        assert!((checkbox_bounds.size.width.0 - 16.0).abs() <= 0.5);
+        assert!((checkbox_bounds.size.height.0 - 16.0).abs() <= 0.5);
     }
 
     #[test]

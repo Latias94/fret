@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery command palette: cmdk keybindings",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "command" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-command" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-command" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-command-shortcuts" },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "padding_insets_px": null,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-input" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-input" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-input" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-item-open-project" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "j", "modifiers": { "ctrl": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-item-toggle-sidebar" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down", "modifiers": { "meta": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-item-toggle-terminal" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_up", "modifiers": { "meta": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-shortcuts-item-open-project" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-command-groups" },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "padding_insets_px": null,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-groups-input" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-groups-input" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-groups-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-groups-item-calendar" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down", "modifiers": { "alt": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is",
+        "container": { "kind": "test_id", "id": "ui-gallery-command-groups-listbox" },
+        "item": { "kind": "test_id", "id": "ui-gallery-command-groups-item-profile" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-command-palette-cmdk-keybindings" }
+  ]
+}

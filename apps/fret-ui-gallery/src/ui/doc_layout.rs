@@ -206,16 +206,10 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let line_height = theme.metric_by_key("font.line_height");
-        let style = fret_core::TextStyle {
-            font: fret_core::FontId::default(),
-            size: Px(12.0),
-            weight: fret_core::FontWeight::NORMAL,
-            slant: fret_core::TextSlant::Normal,
-            line_height,
-            letter_spacing_em: None,
-            ..Default::default()
-        };
+        let style = fret_ui_kit::typography::control_text_style(
+            theme,
+            fret_ui_kit::typography::UiTextSize::Xs,
+        );
         let color = theme
             .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted_foreground"))
@@ -239,6 +233,35 @@ pub(in crate::ui) fn muted_full_width<H: UiHost>(
     })
 }
 
+fn muted_inline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = fret_ui_kit::typography::control_text_style(
+            theme,
+            fret_ui_kit::typography::UiTextSize::Xs,
+        );
+        let color = theme
+            .color_by_key("muted-foreground")
+            .or_else(|| theme.color_by_key("muted_foreground"))
+            .unwrap_or_else(|| theme.color_token("foreground"));
+        (style, color)
+    };
+
+    cx.text_props(TextProps {
+        layout: fret_ui::element::LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
+    })
+}
+
 pub(in crate::ui) fn notes<I, T>(cx: &mut ElementContext<'_, App>, lines: I) -> AnyElement
 where
     I: IntoIterator<Item = T>,
@@ -249,14 +272,23 @@ where
     stack::vstack(
         cx,
         stack::VStackProps::default()
-            .gap(Space::N2)
+            .gap(Space::N1)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |cx| {
             lines
                 .iter()
                 .cloned()
-                .map(|line| muted_full_width(cx, line))
+                .map(|line| {
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N1)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+                        move |cx| [muted_inline(cx, "•"), muted_full_width(cx, line)],
+                    )
+                })
                 .collect::<Vec<_>>()
         },
     )
@@ -335,10 +367,10 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             let title_el = section_title(cx, title);
-            out.push(if let Some(test_id) = title_test_id {
-                title_el.test_id(test_id)
-            } else {
-                title_el
+            out.push(match (title_test_id, test_id_prefix.as_deref()) {
+                (Some(test_id), _) => title_el.test_id(test_id),
+                (None, Some(prefix)) => title_el.test_id(format!("{prefix}-title")),
+                (None, None) => title_el,
             });
             if !description.is_empty() {
                 let description_stack = stack::vstack(
@@ -354,9 +386,17 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
                             .collect::<Vec<_>>()
                     },
                 );
-                out.push(description_stack);
+                out.push(if let Some(prefix) = test_id_prefix.as_deref() {
+                    description_stack.test_id(format!("{prefix}-description"))
+                } else {
+                    description_stack
+                });
             }
-            out.push(content);
+            out.push(if let Some(prefix) = test_id_prefix.as_deref() {
+                content.test_id(format!("{prefix}-content"))
+            } else {
+                content
+            });
             out
         },
     )

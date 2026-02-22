@@ -218,6 +218,7 @@ stack::hstack(
 })"#,
                  ),
              DocSection::new("Notes", notes)
+                 .test_id_prefix("ui-gallery-combobox-notes")
                  .description("Guidelines and parity notes for combobox recipes."),
         ],
     );

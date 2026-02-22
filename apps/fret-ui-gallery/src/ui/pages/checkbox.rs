@@ -189,7 +189,8 @@ pub(super) fn preview_checkbox(
                     .into_element(cx),
                 shadcn::FieldLabel::new("Accept terms and conditions")
                     .for_control("ui-gallery-checkbox-demo-toggle")
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-checkbox-demo-label"),
                 cx.spacer(fret_ui::element::SpacerProps::default()),
                 shadcn::typography::muted(
                     cx,
@@ -233,7 +234,8 @@ pub(super) fn preview_checkbox(
                                 .into_element(cx),
                             shadcn::FieldLabel::new("Controlled checked state")
                                 .for_control("ui-gallery-checkbox-controlled")
-                                .into_element(cx),
+                                .into_element(cx)
+                                .test_id("ui-gallery-checkbox-controlled-label"),
                             cx.spacer(fret_ui::element::SpacerProps::default()),
                             shadcn::typography::muted(
                                 cx,
@@ -261,7 +263,8 @@ pub(super) fn preview_checkbox(
                                 .into_element(cx),
                             shadcn::FieldLabel::new("Optional / indeterminate state")
                                 .for_control("ui-gallery-checkbox-optional")
-                                .into_element(cx),
+                                .into_element(cx)
+                                .test_id("ui-gallery-checkbox-optional-label"),
                             cx.spacer(fret_ui::element::SpacerProps::default()),
                             shadcn::typography::muted(cx, optional_text),
                         ]
@@ -524,16 +527,71 @@ pub(super) fn preview_checkbox(
                 .description("Single checkbox with a live state readout.")
                 .code(
                     "rust",
-                    r#"let checkbox = shadcn::Checkbox::new(model)
-    .a11y_label("Accept terms")
-    .into_element(cx);"#,
+                    r#"let accepted = cx.app.models_mut().insert(false);
+
+let row = stack::hstack(
+    cx,
+    stack::HStackProps::default()
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .items_center(),
+    |cx| {
+        vec![
+            shadcn::Checkbox::new(accepted.clone())
+                // Required for label click -> focus/toggle forwarding.
+                .control_id("terms")
+                .a11y_label("Accept terms")
+                .into_element(cx),
+            shadcn::FieldLabel::new("Accept terms and conditions")
+                .for_control("terms")
+                .into_element(cx),
+        ]
+    },
+);
+
+row"#,
                 ),
             DocSection::new("Checked State", checked_state)
                 .description("Controlled checked model and optional/indeterminate model.")
                 .code(
                     "rust",
-                    r#"let controlled = shadcn::Checkbox::new(controlled_model);
-let optional = shadcn::Checkbox::new_optional(optional_model); // None => indeterminate"#,
+                    r#"let controlled = cx.app.models_mut().insert(true);
+let optional = cx.app.models_mut().insert(None::<bool>); // None => indeterminate
+
+stack::vstack(cx, stack::VStackProps::default().gap(Space::N3), |cx| {
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N3).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Checkbox::new(controlled.clone())
+                        .control_id("controlled")
+                        .a11y_label("Controlled checkbox")
+                        .into_element(cx),
+                    shadcn::FieldLabel::new("Controlled checked state")
+                        .for_control("controlled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N3).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Checkbox::new_optional(optional.clone())
+                        .control_id("optional")
+                        .a11y_label("Optional checkbox")
+                        .into_element(cx),
+                    shadcn::FieldLabel::new("Optional / indeterminate state")
+                        .for_control("optional")
+                        .into_element(cx),
+                ]
+            },
+        ),
+    ]
+})"#,
                 ),
             DocSection::new("Invalid State", invalid_state)
                 .description("Invalid styling is currently approximated via destructive border.")

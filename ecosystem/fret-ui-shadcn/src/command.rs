@@ -1340,6 +1340,7 @@ pub struct CommandPalette {
     entries: Vec<CommandEntry>,
     disabled: bool,
     wrap: bool,
+    vim_bindings: bool,
     empty_text: Arc<str>,
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
@@ -1374,12 +1375,19 @@ enum CommandPaletteRenderRow {
 fn command_palette_render_rows_for_query(
     entries: Vec<CommandEntry>,
     query: &str,
-) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
+) -> (
+    Vec<CommandPaletteRenderRow>,
+    Vec<CommandItem>,
+    Vec<Option<u32>>,
+) {
     #[derive(Clone)]
     enum PendingRow {
         Heading(Arc<str>),
         Separator,
-        Item(CommandItem),
+        Item {
+            group: Option<u32>,
+            item: CommandItem,
+        },
     }
 
     let score_item = |item: &CommandItem| -> f32 {
@@ -1399,13 +1407,14 @@ fn command_palette_render_rows_for_query(
     };
 
     let mut pending_rows: Vec<PendingRow> = Vec::new();
+    let mut next_group_id: u32 = 0;
     if query.is_empty() {
         for entry in entries {
             match entry {
                 CommandEntry::Item(item) => {
                     let score = score_item(&item);
                     if score > 0.0 {
-                        pending_rows.push(PendingRow::Item(item));
+                        pending_rows.push(PendingRow::Item { group: None, item });
                     }
                 }
                 CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
@@ -1414,10 +1423,16 @@ fn command_palette_render_rows_for_query(
                         continue;
                     }
 
+                    let group_id = next_group_id;
+                    next_group_id = next_group_id.saturating_add(1);
+
                     if let Some(heading) = group.heading {
                         pending_rows.push(PendingRow::Heading(heading));
                     }
-                    pending_rows.extend(group.items.into_iter().map(PendingRow::Item));
+                    pending_rows.extend(group.items.into_iter().map(|item| PendingRow::Item {
+                        group: Some(group_id),
+                        item,
+                    }));
                 }
             }
         }
@@ -1480,16 +1495,22 @@ fn command_palette_render_rows_for_query(
         pending_rows.extend(
             root_items
                 .into_iter()
-                .map(|(_, _, item)| PendingRow::Item(item)),
+                .map(|(_, _, item)| PendingRow::Item { group: None, item }),
         );
         for (_, _, heading, scored_items) in groups {
+            let group_id = next_group_id;
+            next_group_id = next_group_id.saturating_add(1);
+
             if let Some(heading) = heading {
                 pending_rows.push(PendingRow::Heading(heading));
             }
             pending_rows.extend(
                 scored_items
                     .into_iter()
-                    .map(|(_, _, item)| PendingRow::Item(item)),
+                    .map(|(_, _, item)| PendingRow::Item {
+                        group: Some(group_id),
+                        item,
+                    }),
             );
         }
     }
@@ -1497,7 +1518,7 @@ fn command_palette_render_rows_for_query(
     let mut has_item_from: Vec<bool> = vec![false; pending_rows.len() + 1];
     for idx in (0..pending_rows.len()).rev() {
         has_item_from[idx] =
-            has_item_from[idx + 1] || matches!(pending_rows[idx], PendingRow::Item(_));
+            has_item_from[idx + 1] || matches!(pending_rows[idx], PendingRow::Item { .. });
     }
 
     let mut filtered_rows: Vec<PendingRow> = Vec::with_capacity(pending_rows.len());
@@ -1512,10 +1533,10 @@ fn command_palette_render_rows_for_query(
                 prev_is_sep = true;
                 filtered_rows.push(PendingRow::Separator);
             }
-            PendingRow::Item(item) => {
+            PendingRow::Item { group, item } => {
                 seen_item_before = true;
                 prev_is_sep = false;
-                filtered_rows.push(PendingRow::Item(item));
+                filtered_rows.push(PendingRow::Item { group, item });
             }
             PendingRow::Heading(h) => {
                 prev_is_sep = false;
@@ -1525,6 +1546,7 @@ fn command_palette_render_rows_for_query(
     }
 
     let mut items: Vec<CommandItem> = Vec::new();
+    let mut item_groups: Vec<Option<u32>> = Vec::new();
     let mut saw_heading = false;
     let render_rows: Vec<CommandPaletteRenderRow> = filtered_rows
         .into_iter()
@@ -1539,15 +1561,16 @@ fn command_palette_render_rows_for_query(
                 out
             }
             PendingRow::Separator => vec![CommandPaletteRenderRow::Separator],
-            PendingRow::Item(item) => {
+            PendingRow::Item { group, item } => {
                 let idx = items.len();
                 items.push(item);
+                item_groups.push(group);
                 vec![CommandPaletteRenderRow::Item(idx)]
             }
         })
         .collect();
 
-    (render_rows, items)
+    (render_rows, items, item_groups)
 }
 
 impl std::fmt::Debug for CommandPalette {
@@ -1556,6 +1579,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("entries_len", &self.entries.len())
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
+            .field("vim_bindings", &self.vim_bindings)
             .field("empty_text", &self.empty_text.as_ref())
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
@@ -1582,7 +1606,10 @@ impl CommandPalette {
             model,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             disabled: false,
-            wrap: true,
+            // cmdk default: no loop unless explicitly enabled via `loop`.
+            wrap: false,
+            // cmdk default: ctrl+n/j/p/k keybinds enabled.
+            vim_bindings: true,
             empty_text: Arc::from("No results."),
             a11y_label: Arc::from("Command input"),
             placeholder: None,
@@ -1649,6 +1676,12 @@ impl CommandPalette {
 
     pub fn wrap(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
+        self
+    }
+
+    /// Enables cmdk-style "vim bindings" (Ctrl+N/J/P/K) for selection navigation.
+    pub fn vim_bindings(mut self, vim_bindings: bool) -> Self {
+        self.vim_bindings = vim_bindings;
         self
     }
 
@@ -1753,7 +1786,9 @@ impl CommandPalette {
         struct KeyHandlerState {
             disabled: Rc<Cell<bool>>,
             wrap: Rc<Cell<bool>>,
+            vim_bindings: Rc<Cell<bool>>,
             entries: Rc<RefCell<Arc<[PaletteEntry]>>>,
+            item_groups: Rc<RefCell<Arc<[Option<u32>]>>>,
             handler: fret_ui::action::OnKeyDown,
         }
 
@@ -1769,6 +1804,7 @@ impl CommandPalette {
 
             let disabled = self.disabled;
             let wrap = self.wrap;
+            let vim_bindings = self.vim_bindings;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
@@ -1781,7 +1817,7 @@ impl CommandPalette {
                 .unwrap_or_default();
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
-            let (render_rows, items) =
+            let (render_rows, items, item_groups) =
                 command_palette_render_rows_for_query(self.entries, query.as_str());
 
             let items_fingerprint = {
@@ -1789,7 +1825,7 @@ impl CommandPalette {
                 query.as_str().hash(&mut hasher);
                 render_rows.len().hash(&mut hasher);
                 for row in &render_rows {
-                    match row {
+                    match row.clone() {
                         CommandPaletteRenderRow::Heading(h) => {
                             "heading".hash(&mut hasher);
                             h.as_ref().hash(&mut hasher);
@@ -1802,22 +1838,24 @@ impl CommandPalette {
                         }
                         CommandPaletteRenderRow::Item(idx) => {
                             "item".hash(&mut hasher);
-                            if let Some(item) = items.get(*idx) {
+                            if let Some(item) = items.get(idx) {
                                 item.label.as_ref().hash(&mut hasher);
                                 item.value.as_ref().hash(&mut hasher);
+                                item_groups
+                                    .get(idx)
+                                    .copied()
+                                    .flatten()
+                                    .unwrap_or(u32::MAX)
+                                    .hash(&mut hasher);
                                 item.keywords.len().hash(&mut hasher);
                                 for kw in &item.keywords {
-                                    kw.as_ref().hash(&mut hasher);
+                                    (&**kw).hash(&mut hasher);
                                 }
-                                item.shortcut
-                                    .as_ref()
-                                    .map(|s| s.as_ref())
-                                    .unwrap_or("")
-                                    .hash(&mut hasher);
+                                item.shortcut.as_deref().unwrap_or("").hash(&mut hasher);
                                 item.disabled.hash(&mut hasher);
                                 item.command
                                     .as_ref()
-                                    .map(|c| c.as_str())
+                                    .map(CommandId::as_str)
                                     .unwrap_or("")
                                     .hash(&mut hasher);
                             }
@@ -2323,11 +2361,16 @@ impl CommandPalette {
                     let entries_cell: Rc<RefCell<Arc<[PaletteEntry]>>> =
                         Rc::new(RefCell::new(Arc::from([])));
                     let entries_read = entries_cell.clone();
+                    let item_groups_cell: Rc<RefCell<Arc<[Option<u32>]>>> =
+                        Rc::new(RefCell::new(Arc::from([])));
+                    let item_groups_read = item_groups_cell.clone();
                     let disabled_cell = Rc::new(Cell::new(false));
                     let wrap_cell = Rc::new(Cell::new(true));
+                    let vim_bindings_cell = Rc::new(Cell::new(true));
 
                     let disabled_read = disabled_cell.clone();
                     let wrap_read = wrap_cell.clone();
+                    let vim_bindings_read = vim_bindings_cell.clone();
 
                     let handler: fret_ui::action::OnKeyDown =
                         Arc::new(move |host, action_cx, down| {
@@ -2338,97 +2381,152 @@ impl CommandPalette {
                             let entries = entries_read.borrow();
                             let disabled_flags: Vec<bool> =
                                 entries.iter().map(|e| e.disabled).collect();
+                            let groups = item_groups_read.borrow();
+
+                            let current_value =
+                                host.models_mut().get_cloned(&active).unwrap_or(None);
+                            let current_idx = current_value.as_ref().and_then(|v| {
+                                entries.iter().position(|e| e.value.as_ref() == v.as_ref())
+                            });
+
+                            let mut set_active_by_idx = |idx: Option<usize>| {
+                                let next =
+                                    idx.and_then(|i| entries.get(i)).map(|e| e.value.clone());
+                                if next != current_value {
+                                    let _ =
+                                        host.models_mut().update(&active, |v| *v = next.clone());
+                                    host.request_redraw(action_cx.window);
+                                }
+                            };
+
+                            let move_by_item = |forward: bool,
+                                                set_active_by_idx: &mut dyn FnMut(
+                                Option<usize>,
+                            )| {
+                                let next_idx = cmdk_selection::next_active_index(
+                                    &disabled_flags,
+                                    current_idx,
+                                    forward,
+                                    wrap_read.get(),
+                                );
+                                set_active_by_idx(next_idx);
+                            };
+
+                            let move_to_edge = |forward: bool,
+                                                set_active_by_idx: &mut dyn FnMut(
+                                Option<usize>,
+                            )| {
+                                let next_idx = if forward {
+                                    cmdk_selection::last_enabled(&disabled_flags)
+                                } else {
+                                    cmdk_selection::first_enabled(&disabled_flags)
+                                };
+                                set_active_by_idx(next_idx);
+                            };
+
+                            let move_by_group = |forward: bool,
+                                                 set_active_by_idx: &mut dyn FnMut(
+                                Option<usize>,
+                            )| {
+                                let Some(cur_idx) = current_idx else {
+                                    move_by_item(forward, set_active_by_idx);
+                                    return;
+                                };
+                                let Some(cur_group) = groups.get(cur_idx).copied().flatten() else {
+                                    move_by_item(forward, set_active_by_idx);
+                                    return;
+                                };
+
+                                // Group order is the order of appearance in the rendered rows.
+                                let mut order: Vec<u32> = Vec::new();
+                                let mut last: Option<u32> = None;
+                                for g in groups.iter().copied().flatten() {
+                                    if last != Some(g) {
+                                        order.push(g);
+                                        last = Some(g);
+                                    }
+                                }
+
+                                let Some(pos) = order.iter().position(|g| *g == cur_group) else {
+                                    move_by_item(forward, set_active_by_idx);
+                                    return;
+                                };
+
+                                let candidates: Box<dyn Iterator<Item = u32>> = if forward {
+                                    Box::new(order.iter().copied().skip(pos + 1))
+                                } else {
+                                    Box::new(order.iter().copied().take(pos).rev())
+                                };
+
+                                for group_id in candidates {
+                                    let next_idx =
+                                        groups.iter().enumerate().find_map(|(idx, g)| {
+                                            (disabled_flags.get(idx).copied() == Some(false)
+                                                && *g == Some(group_id))
+                                            .then_some(idx)
+                                        });
+                                    if next_idx.is_some() {
+                                        set_active_by_idx(next_idx);
+                                        return;
+                                    }
+                                }
+
+                                // Fallback to item-wise movement when no other enabled group exists.
+                                move_by_item(forward, set_active_by_idx);
+                            };
 
                             match down.key {
+                                KeyCode::KeyN | KeyCode::KeyJ => {
+                                    if vim_bindings_read.get() && down.modifiers.ctrl {
+                                        move_by_item(true, &mut set_active_by_idx);
+                                        return true;
+                                    }
+                                    false
+                                }
+                                KeyCode::KeyP | KeyCode::KeyK => {
+                                    if vim_bindings_read.get() && down.modifiers.ctrl {
+                                        move_by_item(false, &mut set_active_by_idx);
+                                        return true;
+                                    }
+                                    false
+                                }
                                 KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                                    let current_value =
-                                        host.models_mut().get_cloned(&active).unwrap_or(None);
-                                    let current = current_value.as_ref().and_then(|v| {
-                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
-                                    });
                                     let forward = down.key == KeyCode::ArrowDown;
-                                    let next_idx = cmdk_selection::next_active_index(
-                                        &disabled_flags,
-                                        current,
-                                        forward,
-                                        wrap_read.get(),
-                                    );
-
-                                    let next = next_idx
-                                        .and_then(|i| entries.get(i))
-                                        .map(|e| e.value.clone());
-                                    if next != current_value {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&active, |v| *v = next.clone());
-                                        host.request_redraw(action_cx.window);
+                                    if down.modifiers.meta {
+                                        move_to_edge(forward, &mut set_active_by_idx);
+                                    } else if down.modifiers.alt {
+                                        move_by_group(forward, &mut set_active_by_idx);
+                                    } else {
+                                        move_by_item(forward, &mut set_active_by_idx);
                                     }
                                     true
                                 }
                                 KeyCode::Home => {
-                                    let current_value =
-                                        host.models_mut().get_cloned(&active).unwrap_or(None);
                                     let next_idx = cmdk_selection::first_enabled(&disabled_flags);
-                                    let next = next_idx
-                                        .and_then(|i| entries.get(i))
-                                        .map(|e| e.value.clone());
-                                    if next != current_value {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&active, |v| *v = next.clone());
-                                        host.request_redraw(action_cx.window);
-                                    }
+                                    set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::End => {
-                                    let current_value =
-                                        host.models_mut().get_cloned(&active).unwrap_or(None);
                                     let next_idx = cmdk_selection::last_enabled(&disabled_flags);
-                                    let next = next_idx
-                                        .and_then(|i| entries.get(i))
-                                        .map(|e| e.value.clone());
-                                    if next != current_value {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&active, |v| *v = next.clone());
-                                        host.request_redraw(action_cx.window);
-                                    }
+                                    set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::PageDown | KeyCode::PageUp => {
-                                    let current_value =
-                                        host.models_mut().get_cloned(&active).unwrap_or(None);
-                                    let current = current_value.as_ref().and_then(|v| {
-                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
-                                    });
                                     let forward = down.key == KeyCode::PageDown;
                                     let next_idx = cmdk_selection::advance_active_index(
                                         &disabled_flags,
-                                        current,
+                                        current_idx,
                                         forward,
                                         wrap_read.get(),
                                         10,
                                     );
-                                    let next = next_idx
-                                        .and_then(|i| entries.get(i))
-                                        .map(|e| e.value.clone());
-                                    if next != current_value {
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&active, |v| *v = next.clone());
-                                        host.request_redraw(action_cx.window);
-                                    }
+                                    set_active_by_idx(next_idx);
                                     true
                                 }
                                 KeyCode::Enter | KeyCode::NumpadEnter => {
-                                    let current_value =
-                                        host.models_mut().get_cloned(&active).unwrap_or(None);
-                                    let current = current_value.as_ref().and_then(|v| {
-                                        entries.iter().position(|e| e.value.as_ref() == v.as_ref())
-                                    });
                                     let Some(idx) = cmdk_selection::clamp_active_index(
                                         &disabled_flags,
-                                        current,
+                                        current_idx,
                                     ) else {
                                         return false;
                                     };
@@ -2453,14 +2551,19 @@ impl CommandPalette {
                     KeyHandlerState {
                         disabled: disabled_cell,
                         wrap: wrap_cell,
+                        vim_bindings: vim_bindings_cell,
                         entries: entries_cell,
+                        item_groups: item_groups_cell,
                         handler,
                     }
                 },
                 |state: &mut KeyHandlerState| {
                     state.disabled.set(disabled);
                     state.wrap.set(wrap);
+                    state.vim_bindings.set(vim_bindings);
                     *state.entries.borrow_mut() = entries_arc.clone();
+                    *state.item_groups.borrow_mut() =
+                        Arc::from(item_groups.clone().into_boxed_slice());
                     state.handler.clone()
                 },
             );
@@ -2548,6 +2651,7 @@ pub struct CommandDialog {
     a11y_label: Option<Arc<str>>,
     disabled: bool,
     wrap: bool,
+    vim_bindings: bool,
     close_on_select: bool,
     empty_text: Arc<str>,
     on_open_change: Option<OnOpenChange>,
@@ -2564,6 +2668,7 @@ impl std::fmt::Debug for CommandDialog {
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
+            .field("vim_bindings", &self.vim_bindings)
             .field("close_on_select", &self.close_on_select)
             .field("empty_text", &self.empty_text.as_ref())
             .field("on_open_change", &self.on_open_change.is_some())
@@ -2591,7 +2696,8 @@ impl CommandDialog {
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
             disabled: false,
-            wrap: true,
+            wrap: false,
+            vim_bindings: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
             on_open_change: None,
@@ -2630,7 +2736,8 @@ impl CommandDialog {
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
             disabled: false,
-            wrap: true,
+            wrap: false,
+            vim_bindings: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
             on_open_change: None,
@@ -2656,6 +2763,12 @@ impl CommandDialog {
 
     pub fn wrap(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
+        self
+    }
+
+    /// Enables cmdk-style "vim bindings" (Ctrl+N/J/P/K) for selection navigation.
+    pub fn vim_bindings(mut self, vim_bindings: bool) -> Self {
+        self.vim_bindings = vim_bindings;
         self
     }
 
@@ -2729,6 +2842,7 @@ impl CommandDialog {
             .unwrap_or_else(|| Arc::from("Command palette"));
         let disabled = self.disabled;
         let wrap = self.wrap;
+        let vim_bindings = self.vim_bindings;
         let close_on_select = self.close_on_select;
         let empty_text = self.empty_text;
         let on_open_change = self.on_open_change;
@@ -2845,6 +2959,7 @@ impl CommandDialog {
                     .a11y_label(a11y_label.clone())
                     .disabled(disabled)
                     .wrap(wrap)
+                    .vim_bindings(vim_bindings)
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
                     .into_element(cx);
@@ -4165,7 +4280,7 @@ mod tests {
             CommandItem::new("Gamma").into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "");
         assert_eq!(items.len(), 3);
         assert_eq!(
             row_signatures(&rows, &items),
@@ -4192,7 +4307,7 @@ mod tests {
             CommandSeparator::new().into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "gam");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "gam");
         assert_eq!(items.len(), 1);
         assert_eq!(
             row_signatures(&rows, &items),
@@ -4207,7 +4322,7 @@ mod tests {
             CommandItem::new("alpha").into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
         assert_eq!(
             row_signatures(&rows, &items),
             vec!["I:alpha".to_string(), "I:pal".to_string()]
@@ -4225,7 +4340,7 @@ mod tests {
                 .into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
         assert_eq!(
             row_signatures(&rows, &items),
             vec![
@@ -4247,7 +4362,7 @@ mod tests {
             CommandItem::new("alpha").into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "al");
         assert_eq!(
             row_signatures(&rows, &items),
             vec![
@@ -4268,7 +4383,7 @@ mod tests {
             CommandSeparator::new().into(),
         ];
 
-        let (rows, items) = command_palette_render_rows_for_query(entries, "");
+        let (rows, items, _item_groups) = command_palette_render_rows_for_query(entries, "");
         assert_eq!(
             row_signatures(&rows, &items),
             vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
