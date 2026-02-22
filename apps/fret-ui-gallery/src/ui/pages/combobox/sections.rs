@@ -23,6 +23,41 @@ pub(super) fn demo(
         .test_id("ui-gallery-combobox-basic-trigger")
 }
 
+pub(super) fn clear_button(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    let combo = shadcn::Combobox::new(models.clear_value.clone(), models.clear_open.clone())
+        .a11y_label("Combobox clear")
+        .width(Px(260.0))
+        .placeholder("Select a framework")
+        .query_model(models.clear_query.clone())
+        .show_clear(true)
+        .test_id_prefix("ui-gallery-combobox-clear")
+        .items(helpers::base_items())
+        .into_element(cx)
+        .test_id("ui-gallery-combobox-clear-trigger");
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |cx| {
+            vec![
+                combo,
+                helpers::state_rows(
+                    cx,
+                    &models.clear_value,
+                    &models.clear_query,
+                    "ui-gallery-combobox-clear",
+                ),
+            ]
+        },
+    )
+}
+
 pub(super) fn custom_items_top(
     cx: &mut ElementContext<'_, App>,
     models: &ComboboxModels,

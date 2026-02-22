@@ -2,6 +2,9 @@ use super::prelude::*;
 
 #[derive(Default, Clone)]
 struct ComboboxModelsState {
+    clear_value: Option<Model<Option<Arc<str>>>>,
+    clear_open: Option<Model<bool>>,
+    clear_query: Option<Model<String>>,
     custom_value: Option<Model<Option<Arc<str>>>>,
     custom_open: Option<Model<bool>>,
     custom_query: Option<Model<String>>,
@@ -27,6 +30,9 @@ struct ComboboxModelsState {
 
 #[derive(Clone)]
 pub(super) struct ComboboxModels {
+    pub(super) clear_value: Model<Option<Arc<str>>>,
+    pub(super) clear_open: Model<bool>,
+    pub(super) clear_query: Model<String>,
     pub(super) custom_value: Model<Option<Arc<str>>>,
     pub(super) custom_open: Model<bool>,
     pub(super) custom_query: Model<String>,
@@ -53,6 +59,9 @@ pub(super) struct ComboboxModels {
 impl ComboboxModels {
     fn try_from_state(state: ComboboxModelsState) -> Option<Self> {
         Some(ComboboxModels {
+            clear_value: state.clear_value?,
+            clear_open: state.clear_open?,
+            clear_query: state.clear_query?,
             custom_value: state.custom_value?,
             custom_open: state.custom_open?,
             custom_query: state.custom_query?,
@@ -84,6 +93,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         return models;
     }
 
+    let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("nuxt")));
+    let clear_open = cx.app.models_mut().insert(false);
+    let clear_query = cx.app.models_mut().insert(String::new());
+
     let custom_value = cx.app.models_mut().insert(None);
     let custom_open = cx.app.models_mut().insert(false);
     let custom_query = cx.app.models_mut().insert(String::new());
@@ -113,6 +126,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let rtl_query = cx.app.models_mut().insert(String::new());
 
     cx.with_state(ComboboxModelsState::default, |st| {
+        st.clear_value = Some(clear_value.clone());
+        st.clear_open = Some(clear_open.clone());
+        st.clear_query = Some(clear_query.clone());
+
         st.custom_value = Some(custom_value.clone());
         st.custom_open = Some(custom_open.clone());
         st.custom_query = Some(custom_query.clone());
@@ -143,6 +160,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     });
 
     ComboboxModels {
+        clear_value,
+        clear_open,
+        clear_query,
         custom_value,
         custom_open,
         custom_query,

@@ -19,6 +19,7 @@ pub(super) fn preview_combobox(
     let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
 
     let demo = sections::demo(cx, value, open, query);
+    let clear = sections::clear_button(cx, &models);
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
@@ -26,13 +27,6 @@ pub(super) fn preview_combobox(
     let disabled = sections::disabled(cx, &models);
     let input_group = sections::input_group(cx, &models);
     let rtl = sections::rtl(cx, &models);
-
-    let (clear_title, clear) = doc_layout::gap_card(
-        cx,
-        "Clear Button",
-        "Upstream combobox supports `showClear` on the input. Current Fret `Combobox` does not expose a built-in clear affordance yet; clear by resetting the value model in your app state.",
-        "ui-gallery-combobox-clear-gap",
-    );
 
     let (trigger_title, trigger) = doc_layout::gap_card(
         cx,
@@ -52,7 +46,7 @@ pub(super) fn preview_combobox(
         cx,
         [
             "Combobox is a Popover + Command recipe. Keep shadcn demo order stable so parity gaps are explicit and testable.",
-            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select, clear, and trigger composition are tracked as explicit gaps.",
+            "Current Fret `Combobox` focuses on single-select + query filtering; multi-select and trigger composition are tracked as explicit gaps.",
             "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
             "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
         ],
@@ -82,12 +76,22 @@ pub(super) fn preview_combobox(
     ])
     .into_element(cx);"#,
                 ),
-            DocSection::new(clear_title, clear)
-                .description("Upstream has `showClear`; Fret keeps this as an explicit gap marker.")
+            DocSection::new("Clear Button", clear)
+                .description("Enable `show_clear` to show a clear affordance when a value is selected.")
                 .code(
                     "rust",
-                    r#"// Not yet implemented: upstream supports `showClear` on the combobox input.
-// In Fret today, clear selection by resetting the value model to `None`."#,
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a framework")
+    .query_model(query)
+    .show_clear(true)
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+        shadcn::ComboboxItem::new("remix", "Remix"),
+        shadcn::ComboboxItem::new("astro", "Astro"),
+    ])
+    .into_element(cx);"#,
                 ),
             DocSection::new("Groups", groups)
                 .description("Upstream groups items; current Fret demo approximates groups via prefixed labels.")
