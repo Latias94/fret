@@ -119,11 +119,27 @@ If you are changing layout/style parity:
 - Runtime contract surface: `docs/runtime-contract-matrix.md`
 - Repo structure: `docs/repo-structure.md`
 
+## Examples
+
+- Example: find the smallest runnable target
+  - User says: "Where do I change the command palette behavior?"
+  - Actions:
+    1. Use `docs/ui-closure-map.md` to map the contract → code → tests.
+    2. Pick a smallest runnable demo (prefer `apps/` harness shells) and a single reproduction path.
+  - Result: a single crate + entrypoint to iterate on (no repo-wide wandering).
+
 ## Common pitfalls
 
 - Fixing a policy mismatch by adding runtime knobs in `crates/fret-ui` (wrong layer).
 - Starting from a huge app target instead of a minimal demo/gallery page (slow iteration).
 - Changing behavior without a gate (regressions return as “human timing” bugs).
+
+## Troubleshooting
+
+- Symptom: you keep touching the wrong crate/layer.
+  - Fix: start from `docs/repo-structure.md` and confirm whether the change is mechanism (`crates/`) or policy (`ecosystem/`).
+- Symptom: builds are too slow for iteration.
+  - Fix: run the smallest app target first; avoid `--workspace` builds until the change is localized.
 
 ## Related skills
 

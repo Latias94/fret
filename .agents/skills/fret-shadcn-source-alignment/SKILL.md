@@ -150,6 +150,13 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
   - `ecosystem/fret-ui-shadcn/tests/`
   - `goldens/shadcn-web/v4/new-york-v4/*.json`
 
+## Examples
+
+- Example: align a component with upstream shadcn/Radix behavior
+  - User says: "Our Select/Popover differs from Radix—match the behavior."
+  - Actions: choose upstream source-of-truth, implement in the correct Fret layer, and lock with scripts/tests.
+  - Result: parity improvement with a regression gate.
+
 ## Common pitfalls
 
 - Fixing policy mismatches by adding runtime knobs in `crates/fret-ui` (wrong layer most of the time).
@@ -157,6 +164,13 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.
 - Treating Base UI as a 1:1 “implementation port”: use it as a headless reference, then translate to Fret’s GPU-first renderer (semantics/hit-testing/focus routing).
+
+## Troubleshooting
+
+- Symptom: upstream behavior is subtle (focus/keyboard/ARIA).
+  - Fix: gate semantics and interaction flows before chasing pixels.
+- Symptom: goldens are incomplete.
+  - Fix: rely on scripted diagnostics and targeted Rust tests as primary gates.
 
 ## Related skills
 

@@ -80,11 +80,25 @@ Run the always-on guardrails:
 - Crate audit snapshot: `tools/audit_crate.py`
 - Module-size drift: `tools/report_largest_files.py`
 
+## Examples
+
+- Example: refactor across crates without breaking layering
+  - User says: "Move this helper into fret-core—will it violate boundaries?"
+  - Actions: run layering checks, scan forbidden deps, and keep portability constraints explicit.
+  - Result: a refactor plan that does not leak platform deps into contract crates.
+
 ## Common pitfalls
 
 - Treating allowlists as a first-choice fix (prefer moving code to the correct layer).
 - Ignoring a “small” layering violation during a refactor (it compounds quickly).
 - Measuring file-size drift after the refactor lands (run guardrails early).
+
+## Troubleshooting
+
+- Symptom: layering check fails unexpectedly.
+  - Fix: inspect the failing edge, then decide whether to move code (preferred) or split a new crate (only if necessary).
+- Symptom: a platform crate dependency sneaks into a contract crate.
+  - Fix: introduce an abstraction boundary (traits/data structs) and keep platform wiring in `*-platform-*`/runner crates.
 
 ## Related skills
 

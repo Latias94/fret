@@ -50,6 +50,33 @@ Defaults if unclear:
   - Summary sidecar (cached): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
   - Find the right `test_id` quickly (cached index): `cargo run -p fretboard -- diag query test-id [<bundle_dir|bundle.json>] <pattern> --mode contains --top 50`
   - Export a minimal shareable slice for one target (instead of copying bundle fragments): `cargo run -p fretboard -- diag slice [<bundle_dir|bundle.json>] --test-id <test_id>`
+  - Python fallback (bounded output; useful when you only have a `bundle.json` and cannot run `fretboard`):
+    - PowerShell:
+      ```powershell
+      @'
+      import json,sys
+      from collections import deque
+      p, needle = sys.argv[1], sys.argv[2]
+      data = json.load(open(p, encoding="utf-8"))
+      out = []
+      st = deque([("", data)])
+      while st and len(out) < 50:
+          path, v = st.pop()
+          if isinstance(v, dict):
+              for k, vv in v.items():
+                  st.append(((path + "." + k) if path else k, vv))
+          elif isinstance(v, list):
+              for i, vv in enumerate(v):
+                  st.append((f"{path}[{i}]", vv))
+          else:
+              s = str(v)
+              if needle in s:
+                  out.append((path, s[:160]))
+      for a, b in out:
+          print(f"{a} => {b}")
+      print("matches", len(out))
+      '@ | python - <bundle.json> <needle>
+      ```
 
 - Web runner (WASM): export bundles via DevTools WS (no filesystem access in-browser):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
@@ -241,6 +268,21 @@ Where the code lives:
 - Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
 - Triage/compare engine: `crates/fret-diag`
 
+## Examples
+
+- Example: turn a flaky UI bug into a reproducible gate
+  - User says: "This focus bug only happens sometimes—can we script it?"
+  - Actions:
+    1. Add stable `test_id` targets.
+    2. Author a script in `tools/diag-scripts/` using v2 steps (prefer `click_stable`).
+    3. Capture a bundle and add a minimal assertion/check.
+  - Result: deterministic repro + shareable evidence bundle + CI-friendly gate.
+
+- Example: add a perf regression gate
+  - User says: "Scrolling feels janky—make it measurable."
+  - Actions: run `diag perf`, keep the worst `evidence_bundle`, gate on an explicit threshold.
+  - Result: a number-backed contract with worst-frame evidence.
+
 ## Common pitfalls
 
 - Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1` (or the legacy alias).
@@ -251,6 +293,14 @@ Where the code lives:
   - Forgetting `fret_devtools_ws` / `fret_devtools_token` query params (no WS bridge, no scripts/bundles).
   - Assuming the web app can write `target/fret-diag/...` (it cannot; you must export via WS).
   - Running a script that never calls `capture_bundle` (nothing to export).
+
+## Troubleshooting
+
+- Symptom: no bundles are produced.
+  - Likely cause: diagnostics are not enabled.
+  - Fix: launch via `fretboard diag run ... --launch -- <cmd>` or set `FRET_DIAG=1`.
+- Symptom: selectors are flaky (misses, clicks wrong node).
+  - Fix: prefer `test_id` + v2 intent steps (`click_stable`, `ensure_visible`) over coordinates.
 
 ## Related skills
 

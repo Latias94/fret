@@ -99,11 +99,25 @@ See: `fret-skills-playbook`.
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
 - Orientation: `.agents/skills/fret-repo-orientation/SKILL.md`
 
+## Examples
+
+- Example: use Fret skills from an external app repo
+  - User says: "We depend on Fret, but we don't have the mono-repo tools—how do we debug?"
+  - Actions: keep a lightweight Fret checkout for clickable evidence anchors and run only the needed tools.
+  - Result: reproducible debugging without importing the entire mono-repo.
+
 ## Common pitfalls
 
 - Trying to run `tools/*` commands inside the external app repo (they don’t exist there).
 - Assuming `fretboard` is available without a Fret checkout.
 - Making app-side changes without leaving any gate/evidence behind.
+
+## Troubleshooting
+
+- Symptom: docs mention `fretboard`, but you cannot run it in your repo.
+  - Fix: run `fretboard` from a Fret checkout and point it at your app command, or use published crates where supported.
+- Symptom: evidence anchors are not clickable.
+  - Fix: keep a sibling checkout or submodule of the Fret repo so paths resolve.
 
 ## Related skills
 

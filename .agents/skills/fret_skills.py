@@ -35,6 +35,8 @@ RECOMMENDED_HEADINGS = (
     "## When to use",
     "## Quick start",
     "## Workflow",
+    "## Examples",
+    "## Troubleshooting",
     "## Evidence anchors",
     "## Common pitfalls",
     "## Related skills",
@@ -62,7 +64,7 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         ("crates/fret-diag-protocol/src/lib.rs", r"\boverlay_placement_trace\b"),
         ("ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs", r"diag\.script_v2"),
         ("ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs", r"diag\.screenshot_png"),
-        ("ecosystem/fret-bootstrap/src/ui_diagnostics.rs", r"\bFRET_DIAG_DEBUG_CLICK_STABLE\b"),
+        ("ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs", r"\bpush_click_stable_trace\b"),
         ("crates/fret-diag/src/lib.rs", r"\bFRET_DIAG_FIXED_FRAME_DELTA_MS\b"),
         (".agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py", r""),
     ],
@@ -284,9 +286,18 @@ def _validate_skill_dir(skill_dir: Path, strict_headings: bool) -> list[Validati
     skill_name = skill_dir.name
     skill_file = skill_dir / SKILL_FILE_NAME
 
-    if not skill_file.exists():
-        problems.append(ValidationProblem("error", skill_name, "Missing SKILL.md"))
+    # Enforce exact filenames (important when users zip/upload skills to agents that treat paths case-sensitively).
+    try:
+        file_names = {p.name for p in skill_dir.iterdir() if p.is_file()}
+    except Exception:
+        file_names = set()
+
+    if SKILL_FILE_NAME not in file_names:
+        problems.append(ValidationProblem("error", skill_name, "Missing SKILL.md (must be named exactly SKILL.md)"))
         return problems
+
+    if any(n.lower() == "readme.md" for n in file_names):
+        problems.append(ValidationProblem("error", skill_name, "Disallowed README.md (put docs in SKILL.md or references/)"))
 
     text = _read_text(skill_file)
     lines = text.splitlines()
@@ -305,6 +316,8 @@ def _validate_skill_dir(skill_dir: Path, strict_headings: bool) -> list[Validati
         return problems
 
     fm_lines = lines[1:end_index]
+    if any("<" in l or ">" in l for l in fm_lines):
+        problems.append(ValidationProblem("error", skill_name, "Invalid frontmatter (contains angle brackets < or >)"))
     fm = _parse_frontmatter(fm_lines)
 
     if not fm.name or not fm.name.strip():
