@@ -150,6 +150,230 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
     })
 }
 
+pub(super) fn finalize_drive_script_for_window(
+    service: &mut UiDiagnosticsService,
+    app: &mut App,
+    window: AppWindowId,
+    prev_next_step: usize,
+    step_index: usize,
+    step_index_u32: u32,
+    step_kind: String,
+    mut active: ActiveScript,
+    mut output: UiScriptFrameOutput,
+    mut force_dump_label: Option<String>,
+    force_dump_max_snapshots: Option<usize>,
+    mut stop_script: bool,
+    mut failure_reason: Option<String>,
+    handoff_to: Option<AppWindowId>,
+) -> UiScriptFrameOutput {
+    if !stop_script && handoff_to.is_none() && active.next_step > prev_next_step {
+        push_script_event_log(
+            &mut active,
+            &service.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "step_end".to_string(),
+                step_index: Some(step_index_u32),
+                note: Some(step_kind.clone()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        active.event_log_active_step = None;
+    }
+
+    if let Some(target_window) = handoff_to {
+        if service.active_scripts.contains_key(&target_window) {
+            force_dump_label = Some(format!(
+                "script-step-{step_index:04}-handoff-target-window-busy"
+            ));
+            stop_script = true;
+            failure_reason = Some("script_handoff_target_window_busy".to_string());
+        } else {
+            service.active_scripts.insert(target_window, active);
+            return output;
+        }
+    }
+
+    if !output.events.is_empty() {
+        for event in &output.events {
+            service.record_script_event(app, window, event);
+        }
+    }
+
+    if stop_script {
+        push_script_event_log(
+            &mut active,
+            &service.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: failure_reason.clone(),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        if service.cfg.script_auto_dump {
+            if let Some(label) = force_dump_label.as_deref() {
+                push_script_event_log(
+                    &mut active,
+                    &service.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "bundle_dump_requested".to_string(),
+                        step_index: Some(step_index as u32),
+                        note: Some(label.to_string()),
+                        bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
+                    },
+                );
+                let dumped_dir = service.dump_bundle(Some(label));
+                if let Some(dir) = dumped_dir.as_ref() {
+                    push_script_event_log(
+                        &mut active,
+                        &service.cfg,
+                        UiScriptEventLogEntryV1 {
+                            unix_ms: unix_ms_now(),
+                            kind: "bundle_dumped".to_string(),
+                            step_index: Some(step_index as u32),
+                            note: Some(label.to_string()),
+                            bundle_dir: Some(display_path(&service.cfg.out_dir, dir)),
+                            window: Some(window.data().as_ffi()),
+                            tick_id: Some(app.tick_id().0),
+                            frame_id: Some(app.frame_id().0),
+                            window_snapshot_seq: None,
+                        },
+                    );
+                }
+            }
+        } else if let Some(label) = force_dump_label {
+            push_script_event_log(
+                &mut active,
+                &service.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "bundle_dump_requested".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some(label.clone()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            service.request_force_dump(
+                label,
+                force_dump_max_snapshots,
+                Some(active.run_id),
+                Some(step_index as u32),
+                None,
+            );
+        }
+
+        let reason_code = failure_reason
+            .as_deref()
+            .and_then(reason_code_for_script_failure)
+            .map(|s| s.to_string());
+        let evidence = script_evidence_for_active(&active);
+        service.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code,
+            reason: failure_reason,
+            evidence,
+            last_bundle_dir: service
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&service.cfg.out_dir, p)),
+            last_bundle_artifact: service.last_dump_artifact_stats.clone(),
+        });
+    } else {
+        if let Some(label) = force_dump_label {
+            push_script_event_log(
+                &mut active,
+                &service.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "bundle_dump_requested".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some(label.clone()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            service.request_force_dump(
+                label,
+                force_dump_max_snapshots,
+                Some(active.run_id),
+                Some(step_index as u32),
+                None,
+            );
+        }
+
+        if active.next_step >= active.steps.len() {
+            let passed_step_index = active.next_step.saturating_sub(1) as u32;
+            push_script_event_log(
+                &mut active,
+                &service.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_passed".to_string(),
+                    step_index: Some(passed_step_index),
+                    note: None,
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            service.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Passed,
+                step_index: Some(passed_step_index),
+                reason_code: None,
+                reason: None,
+                evidence: script_evidence_for_active(&active),
+                last_bundle_dir: service
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&service.cfg.out_dir, p)),
+                last_bundle_artifact: service.last_dump_artifact_stats.clone(),
+            });
+        } else if active.next_step < active.steps.len() {
+            // Keep the app ticking while a script is active, even if the last injected events
+            // did not invalidate UI state. This ensures `wait_until`/timeouts progress and
+            // cross-window gates (tear-off, hover detection) do not stall.
+            output.request_redraw = true;
+            output.effects.push(Effect::RequestAnimationFrame(window));
+            service.active_scripts.insert(window, active);
+        }
+    }
+
+    output
+}
+
 pub(super) fn click_stable_trace_entry_eq(
     a: &UiClickStableTraceEntryV1,
     b: &UiClickStableTraceEntryV1,
