@@ -12248,6 +12248,11 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         return direct;
     }
 
+    let root = path.join("_root").join("bundle.json");
+    if root.is_file() {
+        return root;
+    }
+
     match materialize_bundle_json_from_manifest_chunks_if_missing(path) {
         Ok(Some(v2)) if v2.is_file() => {
             return v2;
