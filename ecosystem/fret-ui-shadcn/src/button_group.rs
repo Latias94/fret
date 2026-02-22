@@ -10,15 +10,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Axis, Corners, Edges, FontId, FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, InputGroup, Separator};
@@ -168,17 +166,21 @@ impl ButtonGroupText {
                     wrap: false,
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: text.clone(),
-                        style: Some(TextStyle {
+                    let style = typography::with_intent(
+                        TextStyle {
                             font: FontId::default(),
                             size: text_px,
                             weight: FontWeight::MEDIUM,
                             line_height: Some(line_height),
-                            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
-                        }),
+                        },
+                        TextIntent::Control,
+                    );
+
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: text.clone(),
+                        style: Some(style),
                         color: Some(text_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
