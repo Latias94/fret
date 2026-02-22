@@ -84,7 +84,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" },
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled" },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 900
@@ -95,6 +95,22 @@
         "kind": "checked_is",
         "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled" },
         "checked": false
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled" },
+        "checked": true
       },
       "timeout_frames": 600
     },
