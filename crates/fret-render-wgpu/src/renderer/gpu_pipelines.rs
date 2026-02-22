@@ -3,11 +3,22 @@ use super::gpu_globals::GpuGlobals;
 use super::types::QuadPipelineKey;
 
 pub(super) struct GpuPipelines {
-    quad_pipeline_format: Option<wgpu::TextureFormat>,
-    quad_pipelines: std::collections::HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
+    pub(super) quad_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) quad_pipelines: std::collections::HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
 
-    viewport_pipeline_format: Option<wgpu::TextureFormat>,
-    viewport_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) viewport_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) viewport_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) text_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) text_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) text_outline_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) text_color_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) text_color_pipeline: Option<wgpu::RenderPipeline>,
+
+    pub(super) text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) text_subpixel_outline_pipeline: Option<wgpu::RenderPipeline>,
 }
 
 impl Default for GpuPipelines {
@@ -17,6 +28,14 @@ impl Default for GpuPipelines {
             quad_pipelines: std::collections::HashMap::new(),
             viewport_pipeline_format: None,
             viewport_pipeline: None,
+            text_pipeline_format: None,
+            text_pipeline: None,
+            text_outline_pipeline: None,
+            text_color_pipeline_format: None,
+            text_color_pipeline: None,
+            text_subpixel_pipeline_format: None,
+            text_subpixel_pipeline: None,
+            text_subpixel_outline_pipeline: None,
         }
     }
 }

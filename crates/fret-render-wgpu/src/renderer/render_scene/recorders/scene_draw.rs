@@ -127,26 +127,11 @@ impl Renderer {
             }
 
             let viewport_pipeline = self.viewport_pipeline_ref();
-            let text_pipeline = self
-                .text_pipeline
-                .as_ref()
-                .expect("text pipeline must exist");
-            let text_outline_pipeline = self
-                .text_outline_pipeline
-                .as_ref()
-                .expect("text outline pipeline must exist");
-            let text_color_pipeline = self
-                .text_color_pipeline
-                .as_ref()
-                .expect("text color pipeline must exist");
-            let text_subpixel_pipeline = self
-                .text_subpixel_pipeline
-                .as_ref()
-                .expect("text subpixel pipeline must exist");
-            let text_subpixel_outline_pipeline = self
-                .text_subpixel_outline_pipeline
-                .as_ref()
-                .expect("text subpixel outline pipeline must exist");
+            let text_pipeline = self.text_pipeline_ref();
+            let text_outline_pipeline = self.text_outline_pipeline_ref();
+            let text_color_pipeline = self.text_color_pipeline_ref();
+            let text_subpixel_pipeline = self.text_subpixel_pipeline_ref();
+            let text_subpixel_outline_pipeline = self.text_subpixel_outline_pipeline_ref();
             let mask_pipeline = self
                 .mask_pipeline
                 .as_ref()

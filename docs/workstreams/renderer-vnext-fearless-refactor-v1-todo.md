@@ -239,6 +239,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (`GpuPipelines`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::pipelines`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (`quad_pipeline_ref`, `viewport_pipeline_ref`)
+  - Landed (step 5): move text pipeline caches into `GpuPipelines`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (text pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/text.rs` (`ensure_text_*`, `*_pipeline_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs` (uses `*_pipeline_ref`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

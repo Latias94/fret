@@ -86,17 +86,6 @@ pub struct Renderer {
 
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
-    text_pipeline_format: Option<wgpu::TextureFormat>,
-    text_pipeline: Option<wgpu::RenderPipeline>,
-    text_outline_pipeline: Option<wgpu::RenderPipeline>,
-
-    text_color_pipeline_format: Option<wgpu::TextureFormat>,
-    text_color_pipeline: Option<wgpu::RenderPipeline>,
-
-    text_subpixel_pipeline_format: Option<wgpu::TextureFormat>,
-    text_subpixel_pipeline: Option<wgpu::RenderPipeline>,
-    text_subpixel_outline_pipeline: Option<wgpu::RenderPipeline>,
-
     mask_pipeline_format: Option<wgpu::TextureFormat>,
     mask_pipeline: Option<wgpu::RenderPipeline>,
 
