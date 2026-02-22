@@ -2871,6 +2871,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn text_area_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> TextAreaProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let props = f(cx, id);
+            cx.new_any_element(id, ElementKind::TextArea(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
     pub fn resizable_panel_group<I>(
         &mut self,
         props: ResizablePanelGroupProps,
