@@ -62,6 +62,7 @@ mod script_steps_pointer;
 mod script_steps_pointer_session;
 mod script_steps_pointer_sweep;
 mod script_steps_scroll;
+mod script_steps_slider;
 mod script_steps_visibility;
 mod script_steps_wait;
 
@@ -1899,217 +1900,23 @@ impl UiDiagnosticsService {
                     return output;
                 }
             }
-            UiActionStepV2::SetSliderValue {
-                target,
-                value,
-                min,
-                max,
-                epsilon,
-                timeout_frames,
-                drag_steps,
-            } => {
-                active.wait_until = None;
-                active.screenshot_wait = None;
-
-                if let Some(snapshot) = semantics_snapshot {
-                    let mut state = match active.v2_step_state.take() {
-                        Some(V2StepState::SetSliderValue(mut state))
-                            if state.step_index == step_index =>
-                        {
-                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                            state
-                        }
-                        _ => V2SetSliderValueState {
-                            step_index,
-                            remaining_frames: timeout_frames,
-                            phase: 0,
-                            last_drag_x: None,
-                        },
-                    };
-
-                    let node = select_semantics_node_with_trace(
-                        snapshot,
-                        window,
-                        element_runtime,
-                        &target,
-                        step_index as u32,
-                        self.cfg.redact_text,
-                        &mut active.selector_resolution_trace,
-                    );
-                    if let Some(node) = node {
-                        if node.flags.disabled {
-                            force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-set_slider_value-disabled"
-                            ));
-                            stop_script = true;
-                            failure_reason = Some("set_slider_value_disabled".to_string());
-                            active.v2_step_state = None;
-                            output.request_redraw = true;
-                        } else {
-                            let bounds = node.bounds;
-                            let left = bounds.origin.x.0;
-                            let width = bounds.size.width.0.max(0.0);
-                            let right = left + width;
-                            let span = (max - min).abs().max(0.0001);
-
-                            let clamp_x = |x: f32| {
-                                let pad = 2.0_f32;
-                                x.clamp(left + pad, right - pad)
-                            };
-                            let target_t = ((value - min) / span).clamp(0.0, 1.0);
-
-                            if state.phase == 0 {
-                                let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect_clamped_to_rect(bounds, window_bounds);
-                                let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                let start = Point::new(fret_core::Px(start_x), start.y);
-                                let end = Point::new(fret_core::Px(x), start.y);
-                                if let Some(ui) = ui.as_deref_mut() {
-                                    record_hit_test_trace_for_selector(
-                                        &mut active.hit_test_trace,
-                                        ui,
-                                        element_runtime,
-                                        window,
-                                        Some(snapshot),
-                                        &target,
-                                        step_index as u32,
-                                        start,
-                                        Some(node),
-                                        Some("set_slider_value.drag_start"),
-                                        self.cfg.max_debug_string_bytes,
-                                    );
-                                    record_hit_test_trace_for_selector(
-                                        &mut active.hit_test_trace,
-                                        ui,
-                                        element_runtime,
-                                        window,
-                                        Some(snapshot),
-                                        &target,
-                                        step_index as u32,
-                                        end,
-                                        Some(node),
-                                        Some("set_slider_value.drag_end"),
-                                        self.cfg.max_debug_string_bytes,
-                                    );
-                                }
-                                output.events.extend(drag_events(
-                                    start,
-                                    end,
-                                    UiMouseButtonV1::Left,
-                                    drag_steps.max(1),
-                                ));
-                                state.phase = 1;
-                                state.last_drag_x = Some(x);
-                                active.v2_step_state = Some(V2StepState::SetSliderValue(state));
-                                output.request_redraw = true;
-                            } else {
-                                let observed = node
-                                    .value
-                                    .as_deref()
-                                    .and_then(parse_semantics_numeric_value);
-                                if let Some(observed) = observed {
-                                    if (observed - value).abs() <= epsilon.max(0.0) {
-                                        active.v2_step_state = None;
-                                        active.next_step = active.next_step.saturating_add(1);
-                                        output.request_redraw = true;
-                                        if self.cfg.script_auto_dump {
-                                            force_dump_label = Some(format!(
-                                                "script-step-{step_index:04}-set_slider_value"
-                                            ));
-                                        }
-                                    } else if state.remaining_frames == 0 {
-                                        force_dump_label = Some(format!(
-                                            "script-step-{step_index:04}-set_slider_value-timeout"
-                                        ));
-                                        stop_script = true;
-                                        failure_reason =
-                                            Some("set_slider_value_timeout".to_string());
-                                        active.v2_step_state = None;
-                                        output.request_redraw = true;
-                                    } else {
-                                        let error = value - observed;
-                                        let dx = (error / span) * width;
-                                        let start =
-                                            center_of_rect_clamped_to_rect(bounds, window_bounds);
-                                        let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                        let end_x = clamp_x(start_x + dx);
-                                        let start = Point::new(fret_core::Px(start_x), start.y);
-                                        let end = Point::new(fret_core::Px(end_x), start.y);
-                                        if let Some(ui) = ui.as_deref_mut() {
-                                            record_hit_test_trace_for_selector(
-                                                &mut active.hit_test_trace,
-                                                ui,
-                                                element_runtime,
-                                                window,
-                                                Some(snapshot),
-                                                &target,
-                                                step_index as u32,
-                                                start,
-                                                Some(node),
-                                                Some("set_slider_value.adjust_drag_start"),
-                                                self.cfg.max_debug_string_bytes,
-                                            );
-                                            record_hit_test_trace_for_selector(
-                                                &mut active.hit_test_trace,
-                                                ui,
-                                                element_runtime,
-                                                window,
-                                                Some(snapshot),
-                                                &target,
-                                                step_index as u32,
-                                                end,
-                                                Some(node),
-                                                Some("set_slider_value.adjust_drag_end"),
-                                                self.cfg.max_debug_string_bytes,
-                                            );
-                                        }
-                                        output.events.extend(drag_events(
-                                            start,
-                                            end,
-                                            UiMouseButtonV1::Left,
-                                            drag_steps.max(1),
-                                        ));
-                                        state.last_drag_x = Some(end_x);
-                                        state.remaining_frames =
-                                            state.remaining_frames.saturating_sub(1);
-                                        active.v2_step_state =
-                                            Some(V2StepState::SetSliderValue(state));
-                                        output.request_redraw = true;
-                                    }
-                                } else {
-                                    force_dump_label = Some(format!(
-                                        "script-step-{step_index:04}-set_slider_value-unparseable"
-                                    ));
-                                    stop_script = true;
-                                    failure_reason =
-                                        Some("set_slider_value_unparseable".to_string());
-                                    active.v2_step_state = None;
-                                    output.request_redraw = true;
-                                }
-                            }
-                        }
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-set_slider_value-timeout"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("set_slider_value_timeout".to_string());
-                        active.v2_step_state = None;
-                        output.request_redraw = true;
-                    } else {
-                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
-                        active.v2_step_state = Some(V2StepState::SetSliderValue(state));
-                        output.request_redraw = true;
-                    }
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-set_slider_value-no-semantics"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
-                    active.v2_step_state = None;
-                    output.request_redraw = true;
-                }
+            step @ UiActionStepV2::SetSliderValue { .. } => {
+                let handled = script_steps_slider::handle_set_slider_value_step(
+                    self,
+                    window,
+                    window_bounds,
+                    step_index,
+                    step,
+                    element_runtime,
+                    semantics_snapshot,
+                    ui.as_deref_mut(),
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                debug_assert!(handled);
             }
         }
 
