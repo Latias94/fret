@@ -96,10 +96,11 @@ Cons:
 
 ## Evidence anchors (implementation)
 
-To be filled as the workstream progresses. Initial expected anchors:
+Initial anchors (as the workstream progresses):
 
 - Encode: `crates/fret-render-wgpu/src/renderer/render_scene/encode/*`
 - Compile: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
 - Execute: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs`
+- Execute (pass inputs): `crates/fret-render-wgpu/src/renderer/render_scene/ctx.rs`
+- Execute (effect recorders): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
 - Gates: `crates/fret-render-wgpu/tests/*_conformance.rs`
-
