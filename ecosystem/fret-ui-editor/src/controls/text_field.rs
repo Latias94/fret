@@ -12,6 +12,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActivateReason, OnActivate};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::chrome::{
@@ -179,11 +180,10 @@ impl TextField {
                     props.test_id = test_id.clone();
 
                     props.chrome = joined_text_input_style(chrome);
-                    props.text_style = TextStyle {
+                    props.text_style = typography::as_control_text(TextStyle {
                         line_height: Some(density.row_height),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..text_style
-                    };
+                    });
 
                     cx.text_input(props)
                 }

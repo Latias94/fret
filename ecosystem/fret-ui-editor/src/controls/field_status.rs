@@ -9,6 +9,7 @@ use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Edges, Px, TextAlign, TextStyle};
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::typography;
 
 use crate::primitives::EditorDensity;
 
@@ -99,12 +100,11 @@ impl FieldStatusBadge {
         };
 
         let badge_h = Px((density.row_height.0 * 0.8).max(12.0));
-        let text_style = TextStyle {
+        let text_style = typography::as_control_text(TextStyle {
             size: Px(10.0),
             line_height: Some(badge_h),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
-        };
+        });
 
         cx.container(
             ContainerProps {

@@ -18,6 +18,7 @@ use fret_ui::element::{
     TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::controls::numeric_input::{NumericFormatFn, NumericParseFn, NumericValidateFn};
@@ -290,12 +291,11 @@ where
                                 ..Default::default()
                             },
                             text: value_text_for_scrub.clone(),
-                            style: Some(TextStyle {
+                            style: Some(typography::as_control_text(TextStyle {
                                 size: frame_chrome.text_px,
                                 line_height: Some(density.row_height),
-                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 ..Default::default()
-                            }),
+                            })),
                             color: Some(visuals.fg),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,

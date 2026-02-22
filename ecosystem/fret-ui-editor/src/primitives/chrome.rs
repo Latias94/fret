@@ -7,6 +7,7 @@ use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::element::{RingPlacement, RingStyle};
 use fret_ui::{TextAreaStyle, TextInputStyle, Theme};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
@@ -117,12 +118,11 @@ pub(crate) fn resolve_editor_text_input_style(
     let font_line_height = theme
         .metric_by_key("font.line_height")
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    let text_style = TextStyle {
+    let text_style = typography::as_control_text(TextStyle {
         size: resolved.text_px,
         line_height: Some(font_line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
-    };
+    });
 
     (chrome, text_style)
 }
@@ -175,12 +175,11 @@ pub(crate) fn resolve_editor_text_area_style(
     let font_line_height = theme
         .metric_by_key("font.line_height")
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    let text_style = TextStyle {
+    let text_style = typography::as_content_text(TextStyle {
         size: resolved.text_px,
         line_height: Some(font_line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
-    };
+    });
 
     let chrome = TextAreaStyle {
         padding_x: resolved.padding.left,
@@ -259,4 +258,44 @@ pub(crate) fn resolve_editor_text_area_field_style(
             selection: Some("component.text_field.selection"),
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{TextLineHeightPolicy, TextVerticalPlacement};
+
+    #[test]
+    fn editor_text_field_style_uses_control_intent_defaults() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let (_chrome, style) =
+            resolve_editor_text_field_style(theme, Size::Small, &ChromeRefinement::default());
+
+        assert!(style.line_height.is_some());
+        assert_eq!(
+            style.line_height_policy,
+            TextLineHeightPolicy::FixedFromStyle
+        );
+        assert_eq!(
+            style.vertical_placement,
+            TextVerticalPlacement::BoundsAsLineBox
+        );
+    }
+
+    #[test]
+    fn editor_text_area_style_uses_content_intent_defaults() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let (_chrome, style) =
+            resolve_editor_text_area_field_style(theme, Size::Small, &ChromeRefinement::default());
+
+        assert!(style.line_height.is_some());
+        assert_eq!(style.line_height_policy, TextLineHeightPolicy::ExpandToFit);
+        assert_eq!(
+            style.vertical_placement,
+            TextVerticalPlacement::CenterMetricsBox
+        );
+    }
 }

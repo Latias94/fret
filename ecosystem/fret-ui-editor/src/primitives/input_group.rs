@@ -15,6 +15,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ColorRef;
+use fret_ui_kit::typography;
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
@@ -530,13 +531,12 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
                     ..Default::default()
                 },
                 text: label.clone(),
-                style: Some(TextStyle {
+                style: Some(typography::as_control_text(TextStyle {
                     size: Px(11.0),
                     weight: fret_core::FontWeight::SEMIBOLD,
                     line_height: Some(density.row_height),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     ..Default::default()
-                }),
+                })),
                 color: Some(fg),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,

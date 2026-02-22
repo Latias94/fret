@@ -25,6 +25,7 @@ use fret_ui::element::{
     PositionStyle, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -243,12 +244,11 @@ where
                                 ..Default::default()
                             },
                             text: value_text.clone(),
-                            style: Some(TextStyle {
+                            style: Some(typography::as_control_text(TextStyle {
                                 size: scrub_chrome.text_px,
                                 line_height: Some(density.row_height),
-                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 ..Default::default()
-                            }),
+                            })),
                             color: Some(visuals.fg),
                             wrap: TextWrap::None,
                             overflow: TextOverflow::Ellipsis,
