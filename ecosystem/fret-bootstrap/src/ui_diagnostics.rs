@@ -1445,174 +1445,27 @@ impl UiDiagnosticsService {
                     }
                 }
             }
-            UiActionStepV2::Click {
-                window: target_window,
-                target,
-                button,
-                click_count,
-                modifiers,
-            } => {
-                if let Some(target_window) = self.resolve_window_target_for_active_step(
+            step @ UiActionStepV2::Click { .. } => {
+                let should_return = script_steps_pointer::handle_click_step(
+                    self,
+                    app,
                     window,
+                    window_bounds,
                     anchor_window,
-                    target_window.as_ref(),
-                ) {
-                    if target_window != window {
-                        handoff_to = Some(target_window);
-                        output
-                            .effects
-                            .push(Effect::RequestAnimationFrame(target_window));
-                        output.request_redraw = true;
-                    }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-click-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                }
-                if stop_script {
-                    active.v2_step_state = None;
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                } else if handoff_to.is_some() {
-                    // This step is window-targeted; migrate the active script to the target window.
-                    // The next frame for that window will resolve the selector and inject events
-                    // relative to its semantics snapshot.
-                    //
-                    // Keep the step state clean: per-step caches (if any) must be recomputed.
-                    active.v2_step_state = None;
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                    // Skip the remainder of this step on the current window.
-                } else {
-                    let Some(snapshot) = semantics_snapshot else {
-                        output.request_redraw = true;
-                        let label = format!("script-step-{step_index:04}-click-no-semantics");
-                        if self.cfg.script_auto_dump {
-                            self.dump_bundle(Some(&label));
-                        }
-                        push_script_event_log(
-                            &mut active,
-                            &self.cfg,
-                            UiScriptEventLogEntryV1 {
-                                unix_ms: unix_ms_now(),
-                                kind: "script_failed".to_string(),
-                                step_index: Some(step_index as u32),
-                                note: Some("no_semantics_snapshot".to_string()),
-                                bundle_dir: None,
-                                window: Some(window.data().as_ffi()),
-                                tick_id: Some(app.tick_id().0),
-                                frame_id: Some(app.frame_id().0),
-                                window_snapshot_seq: None,
-                            },
-                        );
-                        self.write_script_result(UiScriptResultV1 {
-                            schema_version: 1,
-                            run_id: active.run_id,
-                            updated_unix_ms: unix_ms_now(),
-                            window: Some(window.data().as_ffi()),
-                            stage: UiScriptStageV1::Failed,
-                            step_index: Some(step_index as u32),
-                            reason_code: Some("semantics.missing".to_string()),
-                            reason: Some("no_semantics_snapshot".to_string()),
-                            evidence: script_evidence_for_active(&active),
-                            last_bundle_dir: self
-                                .last_dump_dir
-                                .as_ref()
-                                .map(|p| display_path(&self.cfg.out_dir, p)),
-                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                        });
-                        return output;
-                    };
-                    let Some(node) = select_semantics_node_with_trace(
-                        snapshot,
-                        window,
-                        element_runtime,
-                        &target,
-                        step_index as u32,
-                        self.cfg.redact_text,
-                        &mut active.selector_resolution_trace,
-                    ) else {
-                        output.request_redraw = true;
-                        let label = format!("script-step-{step_index:04}-click-no-semantics-match");
-                        if self.cfg.script_auto_dump {
-                            self.dump_bundle(Some(&label));
-                        }
-                        push_script_event_log(
-                            &mut active,
-                            &self.cfg,
-                            UiScriptEventLogEntryV1 {
-                                unix_ms: unix_ms_now(),
-                                kind: "script_failed".to_string(),
-                                step_index: Some(step_index as u32),
-                                note: Some("click_no_semantics_match".to_string()),
-                                bundle_dir: None,
-                                window: Some(window.data().as_ffi()),
-                                tick_id: Some(app.tick_id().0),
-                                frame_id: Some(app.frame_id().0),
-                                window_snapshot_seq: None,
-                            },
-                        );
-                        self.write_script_result(UiScriptResultV1 {
-                            schema_version: 1,
-                            run_id: active.run_id,
-                            updated_unix_ms: unix_ms_now(),
-                            window: Some(window.data().as_ffi()),
-                            stage: UiScriptStageV1::Failed,
-                            step_index: Some(step_index as u32),
-                            reason_code: Some("selector.not_found".to_string()),
-                            reason: Some("click_no_semantics_match".to_string()),
-                            evidence: script_evidence_for_active(&active),
-                            last_bundle_dir: self
-                                .last_dump_dir
-                                .as_ref()
-                                .map(|p| display_path(&self.cfg.out_dir, p)),
-                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                        });
-                        return output;
-                    };
-
-                    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                    if let Some(ui) = ui.as_deref_mut() {
-                        record_hit_test_trace_for_selector(
-                            &mut active.hit_test_trace,
-                            ui,
-                            element_runtime,
-                            window,
-                            Some(snapshot),
-                            &target,
-                            step_index as u32,
-                            pos,
-                            Some(node),
-                            Some("click"),
-                            self.cfg.max_debug_string_bytes,
-                        );
-                    }
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        Some(snapshot),
-                        window,
-                        step_index as u32,
-                        "click",
-                    );
-                    let modifiers = core_modifiers_from_ui(modifiers);
-                    output.events.extend(click_events_with_modifiers(
-                        pos,
-                        button,
-                        click_count,
-                        modifiers,
-                    ));
-
-                    active.wait_until = None;
-                    active.screenshot_wait = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                    if self.cfg.script_auto_dump {
-                        force_dump_label = Some(format!("script-step-{step_index:04}-click"));
-                    }
+                    step_index,
+                    step,
+                    element_runtime,
+                    semantics_snapshot,
+                    ui.as_deref_mut(),
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                if should_return {
+                    return output;
                 }
             }
             UiActionStepV2::ClickStable {
