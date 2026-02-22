@@ -32,10 +32,11 @@ scope: diagnostics, automation, tooling, refactor
 
 - [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
+- [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
   - `diag run` (context assembly + orchestration),
   - `diag suite` (suite execution + reporting),
-  - `diag stats` (dispatch + formatting).
+  - `diag matrix` (suite orchestration + reporting).
 
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 

@@ -34,6 +34,7 @@ Related living docs:
   `crates/fret-diag/src/lib.rs`:
   - `crates/fret-diag/src/diag_perf.rs` (extracted `diag perf` command handler)
   - `crates/fret-diag/src/diag_compare.rs` (extracted `diag compare` command handler)
+  - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
 - `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
