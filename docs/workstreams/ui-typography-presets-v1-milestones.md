@@ -79,3 +79,17 @@ Evidence:
 - `ecosystem/fret-code-view/src/code_block.rs`
 - `ecosystem/fret-markdown/src/lib.rs`
 - `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
+
+## M5 — AI Elements adoption
+
+Status: Done.
+
+Exit criteria:
+
+- `fret-ui-ai` surfaces prefer intent-first typography helpers over ad-hoc `TextStyle` literals for
+  stable control text sizing/line height.
+
+Evidence:
+- `ecosystem/fret-ui-ai/src/elements/message_parts.rs`
+- `ecosystem/fret-ui-ai/src/elements/terminal.rs`
+- `ecosystem/fret-ui-ai/src/elements/web_preview.rs`

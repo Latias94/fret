@@ -61,7 +61,7 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
 - Mechanism policies:
   - `crates/fret-core/src/text/mod.rs` (`TextLineHeightPolicy`, `TextVerticalPlacement`)
   - `crates/fret-render-text/src/parley_shaper.rs` (fixed line box baseline model)
-- Ecosystem authoring:
+  - Ecosystem authoring:
   - `ecosystem/fret-ui-kit/src/ui.rs` (`TextPreset`, `TextBox`)
   - `ecosystem/fret-ui-kit/src/typography.rs` (`TextIntent`, `TypographyPreset`, `with_intent`)
   - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`line_height_px`, `line_box_in_bounds`)
@@ -70,6 +70,8 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
     - `ecosystem/fret-ui-kit/src/declarative/text_field.rs`
     - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (toasts)
     - `ecosystem/fret-ui-shadcn/src/button_group.rs`
+    - `ecosystem/fret-ui-ai/src/elements/message_parts.rs`
+    - `ecosystem/fret-ui-ai/src/elements/terminal.rs`
     - `ecosystem/fret-code-view/src/code_block.rs`
     - `ecosystem/fret-markdown/src/lib.rs`
     - `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
