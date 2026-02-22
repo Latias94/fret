@@ -30,7 +30,8 @@ scope: diagnostics, automation, tooling, refactor
 
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 
-- [ ] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
+- [x] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
+  - `docs/workstreams/diag-fearless-refactor-v1/minimum-useful-bundle.md`
 - [x] Add query-friendly indexes (sidecars) for tools/agents (implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`):
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),
@@ -40,6 +41,7 @@ scope: diagnostics, automation, tooling, refactor
   - versioned schema,
   - additive-only evolution,
   - documented failure behavior when sidecars are missing.
+  - `docs/workstreams/diag-fearless-refactor-v1/sidecar-schema-policy.md`
 
 ## M3: Tooling + AI loop
 
