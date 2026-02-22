@@ -79,6 +79,7 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to `bu
 - `bundle.meta.json`: compact per-window counts (snapshots, semantics inline vs table, test-id totals for a considered snapshot).
 - `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
 - `test_ids.index.json`: a per-window `test_id` index (items + duplicate hints) derived from the last snapshot with resolved semantics.
+- `script.result.json` (script dumps only): the most recent script result snapshot (stage/reason + bounded evidence traces).
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
@@ -90,6 +91,8 @@ Notes:
 
 - `bundle.index.json` includes `test_id_bloom_hex` only for a bounded tail window (currently the last 64 snapshots per window) so that
   `diag query snapshots --test-id <id>` can quickly prioritize likely-matching snapshots without scanning `bundle.json`.
+- When `script.result.json` is present in the bundle directory, `bundle.index.json` also includes an additive `script.steps` section that
+  maps script `step_index` values to the nearest snapshot selector (resolved by `frame_id` first, then by timestamp when needed).
 
 ## AI-first triage recipe (avoid sharing full `bundle.json`)
 

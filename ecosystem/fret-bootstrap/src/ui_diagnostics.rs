@@ -59,6 +59,7 @@ mod test_id_bloom;
 pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_runner;
+mod script_step_index;
 mod script_steps;
 mod script_steps_assert;
 mod script_steps_drag;

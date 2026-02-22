@@ -58,6 +58,8 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
   - slice bundles without grepping `bundle.json` (`fretboard diag slice`).
 - Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots to make
   `diag query snapshots --test-id ...` fast without loading the full bundle.
+- Runtime script dumps include `script.result.json`, and `bundle.index.json` may include additive `script.steps` markers for
+  mapping `step_index` to a snapshot selector without re-parsing the full bundle.
 
 ## Plan: two-phase evolution (preferred order)
 

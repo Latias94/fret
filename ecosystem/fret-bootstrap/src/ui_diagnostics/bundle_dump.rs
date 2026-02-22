@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use fret_diag_protocol::UiScriptResultV1;
+
 use super::{
     UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService, bundle,
     bundle_index, unix_ms_now, write_json, write_json_compact, write_latest_pointer,
@@ -119,12 +121,37 @@ pub(super) fn dump_bundle_with_options(
                         .unwrap_or(true);
                     if want_index {
                         let label = bundle_json_path.display().to_string();
-                        let index =
+                        let mut index =
                             bundle_index::build_bundle_index_json(&label, &bundle.windows, None);
                         let meta =
                             bundle_index::build_bundle_meta_json(&label, &bundle.windows, None);
                         let test_ids_index =
                             bundle_index::build_test_ids_index_json(&label, &bundle.windows, None);
+
+                        if is_script_dump {
+                            let script_result = std::fs::read(&service.cfg.script_result_path)
+                                .ok()
+                                .and_then(|bytes| {
+                                    serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
+                                })
+                                .filter(|r| r.schema_version == 1);
+                            if let Some(script_result) = &script_result {
+                                let _ = write_json_compact(
+                                    dir.join("script.result.json"),
+                                    script_result,
+                                );
+                                if let Some(script_steps) =
+                                    super::script_step_index::build_script_step_index_payload(
+                                        &index,
+                                        script_result,
+                                    )
+                                    && let Some(obj) = index.as_object_mut()
+                                {
+                                    obj.insert("script".to_string(), script_steps);
+                                }
+                            }
+                        }
+
                         let _ = write_json_compact(dir.join("bundle.index.json"), &index);
                         let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
                         let _ =
@@ -185,7 +212,7 @@ pub(super) fn dump_bundle_with_options(
                     if want_index {
                         let label = bundle_json_path.display().to_string();
                         let semantics_table = bundle.tables.semantics.as_ref();
-                        let index = bundle_index::build_bundle_index_json(
+                        let mut index = bundle_index::build_bundle_index_json(
                             &label,
                             &bundle.windows,
                             semantics_table,
@@ -200,6 +227,31 @@ pub(super) fn dump_bundle_with_options(
                             &bundle.windows,
                             semantics_table,
                         );
+
+                        if is_script_dump {
+                            let script_result = std::fs::read(&service.cfg.script_result_path)
+                                .ok()
+                                .and_then(|bytes| {
+                                    serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
+                                })
+                                .filter(|r| r.schema_version == 1);
+                            if let Some(script_result) = &script_result {
+                                let _ = write_json_compact(
+                                    dir.join("script.result.json"),
+                                    script_result,
+                                );
+                                if let Some(script_steps) =
+                                    super::script_step_index::build_script_step_index_payload(
+                                        &index,
+                                        script_result,
+                                    )
+                                    && let Some(obj) = index.as_object_mut()
+                                {
+                                    obj.insert("script".to_string(), script_steps);
+                                }
+                            }
+                        }
+
                         let _ = write_json_compact(dir.join("bundle.index.json"), &index);
                         let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
                         let _ =
