@@ -947,10 +947,7 @@ pub(in super::super) fn record_clip_mask_pass(
         return;
     };
 
-    let pipeline = renderer
-        .clip_mask_pipeline
-        .as_ref()
-        .expect("clip mask pipeline must exist");
+    let pipeline = renderer.clip_mask_pipeline_ref();
     let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
     run_clip_mask_triangle_pass(

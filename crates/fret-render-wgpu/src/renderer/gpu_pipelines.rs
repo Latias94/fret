@@ -37,6 +37,8 @@ pub(super) struct GpuPipelines {
     pub(super) composite_mask_pipelines:
         [Option<wgpu::RenderPipeline>; fret_core::BlendMode::COUNT],
     pub(super) composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 }
 
 impl Default for GpuPipelines {
@@ -66,6 +68,7 @@ impl Default for GpuPipelines {
             composite_pipelines: [const { None }; fret_core::BlendMode::COUNT],
             composite_mask_pipelines: [const { None }; fret_core::BlendMode::COUNT],
             composite_mask_bind_group_layout: None,
+            clip_mask_pipeline: None,
         }
     }
 }

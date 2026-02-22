@@ -88,7 +88,6 @@ pub struct Renderer {
 
     text_vertices: buffers::RingBuffer<TextVertex>,
 
-    clip_mask_pipeline: Option<wgpu::RenderPipeline>,
     clip_mask_param_buffer: wgpu::Buffer,
     clip_mask_param_bind_group: wgpu::BindGroup,
     clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,

@@ -483,7 +483,6 @@ impl Renderer {
             text_paints,
             viewport_vertices,
             text_vertices,
-            clip_mask_pipeline: None,
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
             clip_mask_param_bind_group_layout,
