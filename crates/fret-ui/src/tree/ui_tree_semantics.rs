@@ -244,6 +244,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut set_size: Option<u32> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
+                let mut extra = fret_core::SemanticsNodeExtra::default();
                 let mut test_id: Option<String> = None;
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
@@ -274,6 +275,7 @@ impl<H: UiHost> UiTree<H> {
                         label: &mut label,
                         value: &mut value,
                         test_id: &mut test_id,
+                        extra: &mut extra,
                         text_selection: &mut text_selection,
                         text_composition: &mut text_composition,
                         actions: &mut actions,
@@ -313,6 +315,7 @@ impl<H: UiHost> UiTree<H> {
                     set_size,
                     label,
                     value,
+                    extra,
                     text_selection,
                     text_composition,
                     actions,

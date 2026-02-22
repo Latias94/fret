@@ -1178,6 +1178,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) label: &'a mut Option<String>,
     pub(crate) value: &'a mut Option<String>,
     pub(crate) test_id: &'a mut Option<String>,
+    pub(crate) extra: &'a mut fret_core::SemanticsNodeExtra,
     pub(crate) text_selection: &'a mut Option<(u32, u32)>,
     pub(crate) text_composition: &'a mut Option<(u32, u32)>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
@@ -1215,6 +1216,47 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         *self.value = Some(value.into());
     }
 
+    pub fn set_placeholder<T: Into<String>>(&mut self, placeholder: Option<T>) {
+        self.extra.placeholder = placeholder.map(Into::into);
+    }
+
+    pub fn set_url<T: Into<String>>(&mut self, url: Option<T>) {
+        self.extra.url = url.map(Into::into);
+    }
+
+    pub fn set_level(&mut self, level: Option<u32>) {
+        self.extra.level = level;
+    }
+
+    pub fn set_numeric_value(&mut self, value: Option<f64>) {
+        self.extra.numeric.value = value;
+    }
+
+    pub fn set_numeric_range(&mut self, min: Option<f64>, max: Option<f64>) {
+        self.extra.numeric.min = min;
+        self.extra.numeric.max = max;
+    }
+
+    pub fn set_numeric_step(&mut self, step: Option<f64>) {
+        self.extra.numeric.step = step;
+    }
+
+    pub fn set_numeric_jump(&mut self, jump: Option<f64>) {
+        self.extra.numeric.jump = jump;
+    }
+
+    pub fn set_scroll_x(&mut self, x: Option<f64>, min: Option<f64>, max: Option<f64>) {
+        self.extra.scroll.x = x;
+        self.extra.scroll.x_min = min;
+        self.extra.scroll.x_max = max;
+    }
+
+    pub fn set_scroll_y(&mut self, y: Option<f64>, min: Option<f64>, max: Option<f64>) {
+        self.extra.scroll.y = y;
+        self.extra.scroll.y_min = min;
+        self.extra.scroll.y_max = max;
+    }
+
     pub fn set_text_selection(&mut self, anchor: u32, focus: u32) {
         *self.text_selection = Some((anchor, focus));
     }
@@ -1249,6 +1291,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_disabled(&mut self, disabled: bool) {
         self.flags.disabled = disabled;
+    }
+
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.flags.read_only = read_only;
     }
 
     pub fn set_selected(&mut self, selected: bool) {

@@ -69,11 +69,30 @@ impl ElementHostWidget {
                 if let Some(value) = props.value.as_ref() {
                     cx.set_value(value.as_ref().to_string());
                 }
+                if let Some(placeholder) = props.placeholder.as_ref() {
+                    cx.set_placeholder(Some(placeholder.as_ref().to_string()));
+                }
+                if let Some(url) = props.url.as_ref() {
+                    cx.set_url(Some(url.as_ref().to_string()));
+                }
+                cx.set_level(props.level);
+                cx.set_numeric_value(props.numeric_value);
+                cx.set_numeric_range(props.min_numeric_value, props.max_numeric_value);
+                cx.set_numeric_step(props.numeric_value_step);
+                cx.set_numeric_jump(props.numeric_value_jump);
+                cx.set_scroll_x(props.scroll_x, props.scroll_x_min, props.scroll_x_max);
+                cx.set_scroll_y(props.scroll_y, props.scroll_y_min, props.scroll_y_max);
                 if props.focusable && !props.disabled {
                     cx.set_focusable(true);
                 }
+                if let Some(editable) = props.value_editable {
+                    cx.set_value_editable(editable);
+                }
                 if props.disabled {
                     cx.set_disabled(true);
+                }
+                if props.read_only {
+                    cx.set_read_only(true);
                 }
                 if props.selected {
                     cx.set_selected(true);
@@ -258,6 +277,7 @@ impl ElementHostWidget {
                 // This is a mechanism-only surface: it can accept selection updates via hooks, but
                 // does not provide an internal buffer for `SetValue` edits.
                 cx.set_value_editable(false);
+                cx.set_read_only(true);
                 cx.set_text_selection_supported(props.enabled);
 
                 // Only publish ranges when focused, matching TextInput/TextArea behavior.
@@ -327,6 +347,9 @@ impl ElementHostWidget {
             if let Some(disabled) = decoration.disabled {
                 cx.set_disabled(disabled);
             }
+            if let Some(read_only) = decoration.read_only {
+                cx.set_read_only(read_only);
+            }
             if let Some(selected) = decoration.selected {
                 cx.set_selected(selected);
             }
@@ -335,6 +358,39 @@ impl ElementHostWidget {
             }
             if let Some(checked) = decoration.checked {
                 cx.set_checked(checked);
+            }
+            if let Some(placeholder) = decoration.placeholder.as_ref() {
+                cx.set_placeholder(Some(placeholder.as_ref().to_string()));
+            }
+            if let Some(url) = decoration.url.as_ref() {
+                cx.set_url(Some(url.as_ref().to_string()));
+            }
+            if let Some(level) = decoration.level {
+                cx.set_level(Some(level));
+            }
+            if let Some(value) = decoration.numeric_value {
+                cx.set_numeric_value(Some(value));
+            }
+            if decoration.min_numeric_value.is_some() || decoration.max_numeric_value.is_some() {
+                cx.set_numeric_range(decoration.min_numeric_value, decoration.max_numeric_value);
+            }
+            if let Some(step) = decoration.numeric_value_step {
+                cx.set_numeric_step(Some(step));
+            }
+            if let Some(jump) = decoration.numeric_value_jump {
+                cx.set_numeric_jump(Some(jump));
+            }
+            if decoration.scroll_x.is_some()
+                || decoration.scroll_x_min.is_some()
+                || decoration.scroll_x_max.is_some()
+            {
+                cx.set_scroll_x(decoration.scroll_x, decoration.scroll_x_min, decoration.scroll_x_max);
+            }
+            if decoration.scroll_y.is_some()
+                || decoration.scroll_y_min.is_some()
+                || decoration.scroll_y_max.is_some()
+            {
+                cx.set_scroll_y(decoration.scroll_y, decoration.scroll_y_min, decoration.scroll_y_max);
             }
             if let Some(element) = decoration.active_descendant_element
                 && let Some(node) = cx.resolve_declarative_element(element)

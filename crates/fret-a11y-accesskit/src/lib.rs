@@ -56,6 +56,7 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Alert => Role::Alert,
         SemanticsRole::Button => Role::Button,
         SemanticsRole::Link => Role::Link,
+        SemanticsRole::Image => Role::Image,
         SemanticsRole::Checkbox => Role::CheckBox,
         SemanticsRole::Switch => Role::Switch,
         SemanticsRole::Slider => Role::Slider,
@@ -247,6 +248,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.disabled {
             out.set_disabled();
         }
+        if node.flags.read_only {
+            out.set_read_only();
+        }
         if node.flags.selected {
             out.set_selected(true);
         }
@@ -298,6 +302,56 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         }
         if let Some(value) = node.value.as_ref() {
             out.set_value(value.clone());
+        }
+        if let Some(placeholder) = node.extra.placeholder.as_ref() {
+            out.set_placeholder(placeholder.clone());
+        }
+        if let Some(url) = node.extra.url.as_ref() {
+            out.set_url(url.clone());
+        }
+        if let Some(level) = node
+            .extra
+            .level
+            .and_then(|level| usize::try_from(level).ok())
+        {
+            out.set_level(level);
+        }
+
+        let numeric = node.extra.numeric;
+        if let Some(value) = numeric.value.filter(|v| v.is_finite()) {
+            out.set_numeric_value(value);
+        }
+        if let Some(value) = numeric.min.filter(|v| v.is_finite()) {
+            out.set_min_numeric_value(value);
+        }
+        if let Some(value) = numeric.max.filter(|v| v.is_finite()) {
+            out.set_max_numeric_value(value);
+        }
+        if let Some(value) = numeric.step.filter(|v| v.is_finite()) {
+            out.set_numeric_value_step(value);
+        }
+        if let Some(value) = numeric.jump.filter(|v| v.is_finite()) {
+            out.set_numeric_value_jump(value);
+        }
+
+        let scroll = node.extra.scroll;
+        if let Some(value) = scroll.x.filter(|v| v.is_finite()) {
+            out.set_scroll_x(value);
+        }
+        if let Some(value) = scroll.x_min.filter(|v| v.is_finite()) {
+            out.set_scroll_x_min(value);
+        }
+        if let Some(value) = scroll.x_max.filter(|v| v.is_finite()) {
+            out.set_scroll_x_max(value);
+        }
+        if let Some(value) = scroll.y.filter(|v| v.is_finite()) {
+            out.set_scroll_y(value);
+        }
+        if let Some(value) = scroll.y_min.filter(|v| v.is_finite()) {
+            out.set_scroll_y_min(value);
+        }
+        if let Some(value) = scroll.y_max.filter(|v| v.is_finite()) {
+            out.set_scroll_y_max(value);
         }
 
         if let Some(active) = node.active_descendant
@@ -510,8 +564,8 @@ mod tests {
     };
     use accesskit::Role;
     use fret_core::{
-        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
-        SemanticsRoot, SemanticsSnapshot,
+        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsNodeExtra,
+        SemanticsRole, SemanticsRoot, SemanticsSnapshot,
     };
     use slotmap::KeyData;
 
@@ -543,8 +597,111 @@ mod tests {
             Role::MenuItemRadio
         );
         assert_eq!(super::map_role(SemanticsRole::Link), Role::Link);
+        assert_eq!(super::map_role(SemanticsRole::Image), Role::Image);
         assert_eq!(super::map_role(SemanticsRole::Tooltip), Role::Tooltip);
         assert_eq!(super::map_role(SemanticsRole::Toolbar), Role::Toolbar);
+    }
+
+    #[test]
+    fn numeric_and_extra_properties_are_emitted_when_present() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let slider = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let mut extra = SemanticsNodeExtra::default();
+        extra.numeric.value = Some(50.0);
+        extra.numeric.min = Some(0.0);
+        extra.numeric.max = Some(100.0);
+        extra.numeric.step = Some(1.0);
+        extra.numeric.jump = Some(10.0);
+        extra.scroll.x = Some(5.0);
+        extra.scroll.x_min = Some(0.0);
+        extra.scroll.x_max = Some(10.0);
+        extra.level = Some(3);
+        extra.url = Some("https://example.com".to_string());
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    extra: SemanticsNodeExtra::default(),
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+                SemanticsNode {
+                    id: slider,
+                    parent: Some(root),
+                    role: SemanticsRole::Slider,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Slider".to_string()),
+                    value: Some("50".to_string()),
+                    extra,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let slider_id = to_accesskit_id(slider);
+        let slider_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == slider_id).then_some(n))
+            .expect("slider node present");
+
+        assert_eq!(slider_node.numeric_value(), Some(50.0));
+        assert_eq!(slider_node.min_numeric_value(), Some(0.0));
+        assert_eq!(slider_node.max_numeric_value(), Some(100.0));
+        assert_eq!(slider_node.numeric_value_step(), Some(1.0));
+        assert_eq!(slider_node.numeric_value_jump(), Some(10.0));
+        assert_eq!(slider_node.scroll_x(), Some(5.0));
+        assert_eq!(slider_node.scroll_x_min(), Some(0.0));
+        assert_eq!(slider_node.scroll_x_max(), Some(10.0));
+        assert_eq!(slider_node.level(), Some(3));
+        assert_eq!(slider_node.url(), Some("https://example.com"));
     }
 
     #[test]
@@ -586,6 +743,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -609,6 +767,7 @@ mod tests {
                     set_size: None,
                     label: Some("Command input".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions {
@@ -633,6 +792,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -656,6 +816,7 @@ mod tests {
                     set_size: None,
                     label: Some("Item 1".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -736,6 +897,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -756,6 +918,7 @@ mod tests {
                     set_size: None,
                     label: Some("Underlay list".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -779,6 +942,7 @@ mod tests {
                     set_size: Some(1),
                     label: Some("Underlay item".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -799,6 +963,7 @@ mod tests {
                     set_size: None,
                     label: Some("Modal".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -822,6 +987,7 @@ mod tests {
                     set_size: None,
                     label: Some("Command input".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions {
@@ -891,6 +1057,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -911,6 +1078,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -931,6 +1099,7 @@ mod tests {
                     set_size: Some(1200),
                     label: Some("Item 57".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -994,6 +1163,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1014,6 +1184,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1034,6 +1205,7 @@ mod tests {
                     set_size: None,
                     label: Some("Title".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1054,6 +1226,7 @@ mod tests {
                     set_size: None,
                     label: Some("Description".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1128,6 +1301,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1148,6 +1322,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1168,6 +1343,7 @@ mod tests {
                     set_size: None,
                     label: Some("Modal dialog".to_string()),
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1230,6 +1406,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1253,6 +1430,7 @@ mod tests {
                     set_size: None,
                     label: Some("Search".to_string()),
                     value: Some("hello".to_string()),
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: Some((1, 4)),
                     text_composition: None,
                     actions: SemanticsActions {
@@ -1337,6 +1515,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1360,6 +1539,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: Some("a😀b".to_string()),
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: Some((0, 0)),
                     text_composition: None,
                     actions: SemanticsActions {
@@ -1437,6 +1617,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1460,6 +1641,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: Some("hello".to_string()),
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: Some((0, 5)),
                     text_composition: None,
                     actions: SemanticsActions {
@@ -1536,6 +1718,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: None,
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
@@ -1559,6 +1742,7 @@ mod tests {
                     set_size: None,
                     label: None,
                     value: Some("he|llo".to_string()),
+                    extra: SemanticsNodeExtra::default(),
                     text_selection: Some((2, 2)),
                     text_composition: Some((2, 3)),
                     actions: SemanticsActions {

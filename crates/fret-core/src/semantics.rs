@@ -15,6 +15,7 @@ pub enum SemanticsRole {
     Alert,
     Button,
     Link,
+    Image,
     Checkbox,
     Switch,
     Slider,
@@ -55,6 +56,7 @@ pub struct SemanticsFlags {
     pub focused: bool,
     pub captured: bool,
     pub disabled: bool,
+    pub read_only: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Tri-state checked state (None = not checkable / unknown).
@@ -68,6 +70,35 @@ pub struct SemanticsInlineSpan {
     pub role: SemanticsRole,
     /// Opaque, component-defined tag (e.g. a URL for markdown links).
     pub tag: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct SemanticsNumeric {
+    pub value: Option<f64>,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub step: Option<f64>,
+    pub jump: Option<f64>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct SemanticsScroll {
+    pub x: Option<f64>,
+    pub x_min: Option<f64>,
+    pub x_max: Option<f64>,
+    pub y: Option<f64>,
+    pub y_min: Option<f64>,
+    pub y_max: Option<f64>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct SemanticsNodeExtra {
+    pub placeholder: Option<String>,
+    pub url: Option<String>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
+    pub numeric: SemanticsNumeric,
+    pub scroll: SemanticsScroll,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +130,7 @@ pub struct SemanticsNode {
     pub label: Option<String>,
     /// Value text, typically for text fields and sliders.
     pub value: Option<String>,
+    pub extra: SemanticsNodeExtra,
     /// Text selection in UTF-8 byte offsets within `value` (ADR 0071).
     ///
     /// This is `(anchor, focus)` to preserve selection direction for assistive technologies.
@@ -518,6 +550,7 @@ mod tests {
             set_size: None,
             label: None,
             value: Some("😀".to_string()), // 4 bytes
+            extra: SemanticsNodeExtra::default(),
             text_selection: Some((0, 4)),
             text_composition: Some((0, 4)),
             actions: SemanticsActions::default(),
@@ -557,6 +590,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: Some((0, 0)),
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -586,6 +620,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -623,6 +658,7 @@ mod tests {
             set_size: None,
             label: None,
             value: Some("😀".to_string()), // 4 bytes
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -670,6 +706,7 @@ mod tests {
             set_size: None,
             label: None,
             value: Some("abc".to_string()),
+            extra: SemanticsNodeExtra::default(),
             text_selection: Some((0, 4)),
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -699,6 +736,7 @@ mod tests {
             set_size: None,
             label: None,
             value: Some("abc".to_string()),
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: Some((2, 1)),
             actions: SemanticsActions::default(),
@@ -731,6 +769,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -761,6 +800,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -781,6 +821,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -812,6 +853,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -833,6 +875,7 @@ mod tests {
             set_size: None,
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
@@ -860,6 +903,7 @@ mod tests {
             set_size: Some(1),
             label: None,
             value: None,
+            extra: SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
