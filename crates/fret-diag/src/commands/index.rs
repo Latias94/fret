@@ -1,15 +1,9 @@
 use std::path::{Path, PathBuf};
 
-fn try_read_bundle_index_json(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
-        return None;
-    }
-    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
-        return None;
-    }
-    Some(v)
+use super::sidecars;
+
+fn try_read_bundle_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
+    sidecars::try_read_sidecar_json_v1(path, "bundle_index", warmup_frames)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -42,46 +36,22 @@ pub(crate) fn cmd_index(
             .and_then(|s| s.to_str())
             .is_some_and(|s| s == "bundle.index.json")
     {
-        let v = try_read_bundle_index_json(&src)
-            .ok_or_else(|| format!("invalid bundle.index.json: {}", src.display()))?;
-        if v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames) {
+        if try_read_bundle_index_json(&src, warmup_frames).is_some() {
             (src.clone(), src.clone())
+        } else if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(&src) {
+            let canonical =
+                crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+            let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
+            (canonical, out)
         } else {
-            // Recover by regenerating from an adjacent bundle.json.
-            let mut candidates: Vec<PathBuf> = Vec::new();
-            if let Some(parent) = src.parent() {
-                candidates.push(parent.to_path_buf());
-                if parent.file_name().and_then(|s| s.to_str()) == Some("_root") {
-                    if let Some(grandparent) = parent.parent() {
-                        candidates.push(grandparent.to_path_buf());
-                    }
-                }
-            }
-            let mut regenerated: Option<(PathBuf, PathBuf)> = None;
-            for candidate in candidates {
-                let bundle_path = crate::resolve_bundle_json_path(&candidate);
-                if !bundle_path.is_file() {
-                    continue;
-                }
-                let canonical =
-                    crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-                let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
-                regenerated = Some((canonical, out));
-                break;
-            }
-            regenerated.ok_or_else(|| {
-                format!(
-                    "bundle.index.json warmup_frames mismatch and no adjacent bundle.json was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json>`)\n  index: {}",
-                    src.display()
-                )
-            })?
+            return Err(format!(
+                "invalid bundle.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  index: {}",
+                src.display()
+            ));
         }
     } else if src.is_dir() {
         let direct = src.join("bundle.index.json");
-        if direct.is_file()
-            && let Some(v) = try_read_bundle_index_json(&direct)
-            && v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
-        {
+        if direct.is_file() && try_read_bundle_index_json(&direct, warmup_frames).is_some() {
             (direct.clone(), direct)
         } else {
             let bundle_path = crate::resolve_bundle_json_path(&src);

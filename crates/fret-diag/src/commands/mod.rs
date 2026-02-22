@@ -8,6 +8,7 @@ pub(crate) mod pick;
 pub(crate) mod query;
 pub(crate) mod script;
 pub(crate) mod session;
+mod sidecars;
 pub(crate) mod slice;
 mod slice_payload;
 mod slice_streaming;

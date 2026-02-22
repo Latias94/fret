@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use super::sidecars;
+
 use crate::test_id_bloom::TestIdBloomV1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,28 +42,12 @@ fn resolve_latest_bundle_json_path(out_dir: &Path) -> Result<PathBuf, String> {
     Ok(crate::resolve_bundle_json_path(&latest))
 }
 
-fn try_read_test_ids_index_json(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    if v.get("kind").and_then(|v| v.as_str()) != Some("test_ids_index") {
-        return None;
-    }
-    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
-        return None;
-    }
-    Some(v)
+fn try_read_test_ids_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
+    sidecars::try_read_sidecar_json_v1(path, "test_ids_index", warmup_frames)
 }
 
-fn try_read_bundle_index_json(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
-        return None;
-    }
-    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
-        return None;
-    }
-    Some(v)
+fn try_read_bundle_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
+    sidecars::try_read_sidecar_json_v1(path, "bundle_index", warmup_frames)
 }
 
 fn bundle_index_has_script_markers(v: &serde_json::Value) -> bool {
@@ -76,19 +62,12 @@ fn bundle_index_matches_request(
     warmup_frames: u64,
     require_script_markers: bool,
 ) -> bool {
-    // schema_version is validated by `try_read_bundle_index_json`.
-    if v.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
-        return false;
-    }
+    let _ = warmup_frames;
+    // schema_version + warmup_frames are validated by `try_read_bundle_index_json`.
     if require_script_markers && !bundle_index_has_script_markers(v) {
         return false;
     }
     true
-}
-
-fn test_ids_index_matches_request(v: &serde_json::Value, warmup_frames: u64) -> bool {
-    // schema_version is validated by `try_read_test_ids_index_json`.
-    v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
 }
 
 fn resolve_test_ids_index_from_src(
@@ -98,40 +77,32 @@ fn resolve_test_ids_index_from_src(
     if src.is_dir() {
         let direct = src.join("test_ids.index.json");
         if direct.is_file() {
-            if let Some(v) = try_read_test_ids_index_json(&direct) {
-                if !test_ids_index_matches_request(&v, warmup_frames) {
-                    // Fall through and regenerate.
-                } else {
-                    let bundle = v
-                        .get("bundle")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| direct.display().to_string());
-                    return Ok((bundle, direct, v));
-                }
+            if let Some(v) = try_read_test_ids_index_json(&direct, warmup_frames) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| direct.display().to_string());
+                return Ok((bundle, direct, v));
             }
         }
 
         let root = src.join("_root").join("test_ids.index.json");
         if root.is_file() {
-            if let Some(v) = try_read_test_ids_index_json(&root) {
-                if !test_ids_index_matches_request(&v, warmup_frames) {
-                    // Fall through and regenerate.
-                } else {
-                    let bundle = v
-                        .get("bundle")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| root.display().to_string());
-                    return Ok((bundle, root, v));
-                }
+            if let Some(v) = try_read_test_ids_index_json(&root, warmup_frames) {
+                let bundle = v
+                    .get("bundle")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| root.display().to_string());
+                return Ok((bundle, root, v));
             }
         }
 
         let bundle_path = crate::resolve_bundle_json_path(src);
         let index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-        let v = try_read_test_ids_index_json(&index_path)
+        let v = try_read_test_ids_index_json(&index_path, warmup_frames)
             .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
         return Ok((bundle_path.display().to_string(), index_path, v));
     }
@@ -142,9 +113,7 @@ fn resolve_test_ids_index_from_src(
             .and_then(|s| s.to_str())
             .is_some_and(|s| s == "test_ids.index.json")
     {
-        let v = try_read_test_ids_index_json(src)
-            .ok_or_else(|| format!("invalid test_ids.index.json: {}", src.display()))?;
-        if test_ids_index_matches_request(&v, warmup_frames) {
+        if let Some(v) = try_read_test_ids_index_json(src, warmup_frames) {
             let bundle = v
                 .get("bundle")
                 .and_then(|v| v.as_str())
@@ -153,24 +122,10 @@ fn resolve_test_ids_index_from_src(
             return Ok((bundle, src.to_path_buf(), v));
         }
 
-        // Try to recover by regenerating from an adjacent bundle.json.
-        let mut candidates: Vec<PathBuf> = Vec::new();
-        if let Some(parent) = src.parent() {
-            candidates.push(parent.to_path_buf());
-            if parent.file_name().and_then(|s| s.to_str()) == Some("_root") {
-                if let Some(grandparent) = parent.parent() {
-                    candidates.push(grandparent.to_path_buf());
-                }
-            }
-        }
-        for candidate in candidates {
-            let bundle_path = crate::resolve_bundle_json_path(&candidate);
-            if !bundle_path.is_file() {
-                continue;
-            }
+        if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(src) {
             let index_path =
                 crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-            let v = try_read_test_ids_index_json(&index_path)
+            let v = try_read_test_ids_index_json(&index_path, warmup_frames)
                 .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
             let bundle = v
                 .get("bundle")
@@ -181,14 +136,14 @@ fn resolve_test_ids_index_from_src(
         }
 
         return Err(format!(
-            "test_ids.index.json does not match requested warmup_frames={warmup_frames} and no adjacent bundle.json was found to regenerate it (tip: run `fretboard diag query test-id <bundle_dir|bundle.json> ...` or regenerate via `fretboard diag index <bundle_dir|bundle.json>`)\n  index: {}",
+            "invalid test_ids.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  index: {}",
             src.display()
         ));
     }
 
     let bundle_path = crate::resolve_bundle_json_path(src);
     let index_path = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-    let v = try_read_test_ids_index_json(&index_path)
+    let v = try_read_test_ids_index_json(&index_path, warmup_frames)
         .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
     Ok((bundle_path.display().to_string(), index_path, v))
 }
@@ -201,7 +156,7 @@ fn resolve_bundle_index_from_src(
     if src.is_dir() {
         let direct = src.join("bundle.index.json");
         if direct.is_file() {
-            if let Some(v) = try_read_bundle_index_json(&direct) {
+            if let Some(v) = try_read_bundle_index_json(&direct, warmup_frames) {
                 if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
                     let bundle = v
                         .get("bundle")
@@ -215,7 +170,7 @@ fn resolve_bundle_index_from_src(
 
         let root = src.join("_root").join("bundle.index.json");
         if root.is_file() {
-            if let Some(v) = try_read_bundle_index_json(&root) {
+            if let Some(v) = try_read_bundle_index_json(&root, warmup_frames) {
                 if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
                     let bundle = v
                         .get("bundle")
@@ -230,7 +185,7 @@ fn resolve_bundle_index_from_src(
         let bundle_path = crate::resolve_bundle_json_path(src);
         let index_path =
             crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-        let v = try_read_bundle_index_json(&index_path)
+        let v = try_read_bundle_index_json(&index_path, warmup_frames)
             .ok_or_else(|| "invalid bundle.index.json".to_string())?;
         return Ok((bundle_path.display().to_string(), index_path, v));
     }
@@ -241,7 +196,7 @@ fn resolve_bundle_index_from_src(
             .and_then(|s| s.to_str())
             .is_some_and(|s| s == "bundle.index.json")
     {
-        let v = try_read_bundle_index_json(src)
+        let v = try_read_bundle_index_json(src, warmup_frames)
             .ok_or_else(|| format!("invalid bundle.index.json: {}", src.display()))?;
         if bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
             let bundle = v
@@ -269,7 +224,7 @@ fn resolve_bundle_index_from_src(
             }
             let index_path =
                 crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-            let v = try_read_bundle_index_json(&index_path)
+            let v = try_read_bundle_index_json(&index_path, warmup_frames)
                 .ok_or_else(|| "invalid bundle.index.json".to_string())?;
             if !bundle_index_matches_request(&v, warmup_frames, require_script_markers) {
                 continue;
@@ -303,7 +258,7 @@ fn resolve_bundle_index_from_src(
 
     let bundle_path = crate::resolve_bundle_json_path(src);
     let index_path = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-    let v = try_read_bundle_index_json(&index_path)
+    let v = try_read_bundle_index_json(&index_path, warmup_frames)
         .ok_or_else(|| "invalid bundle.index.json".to_string())?;
     Ok((bundle_path.display().to_string(), index_path, v))
 }
@@ -457,7 +412,7 @@ fn cmd_query_snapshots(
         let bundle_path = resolve_latest_bundle_json_path(out_dir)?;
         let index_path =
             crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
-        let index = try_read_bundle_index_json(&index_path)
+        let index = try_read_bundle_index_json(&index_path, warmup_frames)
             .ok_or_else(|| "invalid bundle.index.json".to_string())?;
         (bundle_path.display().to_string(), index_path, index)
     };
@@ -792,7 +747,7 @@ fn cmd_query_test_id(
         let bundle_path = bundle_path;
         let index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
-        let index = try_read_test_ids_index_json(&index_path)
+        let index = try_read_test_ids_index_json(&index_path, warmup_frames)
             .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
         (bundle_path.display().to_string(), index_path, index)
     };

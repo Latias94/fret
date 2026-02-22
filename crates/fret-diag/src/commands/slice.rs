@@ -922,7 +922,9 @@ pub(crate) fn cmd_slice(
         if src.is_dir() {
             let bundle_path = crate::resolve_bundle_json_path(&src);
             let idx = if bundle_path.is_file() {
-                read_bundle_index_for_step_index(&bundle_path, warmup_frames).ok().flatten()
+                read_bundle_index_for_step_index(&bundle_path, warmup_frames)
+                    .ok()
+                    .flatten()
             } else {
                 try_read_bundle_index_from_dir(&src, warmup_frames)
             };
@@ -931,19 +933,19 @@ pub(crate) fn cmd_slice(
                 && let Some((step_window, step_frame_id, step_seq)) =
                     resolve_step_selector_from_bundle_index(&idx, step_index)
             {
-            if let Some(req) = window_id
-                && req != step_window
-            {
-                return Err(format!(
-                    "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
-                ));
-            }
-            window_id = Some(step_window);
-            if step_seq.is_some() {
-                window_snapshot_seq = step_seq;
-            } else {
-                frame_id = step_frame_id;
-            }
+                if let Some(req) = window_id
+                    && req != step_window
+                {
+                    return Err(format!(
+                        "--step-index {step_index} resolved to window={step_window}, but --window {req} was requested"
+                    ));
+                }
+                window_id = Some(step_window);
+                if step_seq.is_some() {
+                    window_snapshot_seq = step_seq;
+                } else {
+                    frame_id = step_frame_id;
+                }
             }
         }
     }

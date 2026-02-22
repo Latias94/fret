@@ -3,8 +3,8 @@ use std::path::Path;
 use crate::util::{now_unix_ms, write_json_value};
 
 use super::first_wheel_frame_id_for_window;
-use super::{semantics_node_id_for_test_id, semantics_parent_map};
 use super::parse_redacted_len_bytes;
+use super::{semantics_node_id_for_test_id, semantics_parent_map};
 pub(crate) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present(
     bundle_path: &Path,
     warmup_frames: u64,
@@ -5558,4 +5558,3 @@ pub(crate) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json
         evidence_path.display()
     ))
 }
-
