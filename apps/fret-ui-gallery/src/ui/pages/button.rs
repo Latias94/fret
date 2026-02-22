@@ -203,7 +203,9 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     .into_element(cx);"#,
                 ),
             DocSection::new("Link (render)", link_render)
-                .description("Render the button with link semantics (shadcn `asChild`-style composition).")
+                .description(
+                    "Render the button with link semantics (shadcn `asChild`-style composition).",
+                )
                 .code(
                     "rust",
                     r#"shadcn::Button::new("Dashboard")

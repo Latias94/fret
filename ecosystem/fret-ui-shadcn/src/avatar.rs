@@ -11,7 +11,37 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::avatar as radix_avatar;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
+
+#[derive(Debug, Default)]
+struct AvatarSizeProviderState {
+    current: Option<AvatarSize>,
+}
+
+fn inherited_avatar_size<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<AvatarSize> {
+    cx.inherited_state_where::<AvatarSizeProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current)
+}
+
+#[track_caller]
+fn with_avatar_size_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    size: AvatarSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(AvatarSizeProviderState::default, |st| {
+        let prev = st.current;
+        st.current = Some(size);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(AvatarSizeProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
 
 /// shadcn/ui avatar size variants (`size="sm" | "default" | "lg"`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,30 +92,319 @@ impl Avatar {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let size_variant = self.size;
+        with_avatar_size_provider(cx, size_variant, |cx| {
+            let theme = Theme::global(&*cx.app).clone();
 
-        let size = match self.size {
-            AvatarSize::Sm => Space::N6,
-            AvatarSize::Default => Space::N8,
-            AvatarSize::Lg => Space::N10,
+            let size = match size_variant {
+                AvatarSize::Sm => Space::N6,
+                AvatarSize::Default => Space::N8,
+                AvatarSize::Lg => Space::N10,
+            };
+
+            let base_chrome = ChromeRefinement::default().rounded(Radius::Full);
+            let base_layout = LayoutRefinement::default()
+                .relative()
+                .w_px(MetricRef::space(size))
+                .h_px(MetricRef::space(size))
+                .flex_shrink_0();
+
+            let mut props = decl_style::container_props(
+                &theme,
+                base_chrome.merge(self.chrome),
+                base_layout.merge(self.layout),
+            );
+            props.layout.overflow = Overflow::Clip;
+
+            let children = self.children;
+            cx.container(props, move |_cx| children)
+        })
+    }
+}
+
+/// shadcn/ui `AvatarBadge`.
+///
+/// Positioned at the bottom-right of the current `Avatar` size scope.
+#[derive(Debug, Clone, Default)]
+pub struct AvatarBadge {
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl AvatarBadge {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let size = inherited_avatar_size(cx).unwrap_or_default();
+        let (dot_px, icon_px, hide_icon) = match size {
+            AvatarSize::Sm => (Px(8.0), Px(0.0), true),
+            AvatarSize::Default => (Px(10.0), Px(8.0), false),
+            AvatarSize::Lg => (Px(12.0), Px(8.0), false),
         };
 
-        let base_chrome = ChromeRefinement::default().rounded(Radius::Full);
-        let base_layout = LayoutRefinement::default()
-            .relative()
-            .w_px(MetricRef::space(size))
-            .h_px(MetricRef::space(size))
-            .flex_shrink_0();
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Full)
+            .border_width(Px(2.0))
+            .border_color(ColorRef::Token {
+                key: "background",
+                fallback: ColorFallback::ThemeSurfaceBackground,
+            })
+            .bg(ColorRef::Token {
+                key: "primary",
+                fallback: ColorFallback::ThemeAccent,
+            })
+            .merge(self.chrome);
 
-        let mut props = decl_style::container_props(
-            &theme,
-            base_chrome.merge(self.chrome),
-            base_layout.merge(self.layout),
-        );
-        props.layout.overflow = Overflow::Clip;
+        let layout = LayoutRefinement::default()
+            .absolute()
+            .right_px(Px(0.0))
+            .bottom_px(Px(0.0))
+            .w_px(MetricRef::Px(dot_px))
+            .h_px(MetricRef::Px(dot_px))
+            .merge(self.layout);
+
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let mut props = decl_style::container_props(theme, chrome, layout);
+            props.layout.overflow = Overflow::Visible;
+            props
+        };
+
+        let children = if hide_icon { Vec::new() } else { self.children };
+
+        cx.container(props, move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    if children.is_empty() {
+                        Vec::new()
+                    } else {
+                        vec![cx.container(
+                            {
+                                let theme = Theme::global(&*cx.app);
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default(),
+                                    LayoutRefinement::default()
+                                        .w_px(MetricRef::Px(icon_px))
+                                        .h_px(MetricRef::Px(icon_px)),
+                                )
+                            },
+                            move |_cx| children.clone(),
+                        )]
+                    }
+                },
+            )]
+        })
+    }
+}
+
+/// shadcn/ui `AvatarGroup`.
+///
+/// Overlap wrapper (`-space-x-2` in Tailwind) + installs a size scope so `AvatarGroupCount` can
+/// match the intended avatar size.
+#[derive(Debug, Clone)]
+pub struct AvatarGroup {
+    children: Vec<AnyElement>,
+    size: Option<AvatarSize>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl AvatarGroup {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            size: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn size(mut self, size: AvatarSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let run = |cx: &mut ElementContext<'_, H>| {
+            let props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(theme, self.chrome, self.layout)
+            };
+
+            let mut out = Vec::new();
+            for (idx, child) in self.children.into_iter().enumerate() {
+                if idx == 0 {
+                    out.push(child);
+                } else {
+                    out.push(cx.container(
+                        {
+                            let theme = Theme::global(&*cx.app);
+                            decl_style::container_props(
+                                theme,
+                                ChromeRefinement::default(),
+                                LayoutRefinement::default().ml_neg(Space::N2),
+                            )
+                        },
+                        move |_cx| vec![child.clone()],
+                    ));
+                }
+            }
+
+            cx.container(props, move |cx| {
+                vec![cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| out.clone(),
+                )]
+            })
+        };
+
+        if let Some(size) = self.size {
+            with_avatar_size_provider(cx, size, run)
+        } else {
+            run(cx)
+        }
+    }
+}
+
+/// shadcn/ui `AvatarGroupCount`.
+#[derive(Debug, Clone, Default)]
+pub struct AvatarGroupCount {
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl AvatarGroupCount {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let size = inherited_avatar_size(cx).unwrap_or_default();
+        let (box_space, text_px) = match size {
+            AvatarSize::Sm => (Space::N6, Px(12.0)),
+            AvatarSize::Default => (Space::N8, Px(14.0)),
+            AvatarSize::Lg => (Space::N10, Px(14.0)),
+        };
+
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Full)
+            .border_width(Px(2.0))
+            .border_color(ColorRef::Token {
+                key: "background",
+                fallback: ColorFallback::ThemeSurfaceBackground,
+            })
+            .bg(ColorRef::Token {
+                key: "muted",
+                fallback: ColorFallback::ThemePanelBackground,
+            })
+            .text_color(ColorRef::Token {
+                key: "muted-foreground",
+                fallback: ColorFallback::ThemeTextMuted,
+            })
+            .merge(self.chrome);
+
+        let layout = LayoutRefinement::default()
+            .w_px(MetricRef::space(box_space))
+            .h_px(MetricRef::space(box_space))
+            .flex_shrink_0()
+            .merge(self.layout);
+
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(theme, chrome, layout)
+        };
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        cx.container(props, move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    if children.is_empty() {
+                        vec![
+                            ui::text(cx, "+3")
+                                .text_size_px(text_px)
+                                .font_medium()
+                                .nowrap()
+                                .into_element(cx),
+                        ]
+                    } else {
+                        children.clone()
+                    }
+                },
+            )]
+        })
     }
 }
 
