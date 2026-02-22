@@ -2,7 +2,7 @@ use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
-    set_scissor_rect_absolute_opt,
+    run_composite_premul_quad_pass,
 };
 
 pub(in super::super) fn record_color_adjust_pass(
@@ -871,69 +871,45 @@ pub(in super::super) fn record_composite_premul_pass(
         return;
     };
 
-    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("fret composite premul pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: dst_view,
-            depth_slice: None,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: pass.load,
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-        multiview_mask: None,
-    });
-    rp.set_pipeline(composite_pipeline);
-    if perf_enabled {
-        frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-        frame_perf.pipeline_switches_composite =
-            frame_perf.pipeline_switches_composite.saturating_add(1);
-    }
-    if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
-        rp.set_bind_group(
-            0,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-        );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        }
-    } else {
-        rp.set_bind_group(
-            0,
-            &renderer.uniform_bind_group,
-            &[0, ctx.render_space_offset_u32],
-        );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        }
-    }
-    rp.set_bind_group(1, &bind_group, &[]);
-    if perf_enabled {
-        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        frame_perf.texture_bind_group_switches =
-            frame_perf.texture_bind_group_switches.saturating_add(1);
-    }
+    let (uniform_bind_group, uniform_offsets) =
+        if let Some(mask_uniform_index) = pass.mask_uniform_index {
+            let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+            let mask_image = encoding
+                .uniform_mask_images
+                .get(mask_uniform_index as usize)
+                .copied()
+                .flatten();
+            (
+                renderer.pick_uniform_bind_group_for_mask_image(mask_image),
+                [uniform_offset, ctx.render_space_offset_u32],
+            )
+        } else {
+            (
+                &renderer.uniform_bind_group,
+                [0, ctx.render_space_offset_u32],
+            )
+        };
+
     let base = u64::from(base) * quad_vertex_size;
     let len = 6 * quad_vertex_size;
-    rp.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
-    let _ =
-        set_scissor_rect_absolute_opt(&mut rp, pass.dst_scissor, pass.dst_origin, pass.dst_size);
-    rp.draw(0..6, 0..1);
-    if perf_enabled {
-        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-    }
+    run_composite_premul_quad_pass(
+        encoder,
+        "fret composite premul pass",
+        composite_pipeline,
+        dst_view,
+        pass.load,
+        uniform_bind_group,
+        &uniform_offsets,
+        &bind_group,
+        &[],
+        &renderer.path_composite_vertices,
+        base,
+        len,
+        pass.dst_scissor,
+        pass.dst_origin,
+        pass.dst_size,
+        perf_enabled.then_some(frame_perf),
+    );
 }
 
 pub(in super::super) fn record_clip_mask_pass(
