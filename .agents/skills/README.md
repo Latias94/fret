@@ -65,8 +65,18 @@ These conventions keep skills consistent and easy to auto-validate/package:
 - Skill directory name: `fret-*`
 - Skill entrypoint: `SKILL.md`
 - Frontmatter: `name` and `description`
-- Recommended headings: `When to use`, `Quick start`, `Workflow`, `Evidence anchors`, `Common pitfalls`, `Related skills`
+- Skill folder structure: `SKILL.md` (required), optional `references/`, `scripts/`, `assets/`
+- Recommended headings: `When to use`, `Quick start`, `Workflow`, `Examples`, `Troubleshooting`, `Evidence anchors`, `Common pitfalls`, `Related skills`
 - Evidence anchors: prefer stable file paths + symbol names; avoid fragile line-number anchors
+
+Claude-aligned folder rules (mirrors the upstream “build a skill” guidance):
+
+- `SKILL.md` must be named exactly `SKILL.md` (case-sensitive when uploaded/zipped)
+- Do not place a `README.md` inside an individual skill folder (keep docs in `SKILL.md` or `references/`)
+- Frontmatter must start at the top of `SKILL.md` and be wrapped in `---` delimiters
+- `name` must match the folder name and be lowercase-hyphen (kebab-case)
+- `description` must include **what** the skill does + **when** to use it (trigger phrases); keep it `<= 1024` chars
+- Treat frontmatter as “system-prompt surface”: avoid XML/angle brackets and other injection-shaped content
 
 ## Skill quality bar (engineering discipline)
 

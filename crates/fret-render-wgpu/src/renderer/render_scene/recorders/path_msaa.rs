@@ -1,6 +1,8 @@
 use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
-use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
+use super::super::helpers::{
+    ensure_color_dst_view_owned, run_path_msaa_composite_quad_pass, set_scissor_rect_absolute,
+};
 
 pub(in super::super) fn record_path_msaa_batch_pass(
     exec: &mut RenderSceneExecutor<'_>,
@@ -116,7 +118,8 @@ pub(in super::super) fn record_path_msaa_batch_pass(
                 }
                 active_scissor = Some(draw.scissor);
             }
-            let uniform_offset = (u64::from(draw.uniform_index) * renderer.uniform_stride) as u32;
+            let uniform_offset =
+                (u64::from(draw.uniform_index) * renderer.uniforms.uniform_stride) as u32;
             let mask_image = encoding
                 .uniform_mask_images
                 .get(draw.uniform_index as usize)
@@ -150,70 +153,39 @@ pub(in super::super) fn record_path_msaa_batch_pass(
         }
     }
 
-    let union = path_pass.union_scissor.0;
-    if union.w == 0 || union.h == 0 {
+    let union = path_pass.union_scissor;
+    if union.0.w == 0 || union.0.h == 0 {
         return;
     }
     let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
     };
-
-    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("fret renderer pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: pass_target_view,
-            depth_slice: None,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: path_pass.load,
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-        multiview_mask: None,
-    });
-
-    pass.set_pipeline(composite_pipeline);
-    if perf_enabled {
-        frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-        frame_perf.pipeline_switches_composite =
-            frame_perf.pipeline_switches_composite.saturating_add(1);
-    }
     let uniform_offset =
-        (u64::from(path_pass.batch_uniform_index) * renderer.uniform_stride) as u32;
+        (u64::from(path_pass.batch_uniform_index) * renderer.uniforms.uniform_stride) as u32;
     let mask_image = encoding
         .uniform_mask_images
         .get(path_pass.batch_uniform_index as usize)
         .copied()
         .flatten();
     let uniform_bind_group = renderer.pick_uniform_bind_group_for_mask_image(mask_image);
-    pass.set_bind_group(
-        0,
-        uniform_bind_group,
-        &[uniform_offset, ctx.render_space_offset_u32],
-    );
-    if perf_enabled {
-        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        frame_perf.uniform_bind_group_switches =
-            frame_perf.uniform_bind_group_switches.saturating_add(1);
-    }
-    pass.set_bind_group(1, &intermediate.bind_group, &[]);
-    if perf_enabled {
-        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        frame_perf.texture_bind_group_switches =
-            frame_perf.texture_bind_group_switches.saturating_add(1);
-    }
     let base = u64::from(base) * quad_vertex_size;
     let len = 6 * quad_vertex_size;
-    pass.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
-    if set_scissor_rect_absolute(&mut pass, union, target_origin, target_size) && perf_enabled {
-        frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-    }
-    pass.draw(0..6, 0..1);
-    if perf_enabled {
-        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-        frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-    }
+    run_path_msaa_composite_quad_pass(
+        encoder,
+        "fret renderer pass",
+        composite_pipeline,
+        pass_target_view,
+        path_pass.load,
+        uniform_bind_group,
+        &[uniform_offset, ctx.render_space_offset_u32],
+        &intermediate.bind_group,
+        &[],
+        &renderer.path_composite_vertices,
+        base,
+        len,
+        union,
+        target_origin,
+        target_size,
+        perf_enabled.then_some(frame_perf),
+    );
 }

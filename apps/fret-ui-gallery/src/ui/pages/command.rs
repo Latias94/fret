@@ -10,6 +10,7 @@ pub(super) fn preview_command_palette(
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CommandPageModels {
+        usage_query: Option<Model<String>>,
         basic_open: Option<Model<bool>>,
         basic_query: Option<Model<String>>,
         shortcuts_query: Option<Model<String>>,
@@ -20,9 +21,11 @@ pub(super) fn preview_command_palette(
         demo_filter_query: Option<Model<String>>,
         demo_disable_filtering: Option<Model<bool>>,
         demo_filter_value: Option<Model<Option<Arc<str>>>>,
+        demo_group_force_query: Option<Model<String>>,
     }
 
     let (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -33,8 +36,10 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
+            st.usage_query.clone(),
             st.basic_open.clone(),
             st.basic_query.clone(),
             st.shortcuts_query.clone(),
@@ -45,10 +50,12 @@ pub(super) fn preview_command_palette(
             st.demo_filter_query.clone(),
             st.demo_disable_filtering.clone(),
             st.demo_filter_value.clone(),
+            st.demo_group_force_query.clone(),
         )
     });
 
     let (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -59,7 +66,9 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) = match (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -70,8 +79,10 @@ pub(super) fn preview_command_palette(
         demo_filter_query,
         demo_disable_filtering,
         demo_filter_value,
+        demo_group_force_query,
     ) {
         (
+            Some(usage_query),
             Some(basic_open),
             Some(basic_query),
             Some(shortcuts_query),
@@ -82,7 +93,9 @@ pub(super) fn preview_command_palette(
             Some(demo_filter_query),
             Some(demo_disable_filtering),
             Some(demo_filter_value),
+            Some(demo_group_force_query),
         ) => (
+            usage_query,
             basic_open,
             basic_query,
             shortcuts_query,
@@ -93,8 +106,10 @@ pub(super) fn preview_command_palette(
             demo_filter_query,
             demo_disable_filtering,
             demo_filter_value,
+            demo_group_force_query,
         ),
         _ => {
+            let usage_query = cx.app.models_mut().insert(String::new());
             let basic_open = cx.app.models_mut().insert(false);
             let basic_query = cx.app.models_mut().insert(String::new());
             let shortcuts_query = cx.app.models_mut().insert(String::new());
@@ -108,7 +123,9 @@ pub(super) fn preview_command_palette(
                 .app
                 .models_mut()
                 .insert(Some(Arc::<str>::from("Calendar")));
+            let demo_group_force_query = cx.app.models_mut().insert(String::new());
             cx.with_state(CommandPageModels::default, |st| {
+                st.usage_query = Some(usage_query.clone());
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
                 st.shortcuts_query = Some(shortcuts_query.clone());
@@ -120,8 +137,10 @@ pub(super) fn preview_command_palette(
                 st.demo_filter_query = Some(demo_filter_query.clone());
                 st.demo_disable_filtering = Some(demo_disable_filtering.clone());
                 st.demo_filter_value = Some(demo_filter_value.clone());
+                st.demo_group_force_query = Some(demo_group_force_query.clone());
             });
             (
+                usage_query,
                 basic_open,
                 basic_query,
                 shortcuts_query,
@@ -132,25 +151,30 @@ pub(super) fn preview_command_palette(
                 demo_filter_query,
                 demo_disable_filtering,
                 demo_filter_value,
+                demo_group_force_query,
             )
         }
     };
 
-    let on_select = |tag: Arc<str>| {
-        let last_action = last_action.clone();
-        Arc::new(
-            move |host: &mut dyn fret_ui::action::UiActionHost,
-                  action_cx: fret_ui::action::ActionCx,
-                  _reason: fret_ui::action::ActivateReason| {
-                let value = tag.clone();
-                let _ = host
-                    .models_mut()
-                    .update(&last_action, |cur: &mut Arc<str>| {
-                        *cur = value.clone();
-                    });
-                host.request_redraw(action_cx.window);
-            },
-        ) as fret_ui::action::OnActivate
+    let last_action_model = last_action.clone();
+    let on_select = {
+        let last_action = last_action_model.clone();
+        move |tag: Arc<str>| {
+            let last_action = last_action.clone();
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      _reason: fret_ui::action::ActivateReason| {
+                    let value = tag.clone();
+                    let _ = host
+                        .models_mut()
+                        .update(&last_action, |cur: &mut Arc<str>| {
+                            *cur = value.clone();
+                        });
+                    host.request_redraw(action_cx.window);
+                },
+            ) as fret_ui::action::OnActivate
+        }
     };
 
     let basic_items = vec![
@@ -167,8 +191,55 @@ pub(super) fn preview_command_palette(
             .keywords(["math", "calc"])
             .on_select_action(on_select(Arc::from("command.basic.calculator"))),
     ];
-    let demo_filter_entries: Vec<shadcn::CommandEntry> =
+
+    let usage_entries: Vec<shadcn::CommandEntry> = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Calendar")
+                .on_select_action(on_select(Arc::from("command.usage.calendar"))),
+            shadcn::CommandItem::new("Search Emoji")
+                .on_select_action(on_select(Arc::from("command.usage.search-emoji"))),
+            shadcn::CommandItem::new("Calculator")
+                .on_select_action(on_select(Arc::from("command.usage.calculator"))),
+        ])
+        .heading("Suggestions")
+        .into(),
+        shadcn::CommandSeparator::new().into(),
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Profile")
+                .on_select_action(on_select(Arc::from("command.usage.profile"))),
+            shadcn::CommandItem::new("Billing")
+                .on_select_action(on_select(Arc::from("command.usage.billing"))),
+            shadcn::CommandItem::new("Settings")
+                .on_select_action(on_select(Arc::from("command.usage.settings"))),
+        ])
+        .heading("Settings")
+        .into(),
+    ];
+
+    let usage_palette = shadcn::CommandPalette::new(usage_query.clone(), Vec::new())
+        .placeholder("Type a command or search...")
+        .a11y_label("Command usage")
+        .entries(usage_entries)
+        .test_id_input("ui-gallery-command-usage-input")
+        .list_test_id("ui-gallery-command-usage-listbox")
+        .test_id_item_prefix("ui-gallery-command-usage-item-")
+        .into_element(cx)
+        .test_id("ui-gallery-command-usage");
+    let mut demo_filter_entries: Vec<shadcn::CommandEntry> =
         basic_items.clone().into_iter().map(Into::into).collect();
+    demo_filter_entries.push(
+        shadcn::CommandSeparator::new()
+            .always_render(true)
+            .test_id("ui-gallery-command-demo-filter-separator")
+            .into(),
+    );
+    demo_filter_entries.push(
+        shadcn::CommandItem::new("Force mounted row (cmdk forceMount)")
+            .value("force-mounted")
+            .force_mount(true)
+            .on_select_action(on_select(Arc::from("command.demo.force-mount")))
+            .into(),
+    );
 
     let basic_dialog =
         shadcn::CommandDialog::new(basic_open.clone(), basic_query.clone(), basic_items)
@@ -327,6 +398,59 @@ pub(super) fn preview_command_palette(
                 .into_element(cx)
                 .test_id("ui-gallery-command-demo-filter");
 
+            let group_force_entries = vec![
+                shadcn::CommandGroup::new([
+                    shadcn::CommandItem::new("Alpha").on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
+                    shadcn::CommandItem::new("Beta").on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
+                ])
+                .heading("Letters")
+                .force_mount(true)
+                .into(),
+                shadcn::CommandSeparator::new().into(),
+                shadcn::CommandGroup::new([shadcn::CommandItem::new("Giraffe")
+                    .on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    })])
+                .heading("Animals")
+                .into(),
+            ];
+            let group_force_palette =
+                shadcn::CommandPalette::new(demo_group_force_query.clone(), Vec::new())
+                    .placeholder("Type to filter groups... (demo-only)")
+                    .a11y_label("Command group forceMount demo")
+                    .entries(group_force_entries)
+                    .test_id_input("ui-gallery-command-group-force-input")
+                    .list_test_id("ui-gallery-command-group-force-listbox")
+                    .test_id_item_prefix("ui-gallery-command-group-force-item-")
+                    .test_id_heading_prefix("ui-gallery-command-group-force-heading-")
+                    .into_element(cx)
+                    .test_id("ui-gallery-command-group-force");
+
             let demo_block = stack::vstack(
                 cx,
                 stack::VStackProps::default()
@@ -340,14 +464,16 @@ pub(super) fn preview_command_palette(
                         .get_cloned(&demo_filter_value)
                         .unwrap_or(None);
                     vec![
-                        cx.text("Demo-only: controlled cmdk selection value"),
+                        cx.text("Controlled selection demo (cmdk `value`)"),
                         cx.text(format!(
-                            "selection value (cmdk value): {}",
+                            "active value: {}",
                             demo_filter_value_value.as_deref().unwrap_or("<none>")
                         )),
                         controlled_selection_row,
                         demo_toggle_row,
                         demo_palette,
+                        cx.text("Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out."),
+                        group_force_palette,
                     ]
                 },
             );
@@ -462,7 +588,7 @@ pub(super) fn preview_command_palette(
         cx,
         [
             "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
-            "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
+            "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
             "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
             "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
         ],
@@ -471,9 +597,41 @@ pub(super) fn preview_command_palette(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order: Basic, Shortcuts, Groups, Scrollable, RTL.",
+            "Preview follows shadcn Command docs order: Usage, Basic, Shortcuts, Groups, Scrollable, RTL.",
         ),
         vec![
+            DocSection::new("Usage", usage_palette)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-usage")
+                .descriptions([
+                    "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
+                    "Use this pattern for inline command menus (as opposed to `CommandDialog`).",
+                ])
+                .code(
+                    "rust",
+                    r#"let entries = vec![
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Calendar"),
+        shadcn::CommandItem::new("Search Emoji"),
+        shadcn::CommandItem::new("Calculator"),
+    ])
+    .heading("Suggestions")
+    .into(),
+    shadcn::CommandSeparator::new().into(),
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Profile"),
+        shadcn::CommandItem::new("Billing"),
+        shadcn::CommandItem::new("Settings"),
+    ])
+    .heading("Settings")
+    .into(),
+];
+
+shadcn::CommandPalette::new(query, Vec::new())
+    .placeholder("Type a command or search...")
+    .entries(entries)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic_dialog)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-basic")

@@ -89,9 +89,9 @@ Use `fret-diag-workflow` when your main goal is simply “run a script, capture 
 Common “where to look” anchors for smoothness work:
 
 - Perf gate output: `target/fret-diag/check.perf_thresholds.json` (each failure includes `evidence_bundle`)
-- Bundle triage: `target/release/fretboard.exe diag stats <bundle.json> --sort cpu_cycles --top 30`
+- Bundle triage: `cargo run -p fretboard --release -- diag stats <bundle.json> --sort cpu_cycles --top 30` (or `target/release/fretboard[.exe] ...` if already built)
 - Layout mechanism:
-  - `crates/fret-ui/src/tree/layout.rs`
+  - `crates/fret-ui/src/tree/layout/mod.rs`
   - `crates/fret-ui/src/layout/engine.rs`
 - Perf tooling:
   - `crates/fret-diag/src/lib.rs` (suite hooks, perf gates, baseline seeding)
@@ -100,12 +100,26 @@ Common “where to look” anchors for smoothness work:
   - `tools/diag-scripts/tooling-suite-prewarm-fonts.json`
   - `tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json`
 
+## Examples
+
+- Example: convert "it feels janky" into a perf contract
+  - User says: "Scrolling hitches sometimes—make it measurable and fixable."
+  - Actions: run `diag perf`, attribute the worst bundle, land a reversible change, and gate it.
+  - Result: a small optimization with a durable regression gate.
+
 ## Common pitfalls
 
 - Using a `max`-seeded baseline with a `p95` gate (or vice versa): you’ll get systematic failures.
 - Treating `--reuse-launch` slowdowns as “noise”: it’s often state contamination or a real cache/invalidation issue.
 - Over-optimizing a demo script with unstable setup cost (fonts/catalog rescan): prewarm it instead.
 - Chasing wall-clock spikes without checking CPU signal (`cpu_cycles`/`cpu_time`).
+
+## Troubleshooting
+
+- Symptom: perf gates fail after a machine change.
+  - Fix: keep baselines environment-specific; re-seed baselines intentionally (do not silently loosen thresholds).
+- Symptom: suite runs are slower than standalone.
+  - Fix: normalize suite setup (prewarm/reset scripts) and watch for state contamination.
 
 ## Related skills
 

@@ -15,6 +15,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
     RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
+    SpacerProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -422,7 +423,7 @@ impl ContextMenuShortcut {
         let font_line_height = theme.metric_token("font.line_height");
 
         ui::text(cx, self.text)
-            .layout(LayoutRefinement::default().ml_auto())
+            .layout(LayoutRefinement::default().flex_none())
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
             .line_box_in_bounds()
@@ -445,6 +446,7 @@ pub struct ContextMenuCheckboxItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -460,6 +462,7 @@ impl ContextMenuCheckboxItem {
             close_on_select: false,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -491,6 +494,11 @@ impl ContextMenuCheckboxItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -530,6 +538,7 @@ pub struct ContextMenuRadioItemSpec {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -545,6 +554,7 @@ impl ContextMenuRadioItemSpec {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -574,6 +584,11 @@ impl ContextMenuRadioItemSpec {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -589,6 +604,7 @@ impl ContextMenuRadioItemSpec {
             close_on_select: self.close_on_select,
             command: self.command,
             a11y_label: self.a11y_label,
+            test_id: self.test_id,
             trailing: self.trailing,
         }
     }
@@ -605,6 +621,7 @@ pub struct ContextMenuRadioItem {
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -625,6 +642,7 @@ impl ContextMenuRadioItem {
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -646,6 +664,11 @@ impl ContextMenuRadioItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -1054,6 +1077,10 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let checked = item.checked.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+        let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1116,8 +1143,12 @@ impl ContextMenuRenderEnv {
                     enabled: !disabled,
                     focusable: !disabled,
                     focus_ring: Some(ring),
-                    a11y: menu::item::menu_item_checkbox_a11y(a11y_label, checked_now)
-                        .with_collection_position(collection_index, item_count),
+                    a11y: {
+                        let mut a11y =
+                            menu::item::menu_item_checkbox_a11y(a11y_label.clone(), checked_now);
+                        a11y.test_id = test_id.clone();
+                        a11y.with_collection_position(collection_index, item_count)
+                    },
                     ..Default::default()
                 };
 
@@ -1147,7 +1178,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
-                    None,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1168,6 +1199,10 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let group_value = item.group_value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+        let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -1236,8 +1271,12 @@ impl ContextMenuRenderEnv {
                     enabled: !disabled,
                     focusable: !disabled,
                     focus_ring: Some(ring),
-                    a11y: menu::item::menu_item_radio_a11y(a11y_label.clone(), is_selected)
-                        .with_collection_position(collection_index, item_count),
+                    a11y: {
+                        let mut a11y =
+                            menu::item::menu_item_radio_a11y(a11y_label.clone(), is_selected);
+                        a11y.test_id = test_id.clone();
+                        a11y.with_collection_position(collection_index, item_count)
+                    },
                     ..Default::default()
                 };
 
@@ -1267,7 +1306,7 @@ impl ContextMenuRenderEnv {
                     pad_y,
                     radius_sm,
                     text_disabled,
-                    None,
+                    chrome_test_id.clone(),
                 );
 
                 (props, children)
@@ -1867,6 +1906,15 @@ fn menu_row_children<H: UiHost>(
     text_disabled: fret_core::Color,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
+    let label_test_id = chrome_test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}-label")));
+    let trailing_test_id = chrome_test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}-trailing")));
+    let submenu_chevron_test_id = chrome_test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}-submenu-chevron")));
     let child = cx.container(
         ContainerProps {
             layout: {
@@ -1885,6 +1933,7 @@ fn menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let direction = direction_prim::use_direction_in_scope(cx, None);
             let has_indicator = indicator_on.is_some();
             let has_leading_slot = leading.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
@@ -1892,6 +1941,7 @@ fn menu_row_children<H: UiHost>(
                     + usize::from(has_leading_slot)
                     + 1
                     + usize::from(trailing.is_some())
+                    + usize::from(trailing.is_some() || submenu)
                     + usize::from(submenu),
             );
 
@@ -1954,17 +2004,33 @@ fn menu_row_children<H: UiHost>(
                 text = text.letter_spacing_em(letter_spacing_em);
             }
 
-            row.push(text.into_element(cx));
+            let mut label_element = text.into_element(cx);
+            if let Some(test_id) = label_test_id.clone() {
+                label_element = label_element.test_id(test_id);
+            }
+            row.push(label_element);
 
+            if trailing.is_some() || submenu {
+                row.push(cx.spacer(SpacerProps::default()));
+            }
             if let Some(t) = trailing.clone() {
-                row.push(t);
+                let mut trailing_element = t;
+                if let Some(test_id) = trailing_test_id.clone() {
+                    trailing_element = trailing_element.test_id(test_id);
+                }
+                row.push(trailing_element);
             }
 
             if submenu {
-                row.push(submenu_chevron_right_icon(
+                let mut chevron = submenu_chevron_icon(
                     cx,
+                    direction,
                     if disabled { text_disabled } else { row_fg },
-                ));
+                );
+                if let Some(test_id) = submenu_chevron_test_id.clone() {
+                    chevron = chevron.test_id(test_id);
+                }
+                row.push(chevron);
             }
 
             vec![cx.flex(
@@ -1994,10 +2060,15 @@ fn menu_row_children<H: UiHost>(
     vec![chrome].into()
 }
 
-fn submenu_chevron_right_icon<H: UiHost>(
+fn submenu_chevron_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    direction: direction_prim::LayoutDirection,
     fg: fret_core::Color,
 ) -> AnyElement {
+    let icon = match direction {
+        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
+        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
+    };
     cx.flex(
         FlexProps {
             layout: {
@@ -2017,7 +2088,7 @@ fn submenu_chevron_right_icon<H: UiHost>(
         move |cx| {
             vec![decl_icon::icon_with(
                 cx,
-                ids::ui::CHEVRON_RIGHT,
+                icon,
                 Some(Px(16.0)),
                 Some(ColorRef::Color(fg)),
             )]

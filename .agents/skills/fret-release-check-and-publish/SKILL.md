@@ -140,6 +140,13 @@ Important limitations:
 - CI is validated against `.github/workflows/release-plz.yml` (canonical repo guard, `fetch-depth: 0`, permissions).
 - If publishing: the release PR is merged and the publish job completes (tags/releases visible).
 
+## Examples
+
+- Example: debug a release-plz failure
+  - User says: "release-plz failed—what do we fix?"
+  - Actions: run the preflight, identify version-group/manifest issues, and verify publish permissions.
+  - Result: a clear fix list before re-running CI.
+
 ## Common pitfalls
 
 - `all dependencies must have a version requirement specified when publishing`
@@ -179,6 +186,13 @@ Important limitations:
 - `docs/release/release-plz-adoption-analysis.md`
 - `docs/release/v0.1.0-release-checklist.md`
 - `tools/release_closure_check.py`
+
+## Troubleshooting
+
+- Symptom: publish fails due to missing credentials.
+  - Fix: confirm `CARGO_REGISTRY_TOKEN` is present in CI secrets and scoped correctly.
+- Symptom: workspace versioning becomes inconsistent.
+  - Fix: use the configured version group rules; avoid ad-hoc per-crate bumps.
 
 ## Related skills
 

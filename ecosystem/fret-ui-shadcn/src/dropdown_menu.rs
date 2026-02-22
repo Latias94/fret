@@ -1026,6 +1026,10 @@ fn submenu_chevron_right_text<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
 ) -> AnyElement {
+    let icon = match direction_prim::use_direction_in_scope(cx, None) {
+        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
+        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
+    };
     cx.flex(
         FlexProps {
             layout: {
@@ -1046,7 +1050,7 @@ fn submenu_chevron_right_text<H: UiHost>(
         move |cx| {
             vec![decl_icon::icon_with(
                 cx,
-                ids::ui::CHEVRON_RIGHT,
+                icon,
                 Some(Px(16.0)),
                 Some(ColorRef::Color(fg)),
             )]
@@ -4930,6 +4934,7 @@ mod tests {
                     SemanticsRole::TextField => "TextField",
                     SemanticsRole::List => "List",
                     SemanticsRole::ListItem => "ListItem",
+                    SemanticsRole::Separator => "Separator",
                     SemanticsRole::ListBox => "ListBox",
                     SemanticsRole::ListBoxOption => "ListBoxOption",
                     SemanticsRole::TreeItem => "TreeItem",

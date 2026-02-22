@@ -213,14 +213,47 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target: “encode/compile/execute” ownership and regression discipline without contract changes.
   - Evidence: `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`,
     `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row + summary update).
-- [ ] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+- [~] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+  - Landed (step 1): reduce bind-group rebuild churn by making “stable sampler + linear/nearest pair” explicit and reusing renderer-owned globals
+    in uniform bind groups.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`SamplingBindGroups`, `SamplingBindGroups::pick`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
   - Goal: reduce churn in bind group rebuild paths and make ownership explicit.
   - Gate: `cargo test -p fret-render-wgpu --lib` + `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
-- [ ] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
+- [~] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
   - Goal: one place to reason about “recreate buffer → rebuild bind group → invalidate caches”.
+  - Landed (step 1): centralize uniform-dependent buffer replacement so every resize flows through a single rebuild+invalidate path.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
+    - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`ensure_*_capacity`)
+  - Landed (step 2): make uniform-resource invalidation explicit and versioned (uniform buffers ↔ mask-image override bind groups).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups` mixes revisions)
+  - Landed (step 3): extract uniform/clip/mask/render-space buffers into a dedicated `UniformResources` subsystem.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::uniforms`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (writes to `uniforms.*_buffer`)
   - Gate: run the anchor conformance set listed in ADR 0201.
-- [ ] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
+- [~] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.
+  - Landed (step 1): move viewport/image sampler+texture bind group caching behind `BindGroupCaches` methods (no recorder-side closures).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_viewport_sampler_texture_bind_group`, `ensure_image_sampler_texture_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (call sites in `prepare_*_bind_groups`)
+  - Landed (step 2): move uniform mask-image override bind group caching behind `BindGroupCaches` methods (no recorder-side closures).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
 ## M7 — Post-v1 semantic expansions (deferred backlog)

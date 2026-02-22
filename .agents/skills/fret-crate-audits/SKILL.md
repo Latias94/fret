@@ -95,11 +95,25 @@ Prefer producing:
 - Layering policy: `docs/dependency-policy.md`
 - Audit note template: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
 
+## Examples
+
+- Example: pre-refactor hazard scan
+  - User says: "Can we safely refactor this crate?"
+  - Actions: map purpose/exports/deps, identify hidden coupling, propose a minimal gate set.
+  - Result: a short audit note with next steps and risks.
+
 ## Common pitfalls
 
 - Writing a long narrative without extracting landable refactor steps.
 - Touching public API surfaces without an explicit “surface diff” and a gate.
 - Fixing a layering violation by adding allowlists instead of moving code.
+
+## Troubleshooting
+
+- Symptom: the audit balloons into a rewrite.
+  - Fix: timebox, focus on hazards + boundaries first; defer style cleanup.
+- Symptom: unclear public surface.
+  - Fix: start from the crate root exports and look for cross-crate callers before changing structure.
 
 ## Related skills
 

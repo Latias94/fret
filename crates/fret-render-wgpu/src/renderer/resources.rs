@@ -134,6 +134,19 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let uniforms = UniformResources::new(
+            uniform_buffer,
+            uniform_stride,
+            uniform_capacity,
+            render_space_buffer,
+            render_space_stride,
+            render_space_capacity,
+            clip_buffer,
+            clip_capacity,
+            mask_buffer,
+            mask_capacity,
+        );
+
         let material_catalog_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret material catalog texture array"),
             size: wgpu::Extent3d {
@@ -203,60 +216,21 @@ impl Renderer {
         let mask_image_identity_view =
             mask_image_identity_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret quad uniforms bind group"),
+        let uniform_bind_group = super::bind_group_builders::UniformBindGroupGlobals {
             layout: &uniform_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &uniform_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &clip_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &mask_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &render_space_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(&mask_image_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(&mask_image_identity_view),
-                },
-            ],
-        });
+            material_catalog_view: &material_catalog_view,
+            material_catalog_sampler: &material_catalog_sampler,
+            mask_image_sampler: &mask_image_sampler,
+            mask_image_identity_view: &mask_image_identity_view,
+        }
+        .create(
+            device,
+            "fret quad uniforms bind group",
+            &uniforms.uniform_buffer,
+            &uniforms.clip_buffer,
+            &uniforms.mask_buffer,
+            &uniforms.render_space_buffer,
+        );
 
         let viewport_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -486,7 +460,6 @@ impl Renderer {
 
         Self {
             adapter: adapter.clone(),
-            uniform_buffer,
             uniform_bind_group,
             uniform_bind_group_layout,
             mask_image_sampler,
@@ -494,15 +467,7 @@ impl Renderer {
             _mask_image_identity_texture: mask_image_identity_texture,
             mask_image_identity_view,
             mask_image_identity_uploaded: false,
-            render_space_buffer,
-            render_space_stride,
-            render_space_capacity,
-            uniform_stride,
-            uniform_capacity,
-            clip_buffer,
-            clip_capacity,
-            mask_buffer,
-            mask_capacity,
+            uniforms,
             material_catalog_texture,
             material_catalog_view,
             material_catalog_sampler,

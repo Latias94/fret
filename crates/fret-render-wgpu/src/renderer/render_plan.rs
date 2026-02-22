@@ -902,6 +902,11 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::ClipMask(pass) => {
+                if !matches!(pass.load, wgpu::LoadOp::Clear(_)) {
+                    return Err(format!(
+                        "pass[{pass_index}] ClipMask must clear its destination"
+                    ));
+                }
                 if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {

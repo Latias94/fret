@@ -136,6 +136,13 @@ If the change affects publishable crates or release automation:
 - Upstream parity: `.agents/skills/fret-shadcn-source-alignment/SKILL.md`
 - Base UI (upstream source + docs): https://github.com/mui/base-ui (see `packages/react/src/` and `docs/`)
 
+## Examples
+
+- Example: landing a contract change safely
+  - User says: "We need to change input/focus behavior—how do we do it safely?"
+  - Actions: write/update the ADR, add a repro + gate + evidence anchors, then enforce boundaries.
+  - Result: a durable contract change that is reviewable.
+
 ## Common pitfalls
 
 - Landing a behavior change without a gate (regressions return as human-only bugs).
@@ -143,6 +150,13 @@ If the change affects publishable crates or release automation:
 - Not leaving worst bundle paths for perf work (attribution becomes non-deterministic).
 - Doing parity work without locking it with a test/script (drift returns quickly).
 - Tweaking motion “by feel” without fixed-delta diag gates (flake + no regression signal).
+
+## Troubleshooting
+
+- Symptom: behavior change is hard to validate.
+  - Fix: add a minimal scripted repro (`tools/diag-scripts/`) and store the packed bundle as evidence.
+- Symptom: refactor crosses multiple crates.
+  - Fix: pull in `fret-boundary-checks` early to avoid portability regressions.
 
 ## Related skills
 

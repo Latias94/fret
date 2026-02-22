@@ -190,133 +190,54 @@ impl Renderer {
         clip_buffer: &wgpu::Buffer,
         mask_buffer: &wgpu::Buffer,
         render_space_buffer: &wgpu::Buffer,
-        mask_image_sampler: &wgpu::Sampler,
-        mask_image_view: &wgpu::TextureView,
     ) -> wgpu::BindGroup {
-        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let render_space_size = std::mem::size_of::<RenderSpaceUniform>() as u64;
-
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(label),
+        super::bind_group_builders::UniformBindGroupGlobals {
             layout: &self.uniform_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: uniform_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: clip_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: mask_buffer,
-                        offset: 0,
-                        size: None,
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::TextureView(&self.material_catalog_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: wgpu::BindingResource::Sampler(&self.material_catalog_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: render_space_buffer,
-                        offset: 0,
-                        size: Some(std::num::NonZeroU64::new(render_space_size).unwrap()),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::Sampler(mask_image_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: wgpu::BindingResource::TextureView(mask_image_view),
-                },
-            ],
-        })
+            material_catalog_view: &self.material_catalog_view,
+            material_catalog_sampler: &self.material_catalog_sampler,
+            mask_image_sampler: &self.mask_image_sampler,
+            mask_image_identity_view: &self.mask_image_identity_view,
+        }
+        .create(
+            device,
+            label,
+            uniform_buffer,
+            clip_buffer,
+            mask_buffer,
+            render_space_buffer,
+        )
+    }
+
+    fn rebuild_uniform_bind_group(&mut self, device: &wgpu::Device, label: &'static str) {
+        self.uniform_bind_group = self.create_uniform_bind_group(
+            device,
+            label,
+            &self.uniforms.uniform_buffer,
+            &self.uniforms.clip_buffer,
+            &self.uniforms.mask_buffer,
+            &self.uniforms.render_space_buffer,
+        );
     }
 
     pub(super) fn ensure_uniform_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.uniform_capacity {
+        if !self
+            .uniforms
+            .ensure_viewport_uniform_capacity(device, needed)
+        {
             return;
         }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.uniform_capacity.saturating_mul(2).max(1));
-
-        let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret uniforms buffer (resized)"),
-            size: self.uniform_stride * new_capacity as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized)",
-            &uniform_buffer,
-            &self.clip_buffer,
-            &self.mask_buffer,
-            &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
-        );
-
-        self.uniform_buffer = uniform_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
-        self.uniform_capacity = new_capacity;
+        self.bind_group_caches
+            .invalidate_uniform_mask_image_override_bind_groups();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized)");
     }
 
     pub(super) fn ensure_render_space_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.render_space_capacity {
+        if !self.uniforms.ensure_render_space_capacity(device, needed) {
             return;
         }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.render_space_capacity.saturating_mul(2).max(1));
-
-        let render_space_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret render-space uniform buffer (resized)"),
-            size: self.render_space_stride * new_capacity as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        // Rebuild the uniform bind group because it references `render_space_buffer`.
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized render space)",
-            &self.uniform_buffer,
-            &self.clip_buffer,
-            &self.mask_buffer,
-            &render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
-        );
-
-        self.render_space_buffer = render_space_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
-        self.render_space_capacity = new_capacity;
+        self.bind_group_caches
+            .invalidate_uniform_mask_image_override_bind_groups();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized render space)");
     }
 
     pub(super) fn ensure_scale_param_capacity(&mut self, device: &wgpu::Device, needed: usize) {
@@ -338,68 +259,20 @@ impl Renderer {
     }
 
     pub(super) fn ensure_clip_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.clip_capacity {
+        if !self.uniforms.ensure_clip_capacity(device, needed) {
             return;
         }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.clip_capacity.saturating_mul(2).max(1));
-        let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
-        let clip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret clip stack buffer (resized)"),
-            size: clip_entry_size.saturating_mul(new_capacity as u64).max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized clip buffer)",
-            &self.uniform_buffer,
-            &clip_buffer,
-            &self.mask_buffer,
-            &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
-        );
-
-        self.clip_buffer = clip_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
-        self.clip_capacity = new_capacity;
+        self.bind_group_caches
+            .invalidate_uniform_mask_image_override_bind_groups();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized clip buffer)");
     }
 
     pub(super) fn ensure_mask_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.mask_capacity {
+        if !self.uniforms.ensure_mask_capacity(device, needed) {
             return;
         }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.mask_capacity.saturating_mul(2).max(1));
-        let mask_entry_size = std::mem::size_of::<MaskGradientUniform>() as u64;
-        let mask_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret mask stack buffer (resized)"),
-            size: mask_entry_size.saturating_mul(new_capacity as u64).max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized mask buffer)",
-            &self.uniform_buffer,
-            &self.clip_buffer,
-            &mask_buffer,
-            &self.render_space_buffer,
-            &self.mask_image_sampler,
-            &self.mask_image_identity_view,
-        );
-
-        self.mask_buffer = mask_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
-        self.mask_capacity = new_capacity;
+        self.bind_group_caches
+            .invalidate_uniform_mask_image_override_bind_groups();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized mask buffer)");
     }
 }

@@ -46,6 +46,15 @@ use crate::{Dialog, DialogContent, ScrollArea};
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnOpenChangeWithReason =
     Arc<dyn Fn(bool, CommandDialogOpenChangeReason) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+type OnSelectValueAction = Arc<
+    dyn Fn(
+            &mut dyn fret_ui::action::UiActionHost,
+            fret_ui::action::ActionCx,
+            ActivateReason,
+            Arc<str>,
+        ) + 'static,
+>;
 
 type CommandPaletteFilter = dyn Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static;
 pub type CommandPaletteFilterFn = Arc<CommandPaletteFilter>;
@@ -815,6 +824,7 @@ pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
     disabled: bool,
+    force_mount: bool,
     keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
@@ -822,6 +832,7 @@ pub struct CommandItem {
     shortcut: Option<Arc<str>>,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
+    on_select_value: Option<OnSelectValueAction>,
     children: Vec<AnyElement>,
 }
 
@@ -831,6 +842,7 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
+            .field("force_mount", &self.force_mount)
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
@@ -838,6 +850,7 @@ impl std::fmt::Debug for CommandItem {
             .field("shortcut", &self.shortcut.as_ref().map(|s| s.as_ref()))
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
+            .field("on_select_value", &self.on_select_value.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -850,6 +863,7 @@ impl CommandItem {
             label: label.clone(),
             value: cmdk_trimmed_arc(label.clone()),
             disabled: false,
+            force_mount: false,
             keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
@@ -857,6 +871,7 @@ impl CommandItem {
             shortcut: None,
             command: None,
             on_select: None,
+            on_select_value: None,
             children: Vec::new(),
         }
     }
@@ -892,6 +907,13 @@ impl CommandItem {
         self
     }
 
+    /// cmdk: `forceMount`. When true, the item remains rendered even when it does not match the
+    /// current filter query.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
     /// Shows a cmdk-style checkmark indicator, with visibility controlled by `checked`.
     pub fn checkmark(mut self, checked: bool) -> Self {
         self.checked = checked;
@@ -914,6 +936,20 @@ impl CommandItem {
         self
     }
 
+    /// cmdk: `onSelect(value)`. Called when the item is activated, with the item's resolved `value`.
+    pub fn on_select_value_action<F>(mut self, on_select: F) -> Self
+    where
+        F: Fn(
+                &mut dyn fret_ui::action::UiActionHost,
+                fret_ui::action::ActionCx,
+                ActivateReason,
+                Arc<str>,
+            ) + 'static,
+    {
+        self.on_select_value = Some(Arc::new(on_select));
+        self
+    }
+
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
@@ -925,6 +961,7 @@ impl CommandItem {
 pub struct CommandGroup {
     heading: Option<Arc<str>>,
     items: Vec<CommandItem>,
+    force_mount: bool,
 }
 
 impl std::fmt::Debug for CommandGroup {
@@ -932,6 +969,7 @@ impl std::fmt::Debug for CommandGroup {
         f.debug_struct("CommandGroup")
             .field("heading", &self.heading.as_ref().map(|s| s.as_ref()))
             .field("items_len", &self.items.len())
+            .field("force_mount", &self.force_mount)
             .finish()
     }
 }
@@ -942,11 +980,18 @@ impl CommandGroup {
         Self {
             heading: None,
             items,
+            force_mount: false,
         }
     }
 
     pub fn heading(mut self, heading: impl Into<Arc<str>>) -> Self {
         self.heading = Some(heading.into());
+        self
+    }
+
+    /// cmdk: `forceMount`. When true, keeps the group visible even when the query filters out all items.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
         self
     }
 
@@ -962,12 +1007,27 @@ impl CommandGroup {
 }
 
 /// shadcn/ui `CommandSeparator` (v4).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CommandSeparator;
+#[derive(Debug, Clone, Default)]
+pub struct CommandSeparator {
+    always_render: bool,
+    test_id: Option<Arc<str>>,
+}
 
 impl CommandSeparator {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// cmdk: `alwaysRender`. When true, the separator remains visible even when the query is non-empty.
+    pub fn always_render(mut self, always_render: bool) -> Self {
+        self.always_render = always_render;
+        self
+    }
+
+    /// Installs a stable `test_id` on the separator (for automation).
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 }
 
@@ -1177,7 +1237,13 @@ impl CommandList {
 
             let disabled_flags: Vec<bool> = items
                 .iter()
-                .map(|i| disabled || i.disabled || (i.command.is_none() && i.on_select.is_none()))
+                .map(|i| {
+                    disabled
+                        || i.disabled
+                        || (i.command.is_none()
+                            && i.on_select.is_none()
+                            && i.on_select_value.is_none())
+                })
                 .collect();
             let tab_stop = roving_focus_group::first_enabled(&disabled_flags);
 
@@ -1303,29 +1369,42 @@ impl CommandList {
                                 },
                                 |_cx| Vec::new(),
                             )),
-                            CommandPaletteRenderRow::Separator => out.push(cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Px(Px(1.0));
-                                        layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                        layout.margin.right = fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                        layout
+                            CommandPaletteRenderRow::Separator(test_id) => {
+                                let mut sep = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Px(Px(1.0));
+                                            // new-york-v4: `-mx-1 h-px`.
+                                            layout.margin.left =
+                                                fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                            layout.margin.right =
+                                                fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                            layout
+                                        },
+                                        background: Some(border),
+                                        ..Default::default()
                                     },
-                                    background: Some(border),
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::new(),
-                            )),
+                                    |_cx| Vec::new(),
+                                );
+                                sep = sep.attach_semantics(
+                                    SemanticsDecoration::default().role(SemanticsRole::Separator),
+                                );
+                                if let Some(test_id) = test_id.clone() {
+                                    sep = sep.test_id(test_id);
+                                }
+                                out.push(sep);
+                            }
                             CommandPaletteRenderRow::Item(idx) => {
                                 let Some(item) = items.get(idx).cloned() else { continue };
 
-                                let enabled = disabled_flags.get(idx).copied() == Some(false);
+                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
                                 let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                 let query_for_row = query_for_render.clone();
                                 let value_key = item.value.clone();
+                                let value_for_select = item.value.clone();
                                 let label = item.label.clone();
                                 let test_id = item.test_id.clone();
                                 let chrome_test_id = test_id
@@ -1333,10 +1412,11 @@ impl CommandList {
                                     .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                 let command = item.command;
                                 let on_select = item.on_select.clone();
+                                let on_select_value = item.on_select_value.clone();
                                 let children = item.children;
                                 let text_style = text_style.clone();
 
-                                out.push(cx.keyed(value_key, |cx| {
+                                out.push(cx.keyed(value_key, move |cx| {
                                     cx.pressable(
                                         PressableProps {
                                             layout: item_layout,
@@ -1349,15 +1429,34 @@ impl CommandList {
                                                 test_id: test_id.clone(),
                                                 ..Default::default()
                                             },
-                                            ..Default::default()
-                                        },
-                                        move |cx, st| {
-                                            cx.pressable_dispatch_command_if_enabled_opt(command);
-                                            if let Some(on_select) = on_select.clone() {
-                                                cx.pressable_add_on_activate(on_select);
-                                            }
-                                            let hovered = st.hovered && !st.pressed;
-                                            let pressed = st.pressed;
+                                        ..Default::default()
+                                    },
+                                    move |cx, st| {
+                                        cx.pressable_dispatch_command_if_enabled_opt(command);
+                                        if on_select.is_some() || on_select_value.is_some() {
+                                            let on_select = on_select.clone();
+                                            let on_select_value = on_select_value.clone();
+                                            let value = value_for_select.clone();
+                                            cx.pressable_add_on_activate(Arc::new(
+                                                move |host, action_cx, reason| {
+                                                    if let Some(on_select_value) =
+                                                        on_select_value.clone()
+                                                    {
+                                                        on_select_value(
+                                                            host,
+                                                            action_cx,
+                                                            reason,
+                                                            value.clone(),
+                                                        );
+                                                    }
+                                                    if let Some(on_select) = on_select.clone() {
+                                                        on_select(host, action_cx, reason);
+                                                    }
+                                                },
+                                            ));
+                                        }
+                                        let hovered = st.hovered && !st.pressed;
+                                        let pressed = st.pressed;
 
                                             let bg = (hovered || pressed).then_some(bg_hover);
                                             let props = ContainerProps {
@@ -1459,6 +1558,7 @@ pub struct CommandPalette {
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
+    on_value_change: Option<OnValueChange>,
     input_wrapper_h: MetricRef,
     input_h: MetricRef,
     input_icon_size: MetricRef,
@@ -1471,6 +1571,7 @@ pub struct CommandPalette {
     scroll: LayoutRefinement,
     test_id_input: Option<Arc<str>>,
     test_id_item_prefix: Option<Arc<str>>,
+    test_id_heading_prefix: Option<Arc<str>>,
     pub(crate) input_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
     pub(crate) list_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
@@ -1479,7 +1580,7 @@ pub struct CommandPalette {
 enum CommandPaletteRenderRow {
     Heading(Arc<str>),
     GroupPad,
-    Separator,
+    Separator(Option<Arc<str>>),
     Item(usize),
 }
 
@@ -1496,13 +1597,14 @@ fn command_palette_render_rows_for_query_with_options(
     #[derive(Clone)]
     enum PendingRow {
         Heading(Arc<str>),
-        Separator,
+        Separator(CommandSeparator),
         Item {
             group: Option<u32>,
             item: CommandItem,
         },
     }
 
+    let has_search = !query.trim().is_empty();
     let query_for_filter = if should_filter { query } else { "" };
     let score_item = |item: &CommandItem| -> f32 {
         if query_for_filter.is_empty() {
@@ -1531,11 +1633,17 @@ fn command_palette_render_rows_for_query_with_options(
             match entry {
                 CommandEntry::Item(item) => {
                     let score = score_item(&item);
-                    if score > 0.0 {
+                    if score > 0.0 || item.force_mount {
                         pending_rows.push(PendingRow::Item { group: None, item });
                     }
                 }
-                CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
+                CommandEntry::Separator(sep) => {
+                    // cmdk: separators are visible when the search query is empty (or when
+                    // `alwaysRender` is true), even when `shouldFilter` is false.
+                    if !has_search || sep.always_render {
+                        pending_rows.push(PendingRow::Separator(sep));
+                    }
+                }
                 CommandEntry::Group(group) => {
                     if group.items.is_empty() {
                         continue;
@@ -1558,20 +1666,30 @@ fn command_palette_render_rows_for_query_with_options(
         // cmdk sorts items globally by score and groups by highest item score. It also pushes
         // grouped items below ungrouped items.
         let mut root_items: Vec<(usize, f32, CommandItem)> = Vec::new();
-        let mut groups: Vec<(usize, f32, Option<Arc<str>>, Vec<(usize, f32, CommandItem)>)> =
-            Vec::new();
+        let mut groups: Vec<(
+            usize,
+            f32,
+            Option<Arc<str>>,
+            bool,
+            Vec<(usize, f32, CommandItem)>,
+        )> = Vec::new();
+        let mut always_render_separators: Vec<CommandSeparator> = Vec::new();
 
         for (entry_idx, entry) in entries.into_iter().enumerate() {
             match entry {
                 CommandEntry::Item(item) => {
                     let score = score_item(&item);
-                    if score > 0.0 {
+                    if score > 0.0 || item.force_mount {
                         root_items.push((entry_idx, score, item));
                     }
                 }
-                CommandEntry::Separator(_) => {}
+                CommandEntry::Separator(sep) => {
+                    if sep.always_render {
+                        always_render_separators.push(sep);
+                    }
+                }
                 CommandEntry::Group(group) => {
-                    if group.items.is_empty() {
+                    if group.items.is_empty() && !(group.force_mount && group.heading.is_some()) {
                         continue;
                     }
 
@@ -1581,11 +1699,11 @@ fn command_palette_render_rows_for_query_with_options(
                         .enumerate()
                         .filter_map(|(idx, item)| {
                             let score = score_item(&item);
-                            (score > 0.0).then_some((idx, score, item))
+                            (score > 0.0 || item.force_mount).then_some((idx, score, item))
                         })
                         .collect();
 
-                    if scored_items.is_empty() {
+                    if scored_items.is_empty() && !group.force_mount {
                         continue;
                     }
 
@@ -1598,7 +1716,17 @@ fn command_palette_render_rows_for_query_with_options(
                         .map(|(_, score, _)| *score)
                         .fold(0.0_f32, f32::max);
 
-                    groups.push((entry_idx, max_score, group.heading, scored_items));
+                    if scored_items.is_empty() && group.heading.is_none() {
+                        continue;
+                    }
+
+                    groups.push((
+                        entry_idx,
+                        max_score,
+                        group.heading,
+                        group.force_mount,
+                        scored_items,
+                    ));
                 }
             }
         }
@@ -1606,16 +1734,21 @@ fn command_palette_render_rows_for_query_with_options(
         root_items.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
             b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
         });
-        groups.sort_by(|(a_idx, a_score, _, _), (b_idx, b_score, _, _)| {
+        groups.sort_by(|(a_idx, a_score, _, _, _), (b_idx, b_score, _, _, _)| {
             b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
         });
 
+        pending_rows.extend(
+            always_render_separators
+                .into_iter()
+                .map(PendingRow::Separator),
+        );
         pending_rows.extend(
             root_items
                 .into_iter()
                 .map(|(_, _, item)| PendingRow::Item { group: None, item }),
         );
-        for (_, _, heading, scored_items) in groups {
+        for (_, _, heading, _force_mount, scored_items) in groups {
             let group_id = next_group_id;
             next_group_id = next_group_id.saturating_add(1);
 
@@ -1644,12 +1777,15 @@ fn command_palette_render_rows_for_query_with_options(
     let mut prev_is_sep = false;
     for (idx, row) in pending_rows.into_iter().enumerate() {
         match row {
-            PendingRow::Separator => {
-                if !seen_item_before || !has_item_from[idx + 1] || prev_is_sep {
+            PendingRow::Separator(sep) => {
+                if prev_is_sep {
+                    continue;
+                }
+                if !sep.always_render && (!seen_item_before || !has_item_from[idx + 1]) {
                     continue;
                 }
                 prev_is_sep = true;
-                filtered_rows.push(PendingRow::Separator);
+                filtered_rows.push(PendingRow::Separator(sep));
             }
             PendingRow::Item { group, item } => {
                 seen_item_before = true;
@@ -1678,7 +1814,9 @@ fn command_palette_render_rows_for_query_with_options(
                 saw_heading = true;
                 out
             }
-            PendingRow::Separator => vec![CommandPaletteRenderRow::Separator],
+            PendingRow::Separator(sep) => {
+                vec![CommandPaletteRenderRow::Separator(sep.test_id.clone())]
+            }
             PendingRow::Item { group, item } => {
                 let idx = items.len();
                 items.push(item);
@@ -1703,6 +1841,7 @@ impl std::fmt::Debug for CommandPalette {
                 "default_value",
                 &self.default_value.as_ref().map(|s| s.as_ref()),
             )
+            .field("on_value_change", &self.on_value_change.is_some())
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -1710,6 +1849,7 @@ impl std::fmt::Debug for CommandPalette {
             .field("a11y_label", &self.a11y_label.as_ref())
             .field("input_role", &self.input_role)
             .field("input_expanded", &self.input_expanded)
+            .field("on_value_change", &self.on_value_change.is_some())
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("scroll", &self.scroll)
@@ -1720,6 +1860,10 @@ impl std::fmt::Debug for CommandPalette {
             .field(
                 "test_id_item_prefix",
                 &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "test_id_heading_prefix",
+                &self.test_id_heading_prefix.as_ref().map(|s| s.as_ref()),
             )
             .field("input_id_out_cell", &self.input_id_out_cell.is_some())
             .field("list_id_out_cell", &self.list_id_out_cell.is_some())
@@ -1752,6 +1896,7 @@ impl CommandPalette {
             input_test_id: None,
             list_test_id: None,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
+            on_value_change: None,
             input_wrapper_h: Px(36.0).into(),
             input_h: Px(40.0).into(),
             input_icon_size: Px(16.0).into(),
@@ -1767,6 +1912,7 @@ impl CommandPalette {
                 .min_w_0(),
             test_id_input: None,
             test_id_item_prefix: None,
+            test_id_heading_prefix: None,
             input_id_out_cell: None,
             list_id_out_cell: None,
         }
@@ -1840,6 +1986,12 @@ impl CommandPalette {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// cmdk: `onValueChange(value)`. Called when the palette's active (highlighted) `value` changes.
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
         self
     }
 
@@ -1928,6 +2080,12 @@ impl CommandPalette {
         self
     }
 
+    /// Installs stable `test_id`s on group headings using `{prefix}{sanitized_heading}`.
+    pub fn test_id_heading_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_heading_prefix = Some(prefix.into());
+        self
+    }
+
     pub(crate) fn input_id_out_cell(mut self, cell: Rc<Cell<Option<GlobalElementId>>>) -> Self {
         self.input_id_out_cell = Some(cell);
         self
@@ -1960,6 +2118,7 @@ impl CommandPalette {
             value: Arc<str>,
             command: Option<CommandId>,
             on_select: Option<fret_ui::action::OnActivate>,
+            on_select_value: Option<OnSelectValueAction>,
             disabled: bool,
         }
 
@@ -2000,8 +2159,10 @@ impl CommandPalette {
             let list_test_id = self.list_test_id.clone();
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
+            let on_value_change = self.on_value_change.clone();
             let test_id_input = self.test_id_input;
             let test_id_item_prefix = self.test_id_item_prefix;
+            let test_id_heading_prefix = self.test_id_heading_prefix;
             let query = cx
                 .watch_model(&self.model)
                 .layout()
@@ -2030,7 +2191,7 @@ impl CommandPalette {
                         CommandPaletteRenderRow::GroupPad => {
                             "group_pad".hash(&mut hasher);
                         }
-                        CommandPaletteRenderRow::Separator => {
+                        CommandPaletteRenderRow::Separator(_) => {
                             "separator".hash(&mut hasher);
                         }
                         CommandPaletteRenderRow::Item(idx) => {
@@ -2065,13 +2226,17 @@ impl CommandPalette {
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|i| {
-                    let disabled =
-                        disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
+                    let disabled = disabled
+                        || i.disabled
+                        || (i.command.is_none()
+                            && i.on_select.is_none()
+                            && i.on_select_value.is_none());
                     (
                         PaletteEntry {
                             value: i.value.clone(),
                             command: i.command.clone(),
                             on_select: i.on_select.clone(),
+                            on_select_value: i.on_select_value.clone(),
                             disabled,
                         },
                         disabled,
@@ -2123,6 +2288,16 @@ impl CommandPalette {
                     .update(&active, |v| *v = next_active.clone());
             }
 
+            if let Some(handler) = on_value_change.as_ref() {
+                let change = cx
+                    .with_state(CommandPaletteValueChangeCallbackState::default, |state| {
+                        command_palette_value_change_event(state, next_active.clone())
+                    });
+                if let Some(value) = change {
+                    handler(value);
+                }
+            }
+
             let mut row_ids: Vec<fret_ui::elements::GlobalElementId> =
                 Vec::with_capacity(items.len());
 
@@ -2161,7 +2336,11 @@ impl CommandPalette {
                     CommandPaletteRenderRow::Heading(heading) => {
                         let fg = theme.color_token("muted-foreground");
                         let style = heading_text_style(&theme);
-                        cx.container(
+                        let test_id_for_row = test_id_heading_prefix.clone().map(|prefix| {
+                            let seg = sanitize_test_id_segment(heading.as_ref());
+                            Arc::<str>::from(format!("{prefix}{seg}"))
+                        });
+                        let mut heading_row = cx.container(
                             ContainerProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
@@ -2196,7 +2375,11 @@ impl CommandPalette {
 
                                 vec![text.into_element(cx)]
                             },
-                        )
+                        );
+                        if let Some(test_id) = test_id_for_row {
+                            heading_row = heading_row.test_id(test_id);
+                        }
+                        heading_row
                     }
                     CommandPaletteRenderRow::GroupPad => cx.container(
                         ContainerProps {
@@ -2215,9 +2398,9 @@ impl CommandPalette {
                         },
                         |_cx| Vec::new(),
                     ),
-                    CommandPaletteRenderRow::Separator => {
+                    CommandPaletteRenderRow::Separator(test_id) => {
                         let border = border(&theme);
-                        cx.container(
+                        let mut sep = cx.container(
                             ContainerProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
@@ -2233,7 +2416,14 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             |_cx| Vec::new(),
-                        )
+                        );
+                        sep = sep.attach_semantics(
+                            SemanticsDecoration::default().role(SemanticsRole::Separator),
+                        );
+                        if let Some(test_id) = test_id.clone() {
+                            sep = sep.test_id(test_id);
+                        }
+                        sep
                     }
                     CommandPaletteRenderRow::Item(idx) => {
                         let Some(item) = items.get(idx).cloned() else {
@@ -2263,6 +2453,7 @@ impl CommandPalette {
                             let shortcut = item.shortcut.clone();
                             let command = item.command;
                             let on_select = item.on_select.clone();
+                            let on_select_value = item.on_select_value.clone();
                             let children = item.children;
                             let text_style = text_style.clone();
 
@@ -2303,8 +2494,27 @@ impl CommandPalette {
                                 },
                                 move |cx, st| {
                                     cx.pressable_dispatch_command_if_enabled_opt(command);
-                                    if let Some(on_select) = on_select.clone() {
-                                        cx.pressable_add_on_activate(on_select);
+                                    if on_select.is_some() || on_select_value.is_some() {
+                                        let on_select = on_select.clone();
+                                        let on_select_value = on_select_value.clone();
+                                        let value = value.clone();
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, action_cx, reason| {
+                                                if let Some(on_select_value) =
+                                                    on_select_value.clone()
+                                                {
+                                                    on_select_value(
+                                                        host,
+                                                        action_cx,
+                                                        reason,
+                                                        value.clone(),
+                                                    );
+                                                }
+                                                if let Some(on_select) = on_select.clone() {
+                                                    on_select(host, action_cx, reason);
+                                                }
+                                            },
+                                        ));
                                     }
                                     if enabled && !disable_pointer_selection {
                                         let active = active_for_row.clone();
@@ -2732,6 +2942,15 @@ impl CommandPalette {
                                         return false;
                                     };
 
+                                    if let Some(on_select_value) = entry.on_select_value.clone() {
+                                        on_select_value(
+                                            host,
+                                            action_cx,
+                                            ActivateReason::Keyboard,
+                                            entry.value.clone(),
+                                        );
+                                    }
+
                                     if let Some(on_select) = entry.on_select.clone() {
                                         on_select(host, action_cx, ActivateReason::Keyboard);
                                     }
@@ -2855,6 +3074,7 @@ pub struct CommandDialog {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    on_value_change: Option<OnValueChange>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2914,6 +3134,7 @@ impl CommandDialog {
             filter: None,
             value: None,
             default_value: None,
+            on_value_change: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -2959,6 +3180,7 @@ impl CommandDialog {
             filter: None,
             value: None,
             default_value: None,
+            on_value_change: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -3071,6 +3293,13 @@ impl CommandDialog {
         self
     }
 
+    /// cmdk: `onValueChange(value)`. Called when the dialog's internal palette changes its active
+    /// (highlighted) `value`.
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// cmdk: `defaultValue` (initial selected item value).
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
         self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
@@ -3110,6 +3339,7 @@ impl CommandDialog {
         let filter = self.filter;
         let value = self.value;
         let default_value = self.default_value;
+        let on_value_change = self.on_value_change;
         let wrap = self.wrap;
         let vim_bindings = self.vim_bindings;
         let disable_pointer_selection = self.disable_pointer_selection;
@@ -3230,6 +3460,7 @@ impl CommandDialog {
                     .disabled(disabled)
                     .should_filter(should_filter)
                     .value(value.clone())
+                    .on_value_change(on_value_change.clone())
                     .wrap(wrap)
                     .vim_bindings(vim_bindings)
                     .disable_pointer_selection(disable_pointer_selection)
@@ -3261,6 +3492,30 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
+#[derive(Default)]
+struct CommandPaletteValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn command_palette_value_change_event(
+    state: &mut CommandPaletteValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
+        return None;
+    }
+
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
+    }
+
+    None
+}
+
 pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -3274,6 +3529,7 @@ mod tests {
     use super::*;
 
     use std::cell::RefCell;
+    use std::sync::Mutex;
 
     use fret_app::App;
     use fret_core::{
@@ -3737,6 +3993,77 @@ mod tests {
     }
 
     #[test]
+    fn command_item_on_select_value_action_receives_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::new());
+        let selected_value = app.models_mut().insert(None::<Arc<str>>);
+
+        let items = vec![
+            CommandItem::new("Alpha")
+                .value("alpha-id")
+                .on_select_value_action({
+                    let selected_value = selected_value.clone();
+                    move |host, action_cx, _reason, value| {
+                        let _ = host.models_mut().update(&selected_value, |cur| {
+                            *cur = Some(value.clone());
+                        });
+                        host.request_redraw(action_cx.window);
+                    }
+                }),
+        ];
+
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            false,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Alpha"))
+            .map(|n| n.bounds)
+            .expect("Alpha option bounds");
+
+        click(&mut ui, &mut app, &mut services, rect_center(alpha));
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items,
+            false,
+        );
+
+        assert_eq!(
+            selected_value
+                .read_ref(&app, |v| v.clone())
+                .expect("read selected value")
+                .as_deref(),
+            Some("alpha-id")
+        );
+    }
+
+    #[test]
     fn command_dialog_close_on_select_closes_and_clears_query() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3991,6 +4318,36 @@ mod tests {
         root
     }
 
+    fn render_frame_with_value_and_on_value_change(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<String>,
+        value: Model<Option<Arc<str>>>,
+        on_value_change: Option<OnValueChange>,
+        items: Vec<CommandItem>,
+    ) -> fret_core::NodeId {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
+                vec![
+                    CommandPalette::new(model, items)
+                        .value(Some(value.clone()))
+                        .on_value_change(on_value_change.clone())
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_disable_pointer_selection(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -4024,7 +4381,7 @@ mod tests {
             .map(|row| match row {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
                 CommandPaletteRenderRow::GroupPad => "P".to_string(),
-                CommandPaletteRenderRow::Separator => "S".to_string(),
+                CommandPaletteRenderRow::Separator(_) => "S".to_string(),
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
                         .get(*idx)
@@ -4131,6 +4488,95 @@ mod tests {
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
+        );
+    }
+
+    #[test]
+    fn cmdk_on_value_change_emits_active_value_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let seen: Arc<Mutex<Vec<Option<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_value_change: OnValueChange = Arc::new({
+            let seen = seen.clone();
+            move |value| {
+                seen.lock().unwrap_or_else(|e| e.into_inner()).push(value);
+            }
+        });
+        let on_value_change_opt = Some(on_value_change.clone());
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+        ];
+
+        let root = render_frame_with_value_and_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            value.clone(),
+            on_value_change_opt.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        assert!(
+            seen.lock().unwrap_or_else(|e| e.into_inner()).is_empty(),
+            "expected initial mount to not emit on_value_change"
+        );
+
+        // Move highlight down.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_with_value_and_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            value.clone(),
+            on_value_change_opt,
+            items,
+        );
+
+        let seen = seen.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        assert_eq!(
+            seen.last().and_then(|v| v.as_deref()),
+            Some("Beta"),
+            "expected ArrowDown to emit the active cmdk value"
+        );
+        assert_eq!(
+            app.models().get_cloned(&value).flatten().as_deref(),
+            Some("Beta"),
+            "expected ArrowDown to update the active value model"
         );
     }
 
@@ -4274,6 +4720,30 @@ mod tests {
                 .unwrap_or(None)
                 .as_deref(),
             Some("Beta")
+        );
+    }
+
+    #[test]
+    fn cmdk_force_mount_item_survives_filtering() {
+        let entries = vec![
+            CommandItem::new("Calendar")
+                .keywords(["events"])
+                .on_select("calendar")
+                .into(),
+            CommandItem::new("Force mounted row")
+                .value("force-mounted")
+                .force_mount(true)
+                .on_select("force-mounted")
+                .into(),
+        ];
+
+        let (_rows, items, _groups) =
+            command_palette_render_rows_for_query_with_options(entries, "zzz", true, None);
+
+        assert!(
+            items
+                .iter()
+                .any(|item| item.value.as_ref() == "force-mounted")
         );
     }
 
@@ -4893,6 +5363,26 @@ mod tests {
     }
 
     #[test]
+    fn cmdk_group_force_mount_keeps_group_visible_when_filtered() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("Alpha"), CommandItem::new("Beta")])
+                .heading("Letters")
+                .force_mount(true)
+                .into(),
+            CommandGroup::new(vec![CommandItem::new("Giraffe")])
+                .heading("Animals")
+                .into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "gir", true, None);
+        let sigs = row_signatures(&rows, &items);
+        assert!(sigs.iter().any(|sig| sig == "H:Letters"));
+        assert!(sigs.iter().any(|sig| sig == "I:Giraffe"));
+        assert!(!sigs.iter().any(|sig| sig == "I:Alpha"));
+    }
+
+    #[test]
     fn command_palette_sort_orders_ungrouped_items_by_score() {
         let entries = vec![
             CommandItem::new("pal").into(),
@@ -4972,6 +5462,19 @@ mod tests {
     }
 
     #[test]
+    fn cmdk_separator_always_render_stays_visible_with_search() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().always_render(true).into(),
+            CommandItem::new("Beta").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
+        assert!(row_signatures(&rows, &items).iter().any(|sig| sig == "S"));
+    }
+
+    #[test]
     fn cmdk_should_filter_false_shows_all_items_even_when_query_non_empty() {
         let entries = vec![
             CommandItem::new("Alpha").into(),
@@ -4983,8 +5486,21 @@ mod tests {
             command_palette_render_rows_for_query_with_options(entries, "zzz", false, None);
         assert_eq!(
             row_signatures(&rows, &items),
-            vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
+            vec!["I:Alpha".to_string(), "I:Beta".to_string()]
         );
+    }
+
+    #[test]
+    fn cmdk_should_filter_false_hides_separators_unless_always_render() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().always_render(true).into(),
+            CommandItem::new("Beta").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "zzz", false, None);
+        assert!(row_signatures(&rows, &items).iter().any(|sig| sig == "S"));
     }
 
     #[test]

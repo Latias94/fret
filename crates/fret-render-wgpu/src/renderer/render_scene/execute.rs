@@ -590,39 +590,25 @@ impl Renderer {
         self.ensure_render_space_capacity(device, plan.passes.len());
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
-        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let mut uniform_bytes =
-            vec![0u8; (self.uniform_stride * encoding.uniforms.len() as u64) as usize];
-        for (i, u) in encoding.uniforms.iter().enumerate() {
-            let offset = (self.uniform_stride * i as u64) as usize;
-            uniform_bytes[offset..offset + uniform_size as usize]
-                .copy_from_slice(bytemuck::bytes_of(u));
-        }
-        queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
+        let uniform_bytes_written =
+            self.uniforms
+                .write_viewport_uniforms(queue, &encoding.uniforms) as u64;
         if perf_enabled {
             frame_perf.uniform_bytes = frame_perf
                 .uniform_bytes
-                .saturating_add(uniform_bytes.len() as u64);
+                .saturating_add(uniform_bytes_written);
         }
 
         self.ensure_clip_capacity(device, encoding.clips.len().max(1));
-        if !encoding.clips.is_empty() {
-            queue.write_buffer(&self.clip_buffer, 0, bytemuck::cast_slice(&encoding.clips));
-            if perf_enabled {
-                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
-                    (std::mem::size_of::<ClipRRectUniform>() * encoding.clips.len()) as u64,
-                );
-            }
+        let clip_bytes_written = self.uniforms.write_clips(queue, &encoding.clips) as u64;
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(clip_bytes_written);
         }
 
         self.ensure_mask_capacity(device, encoding.masks.len().max(1));
-        if !encoding.masks.is_empty() {
-            queue.write_buffer(&self.mask_buffer, 0, bytemuck::cast_slice(&encoding.masks));
-            if perf_enabled {
-                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
-                    (std::mem::size_of::<MaskGradientUniform>() * encoding.masks.len()) as u64,
-                );
-            }
+        let mask_bytes_written = self.uniforms.write_masks(queue, &encoding.masks) as u64;
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(mask_bytes_written);
         }
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
@@ -737,11 +723,11 @@ impl Renderer {
         let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
 
         debug_assert!(
-            (std::mem::size_of::<RenderSpaceUniform>() as u64) <= self.render_space_stride,
+            (std::mem::size_of::<RenderSpaceUniform>() as u64) <= self.uniforms.render_space_stride,
             "render_space_stride must fit RenderSpaceUniform"
         );
         let render_space_uniform_size = std::mem::size_of::<RenderSpaceUniform>();
-        let render_space_stride = self.render_space_stride as usize;
+        let render_space_stride = self.uniforms.render_space_stride as usize;
         let mut render_space_bytes =
             vec![0u8; render_space_stride.saturating_mul(plan.passes.len())];
         for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
@@ -757,7 +743,9 @@ impl Renderer {
             );
         }
         if !render_space_bytes.is_empty() {
-            queue.write_buffer(&self.render_space_buffer, 0, &render_space_bytes);
+            let _ = self
+                .uniforms
+                .write_render_space_bytes(queue, &render_space_bytes);
         }
 
         let (_, record_elapsed) = fret_perf::measure_span(
@@ -765,8 +753,8 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.record_passes", frame_index),
             || {
-                let render_space_capacity = self.render_space_capacity;
-                let render_space_stride = self.render_space_stride;
+                let render_space_capacity = self.uniforms.render_space_capacity;
+                let render_space_stride = self.uniforms.render_space_stride;
                 let mut executor = RenderSceneExecutor::new(
                     self,
                     device,
@@ -811,6 +799,10 @@ impl Renderer {
                             dst = ?meta.dst,
                             load = meta.load.unwrap_or(""),
                             scissor = ?meta.scissor,
+                            scissor_space = meta
+                                .scissor_space
+                                .map(|s| s.as_str())
+                                .unwrap_or(""),
                             render_origin = ?meta.render_origin,
                             render_size = ?meta.render_size
                         )

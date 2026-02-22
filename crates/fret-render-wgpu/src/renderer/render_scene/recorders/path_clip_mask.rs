@@ -44,7 +44,8 @@ pub(in super::super) fn record_path_clip_mask_pass(
         return;
     }
 
-    let uniform_offset = (mask_pass.uniform_index as u64).saturating_mul(renderer.uniform_stride);
+    let uniform_offset =
+        (mask_pass.uniform_index as u64).saturating_mul(renderer.uniforms.uniform_stride);
 
     let vertex_size = std::mem::size_of::<PathVertex>() as u64;
     let first = (mask_pass.first_vertex as u64).saturating_mul(vertex_size);

@@ -191,6 +191,45 @@ impl Renderer {
             let mut active_mask_image: Option<UniformMaskImageSelection> = None;
             let mut active_scissor: Option<ScissorRect> = None;
 
+            let mut set_scissor =
+                |pass: &mut wgpu::RenderPass<'_>,
+                 scissor: ScissorRect,
+                 frame_perf: &mut RenderPerfStats| {
+                    if active_scissor != Some(scissor) {
+                        if set_scissor_rect_absolute(pass, scissor, target_origin, target_size)
+                            && perf_enabled
+                        {
+                            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                        }
+                        active_scissor = Some(scissor);
+                    }
+                };
+
+            let mut set_uniform =
+                |pass: &mut wgpu::RenderPass<'_>,
+                 uniform_bind_group: &wgpu::BindGroup,
+                 uniform_offset: u32,
+                 mask_image: Option<UniformMaskImageSelection>,
+                 frame_perf: &mut RenderPerfStats| {
+                    if active_uniform_offset != Some(uniform_offset)
+                        || active_mask_image != mask_image
+                    {
+                        pass.set_bind_group(
+                            0,
+                            uniform_bind_group,
+                            &[uniform_offset, render_space_offset_u32],
+                        );
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
+                        active_uniform_offset = Some(uniform_offset);
+                        active_mask_image = mask_image;
+                    }
+                };
+
             let mut i = scene_pass.draw_range.start;
             while i < scene_pass.draw_range.end {
                 let item = &encoding.ordered_draws[i];
@@ -228,7 +267,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -237,35 +276,14 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             0..6,
                             draw.first_instance..(draw.first_instance + draw.instance_count),
@@ -295,7 +313,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -304,23 +322,13 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
                         let Some(bind_group) =
                             self.bind_group_caches.get_viewport_bind_group(draw.target)
                         else {
@@ -336,18 +344,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -409,7 +406,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -418,23 +415,13 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
                         let Some(bind_group) =
                             self.pick_image_bind_group(draw.image, draw.sampling)
                         else {
@@ -448,18 +435,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -489,7 +465,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -498,23 +474,13 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
                         let Some(bind_group) =
                             self.pick_image_bind_group(draw.image, draw.sampling)
                         else {
@@ -528,18 +494,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -770,7 +725,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -779,35 +734,14 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),
@@ -842,7 +776,7 @@ impl Renderer {
                         }
 
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            (u64::from(draw.uniform_index) * self.uniforms.uniform_stride) as u32;
                         let mask_image = encoding
                             .uniform_mask_images
                             .get(draw.uniform_index as usize)
@@ -851,35 +785,14 @@ impl Renderer {
                         let uniform_bind_group =
                             self.pick_uniform_bind_group_for_mask_image(mask_image);
 
-                        if active_uniform_offset != Some(uniform_offset)
-                            || active_mask_image != mask_image
-                        {
-                            pass.set_bind_group(
-                                0,
-                                uniform_bind_group,
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            active_uniform_offset = Some(uniform_offset);
-                            active_mask_image = mask_image;
-                        }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_uniform(
+                            &mut pass,
+                            uniform_bind_group,
+                            uniform_offset,
+                            mask_image,
+                            frame_perf,
+                        );
+                        set_scissor(&mut pass, draw.scissor, frame_perf);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),

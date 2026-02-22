@@ -106,12 +106,31 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 - Contracts/ADRs: `docs/architecture.md`, `docs/runtime-contract-matrix.md`, `docs/adr/`
 - Diag gates: `.agents/skills/fret-diag-workflow/SKILL.md`
 
+## Examples
+
+- Example: audit focus + keyboard UX
+  - User says: "Tab order feels wrong and focus ring is inconsistent."
+  - Actions: check focus-visible rules, roving tabindex patterns, and command/keymap integration.
+  - Result: a concrete list of issues + recommended gates (scripts/tests).
+
+- Example: overlay correctness review
+  - User says: "Menus/tooltips sometimes appear in the wrong place."
+  - Actions: verify overlay placement, outside-press dismissal, and viewport constraints.
+  - Result: actionable fixes + evidence anchors.
+
 ## Common pitfalls
 
 - Over-polishing visuals without fixing focus/keyboard paths.
 - Fixing policy mismatches by adding runtime knobs.
 - Missing `when` gating, causing shortcuts to fire inside text inputs / IME.
 - Missing `test_id`, causing scripts to rot immediately.
+
+## Troubleshooting
+
+- Symptom: review findings are hard to prove.
+  - Fix: pair the review with a minimal `fretboard diag` script + bundle evidence.
+- Symptom: there are too many potential issues.
+  - Fix: triage into P0 correctness (focus, dismissal, input) vs P1 polish (spacing, tokens).
 
 ## Related skills
 

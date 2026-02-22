@@ -8,12 +8,11 @@ impl Renderer {
         image: fret_core::ImageId,
         sampling: fret_core::scene::ImageSamplingHint,
     ) -> Option<&wgpu::BindGroup> {
-        let (linear, nearest) = self.bind_group_caches.get_image_bind_groups(image)?;
-        match sampling {
-            fret_core::scene::ImageSamplingHint::Nearest => Some(nearest),
-            fret_core::scene::ImageSamplingHint::Default
-            | fret_core::scene::ImageSamplingHint::Linear => Some(linear),
-        }
+        Some(
+            self.bind_group_caches
+                .get_image_bind_groups(image)?
+                .pick(sampling),
+        )
     }
 
     pub(super) fn pick_uniform_bind_group_for_mask_image(
@@ -23,17 +22,13 @@ impl Renderer {
         let Some(sel) = mask_image else {
             return &self.uniform_bind_group;
         };
-        let Some((linear, nearest)) = self
+        let Some(groups) = self
             .bind_group_caches
             .get_uniform_mask_image_bind_groups(sel.image)
         else {
             return &self.uniform_bind_group;
         };
-        match sel.sampling {
-            fret_core::scene::ImageSamplingHint::Nearest => nearest,
-            fret_core::scene::ImageSamplingHint::Default
-            | fret_core::scene::ImageSamplingHint::Linear => linear,
-        }
+        groups.pick(sel.sampling)
     }
 }
 
@@ -79,6 +74,151 @@ pub(super) fn set_scissor_rect_absolute_opt(
     set_scissor_rect_absolute(rp, scissor.0, dst_origin, dst_size)
 }
 
+pub(super) fn run_composite_premul_quad_pass(
+    encoder: &mut wgpu::CommandEncoder,
+    label: &str,
+    pipeline: &wgpu::RenderPipeline,
+    dst_view: &wgpu::TextureView,
+    load: wgpu::LoadOp<wgpu::Color>,
+    uniform_bind_group: &wgpu::BindGroup,
+    uniform_offsets: &[u32],
+    texture_bind_group: &wgpu::BindGroup,
+    texture_offsets: &[u32],
+    vertex_buffer: &wgpu::Buffer,
+    vertex_byte_base: u64,
+    vertex_byte_len: u64,
+    dst_scissor: Option<AbsoluteScissorRect>,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+    perf: Option<&mut RenderPerfStats>,
+) {
+    run_absolute_scissor_quad_pass(
+        encoder,
+        label,
+        pipeline,
+        dst_view,
+        load,
+        uniform_bind_group,
+        uniform_offsets,
+        texture_bind_group,
+        texture_offsets,
+        vertex_buffer,
+        vertex_byte_base,
+        vertex_byte_len,
+        dst_scissor,
+        dst_origin,
+        dst_size,
+    );
+
+    if let Some(perf) = perf {
+        perf.pipeline_switches = perf.pipeline_switches.saturating_add(1);
+        perf.pipeline_switches_composite = perf.pipeline_switches_composite.saturating_add(1);
+
+        perf.bind_group_switches = perf.bind_group_switches.saturating_add(2);
+        perf.texture_bind_group_switches = perf.texture_bind_group_switches.saturating_add(1);
+
+        perf.draw_calls = perf.draw_calls.saturating_add(1);
+    }
+}
+
+pub(super) fn run_path_msaa_composite_quad_pass(
+    encoder: &mut wgpu::CommandEncoder,
+    label: &str,
+    pipeline: &wgpu::RenderPipeline,
+    dst_view: &wgpu::TextureView,
+    load: wgpu::LoadOp<wgpu::Color>,
+    uniform_bind_group: &wgpu::BindGroup,
+    uniform_offsets: &[u32],
+    texture_bind_group: &wgpu::BindGroup,
+    texture_offsets: &[u32],
+    vertex_buffer: &wgpu::Buffer,
+    vertex_byte_base: u64,
+    vertex_byte_len: u64,
+    absolute_scissor: AbsoluteScissorRect,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+    perf: Option<&mut RenderPerfStats>,
+) {
+    let applied_scissor = run_absolute_scissor_quad_pass(
+        encoder,
+        label,
+        pipeline,
+        dst_view,
+        load,
+        uniform_bind_group,
+        uniform_offsets,
+        texture_bind_group,
+        texture_offsets,
+        vertex_buffer,
+        vertex_byte_base,
+        vertex_byte_len,
+        Some(absolute_scissor),
+        dst_origin,
+        dst_size,
+    );
+
+    if let Some(perf) = perf {
+        perf.pipeline_switches = perf.pipeline_switches.saturating_add(1);
+        perf.pipeline_switches_composite = perf.pipeline_switches_composite.saturating_add(1);
+
+        perf.bind_group_switches = perf.bind_group_switches.saturating_add(2);
+        perf.uniform_bind_group_switches = perf.uniform_bind_group_switches.saturating_add(1);
+        perf.texture_bind_group_switches = perf.texture_bind_group_switches.saturating_add(1);
+
+        if applied_scissor {
+            perf.scissor_sets = perf.scissor_sets.saturating_add(1);
+        }
+        perf.draw_calls = perf.draw_calls.saturating_add(1);
+        perf.fullscreen_draw_calls = perf.fullscreen_draw_calls.saturating_add(1);
+    }
+}
+
+fn run_absolute_scissor_quad_pass(
+    encoder: &mut wgpu::CommandEncoder,
+    label: &str,
+    pipeline: &wgpu::RenderPipeline,
+    dst_view: &wgpu::TextureView,
+    load: wgpu::LoadOp<wgpu::Color>,
+    uniform_bind_group: &wgpu::BindGroup,
+    uniform_offsets: &[u32],
+    texture_bind_group: &wgpu::BindGroup,
+    texture_offsets: &[u32],
+    vertex_buffer: &wgpu::Buffer,
+    vertex_byte_base: u64,
+    vertex_byte_len: u64,
+    dst_scissor: Option<AbsoluteScissorRect>,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+) -> bool {
+    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some(label),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: dst_view,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load,
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+
+    rp.set_pipeline(pipeline);
+    rp.set_bind_group(0, uniform_bind_group, uniform_offsets);
+    rp.set_bind_group(1, texture_bind_group, texture_offsets);
+    rp.set_vertex_buffer(
+        0,
+        vertex_buffer.slice(vertex_byte_base..vertex_byte_base + vertex_byte_len),
+    );
+    let applied_scissor = set_scissor_rect_absolute_opt(&mut rp, dst_scissor, dst_origin, dst_size);
+    rp.draw(0..6, 0..1);
+    applied_scissor
+}
+
 pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
     match pass {
         RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
@@ -98,11 +238,27 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) enum RenderPlanPassTraceScissorSpace {
+    Absolute,
+    DstLocal,
+}
+
+impl RenderPlanPassTraceScissorSpace {
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Absolute => "absolute",
+            Self::DstLocal => "dst_local",
+        }
+    }
+}
+
 pub(super) struct RenderPlanPassTraceMeta {
     pub(super) src: Option<PlanTarget>,
     pub(super) dst: Option<PlanTarget>,
     pub(super) load: Option<&'static str>,
     pub(super) scissor: Option<ScissorRect>,
+    pub(super) scissor_space: Option<RenderPlanPassTraceScissorSpace>,
     pub(super) render_origin: Option<(u32, u32)>,
     pub(super) render_size: Option<(u32, u32)>,
 }
@@ -126,6 +282,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.target),
             load: Some(load_label(pass.load)),
             scissor: None,
+            scissor_space: None,
             render_origin,
             render_size,
         },
@@ -134,6 +291,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.target),
             load: Some(load_label(pass.load)),
             scissor: Some(pass.union_scissor.0),
+            scissor_space: Some(RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -142,6 +300,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: Some(pass.scissor.0),
+            scissor_space: Some(RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -150,6 +309,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -158,6 +320,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::Absolute),
             render_origin,
             render_size,
         },
@@ -166,6 +331,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -174,6 +342,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -182,6 +353,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -190,6 +364,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -198,6 +375,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -206,6 +386,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -214,6 +397,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -222,6 +408,9 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
             scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
@@ -230,6 +419,7 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             dst: Some(*target),
             load: None,
             scissor: None,
+            scissor_space: None,
             render_origin,
             render_size,
         },
@@ -255,6 +445,14 @@ pub(super) fn render_plan_trace_fingerprint(passes: &[RenderPlanPass]) -> u64 {
         (u64::from(s.x) << 48) ^ (u64::from(s.y) << 32) ^ (u64::from(s.w) << 16) ^ u64::from(s.h)
     }
 
+    fn pack_scissor_space(s: Option<RenderPlanPassTraceScissorSpace>) -> u64 {
+        match s {
+            None => 0,
+            Some(RenderPlanPassTraceScissorSpace::Absolute) => 1,
+            Some(RenderPlanPassTraceScissorSpace::DstLocal) => 2,
+        }
+    }
+
     fn pack_point(p: Option<(u32, u32)>) -> u64 {
         let Some(p) = p else {
             return 0;
@@ -274,6 +472,7 @@ pub(super) fn render_plan_trace_fingerprint(passes: &[RenderPlanPass]) -> u64 {
         hash = mix_fnv1a(hash, meta.dst.map(|t| t as u64 + 1).unwrap_or(0));
         hash = mix_fnv1a(hash, meta.load.map(|s| mix_str(0, s)).unwrap_or(0));
         hash = mix_fnv1a(hash, pack_scissor(meta.scissor));
+        hash = mix_fnv1a(hash, pack_scissor_space(meta.scissor_space));
         hash = mix_fnv1a(hash, pack_point(meta.render_origin));
         hash = mix_fnv1a(hash, pack_point(meta.render_size));
     }

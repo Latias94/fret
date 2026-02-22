@@ -145,7 +145,7 @@ impl CodeBlock {
             max_height: self.max_height,
             windowed_lines: false,
             windowed_lines_overscan: 6,
-            show_scrollbar_x: false,
+            show_scrollbar_x: true,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
             scrollbar_y_on_hover: true,

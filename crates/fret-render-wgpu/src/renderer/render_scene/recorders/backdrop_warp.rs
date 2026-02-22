@@ -110,7 +110,8 @@ pub(in super::super) fn record_backdrop_warp_pass(
         let mask_uniform_index = pass
             .mask_uniform_index
             .expect("mask backdrop-warp needs uniform index");
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         let Some(mask_view) =
             require_mask_view(frame_targets, mask.target, mask.size, "BackdropWarp")
@@ -247,7 +248,8 @@ pub(in super::super) fn record_backdrop_warp_pass(
                 .expect("backdrop-warp masked pipeline must exist");
             (bind_group, pipeline)
         };
-        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
 
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,

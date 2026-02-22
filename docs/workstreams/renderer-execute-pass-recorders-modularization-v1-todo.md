@@ -19,6 +19,11 @@ See also:
 - [x] Extract target selection helpers (output vs intermediate vs mask) into `render_scene/helpers.rs`.
 - [x] Pack pass resources (buffers + bind groups) into `RecordPassResources`.
 - [x] Pack per-pass context (plan/index/offset) into `RecordPassCtx`.
+- [x] Centralize scissor application helpers used by recorders (absolute vs dst-local).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/fullscreen.rs` (dst-local), `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (absolute mapping).
+- [x] Extract a reusable composite-premul quad-pass helper to reduce recorder boilerplate.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`run_composite_premul_quad_pass`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (`record_composite_premul_pass`).
 
 ## Next
 

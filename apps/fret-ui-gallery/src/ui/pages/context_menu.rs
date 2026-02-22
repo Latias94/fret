@@ -287,6 +287,7 @@ pub(super) fn preview_context_menu(
                                 .trailing(
                                     shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx),
                                 )
+                                .test_id("ui-gallery-context-menu-shortcuts-open-file")
                                 .on_select(CMD_MENU_CONTEXT_ACTION),
                         ),
                         shadcn::ContextMenuEntry::Item(
@@ -420,6 +421,7 @@ pub(super) fn preview_context_menu(
                                 show_status_bar.clone(),
                                 "Show status bar",
                             )
+                            .test_id("ui-gallery-context-menu-checkboxes-status-bar")
                             .trailing(shadcn::ContextMenuShortcut::new("Cmd+/").into_element(cx)),
                         ),
                         shadcn::ContextMenuEntry::CheckboxItem(
