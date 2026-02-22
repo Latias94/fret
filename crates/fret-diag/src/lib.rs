@@ -4286,7 +4286,6 @@ See: `docs/tracy.md`.\n";
                 max_top_solve_us: max_top_solve_us.clone(),
                 max_top_total_us: max_top_total_us.clone(),
                 min_run_paint_cache_hit_test_only_replay_allowed_max: min_run_paint_cache_hit_test_only_replay_allowed_max.clone(),
-                out_dir: out_dir.clone(),
                 perf_baseline_headroom_pct: perf_baseline_headroom_pct.clone(),
                 perf_baseline_out: perf_baseline_out.clone(),
                 perf_baseline_path: perf_baseline_path.clone(),
