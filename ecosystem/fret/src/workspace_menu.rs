@@ -28,6 +28,7 @@ use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 fn diag_test_id_suffix(raw: &str) -> String {
@@ -759,16 +760,15 @@ fn render_menu_from_runtime<H: UiHost>(
 
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
-        let text_style = TextStyle {
+        let text_style = typography::as_control_text(TextStyle {
             font: FontId::default(),
             size: font_size,
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
             line_height: Some(font_line_height),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        };
+        });
 
         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
             let (patient_click_sticky, patient_click_timer) =
@@ -932,16 +932,15 @@ fn request_menu_overlay<H: UiHost>(
 
     let item_font_size = theme.metric_token("font.size");
     let item_line_height = theme.metric_token("font.line_height");
-    let item_text = TextStyle {
+    let item_text = typography::as_control_text(TextStyle {
         font: FontId::default(),
         size: item_font_size,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(item_line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    };
+    });
 
     let row_height = Px(item_line_height.0 + 8.0);
 

@@ -72,6 +72,7 @@ We already have the mechanism capability (`TextLineHeightPolicy::FixedFromStyle`
     - `ecosystem/fret-ui-shadcn/src/button_group.rs`
     - `ecosystem/fret-ui-ai/src/elements/message_parts.rs`
     - `ecosystem/fret-ui-ai/src/elements/terminal.rs`
+    - `ecosystem/fret/src/workspace_menu.rs`
     - `ecosystem/fret-code-view/src/code_block.rs`
     - `ecosystem/fret-markdown/src/lib.rs`
     - `ecosystem/fret-ui-editor/src/primitives/chrome.rs`
