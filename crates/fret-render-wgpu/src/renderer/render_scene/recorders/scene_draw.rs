@@ -191,6 +191,17 @@ impl Renderer {
             let mut active_mask_image: Option<UniformMaskImageSelection> = None;
             let mut active_scissor: Option<ScissorRect> = None;
 
+            let mut set_scissor = |pass: &mut wgpu::RenderPass<'_>, scissor: ScissorRect| {
+                if active_scissor != Some(scissor) {
+                    if set_scissor_rect_absolute(pass, scissor, target_origin, target_size)
+                        && perf_enabled
+                    {
+                        frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                    }
+                    active_scissor = Some(scissor);
+                }
+            };
+
             let mut i = scene_pass.draw_range.start;
             while i < scene_pass.draw_range.end {
                 let item = &encoding.ordered_draws[i];
@@ -254,18 +265,7 @@ impl Renderer {
                             active_uniform_offset = Some(uniform_offset);
                             active_mask_image = mask_image;
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             0..6,
                             draw.first_instance..(draw.first_instance + draw.instance_count),
@@ -336,18 +336,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -448,18 +437,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -528,18 +506,7 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -796,18 +763,7 @@ impl Renderer {
                             active_uniform_offset = Some(uniform_offset);
                             active_mask_image = mask_image;
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),
@@ -868,18 +824,7 @@ impl Renderer {
                             active_uniform_offset = Some(uniform_offset);
                             active_mask_image = mask_image;
                         }
-                        if active_scissor != Some(draw.scissor) {
-                            if set_scissor_rect_absolute(
-                                &mut pass,
-                                draw.scissor,
-                                target_origin,
-                                target_size,
-                            ) && perf_enabled
-                            {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
-                            active_scissor = Some(draw.scissor);
-                        }
+                        set_scissor(&mut pass, draw.scissor);
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),
