@@ -193,9 +193,10 @@ pub(super) fn handle_scroll_into_view_step(
                 &mut active.selector_resolution_trace,
             );
 
-            let insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
-            let visible_container = rect_intersection(container_node.bounds, window_bounds)
-                .unwrap_or(window_bounds);
+            let insets =
+                padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+            let visible_container =
+                rect_intersection(container_node.bounds, window_bounds).unwrap_or(window_bounds);
             let inner_visible = rect_inset(visible_container, insets);
 
             let mut effective_dx = delta_x;
@@ -284,7 +285,9 @@ pub(super) fn handle_scroll_into_view_step(
             }
 
             output.events.push(move_pointer_event(pos));
-            output.events.push(wheel_event(pos, effective_dx, effective_dy));
+            output
+                .events
+                .push(wheel_event(pos, effective_dx, effective_dy));
         }
 
         state.remaining_frames = state.remaining_frames.saturating_sub(1);

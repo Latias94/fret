@@ -70,4 +70,3 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
         Err(report.to_human_error())
     }
 }
-
