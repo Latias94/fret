@@ -83,8 +83,11 @@
     },
 
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
     },
     {
       "type": "wait_until",
