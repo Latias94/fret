@@ -1209,114 +1209,33 @@ impl UiDiagnosticsService {
                     }
                 }
             }
-            UiActionStepV2::WaitShortcutRoutingTrace {
-                query,
-                timeout_frames,
-            } => {
-                active.wait_until = None;
-                active.screenshot_wait = None;
-
-                let state = match active.wait_shortcut_routing_trace.take() {
-                    Some(mut state) if state.step_index == step_index => {
-                        state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                        state
-                    }
-                    _ => WaitShortcutRoutingTraceState {
-                        step_index,
-                        remaining_frames: timeout_frames,
-                        start_frame_id: app.frame_id().0.saturating_sub(1),
-                    },
-                };
-
-                let found = active.shortcut_routing_trace.iter().any(|entry| {
-                    entry.frame_id >= state.start_frame_id
-                        && shortcut_routing_trace_entry_matches_query(entry, &query)
-                });
-
-                if found {
-                    active.wait_shortcut_routing_trace = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                } else if state.remaining_frames == 0 {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-wait_shortcut_routing_trace-timeout"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("wait_shortcut_routing_trace_timeout".to_string());
-                    active.wait_shortcut_routing_trace = None;
-                    output.request_redraw = true;
-                } else {
-                    active.wait_shortcut_routing_trace = Some(WaitShortcutRoutingTraceState {
-                        step_index: state.step_index,
-                        remaining_frames: state.remaining_frames.saturating_sub(1),
-                        start_frame_id: state.start_frame_id,
-                    });
-                    output.request_redraw = true;
-                }
+            step @ UiActionStepV2::WaitShortcutRoutingTrace { .. } => {
+                let handled = script_steps_wait::handle_wait_shortcut_routing_trace_step(
+                    app,
+                    step_index,
+                    step,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                debug_assert!(handled);
             }
-            UiActionStepV2::WaitOverlayPlacementTrace {
-                query,
-                timeout_frames,
-            } => {
-                active.wait_until = None;
-                active.screenshot_wait = None;
-
-                if semantics_snapshot.is_none()
-                    && (query.anchor_test_id.is_some() || query.content_test_id.is_some())
-                {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-wait_overlay_placement_trace-no-semantics"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
-                    output.request_redraw = true;
-                } else {
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        semantics_snapshot,
-                        window,
-                        step_index as u32,
-                        "wait_overlay_placement_trace",
-                    );
-
-                    let state = match active.wait_overlay_placement_trace.take() {
-                        Some(mut state) if state.step_index == step_index => {
-                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                            state
-                        }
-                        _ => WaitOverlayPlacementTraceState {
-                            step_index,
-                            remaining_frames: timeout_frames,
-                        },
-                    };
-
-                    let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
-                    let found = active.overlay_placement_trace.iter().any(|entry| {
-                        overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query)
-                    });
-
-                    if found {
-                        active.wait_overlay_placement_trace = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-wait_overlay_placement_trace-timeout"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("wait_overlay_placement_trace_timeout".to_string());
-                        active.wait_overlay_placement_trace = None;
-                        output.request_redraw = true;
-                    } else {
-                        active.wait_overlay_placement_trace =
-                            Some(WaitOverlayPlacementTraceState {
-                                step_index: state.step_index,
-                                remaining_frames: state.remaining_frames.saturating_sub(1),
-                            });
-                        output.request_redraw = true;
-                    }
-                }
+            step @ UiActionStepV2::WaitOverlayPlacementTrace { .. } => {
+                let handled = script_steps_wait::handle_wait_overlay_placement_trace_step(
+                    window,
+                    step_index,
+                    step,
+                    element_runtime,
+                    semantics_snapshot,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                debug_assert!(handled);
             }
             step @ UiActionStepV2::Assert { .. } => {
                 let handled = script_steps_assert::handle_assert_step(
