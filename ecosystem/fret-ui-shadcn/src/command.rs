@@ -1219,9 +1219,12 @@ impl CommandLoading {
 
         let mut a11y = SemanticsDecoration::default()
             .role(SemanticsRole::ProgressBar)
-            .label(text_for_semantics);
+            .label(text_for_semantics)
+            .numeric_range(0.0, 100.0);
         if let Some(progress) = progress {
-            a11y = a11y.value(Arc::<str>::from(format!("{progress}%")));
+            a11y = a11y
+                .value(Arc::<str>::from(format!("{progress}%")))
+                .numeric_value(progress as f64);
         }
         row = row.attach_semantics(a11y);
         if let Some(test_id) = test_id {
@@ -1495,6 +1498,9 @@ impl CommandList {
                                 },
                                 |_cx| Vec::new(),
                             )),
+                            CommandPaletteRenderRow::Loading(loading) => {
+                                out.push(loading.into_element(cx));
+                            }
                             CommandPaletteRenderRow::Separator(test_id) => {
                                 let mut sep = cx.container(
                                     ContainerProps {

@@ -489,6 +489,17 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
         semantics.test_id = test_id.clone();
+        if min.is_finite() {
+            semantics.min_numeric_value = Some(min as f64);
+        }
+        if max.is_finite() {
+            semantics.max_numeric_value = Some(max as f64);
+        }
+        if step.is_finite() && step > 0.0 {
+            semantics.numeric_value_step = Some(step as f64);
+            semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        }
+        semantics.value_editable = Some(!disabled);
         let test_id_prefix = test_id.clone();
 
         let min_value = min;
@@ -993,6 +1004,18 @@ pub fn slider<H: UiHost>(
                                 disabled,
                             );
                             thumb_semantics.layout = thumb_layout;
+                            if min_value.is_finite() {
+                                thumb_semantics.min_numeric_value = Some(min_value as f64);
+                            }
+                            if max_value.is_finite() {
+                                thumb_semantics.max_numeric_value = Some(max_value as f64);
+                            }
+                            if step_value.is_finite() && step_value > 0.0 {
+                                thumb_semantics.numeric_value_step = Some(step_value as f64);
+                                thumb_semantics.numeric_value_jump = Some((step_value * 10.0) as f64);
+                            }
+                            thumb_semantics.focusable = !disabled;
+                            thumb_semantics.value_editable = Some(!disabled);
                             if let Some(test_id) = test_id_prefix.as_ref() {
                                 thumb_semantics.test_id = Some(Arc::<str>::from(format!(
                                     "{test_id}-thumb-{thumb_index}"
