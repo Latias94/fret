@@ -11,8 +11,8 @@ scope: diagnostics, automation, tooling, refactor
 
 Exit criteria:
 
-- `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` no longer contains the full script engine implementation.
-- Script engine code lives in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
+- `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` no longer contains the full per-frame script driver implementation.
+- Script engine code (driver + helpers) lives in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
 - Script runner state types live in `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`.
 - `cargo check -p fret-ui-gallery` is green.
 
@@ -30,4 +30,3 @@ Exit criteria:
 
 - A maintainer can run a scripted repro, collect evidence, and generate a small “triage bundle” quickly.
 - Evidence anchors in docs stay in sync with the implementation.
-
