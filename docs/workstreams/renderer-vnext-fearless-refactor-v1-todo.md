@@ -324,6 +324,19 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 
+- [~] REN-VNEXT-refactor-040 Stage 4: extract image/render-target registries + revision/generation tracking into an explicit subsystem.
+  - Goal: keep “resource registry mutation → revision/generation bump → bind group cache invalidation” localized and reviewable.
+  - Landed (step 1): move registry state (`ImageRegistry`, `RenderTargetRegistry`) + revision/generation counters into `GpuRegistries`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`GpuRegistries`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::registries`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (register/update/unregister bumps)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group keys read revisions)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scene encoding cache key uses generations)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

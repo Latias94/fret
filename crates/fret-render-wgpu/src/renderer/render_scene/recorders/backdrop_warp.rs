@@ -77,7 +77,9 @@ pub(in super::super) fn record_backdrop_warp_pass(
             .saturating_add(std::mem::size_of::<BackdropWarpParams>() as u64);
     }
 
-    let warp_view = pass.warp_image.and_then(|image| renderer.images.get(image));
+    let warp_view = pass
+        .warp_image
+        .and_then(|image| renderer.registries.images.get(image));
 
     let Some(src_view) =
         require_color_src_view(frame_targets, pass.src, pass.src_size, "BackdropWarp")

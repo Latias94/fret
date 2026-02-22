@@ -327,6 +327,7 @@ impl Renderer {
                             frame_perf.viewport_draw_calls =
                                 frame_perf.viewport_draw_calls.saturating_add(1);
                             let metadata = self
+                                .registries
                                 .render_targets
                                 .metadata(draw.target)
                                 .unwrap_or_default();

@@ -1,6 +1,4 @@
-use crate::images::ImageRegistry;
 use crate::svg::SvgRenderer;
-use crate::targets::RenderTargetRegistry;
 use crate::text::TextSystem;
 pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
@@ -18,6 +16,7 @@ mod clip_path_mask_cache;
 mod gpu_effect_params;
 mod gpu_globals;
 mod gpu_pipelines;
+mod gpu_registries;
 mod gpu_textures;
 mod path;
 mod revisioned_cache;
@@ -49,6 +48,7 @@ use fullscreen::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
+use gpu_registries::GpuRegistries;
 use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
@@ -148,15 +148,9 @@ pub struct Renderer {
     intermediate_perf: IntermediatePerfStats,
     intermediate_pool: IntermediatePool,
 
-    render_targets: RenderTargetRegistry,
-    images: ImageRegistry,
+    registries: GpuRegistries,
 
     bind_group_caches: BindGroupCaches,
-    render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
-    render_targets_generation: u64,
-
-    image_revisions: HashMap<fret_core::ImageId, u64>,
-    images_generation: u64,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

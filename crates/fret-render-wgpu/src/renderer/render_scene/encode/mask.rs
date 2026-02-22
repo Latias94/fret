@@ -121,7 +121,7 @@ pub(super) fn push_mask(
             }
 
             // Missing mask source is a deterministic degrade-to-unmasked.
-            if renderer.images.get(image).is_none() {
+            if renderer.registries.images.get(image).is_none() {
                 state.mask_pop_stack.push(MaskPop::NoShader);
                 return true;
             }
@@ -132,9 +132,10 @@ pub(super) fn push_mask(
 
             // Prefer alpha for sRGB textures (avoid sRGB conversion on RGB channels).
             let use_alpha_channel = renderer
+                .registries
                 .images
                 .format(image)
-                .is_some_and(|fmt| fmt.is_srgb());
+                .is_some_and(|fmt: wgpu::TextureFormat| fmt.is_srgb());
             uniform.tile_mode = u32::from(use_alpha_channel);
 
             state.mask_image = Some(UniformMaskImageSelection { image, sampling });
