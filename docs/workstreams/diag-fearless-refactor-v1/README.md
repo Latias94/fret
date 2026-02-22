@@ -45,6 +45,8 @@ Related living docs:
 3. **AI/agent-friendly debugging**
    - Make “what happened” explainable via structured evidence (selector traces, hit-test traces, routing traces).
    - Make “where to look” cheap: stable indexes that allow tools to filter/locate snapshots quickly.
+4. **Debt removal (finish the migration)**
+   - After extraction steps land, remove transitional forwarders and redundant code paths so the new module boundaries stick.
 
 ## Non-goals
 

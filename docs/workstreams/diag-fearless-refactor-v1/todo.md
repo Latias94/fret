@@ -49,6 +49,27 @@ scope: diagnostics, automation, tooling, refactor
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
 - [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
 
+## M4: Remove debt (finish migration, delete redundant code)
+
+Goal: after the mechanical moves land, **remove the temporary shims** and delete redundant/legacy code paths so the
+diagnostics stack stays easy to evolve.
+
+- [ ] Tighten module boundaries in `ecosystem/fret-bootstrap/src/ui_diagnostics/` (no backsliding into the monolith):
+  - Script execution / state / step handlers live under `script_engine.rs` + `script_steps_*`.
+  - Bundle dumping + sidecar writers live under `bundle_dump.rs` / `bundle_index.rs`.
+  - DevTools WS wiring lives under `ui_diagnostics_devtools_ws.rs`.
+- [ ] Delete transitional glue after migration:
+  - remove duplicated per-step dispatch code from the old location(s),
+  - avoid “forwarder wrappers” that exist only because of historical file layout.
+- [ ] Remove redundant semantics traversal helpers in gates:
+  - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
+- [ ] Reduce “stats mega-module” churn permanently:
+  - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
+  - large check families stay in `crates/fret-diag/src/stats/*.rs`.
+- [ ] Audit and remove dead/legacy code paths once consumers have migrated:
+  - legacy env knobs that are no longer used,
+  - legacy schema compatibility layers that are no longer needed for in-tree workflows.
+
 ## Evidence anchors (keep updated as implementation changes)
 
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`

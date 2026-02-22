@@ -40,3 +40,15 @@ Exit criteria:
 
 - A maintainer can run a scripted repro, collect evidence, and generate a small “triage bundle” quickly.
 - Evidence anchors in docs stay in sync with the implementation.
+
+## Milestone 4: Debt is removed (no redundant code paths)
+
+Exit criteria:
+
+- No “temporary forwarders” remain solely due to historical file layout (moved code stays moved).
+- Monolith risk is reduced:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` is not the primary home for script engine logic.
+  - `crates/fret-diag/src/stats.rs` stays small; large check families live in `crates/fret-diag/src/stats/*.rs`.
+- Semantics parsing is centralized:
+  - gates use `crate::json_bundle::SemanticsResolver` and shared helpers (no repeated JSON path digging).
+- `cargo check -p fret-ui-gallery` and `cargo check -p fret-diag` are green.
