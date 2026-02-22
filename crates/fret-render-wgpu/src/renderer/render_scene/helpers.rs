@@ -64,3 +64,43 @@ pub(super) fn set_scissor_rect_absolute(
     rp.set_scissor_rect(lx0, ly0, w, h);
     true
 }
+
+pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
+    match pass {
+        RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
+        RenderPlanPass::PathMsaaBatch(_) => "path_msaa_batch",
+        RenderPlanPass::PathClipMask(_) => "path_clip_mask",
+        RenderPlanPass::CompositePremul(_) => "composite_premul",
+        RenderPlanPass::ScaleNearest(_) => "scale_nearest",
+        RenderPlanPass::Blur(_) => "blur",
+        RenderPlanPass::BackdropWarp(_) => "backdrop_warp",
+        RenderPlanPass::ColorAdjust(_) => "color_adjust",
+        RenderPlanPass::ColorMatrix(_) => "color_matrix",
+        RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+        RenderPlanPass::DropShadow(_) => "drop_shadow",
+        RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
+        RenderPlanPass::ClipMask(_) => "clip_mask",
+        RenderPlanPass::ReleaseTarget(_) => "release_target",
+    }
+}
+
+pub(super) fn render_plan_pass_render_space(
+    pass: &RenderPlanPass,
+) -> Option<((u32, u32), (u32, u32))> {
+    match pass {
+        RenderPlanPass::SceneDrawRange(pass) => Some((pass.target_origin, pass.target_size)),
+        RenderPlanPass::PathMsaaBatch(pass) => Some((pass.target_origin, pass.target_size)),
+        RenderPlanPass::PathClipMask(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::CompositePremul(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::ScaleNearest(pass) => Some((pass.dst_origin, pass.dst_size)),
+        RenderPlanPass::Blur(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::BackdropWarp(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::ReleaseTarget(_) => None,
+    }
+}
