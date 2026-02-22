@@ -22,6 +22,8 @@ pub(super) fn preview_command_palette(
         demo_disable_filtering: Option<Model<bool>>,
         demo_filter_value: Option<Model<Option<Arc<str>>>>,
         demo_group_force_query: Option<Model<String>>,
+        loading_query: Option<Model<String>>,
+        loading_enabled: Option<Model<bool>>,
     }
 
     let (
@@ -37,6 +39,8 @@ pub(super) fn preview_command_palette(
         demo_disable_filtering,
         demo_filter_value,
         demo_group_force_query,
+        loading_query,
+        loading_enabled,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
             st.usage_query.clone(),
@@ -51,6 +55,8 @@ pub(super) fn preview_command_palette(
             st.demo_disable_filtering.clone(),
             st.demo_filter_value.clone(),
             st.demo_group_force_query.clone(),
+            st.loading_query.clone(),
+            st.loading_enabled.clone(),
         )
     });
 
@@ -67,6 +73,8 @@ pub(super) fn preview_command_palette(
         demo_disable_filtering,
         demo_filter_value,
         demo_group_force_query,
+        loading_query,
+        loading_enabled,
     ) = match (
         usage_query,
         basic_open,
@@ -80,6 +88,8 @@ pub(super) fn preview_command_palette(
         demo_disable_filtering,
         demo_filter_value,
         demo_group_force_query,
+        loading_query,
+        loading_enabled,
     ) {
         (
             Some(usage_query),
@@ -94,6 +104,8 @@ pub(super) fn preview_command_palette(
             Some(demo_disable_filtering),
             Some(demo_filter_value),
             Some(demo_group_force_query),
+            Some(loading_query),
+            Some(loading_enabled),
         ) => (
             usage_query,
             basic_open,
@@ -107,6 +119,8 @@ pub(super) fn preview_command_palette(
             demo_disable_filtering,
             demo_filter_value,
             demo_group_force_query,
+            loading_query,
+            loading_enabled,
         ),
         _ => {
             let usage_query = cx.app.models_mut().insert(String::new());
@@ -124,6 +138,8 @@ pub(super) fn preview_command_palette(
                 .models_mut()
                 .insert(Some(Arc::<str>::from("Calendar")));
             let demo_group_force_query = cx.app.models_mut().insert(String::new());
+            let loading_query = cx.app.models_mut().insert(String::new());
+            let loading_enabled = cx.app.models_mut().insert(false);
             cx.with_state(CommandPageModels::default, |st| {
                 st.usage_query = Some(usage_query.clone());
                 st.basic_open = Some(basic_open.clone());
@@ -138,6 +154,8 @@ pub(super) fn preview_command_palette(
                 st.demo_disable_filtering = Some(demo_disable_filtering.clone());
                 st.demo_filter_value = Some(demo_filter_value.clone());
                 st.demo_group_force_query = Some(demo_group_force_query.clone());
+                st.loading_query = Some(loading_query.clone());
+                st.loading_enabled = Some(loading_enabled.clone());
             });
             (
                 usage_query,
@@ -152,6 +170,8 @@ pub(super) fn preview_command_palette(
                 demo_disable_filtering,
                 demo_filter_value,
                 demo_group_force_query,
+                loading_query,
+                loading_enabled,
             )
         }
     };
@@ -584,6 +604,69 @@ pub(super) fn preview_command_palette(
             .test_id("ui-gallery-command-rtl")
     });
 
+    let loading_enabled_value = cx
+        .app
+        .models()
+        .get_cloned(&loading_enabled)
+        .unwrap_or(false);
+    let loading_entries: Vec<shadcn::CommandEntry> = if loading_enabled_value {
+        vec![
+            shadcn::CommandLoading::new("Fetching commands…")
+                .test_id("ui-gallery-command-loading-row")
+                .into(),
+        ]
+    } else {
+        vec![
+            shadcn::CommandGroup::new([
+                shadcn::CommandItem::new("Calendar")
+                    .on_select_action(on_select(Arc::from("command.loading.calendar"))),
+                shadcn::CommandItem::new("Search Emoji")
+                    .on_select_action(on_select(Arc::from("command.loading.search-emoji"))),
+            ])
+            .heading("Loaded items")
+            .into(),
+        ]
+    };
+
+    let loading_toggle_row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N3).items_center(),
+        |cx| {
+            vec![
+                shadcn::Checkbox::new(loading_enabled.clone())
+                    .control_id("command-loading-enabled")
+                    .a11y_label("Loading (demo-only)")
+                    .test_id("ui-gallery-command-loading-enabled")
+                    .into_element(cx),
+                shadcn::FieldLabel::new("Loading (demo-only)")
+                    .for_control("command-loading-enabled")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let loading_palette = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |cx| {
+            vec![
+                loading_toggle_row,
+                shadcn::CommandPalette::new(loading_query.clone(), Vec::new())
+                    .placeholder("Type a command or search...")
+                    .a11y_label("Command loading demo")
+                    .entries(loading_entries.clone())
+                    .test_id_input("ui-gallery-command-loading-input")
+                    .list_test_id("ui-gallery-command-loading-listbox")
+                    .test_id_item_prefix("ui-gallery-command-loading-item-")
+                    .into_element(cx)
+                    .test_id("ui-gallery-command-loading"),
+            ]
+        },
+    );
+
     let notes_stack = doc_layout::notes(
         cx,
         [
@@ -597,7 +680,7 @@ pub(super) fn preview_command_palette(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order: Usage, Basic, Shortcuts, Groups, Scrollable, RTL.",
+            "Preview follows shadcn Command docs order: Usage, Basic, Shortcuts, Groups, Scrollable, RTL, Loading.",
         ),
         vec![
             DocSection::new("Usage", usage_palette)
@@ -703,6 +786,23 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
     |cx| shadcn::CommandPalette::new(rtl_query, Vec::new()).entries(rtl_entries).into_element(cx),
 );"#,
             ),
+            DocSection::new("Loading", loading_palette)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-loading")
+                .descriptions([
+                    "cmdk supports a non-selectable loading row inside the list (`Command.Loading`).",
+                    "In Fret this maps to `shadcn::CommandLoading` as an extra `CommandEntry`.",
+                ])
+                .code(
+                    "rust",
+                    r#"let entries = vec![
+    shadcn::CommandLoading::new("Fetching…").into(),
+];
+
+shadcn::CommandPalette::new(query, Vec::new())
+    .entries(entries)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
     );

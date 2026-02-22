@@ -155,7 +155,7 @@ pub use collapsible::{
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
-    CommandList, CommandPalette, CommandSeparator, CommandShortcut, command,
+    CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
 pub use context_menu::{
     ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
