@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutStyle, MainAlign};
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -87,7 +89,13 @@ fn kbd_with_patch<H: UiHost>(
     cx.container(props, |cx| {
         vec![cx.flex(
             FlexProps {
-                layout: LayoutStyle::default(),
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 direction: fret_core::Axis::Horizontal,
                 gap: Px(0.0),
                 padding: fret_core::Edges::all(Px(0.0)),

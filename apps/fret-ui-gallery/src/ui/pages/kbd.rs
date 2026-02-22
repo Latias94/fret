@@ -21,97 +21,169 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let demo = {
-        let content = stack::hstack(
+        stack::vstack(
             cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
+            stack::VStackProps::default().gap(Space::N4).items_center(),
             |cx| {
                 vec![
-                    shadcn::Kbd::new("Ctrl").into_element(cx),
-                    shadcn::Kbd::new("K").into_element(cx),
-                    shadcn::Kbd::new("Enter").into_element(cx),
+                    shadcn::KbdGroup::new([
+                        shadcn::Kbd::new("⌘").into_element(cx),
+                        shadcn::Kbd::new("⇧").into_element(cx),
+                        shadcn::Kbd::new("⌥").into_element(cx),
+                        shadcn::Kbd::new("⌃").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::KbdGroup::new([
+                        shadcn::Kbd::new("Ctrl").into_element(cx),
+                        ui::text(cx, "+").into_element(cx),
+                        shadcn::Kbd::new("B").into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]
             },
         )
-        .test_id("ui-gallery-kbd-demo");
-        content
+        .test_id("ui-gallery-kbd-demo")
     };
 
     let group = {
-        let content = shadcn::KbdGroup::new([
-            shadcn::Kbd::new("Cmd").into_element(cx),
-            shadcn::Kbd::new("Shift").into_element(cx),
-            shadcn::Kbd::new("P").into_element(cx),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-kbd-group");
-        content
+        let theme = Theme::global(&*cx.app).clone();
+        let muted_fg = theme.color_token("muted-foreground");
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N1).items_center(),
+            |cx| {
+                vec![
+                    ui::text(cx, "Use")
+                        .text_sm()
+                        .text_color(ColorRef::Color(muted_fg))
+                        .into_element(cx),
+                    shadcn::KbdGroup::new([
+                        shadcn::Kbd::new("Ctrl + B").into_element(cx),
+                        shadcn::Kbd::new("Ctrl + K").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    ui::text(cx, "to open the command palette")
+                        .text_sm()
+                        .text_color(ColorRef::Color(muted_fg))
+                        .into_element(cx),
+                ]
+            },
+        )
+        .test_id("ui-gallery-kbd-group")
     };
 
     let button = {
-        let content = shadcn::Button::new("Command Palette")
+        let accept = shadcn::Button::new("Accept")
             .variant(shadcn::ButtonVariant::Outline)
-            .children([shadcn::KbdGroup::new([
-                shadcn::Kbd::new("Cmd").into_element(cx),
-                shadcn::Kbd::new("K").into_element(cx),
-            ])
-            .into_element(cx)])
-            .on_click(CMD_APP_OPEN)
+            .size(shadcn::ButtonSize::Sm)
+            .refine_style(ChromeRefinement::default().pr(Space::N2))
+            .children([shadcn::Kbd::new("⏎").into_element(cx)])
             .into_element(cx)
-            .test_id("ui-gallery-kbd-button");
-        content
+            .test_id("ui-gallery-kbd-button-accept");
+
+        let cancel = shadcn::Button::new("Cancel")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .refine_style(ChromeRefinement::default().pr(Space::N2))
+            .children([shadcn::Kbd::new("Esc").into_element(cx)])
+            .into_element(cx)
+            .test_id("ui-gallery-kbd-button-cancel");
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![accept, cancel],
+        )
+        .test_id("ui-gallery-kbd-button")
     };
 
     let tooltip = {
-        let content = shadcn::TooltipProvider::new()
+        shadcn::TooltipProvider::new()
             .delay_duration_frames(10)
             .skip_delay_duration_frames(5)
             .with(cx, |cx| {
-                vec![
-                    shadcn::Tooltip::new(
-                        shadcn::Button::new("Save")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .into_element(cx),
-                        shadcn::TooltipContent::new(vec![stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |cx| {
-                                vec![
-                                    cx.text("Save file"),
-                                    shadcn::Kbd::new("Cmd").into_element(cx),
-                                    shadcn::Kbd::new("S").into_element(cx),
-                                ]
-                            },
-                        )])
+                let save = shadcn::Tooltip::new(
+                    shadcn::Button::new("Save")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .into_element(cx),
-                    )
-                    .arrow(true)
-                    .open_delay_frames(10)
-                    .close_delay_frames(10)
-                    .into_element(cx)
-                    .test_id("ui-gallery-kbd-tooltip"),
+                    shadcn::TooltipContent::new(vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                ui::text(cx, "Save Changes").into_element(cx),
+                                shadcn::Kbd::new("S").into_element(cx),
+                            ]
+                        },
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx);
+
+                let print = shadcn::Tooltip::new(
+                    shadcn::Button::new("Print")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .into_element(cx),
+                    shadcn::TooltipContent::new(vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                ui::text(cx, "Print Document").into_element(cx),
+                                shadcn::KbdGroup::new([
+                                    shadcn::Kbd::new("Ctrl").into_element(cx),
+                                    shadcn::Kbd::new("P").into_element(cx),
+                                ])
+                                .into_element(cx),
+                            ]
+                        },
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx);
+
+                vec![
+                    shadcn::ButtonGroup::new([save.into(), print.into()])
+                        .into_element(cx)
+                        .test_id("ui-gallery-kbd-tooltip"),
                 ]
             })
             .into_iter()
             .next()
-            .expect("kbd tooltip provider should return one root");
-
-        content
+            .expect("kbd tooltip provider should return one root")
     };
 
     let input_group = {
-        let content = shadcn::InputGroup::new(input_group_value)
+        let theme = Theme::global(&*cx.app).clone();
+        let muted_fg = theme.color_token("muted-foreground");
+
+        let search_icon = shadcn::icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static("lucide.search"),
+            Some(Px(16.0)),
+            Some(ColorRef::Color(muted_fg)),
+        );
+
+        shadcn::InputGroup::new(input_group_value)
             .a11y_label("Search")
-            .trailing([shadcn::KbdGroup::new([
-                shadcn::Kbd::new("Ctrl").into_element(cx),
+            .leading([search_icon])
+            .trailing([
+                shadcn::Kbd::new("⌘").into_element(cx),
                 shadcn::Kbd::new("K").into_element(cx),
             ])
-            .into_element(cx)])
             .trailing_has_kbd(true)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
             .into_element(cx)
-            .test_id("ui-gallery-kbd-input-group");
-
-        content
+            .test_id("ui-gallery-kbd-input-group")
     };
 
     let rtl = doc_layout::rtl(cx, |cx| {
@@ -127,9 +199,9 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let notes = doc_layout::notes(
         cx,
         [
-            "Kbd uses tokenized muted surfaces and is intended for shortcut display rather than free text chips.",
-            "`Tooltip` and `Input Group` examples are composition patterns from shadcn docs.",
-            "Each section has stable test_id for future diag scripts.",
+            "Kbd is a fixed-height control; text placement uses bounds-as-line-box to keep the glyph visually centered.",
+            "Tooltip and Input Group examples follow the upstream shadcn docs structure (v4 / New York).",
+            "Each section has stable test_id for diag scripts and future gates.",
         ],
     );
 
@@ -138,58 +210,91 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         Some("Preview follows shadcn Kbd docs order: Demo, Group, Button, Tooltip, Input Group, RTL."),
         vec![
             DocSection::new("Demo", demo)
-                .description("Basic kbd tokens for a shortcut chord.")
-                .code("rust", r#"shadcn::Kbd::new("Ctrl").into_element(cx);"#),
+                .description("Two shortcut display patterns (symbols and chord).")
+                .code(
+                    "rust",
+                    r#"stack::vstack(cx, stack::VStackProps::default().gap(Space::N4).items_center(), |cx| {
+    vec![
+        shadcn::KbdGroup::new([
+            shadcn::Kbd::new("⌘").into_element(cx),
+            shadcn::Kbd::new("⇧").into_element(cx),
+            shadcn::Kbd::new("⌥").into_element(cx),
+            shadcn::Kbd::new("⌃").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::KbdGroup::new([
+            shadcn::Kbd::new("Ctrl").into_element(cx),
+            ui::text(cx, "+").into_element(cx),
+            shadcn::Kbd::new("B").into_element(cx),
+        ])
+        .into_element(cx),
+    ]
+});"#,
+                ),
             DocSection::new("Group", group)
                 .description("Use `KbdGroup` to keep spacing consistent across tokens.")
                 .code(
                     "rust",
-                    r#"shadcn::KbdGroup::new([
-    shadcn::Kbd::new("Cmd").into_element(cx),
-    shadcn::Kbd::new("K").into_element(cx),
-])
-.into_element(cx);"#,
+                    r#"let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
+
+stack::hstack(cx, stack::HStackProps::default().gap(Space::N1).items_center(), |cx| {
+    vec![
+        ui::text(cx, "Use").text_sm().text_color(ColorRef::Color(muted_fg)).into_element(cx),
+        shadcn::KbdGroup::new([
+            shadcn::Kbd::new("Ctrl + B").into_element(cx),
+            shadcn::Kbd::new("Ctrl + K").into_element(cx),
+        ])
+        .into_element(cx),
+        ui::text(cx, "to open the command palette").text_sm().text_color(ColorRef::Color(muted_fg)).into_element(cx),
+    ]
+});"#,
                 ),
             DocSection::new("Button", button)
                 .description("kbd tokens can be composed into button labels for discoverability.")
                 .code(
                     "rust",
-                    r#"shadcn::Button::new("Command Palette")
+                    r#"shadcn::Button::new("Accept")
     .variant(shadcn::ButtonVariant::Outline)
-    .children([shadcn::KbdGroup::new([
-        shadcn::Kbd::new("Cmd").into_element(cx),
-        shadcn::Kbd::new("K").into_element(cx),
-    ])
-    .into_element(cx)])
-    .on_click(CMD_APP_OPEN)
+    .size(shadcn::ButtonSize::Sm)
+    .refine_style(ChromeRefinement::default().pr(Space::N2))
+    .children([shadcn::Kbd::new("⏎").into_element(cx)])
     .into_element(cx);"#,
                 ),
             DocSection::new("Tooltip", tooltip)
                 .description("Tooltips often include shortcut hints for expert users.")
                 .code(
                     "rust",
-                    r#"shadcn::TooltipProvider::new()
-    .delay_duration_frames(10)
-    .with(cx, |cx| {
-        vec![shadcn::Tooltip::new(
-            shadcn::Button::new("Save").into_element(cx),
-            shadcn::TooltipContent::new(vec![stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| vec![cx.text("Save"), shadcn::Kbd::new("Cmd").into_element(cx), shadcn::Kbd::new("S").into_element(cx)],
-            )])
-            .into_element(cx),
-        )
-        .arrow(true)
-        .into_element(cx)]
-    });"#,
+                    r#"let save = shadcn::Tooltip::new(
+    shadcn::Button::new("Save")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .into_element(cx),
+    shadcn::TooltipContent::new(vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| vec![ui::text(cx, "Save Changes").into_element(cx), shadcn::Kbd::new("S").into_element(cx)],
+    )])
+    .into_element(cx),
+)
+.arrow(true)
+.into_element(cx);"#,
                 ),
             DocSection::new("Input Group", input_group)
                 .description("Trailing kbd hints can be rendered inside an input group.")
                 .code(
                     "rust",
-                    r#"shadcn::InputGroup::new(query)
-    .trailing([shadcn::KbdGroup::new([/* ... */]).into_element(cx)])
+                    r#"let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
+let search_icon = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.search"),
+    Some(Px(16.0)),
+    Some(ColorRef::Color(muted_fg)),
+);
+
+shadcn::InputGroup::new(query)
+    .a11y_label("Search")
+    .leading([search_icon])
+    .trailing([shadcn::Kbd::new("⌘").into_element(cx), shadcn::Kbd::new("K").into_element(cx)])
     .trailing_has_kbd(true);"#,
                 ),
             DocSection::new("RTL", rtl)
