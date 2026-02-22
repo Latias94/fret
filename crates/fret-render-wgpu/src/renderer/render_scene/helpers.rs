@@ -135,6 +135,68 @@ pub(super) fn run_composite_premul_quad_pass(
     }
 }
 
+pub(super) fn run_path_msaa_composite_quad_pass(
+    encoder: &mut wgpu::CommandEncoder,
+    label: &str,
+    pipeline: &wgpu::RenderPipeline,
+    dst_view: &wgpu::TextureView,
+    load: wgpu::LoadOp<wgpu::Color>,
+    uniform_bind_group: &wgpu::BindGroup,
+    uniform_offsets: &[u32],
+    texture_bind_group: &wgpu::BindGroup,
+    texture_offsets: &[u32],
+    vertex_buffer: &wgpu::Buffer,
+    vertex_byte_base: u64,
+    vertex_byte_len: u64,
+    absolute_scissor: AbsoluteScissorRect,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+    perf: Option<&mut RenderPerfStats>,
+) {
+    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some(label),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: dst_view,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load,
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+
+    rp.set_pipeline(pipeline);
+    rp.set_bind_group(0, uniform_bind_group, uniform_offsets);
+    rp.set_bind_group(1, texture_bind_group, texture_offsets);
+    rp.set_vertex_buffer(
+        0,
+        vertex_buffer.slice(vertex_byte_base..vertex_byte_base + vertex_byte_len),
+    );
+    let applied_scissor =
+        set_scissor_rect_absolute(&mut rp, absolute_scissor.0, dst_origin, dst_size);
+    rp.draw(0..6, 0..1);
+
+    if let Some(perf) = perf {
+        perf.pipeline_switches = perf.pipeline_switches.saturating_add(1);
+        perf.pipeline_switches_composite = perf.pipeline_switches_composite.saturating_add(1);
+
+        perf.bind_group_switches = perf.bind_group_switches.saturating_add(2);
+        perf.uniform_bind_group_switches = perf.uniform_bind_group_switches.saturating_add(1);
+        perf.texture_bind_group_switches = perf.texture_bind_group_switches.saturating_add(1);
+
+        if applied_scissor {
+            perf.scissor_sets = perf.scissor_sets.saturating_add(1);
+        }
+        perf.draw_calls = perf.draw_calls.saturating_add(1);
+        perf.fullscreen_draw_calls = perf.fullscreen_draw_calls.saturating_add(1);
+    }
+}
+
 pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
     match pass {
         RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",
