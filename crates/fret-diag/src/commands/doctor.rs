@@ -158,11 +158,45 @@ pub(crate) fn cmd_doctor(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    if rest.len() > 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+
+    let mut fix_bundle_json: bool = false;
+    let mut fix_sidecars: bool = false;
+    let mut positionals: Vec<String> = Vec::new();
+
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--fix" => {
+                fix_bundle_json = true;
+                fix_sidecars = true;
+                i += 1;
+            }
+            "--fix-bundle-json" => {
+                fix_bundle_json = true;
+                i += 1;
+            }
+            "--fix-sidecars" => {
+                fix_sidecars = true;
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag for doctor: {other}"));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
     }
 
-    let mut bundle_dir = if let Some(src) = rest.first().cloned() {
+    if positionals.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    let mut bundle_dir = if let Some(src) = positionals.first().cloned() {
         let src = crate::resolve_path(workspace_root, PathBuf::from(src));
         resolve_bundle_dir_for_report(&src)
     } else {
@@ -190,10 +224,67 @@ pub(crate) fn cmd_doctor(
         }
     }
 
+    let mut fixes_applied: Vec<String> = Vec::new();
+    if fix_bundle_json {
+        if resolve_bundle_json_path_no_materialize(&bundle_dir).is_none() {
+            let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
+            for dir in attempts {
+                if !dir.is_dir() {
+                    continue;
+                }
+                match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
+                    &dir,
+                ) {
+                    Ok(Some(path)) if path.is_file() => {
+                        fixes_applied.push(format!(
+                            "materialized bundle.json from chunks ({})",
+                            path.display()
+                        ));
+                        break;
+                    }
+                    Ok(_) => {}
+                    Err(err) => {
+                        fixes_applied.push(format!(
+                            "attempted to materialize bundle.json from chunks, but failed ({})",
+                            err
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    if fix_sidecars {
+        let bundle_json = resolve_bundle_json_path_no_materialize(&bundle_dir).ok_or_else(|| {
+            "unable to regenerate sidecars: missing bundle.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains bundle.json)".to_string()
+        })?;
+        let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
+            .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));
+        let _ =
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames).map(|p| {
+                fixes_applied.push(format!("regenerated test_ids.index.json ({})", p.display()))
+            });
+        let _ =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames).map(|p| {
+                fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display()))
+            });
+    }
+
     let (items, required_ok, ok) = doctor_items(&bundle_dir, warmup_frames);
 
     if stats_json {
-        let payload = doctor_report_json(&bundle_dir, warmup_frames);
+        let mut payload = doctor_report_json(&bundle_dir, warmup_frames);
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert(
+                "fixes_applied".to_string(),
+                serde_json::Value::Array(
+                    fixes_applied
+                        .iter()
+                        .map(|s| serde_json::Value::String(s.to_string()))
+                        .collect(),
+                ),
+            );
+        }
         let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
         println!("{pretty}");
         return Ok(());
@@ -201,6 +292,11 @@ pub(crate) fn cmd_doctor(
 
     println!("bundle_dir: {}", bundle_dir.display());
     println!("warmup_frames: {}", warmup_frames);
+    if !fixes_applied.is_empty() {
+        for f in &fixes_applied {
+            println!("fixed: {f}");
+        }
+    }
     println!("required_ok: {required_ok}");
     println!("ok: {ok}");
     let report = doctor_report_json(&bundle_dir, warmup_frames);

@@ -57,6 +57,7 @@ scope: diagnostics, automation, tooling, refactor
   - Evidence: `crates/fret-diag/src/commands/doctor.rs`
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
+  - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars.
 
 ## M3: Tooling + AI loop
 
