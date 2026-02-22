@@ -23,6 +23,55 @@ pub(super) struct BindGroupCaches {
 }
 
 impl BindGroupCaches {
+    pub(super) fn ensure_viewport_sampler_texture_bind_group(
+        &mut self,
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        sampler: &wgpu::Sampler,
+        view: &wgpu::TextureView,
+        id: fret_core::RenderTargetId,
+        revision: u64,
+    ) -> &wgpu::BindGroup {
+        self.viewport.ensure(id, revision, || {
+            super::bind_group_builders::create_sampler_texture_bind_group(
+                device,
+                layout,
+                sampler,
+                view,
+                "fret viewport texture bind group",
+            )
+        })
+    }
+
+    pub(super) fn ensure_image_sampler_texture_bind_groups(
+        &mut self,
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        linear_sampler: &wgpu::Sampler,
+        nearest_sampler: &wgpu::Sampler,
+        view: &wgpu::TextureView,
+        id: fret_core::ImageId,
+        revision: u64,
+    ) -> &SamplingBindGroups {
+        self.images.ensure(id, revision, || {
+            let linear = super::bind_group_builders::create_sampler_texture_bind_group(
+                device,
+                layout,
+                linear_sampler,
+                view,
+                "fret image texture bind group (linear)",
+            );
+            let nearest = super::bind_group_builders::create_sampler_texture_bind_group(
+                device,
+                layout,
+                nearest_sampler,
+                view,
+                "fret image texture bind group (nearest)",
+            );
+            SamplingBindGroups { linear, nearest }
+        })
+    }
+
     pub(super) fn invalidate_render_target(&mut self, id: fret_core::RenderTargetId) {
         self.viewport.remove(id);
     }
@@ -36,29 +85,11 @@ impl BindGroupCaches {
         self.uniform_mask_images.clear();
     }
 
-    pub(super) fn ensure_viewport_bind_group(
-        &mut self,
-        id: fret_core::RenderTargetId,
-        revision: u64,
-        build: impl FnOnce() -> wgpu::BindGroup,
-    ) -> &wgpu::BindGroup {
-        self.viewport.ensure(id, revision, build)
-    }
-
     pub(super) fn get_viewport_bind_group(
         &self,
         id: fret_core::RenderTargetId,
     ) -> Option<&wgpu::BindGroup> {
         self.viewport.get(id)
-    }
-
-    pub(super) fn ensure_image_bind_groups(
-        &mut self,
-        id: fret_core::ImageId,
-        revision: u64,
-        build: impl FnOnce() -> SamplingBindGroups,
-    ) -> &SamplingBindGroups {
-        self.images.ensure(id, revision, build)
     }
 
     pub(super) fn get_image_bind_groups(

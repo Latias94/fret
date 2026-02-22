@@ -1,5 +1,4 @@
 use super::super::bind_group_builders::UniformMaskImageBindGroupGlobals;
-use super::super::bind_group_builders::create_sampler_texture_bind_group;
 use super::super::bind_group_caches::SamplingBindGroups;
 use super::super::*;
 
@@ -25,15 +24,14 @@ impl Renderer {
                 .copied()
                 .unwrap_or(0);
             self.bind_group_caches
-                .ensure_viewport_bind_group(target, revision, || {
-                    create_sampler_texture_bind_group(
-                        device,
-                        &self.viewport_bind_group_layout,
-                        &self.viewport_sampler,
-                        view,
-                        "fret viewport texture bind group",
-                    )
-                });
+                .ensure_viewport_sampler_texture_bind_group(
+                    device,
+                    &self.viewport_bind_group_layout,
+                    &self.viewport_sampler,
+                    view,
+                    target,
+                    revision,
+                );
         }
     }
 
@@ -54,27 +52,15 @@ impl Renderer {
 
             let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
             self.bind_group_caches
-                .ensure_image_bind_groups(image, revision, || {
-                    let bind_group_linear = create_sampler_texture_bind_group(
-                        device,
-                        &self.viewport_bind_group_layout,
-                        &self.viewport_sampler,
-                        view,
-                        "fret image texture bind group (linear)",
-                    );
-                    let bind_group_nearest = create_sampler_texture_bind_group(
-                        device,
-                        &self.viewport_bind_group_layout,
-                        &self.image_sampler_nearest,
-                        view,
-                        "fret image texture bind group (nearest)",
-                    );
-
-                    SamplingBindGroups {
-                        linear: bind_group_linear,
-                        nearest: bind_group_nearest,
-                    }
-                });
+                .ensure_image_sampler_texture_bind_groups(
+                    device,
+                    &self.viewport_bind_group_layout,
+                    &self.viewport_sampler,
+                    &self.image_sampler_nearest,
+                    view,
+                    image,
+                    revision,
+                );
         }
     }
 
