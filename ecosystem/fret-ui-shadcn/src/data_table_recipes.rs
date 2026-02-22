@@ -1227,7 +1227,7 @@ impl<TData> DataTableToolbar<TData> {
                                     host.notify(acx);
                                 });
 
-                                entries.push(CommandSeparator.into());
+                                entries.push(CommandSeparator::new().into());
                                 let clear_row = hstack(
                                     cx,
                                     HStackProps::default()

@@ -935,6 +935,7 @@ impl CommandItem {
 pub struct CommandGroup {
     heading: Option<Arc<str>>,
     items: Vec<CommandItem>,
+    force_mount: bool,
 }
 
 impl std::fmt::Debug for CommandGroup {
@@ -942,6 +943,7 @@ impl std::fmt::Debug for CommandGroup {
         f.debug_struct("CommandGroup")
             .field("heading", &self.heading.as_ref().map(|s| s.as_ref()))
             .field("items_len", &self.items.len())
+            .field("force_mount", &self.force_mount)
             .finish()
     }
 }
@@ -952,11 +954,18 @@ impl CommandGroup {
         Self {
             heading: None,
             items,
+            force_mount: false,
         }
     }
 
     pub fn heading(mut self, heading: impl Into<Arc<str>>) -> Self {
         self.heading = Some(heading.into());
+        self
+    }
+
+    /// cmdk: `forceMount`. When true, keeps the group visible even when the query filters out all items.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
         self
     }
 
@@ -972,12 +981,27 @@ impl CommandGroup {
 }
 
 /// shadcn/ui `CommandSeparator` (v4).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CommandSeparator;
+#[derive(Debug, Clone, Default)]
+pub struct CommandSeparator {
+    always_render: bool,
+    test_id: Option<Arc<str>>,
+}
 
 impl CommandSeparator {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// cmdk: `alwaysRender`. When true, the separator remains visible even when the query is non-empty.
+    pub fn always_render(mut self, always_render: bool) -> Self {
+        self.always_render = always_render;
+        self
+    }
+
+    /// Installs a stable `test_id` on the separator (for automation).
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 }
 
@@ -1394,7 +1418,7 @@ pub struct CommandPalette {
 enum CommandPaletteRenderRow {
     Heading(Arc<str>),
     GroupPad,
-    Separator,
+    Separator(Option<Arc<str>>),
     Item(usize),
 }
 
@@ -1411,13 +1435,14 @@ fn command_palette_render_rows_for_query_with_options(
     #[derive(Clone)]
     enum PendingRow {
         Heading(Arc<str>),
-        Separator,
+        Separator(CommandSeparator),
         Item {
             group: Option<u32>,
             item: CommandItem,
         },
     }
 
+    let has_search = !query.trim().is_empty();
     let query_for_filter = if should_filter { query } else { "" };
     let score_item = |item: &CommandItem| -> f32 {
         if query_for_filter.is_empty() {
@@ -1450,7 +1475,13 @@ fn command_palette_render_rows_for_query_with_options(
                         pending_rows.push(PendingRow::Item { group: None, item });
                     }
                 }
-                CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
+                CommandEntry::Separator(sep) => {
+                    // cmdk: separators are visible when the search query is empty (or when
+                    // `alwaysRender` is true), even when `shouldFilter` is false.
+                    if !has_search || sep.always_render {
+                        pending_rows.push(PendingRow::Separator(sep));
+                    }
+                }
                 CommandEntry::Group(group) => {
                     if group.items.is_empty() {
                         continue;
@@ -1473,8 +1504,14 @@ fn command_palette_render_rows_for_query_with_options(
         // cmdk sorts items globally by score and groups by highest item score. It also pushes
         // grouped items below ungrouped items.
         let mut root_items: Vec<(usize, f32, CommandItem)> = Vec::new();
-        let mut groups: Vec<(usize, f32, Option<Arc<str>>, Vec<(usize, f32, CommandItem)>)> =
-            Vec::new();
+        let mut groups: Vec<(
+            usize,
+            f32,
+            Option<Arc<str>>,
+            bool,
+            Vec<(usize, f32, CommandItem)>,
+        )> = Vec::new();
+        let mut always_render_separators: Vec<CommandSeparator> = Vec::new();
 
         for (entry_idx, entry) in entries.into_iter().enumerate() {
             match entry {
@@ -1484,9 +1521,13 @@ fn command_palette_render_rows_for_query_with_options(
                         root_items.push((entry_idx, score, item));
                     }
                 }
-                CommandEntry::Separator(_) => {}
+                CommandEntry::Separator(sep) => {
+                    if sep.always_render {
+                        always_render_separators.push(sep);
+                    }
+                }
                 CommandEntry::Group(group) => {
-                    if group.items.is_empty() {
+                    if group.items.is_empty() && !(group.force_mount && group.heading.is_some()) {
                         continue;
                     }
 
@@ -1500,7 +1541,7 @@ fn command_palette_render_rows_for_query_with_options(
                         })
                         .collect();
 
-                    if scored_items.is_empty() {
+                    if scored_items.is_empty() && !group.force_mount {
                         continue;
                     }
 
@@ -1513,7 +1554,17 @@ fn command_palette_render_rows_for_query_with_options(
                         .map(|(_, score, _)| *score)
                         .fold(0.0_f32, f32::max);
 
-                    groups.push((entry_idx, max_score, group.heading, scored_items));
+                    if scored_items.is_empty() && group.heading.is_none() {
+                        continue;
+                    }
+
+                    groups.push((
+                        entry_idx,
+                        max_score,
+                        group.heading,
+                        group.force_mount,
+                        scored_items,
+                    ));
                 }
             }
         }
@@ -1521,16 +1572,21 @@ fn command_palette_render_rows_for_query_with_options(
         root_items.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
             b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
         });
-        groups.sort_by(|(a_idx, a_score, _, _), (b_idx, b_score, _, _)| {
+        groups.sort_by(|(a_idx, a_score, _, _, _), (b_idx, b_score, _, _, _)| {
             b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
         });
 
+        pending_rows.extend(
+            always_render_separators
+                .into_iter()
+                .map(PendingRow::Separator),
+        );
         pending_rows.extend(
             root_items
                 .into_iter()
                 .map(|(_, _, item)| PendingRow::Item { group: None, item }),
         );
-        for (_, _, heading, scored_items) in groups {
+        for (_, _, heading, _force_mount, scored_items) in groups {
             let group_id = next_group_id;
             next_group_id = next_group_id.saturating_add(1);
 
@@ -1559,12 +1615,15 @@ fn command_palette_render_rows_for_query_with_options(
     let mut prev_is_sep = false;
     for (idx, row) in pending_rows.into_iter().enumerate() {
         match row {
-            PendingRow::Separator => {
-                if !seen_item_before || !has_item_from[idx + 1] || prev_is_sep {
+            PendingRow::Separator(sep) => {
+                if prev_is_sep {
+                    continue;
+                }
+                if !sep.always_render && (!seen_item_before || !has_item_from[idx + 1]) {
                     continue;
                 }
                 prev_is_sep = true;
-                filtered_rows.push(PendingRow::Separator);
+                filtered_rows.push(PendingRow::Separator(sep));
             }
             PendingRow::Item { group, item } => {
                 seen_item_before = true;
@@ -1593,7 +1652,9 @@ fn command_palette_render_rows_for_query_with_options(
                 saw_heading = true;
                 out
             }
-            PendingRow::Separator => vec![CommandPaletteRenderRow::Separator],
+            PendingRow::Separator(sep) => {
+                vec![CommandPaletteRenderRow::Separator(sep.test_id.clone())]
+            }
             PendingRow::Item { group, item } => {
                 let idx = items.len();
                 items.push(item);
@@ -1937,7 +1998,7 @@ impl CommandPalette {
                         CommandPaletteRenderRow::GroupPad => {
                             "group_pad".hash(&mut hasher);
                         }
-                        CommandPaletteRenderRow::Separator => {
+                        CommandPaletteRenderRow::Separator(_) => {
                             "separator".hash(&mut hasher);
                         }
                         CommandPaletteRenderRow::Item(idx) => {
@@ -2122,9 +2183,9 @@ impl CommandPalette {
                         },
                         |_cx| Vec::new(),
                     ),
-                    CommandPaletteRenderRow::Separator => {
+                    CommandPaletteRenderRow::Separator(test_id) => {
                         let border = border(&theme);
-                        cx.container(
+                        let mut sep = cx.container(
                             ContainerProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
@@ -2140,7 +2201,11 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             |_cx| Vec::new(),
-                        )
+                        );
+                        if let Some(test_id) = test_id.clone() {
+                            sep = sep.test_id(test_id);
+                        }
+                        sep
                     }
                     CommandPaletteRenderRow::Item(idx) => {
                         let Some(item) = items.get(idx).cloned() else {
@@ -3927,7 +3992,7 @@ mod tests {
             .map(|row| match row {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
                 CommandPaletteRenderRow::GroupPad => "P".to_string(),
-                CommandPaletteRenderRow::Separator => "S".to_string(),
+                CommandPaletteRenderRow::Separator(_) => "S".to_string(),
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
                         .get(*idx)
@@ -4820,6 +4885,26 @@ mod tests {
     }
 
     #[test]
+    fn cmdk_group_force_mount_keeps_group_visible_when_filtered() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("Alpha"), CommandItem::new("Beta")])
+                .heading("Letters")
+                .force_mount(true)
+                .into(),
+            CommandGroup::new(vec![CommandItem::new("Giraffe")])
+                .heading("Animals")
+                .into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "gir", true, None);
+        let sigs = row_signatures(&rows, &items);
+        assert!(sigs.iter().any(|sig| sig == "H:Letters"));
+        assert!(sigs.iter().any(|sig| sig == "I:Giraffe"));
+        assert!(!sigs.iter().any(|sig| sig == "I:Alpha"));
+    }
+
+    #[test]
     fn command_palette_sort_orders_ungrouped_items_by_score() {
         let entries = vec![
             CommandItem::new("pal").into(),
@@ -4899,6 +4984,19 @@ mod tests {
     }
 
     #[test]
+    fn cmdk_separator_always_render_stays_visible_with_search() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().always_render(true).into(),
+            CommandItem::new("Beta").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
+        assert!(row_signatures(&rows, &items).iter().any(|sig| sig == "S"));
+    }
+
+    #[test]
     fn cmdk_should_filter_false_shows_all_items_even_when_query_non_empty() {
         let entries = vec![
             CommandItem::new("Alpha").into(),
@@ -4910,8 +5008,21 @@ mod tests {
             command_palette_render_rows_for_query_with_options(entries, "zzz", false, None);
         assert_eq!(
             row_signatures(&rows, &items),
-            vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
+            vec!["I:Alpha".to_string(), "I:Beta".to_string()]
         );
+    }
+
+    #[test]
+    fn cmdk_should_filter_false_hides_separators_unless_always_render() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().always_render(true).into(),
+            CommandItem::new("Beta").into(),
+        ];
+
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "zzz", false, None);
+        assert!(row_signatures(&rows, &items).iter().any(|sig| sig == "S"));
     }
 
     #[test]

@@ -170,6 +170,12 @@ pub(super) fn preview_command_palette(
     let mut demo_filter_entries: Vec<shadcn::CommandEntry> =
         basic_items.clone().into_iter().map(Into::into).collect();
     demo_filter_entries.push(
+        shadcn::CommandSeparator::new()
+            .always_render(true)
+            .test_id("ui-gallery-command-demo-filter-separator")
+            .into(),
+    );
+    demo_filter_entries.push(
         shadcn::CommandItem::new("Force mounted row (cmdk forceMount)")
             .value("force-mounted")
             .force_mount(true)
