@@ -158,6 +158,7 @@ pub struct Combobox {
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
     groups: Vec<ComboboxGroup>,
+    group_separators: bool,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -192,6 +193,7 @@ impl Combobox {
             query: None,
             items: Vec::new(),
             groups: Vec::new(),
+            group_separators: false,
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
@@ -287,6 +289,13 @@ impl Combobox {
 
     pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
         self.groups.extend(groups);
+        self
+    }
+
+    /// When enabled, inserts visual separators between `items` and `groups`, and between
+    /// consecutive groups (shadcn `ComboboxSeparator`).
+    pub fn group_separators(mut self, enabled: bool) -> Self {
+        self.group_separators = enabled;
         self
     }
 
@@ -433,6 +442,7 @@ impl Combobox {
             self.responsive,
             self.responsive_device_md_breakpoint,
             self.search_enabled,
+            self.group_separators,
             self.show_clear,
             self.trigger_variant,
             self.consume_outside_pointer_events,
@@ -485,6 +495,7 @@ pub fn combobox<H: UiHost>(
         fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
         false,
+        false,
         ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
@@ -519,6 +530,7 @@ fn combobox_with_patch<H: UiHost>(
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
+    group_separators: bool,
     show_clear: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -1162,7 +1174,7 @@ fn combobox_with_patch<H: UiHost>(
                                 .collect();
                             let non_empty_groups_len = non_empty_groups.len();
 
-                            if !items.is_empty() && non_empty_groups_len > 0 {
+                            if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
                                 entries.push(CommandEntry::Separator(CommandSeparator::new()));
                             }
 
@@ -1172,7 +1184,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
-                                if idx + 1 < non_empty_groups_len {
+                                if group_separators && idx + 1 < non_empty_groups_len {
                                     entries.push(CommandEntry::Separator(CommandSeparator::new()));
                                 }
                             }
@@ -1300,7 +1312,7 @@ fn combobox_with_patch<H: UiHost>(
                                 .filter(|group| !group.items.is_empty())
                                 .collect();
                             let non_empty_groups_len = non_empty_groups.len();
-                            if !items.is_empty() && non_empty_groups_len > 0 {
+                            if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
                                 entries.push(CommandEntry::Separator(CommandSeparator::new()));
                             }
 
@@ -1313,7 +1325,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
-                                if idx + 1 < non_empty_groups_len {
+                                if group_separators && idx + 1 < non_empty_groups_len {
                                     entries.push(CommandEntry::Separator(CommandSeparator::new()));
                                 }
                             }
@@ -1716,7 +1728,7 @@ fn combobox_with_patch<H: UiHost>(
                         .collect();
                     let non_empty_groups_len = non_empty_groups.len();
 
-                    if !items.is_empty() && non_empty_groups_len > 0 {
+                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
                         entries.push(CommandEntry::Separator(CommandSeparator::new()));
                     }
 
@@ -1726,7 +1738,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
-                        if idx + 1 < non_empty_groups_len {
+                        if group_separators && idx + 1 < non_empty_groups_len {
                             entries.push(CommandEntry::Separator(CommandSeparator::new()));
                         }
                     }
@@ -1852,7 +1864,7 @@ fn combobox_with_patch<H: UiHost>(
                         .filter(|group| !group.items.is_empty())
                         .collect();
                     let non_empty_groups_len = non_empty_groups.len();
-                    if !items.is_empty() && non_empty_groups_len > 0 {
+                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
                         entries.push(CommandEntry::Separator(CommandSeparator::new()));
                     }
 
@@ -1865,7 +1877,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
-                        if idx + 1 < non_empty_groups_len {
+                        if group_separators && idx + 1 < non_empty_groups_len {
                             entries.push(CommandEntry::Separator(CommandSeparator::new()));
                         }
                     }

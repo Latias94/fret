@@ -219,6 +219,69 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
     content
 }
 
+pub(super) fn groups_with_separator(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    let combo = shadcn::Combobox::new(
+        models.groups_sep_value.clone(),
+        models.groups_sep_open.clone(),
+    )
+    .a11y_label("Combobox groups with separator")
+    .width(Px(300.0))
+    .placeholder("Select a timezone")
+    .query_model(models.groups_sep_query.clone())
+    .test_id_prefix("ui-gallery-combobox-groups-separator")
+    .trigger_test_id("ui-gallery-combobox-groups-separator-trigger")
+    .group_separators(true)
+    .groups([
+        shadcn::ComboboxGroup::new(
+            "Americas",
+            [
+                shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York"),
+                shadcn::ComboboxItem::new("americas-la", "(GMT-8) Los Angeles"),
+                shadcn::ComboboxItem::new("americas-chi", "(GMT-6) Chicago"),
+            ],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Europe",
+            [
+                shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London"),
+                shadcn::ComboboxItem::new("europe-paris", "(GMT+1) Paris"),
+                shadcn::ComboboxItem::new("europe-berlin", "(GMT+1) Berlin"),
+            ],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Asia/Pacific",
+            [
+                shadcn::ComboboxItem::new("asia-tokyo", "(GMT+9) Tokyo"),
+                shadcn::ComboboxItem::new("asia-shanghai", "(GMT+8) Shanghai"),
+                shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
+            ],
+        ),
+    ])
+    .into_element(cx);
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |cx| {
+            vec![
+                combo,
+                helpers::state_rows(
+                    cx,
+                    &models.groups_sep_value,
+                    &models.groups_sep_query,
+                    "ui-gallery-combobox-groups-separator",
+                ),
+            ]
+        },
+    )
+}
+
 pub(super) fn popup_trigger(
     cx: &mut ElementContext<'_, App>,
     models: &ComboboxModels,

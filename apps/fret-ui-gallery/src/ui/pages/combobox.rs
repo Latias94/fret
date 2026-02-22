@@ -23,6 +23,7 @@ pub(super) fn preview_combobox(
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
+    let groups_with_separator = sections::groups_with_separator(cx, &models);
     let popup = sections::popup_trigger(cx, &models);
     let multiple = sections::multiple_selection(cx, &models);
     let invalid = sections::invalid(cx, &models);
@@ -91,6 +92,27 @@ pub(super) fn preview_combobox(
                     r#"shadcn::Combobox::new(value, open)
     .placeholder("Select a timezone")
     .query_model(query)
+    .groups([
+        shadcn::ComboboxGroup::new(
+            "Americas",
+            [shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York")],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Europe",
+            [shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London")],
+        ),
+    ])
+    .into_element(cx);"#,
+                )
+                .no_shell(),
+            DocSection::new("Groups + Separator", groups_with_separator)
+                .description("Use `.group_separators(true)` to insert separators between groups (shadcn `ComboboxSeparator`).")
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a timezone")
+    .query_model(query)
+    .group_separators(true)
     .groups([
         shadcn::ComboboxGroup::new(
             "Americas",

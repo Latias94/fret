@@ -20,6 +20,9 @@ struct ComboboxModelsState {
     groups_value: Option<Model<Option<Arc<str>>>>,
     groups_open: Option<Model<bool>>,
     groups_query: Option<Model<String>>,
+    groups_sep_value: Option<Model<Option<Arc<str>>>>,
+    groups_sep_open: Option<Model<bool>>,
+    groups_sep_query: Option<Model<String>>,
     invalid_value: Option<Model<Option<Arc<str>>>>,
     invalid_open: Option<Model<bool>>,
     invalid_query: Option<Model<String>>,
@@ -57,6 +60,9 @@ pub(super) struct ComboboxModels {
     pub(super) groups_value: Model<Option<Arc<str>>>,
     pub(super) groups_open: Model<bool>,
     pub(super) groups_query: Model<String>,
+    pub(super) groups_sep_value: Model<Option<Arc<str>>>,
+    pub(super) groups_sep_open: Model<bool>,
+    pub(super) groups_sep_query: Model<String>,
     pub(super) invalid_value: Model<Option<Arc<str>>>,
     pub(super) invalid_open: Model<bool>,
     pub(super) invalid_query: Model<String>,
@@ -95,6 +101,9 @@ impl ComboboxModels {
             groups_value: state.groups_value?,
             groups_open: state.groups_open?,
             groups_query: state.groups_query?,
+            groups_sep_value: state.groups_sep_value?,
+            groups_sep_open: state.groups_sep_open?,
+            groups_sep_query: state.groups_sep_query?,
             invalid_value: state.invalid_value?,
             invalid_open: state.invalid_open?,
             invalid_query: state.invalid_query?,
@@ -144,6 +153,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let groups_open = cx.app.models_mut().insert(false);
     let groups_query = cx.app.models_mut().insert(String::new());
 
+    let groups_sep_value = cx.app.models_mut().insert(None);
+    let groups_sep_open = cx.app.models_mut().insert(false);
+    let groups_sep_query = cx.app.models_mut().insert(String::new());
+
     let invalid_value = cx.app.models_mut().insert(None);
     let invalid_open = cx.app.models_mut().insert(false);
     let invalid_query = cx.app.models_mut().insert(String::new());
@@ -189,6 +202,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.groups_open = Some(groups_open.clone());
         st.groups_query = Some(groups_query.clone());
 
+        st.groups_sep_value = Some(groups_sep_value.clone());
+        st.groups_sep_open = Some(groups_sep_open.clone());
+        st.groups_sep_query = Some(groups_sep_query.clone());
+
         st.invalid_value = Some(invalid_value.clone());
         st.invalid_open = Some(invalid_open.clone());
         st.invalid_query = Some(invalid_query.clone());
@@ -229,6 +246,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         groups_value,
         groups_open,
         groups_query,
+        groups_sep_value,
+        groups_sep_open,
+        groups_sep_query,
         invalid_value,
         invalid_open,
         invalid_query,
