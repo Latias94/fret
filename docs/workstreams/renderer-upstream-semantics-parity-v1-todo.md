@@ -68,5 +68,7 @@ Copy/paste for each seam:
 - Follow-up refactor steps:
   - [Done] Centralize “apply dst-local scissor to a wgpu render pass” in one helper to avoid recorders re-implementing the same mapping pattern.
     - Evidence: `crates/fret-render-wgpu/src/renderer/fullscreen.rs` (`run_fullscreen_triangle_pass*`).
-  - [ ] Extend trace/meta so it is always obvious whether a pass scissor is absolute or local (debug-only is fine).
-    - Current limitation: `RenderPlanPassTraceMeta.scissor` erases the scissor-space tag.
+  - [Done] Extend trace/meta so it is always obvious whether a pass scissor is absolute or local (debug-only is fine).
+    - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
+      `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
+      `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`render_plan_trace_fingerprint` mixes scissor-space).

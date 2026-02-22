@@ -22,8 +22,10 @@
   - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
   - `ClipMask` pass clear/load assumptions (always `Clear`)
   - mask sampling + viewport rect mapping rules for each postprocess pass
-- [ ] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).
-  - Rationale: type-level tagging exists in the plan, but trace currently erases it.
+- [x] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
+    `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`render_plan_trace_fingerprint` mixes scissor-space).
 
 ## Nice-to-have
 
