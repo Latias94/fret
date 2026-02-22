@@ -1613,7 +1613,9 @@ impl MenubarMenuEntries {
                                         height: Length::Px(placed.size.height),
                                         ..Default::default()
                                     },
-                                    overflow: Overflow::Clip,
+                                    // Do not clip at the semantics wrapper: clipping here is rectangular (no corner
+                                    // radii) and will truncate rounded shadows on the inner panel container.
+                                    overflow: Overflow::Visible,
                                     ..Default::default()
                                 },
                                 move |cx| {
