@@ -1340,6 +1340,8 @@ pub struct CommandPalette {
     disabled: bool,
     should_filter: bool,
     filter: Option<CommandPaletteFilterFn>,
+    value: Option<Model<Option<Arc<str>>>>,
+    default_value: Option<Arc<str>>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -1589,6 +1591,11 @@ impl std::fmt::Debug for CommandPalette {
             .field("disabled", &self.disabled)
             .field("should_filter", &self.should_filter)
             .field("filter", &self.filter.is_some())
+            .field("value", &self.value.is_some())
+            .field(
+                "default_value",
+                &self.default_value.as_ref().map(|s| s.as_ref()),
+            )
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -1621,6 +1628,8 @@ impl CommandPalette {
             // cmdk default: should filter/sort when search is non-empty.
             should_filter: true,
             filter: None,
+            value: None,
+            default_value: None,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -1700,6 +1709,23 @@ impl CommandPalette {
         F: Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static,
     {
         self.filter = Some(Arc::new(filter));
+        self
+    }
+
+    /// cmdk: `value` / `defaultValue` (selected item value).
+    ///
+    /// This keeps input focus on the combobox while the highlighted listbox option is tracked
+    /// separately (cmdk-style active descendant).
+    pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self {
+        self.value = value;
+        self
+    }
+
+    /// cmdk: `defaultValue` (initial selected item value).
+    ///
+    /// When omitted, the palette selects the first enabled item.
+    pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
+        self.default_value = Some(default_value.into());
         self
     }
 
@@ -1845,6 +1871,8 @@ impl CommandPalette {
             let disabled = self.disabled;
             let should_filter = self.should_filter;
             let filter = self.filter.clone();
+            let value = self.value.clone();
+            let default_value = self.default_value.clone();
             let wrap = self.wrap;
             let vim_bindings = self.vim_bindings;
             let disable_pointer_selection = self.disable_pointer_selection;
@@ -1931,19 +1959,11 @@ impl CommandPalette {
                 .unzip();
             let entries_arc: Arc<[PaletteEntry]> = Arc::from(entries.into_boxed_slice());
 
-            let active = cx.with_state(CommandPaletteState::default, |st| st.active.clone());
-            let active = if let Some(active) = active {
-                active
-            } else {
-                let init = cmdk_selection::clamp_active_index(&disabled_flags, None)
-                    .and_then(|i| entries_arc.get(i))
-                    .map(|e| e.value.clone());
-                let active = cx.app.models_mut().insert(init);
-                cx.with_state(CommandPaletteState::default, |st| {
-                    st.active = Some(active.clone())
-                });
-                active
-            };
+            let default_value_for_hook = default_value.clone();
+            let active = controllable_state::use_controllable_model(cx, value, move || {
+                default_value_for_hook.clone()
+            })
+            .model();
 
             let _items_changed = cx.with_state(CommandPaletteState::default, |st| {
                 if st.items_fingerprint != items_fingerprint {
@@ -2706,6 +2726,8 @@ pub struct CommandDialog {
     disabled: bool,
     should_filter: bool,
     filter: Option<CommandPaletteFilterFn>,
+    value: Option<Model<Option<Arc<str>>>>,
+    default_value: Option<Arc<str>>,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2726,6 +2748,11 @@ impl std::fmt::Debug for CommandDialog {
             .field("disabled", &self.disabled)
             .field("should_filter", &self.should_filter)
             .field("filter", &self.filter.is_some())
+            .field("value", &self.value.is_some())
+            .field(
+                "default_value",
+                &self.default_value.as_ref().map(|s| s.as_ref()),
+            )
             .field("wrap", &self.wrap)
             .field("vim_bindings", &self.vim_bindings)
             .field("disable_pointer_selection", &self.disable_pointer_selection)
@@ -2758,6 +2785,8 @@ impl CommandDialog {
             disabled: false,
             should_filter: true,
             filter: None,
+            value: None,
+            default_value: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -2801,6 +2830,8 @@ impl CommandDialog {
             disabled: false,
             should_filter: true,
             filter: None,
+            value: None,
+            default_value: None,
             wrap: false,
             vim_bindings: true,
             disable_pointer_selection: false,
@@ -2901,6 +2932,18 @@ impl CommandDialog {
         self
     }
 
+    /// cmdk: `value` / `defaultValue` (selected item value).
+    pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self {
+        self.value = value;
+        self
+    }
+
+    /// cmdk: `defaultValue` (initial selected item value).
+    pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
+        self.default_value = Some(default_value.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
@@ -2932,6 +2975,8 @@ impl CommandDialog {
         let disabled = self.disabled;
         let should_filter = self.should_filter;
         let filter = self.filter;
+        let value = self.value;
+        let default_value = self.default_value;
         let wrap = self.wrap;
         let vim_bindings = self.vim_bindings;
         let disable_pointer_selection = self.disable_pointer_selection;
@@ -3051,11 +3096,16 @@ impl CommandDialog {
                     .a11y_label(a11y_label.clone())
                     .disabled(disabled)
                     .should_filter(should_filter)
+                    .value(value.clone())
                     .wrap(wrap)
                     .vim_bindings(vim_bindings)
                     .disable_pointer_selection(disable_pointer_selection)
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h));
+
+                if let Some(default_value) = default_value.as_ref() {
+                    palette = palette.default_value(default_value.clone());
+                }
 
                 if let Some(filter) = filter.as_ref() {
                     let filter = filter.clone();
@@ -3075,7 +3125,6 @@ impl CommandDialog {
 
 #[derive(Default)]
 struct CommandPaletteState {
-    active: Option<Model<Option<Arc<str>>>>,
     items_fingerprint: u64,
 }
 
@@ -3781,6 +3830,34 @@ mod tests {
         root
     }
 
+    fn render_frame_with_value(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<String>,
+        value: Model<Option<Arc<str>>>,
+        items: Vec<CommandItem>,
+    ) -> fret_core::NodeId {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
+                vec![
+                    CommandPalette::new(model, items)
+                        .value(Some(value.clone()))
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_disable_pointer_selection(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3921,6 +3998,149 @@ mod tests {
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
+        );
+    }
+
+    #[test]
+    fn cmdk_value_model_respects_controlled_selection() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let selected = app.models_mut().insert(Some(Arc::<str>::from("Beta")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+        ];
+
+        let root = render_frame_with_value(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query.clone(),
+            selected.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        let _ = render_frame_with_value(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query,
+            selected.clone(),
+            items,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
+
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.label.as_deref(), Some("Beta"));
+        assert_eq!(
+            app.models()
+                .get_cloned(&selected)
+                .unwrap_or(None)
+                .as_deref(),
+            Some("Beta")
+        );
+    }
+
+    #[test]
+    fn cmdk_value_model_updates_on_arrow_navigation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let selected = app.models_mut().insert(Some(Arc::<str>::from("Alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+            CommandItem::new("Beta").on_select(CommandId::new("beta")),
+        ];
+
+        let root = render_frame_with_value(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query.clone(),
+            selected.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_with_value(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query,
+            selected.clone(),
+            items,
+        );
+
+        assert_eq!(
+            app.models()
+                .get_cloned(&selected)
+                .unwrap_or(None)
+                .as_deref(),
+            Some("Beta")
         );
     }
 
