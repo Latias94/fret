@@ -3,6 +3,7 @@
 See also:
 - `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-design.md`
 - `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-milestones.md`
+- `docs/workstreams/renderer-render-plan-semantics-audit-v1.md`
 
 ## Done
 
