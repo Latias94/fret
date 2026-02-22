@@ -67,6 +67,46 @@ pub(super) fn set_scissor_rect_absolute(
     true
 }
 
+pub(super) fn set_scissor_rect_local(
+    rp: &mut wgpu::RenderPass<'_>,
+    scissor: LocalScissorRect,
+    dst_size: (u32, u32),
+) -> bool {
+    if dst_size.0 == 0 || dst_size.1 == 0 {
+        return false;
+    }
+
+    let scissor = scissor.0;
+    if scissor.w == 0 || scissor.h == 0 {
+        return false;
+    }
+
+    let x0 = scissor.x.min(dst_size.0);
+    let y0 = scissor.y.min(dst_size.1);
+    let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
+    let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
+
+    let w = x1.saturating_sub(x0);
+    let h = y1.saturating_sub(y0);
+    if w == 0 || h == 0 {
+        return false;
+    }
+
+    rp.set_scissor_rect(x0, y0, w, h);
+    true
+}
+
+pub(super) fn set_scissor_rect_local_opt(
+    rp: &mut wgpu::RenderPass<'_>,
+    scissor: Option<LocalScissorRect>,
+    dst_size: (u32, u32),
+) -> bool {
+    let Some(scissor) = scissor else {
+        return false;
+    };
+    set_scissor_rect_local(rp, scissor, dst_size)
+}
+
 pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
     match pass {
         RenderPlanPass::SceneDrawRange(_) => "scene_draw_range",

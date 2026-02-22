@@ -2,7 +2,7 @@ use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
-    set_scissor_rect_absolute,
+    set_scissor_rect_absolute, set_scissor_rect_local_opt,
 };
 
 pub(in super::super) fn record_color_adjust_pass(
@@ -145,14 +145,8 @@ pub(in super::super) fn record_color_adjust_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -221,14 +215,8 @@ pub(in super::super) fn record_color_adjust_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -404,14 +392,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -480,14 +462,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -672,14 +648,8 @@ pub(in super::super) fn record_color_matrix_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -748,14 +718,8 @@ pub(in super::super) fn record_color_matrix_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -941,14 +905,8 @@ pub(in super::super) fn record_drop_shadow_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -1017,14 +975,8 @@ pub(in super::super) fn record_drop_shadow_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
+        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
         rp.draw(0..3, 0..1);
         if perf_enabled {
@@ -1328,14 +1280,8 @@ pub(in super::super) fn record_clip_mask_pass(
         frame_perf.texture_bind_group_switches =
             frame_perf.texture_bind_group_switches.saturating_add(1);
     }
-    if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-        if perf_enabled {
-            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-        }
+    if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
+        frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
     }
     rp.draw(0..3, 0..1);
     if perf_enabled {
