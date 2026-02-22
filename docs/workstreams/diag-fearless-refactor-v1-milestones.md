@@ -28,7 +28,7 @@ Definition of done:
 
 ### M1: Bundle export modularization
 
-- [ ] Extract bundle schema selection + JSON writing into a cohesive module.
+- [x] Extract bundle schema selection + JSON writing into a cohesive module (`bundle_dump.rs`).
 - [ ] Make schema v2 + semantics-mode defaults explicit and documented.
 
 Definition of done:
@@ -39,6 +39,8 @@ Definition of done:
 ### M2: Script runner modularization
 
 - [ ] Extract the scripted interaction runner (v1/v2 parsing, step loop, evidence capture) into its own module.
+  - [x] Extract runner helpers (`script_runner.rs`).
+  - [x] Extract step handlers into dedicated modules (pointer sessions, drag playback, menu, scroll, visibility, etc.).
 
 Definition of done:
 
@@ -70,4 +72,3 @@ Definition of done:
 Definition of done:
 
 - At least one workflow produces a manifest bundle and can materialize `bundle.json` on demand.
-
