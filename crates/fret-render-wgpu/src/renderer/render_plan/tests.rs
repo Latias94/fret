@@ -66,6 +66,78 @@ fn debug_validate_rejects_absolute_scissor_without_intersection() {
 }
 
 #[test]
+fn debug_validate_rejects_mask_viewport_rect_out_of_bounds() {
+    let pass = RenderPlanPass::Blur(BlurPass {
+        src: PlanTarget::Intermediate0,
+        dst: PlanTarget::Intermediate1,
+        src_size: (10, 10),
+        dst_size: (10, 10),
+        dst_scissor: None,
+        mask_uniform_index: Some(0),
+        mask: Some(MaskRef {
+            target: PlanTarget::Mask0,
+            size: (2, 2),
+            viewport_rect: ScissorRect {
+                x: 9,
+                y: 0,
+                w: 2,
+                h: 1,
+            },
+        }),
+        axis: BlurAxis::Horizontal,
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("mask viewport_rect"), "{err}");
+}
+
+#[test]
+fn debug_validate_rejects_mask_size_mismatch() {
+    let pass = RenderPlanPass::ColorAdjust(ColorAdjustPass {
+        src: PlanTarget::Intermediate0,
+        dst: PlanTarget::Intermediate1,
+        src_size: (10, 10),
+        dst_size: (10, 10),
+        dst_scissor: None,
+        mask_uniform_index: Some(0),
+        mask: Some(MaskRef {
+            target: PlanTarget::Mask1,
+            // Expected for 3x5 viewport rect at Mask1 is downsampled_size((3,5),2) == (2,3).
+            size: (1, 1),
+            viewport_rect: ScissorRect {
+                x: 1,
+                y: 2,
+                w: 3,
+                h: 5,
+            },
+        }),
+        saturation: 1.0,
+        brightness: 1.0,
+        contrast: 1.0,
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("mask size mismatch"), "{err}");
+}
+
+#[test]
+fn debug_validate_rejects_origin_size_overflow() {
+    let pass = RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+        segment: SceneSegmentId(0),
+        target: PlanTarget::Intermediate0,
+        target_origin: (u32::MAX, 0),
+        target_size: (1, 1),
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        draw_range: 0..0,
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("overflows"), "{err}");
+}
+
+#[test]
 fn insert_early_releases_inserts_release_after_last_use() {
     let mut passes = vec![
         RenderPlanPass::SceneDrawRange(SceneDrawRangePass {

@@ -6,10 +6,10 @@
 
 ## Next
 
-- [ ] Expand debug validation:
-  - verify scissors are within destination bounds when provided (in progress)
-  - verify `MaskRef.viewport_rect` is within mask target size (in progress)
-  - verify `target_origin + target_size` bounds are consistent per pass
+- [x] Expand debug validation:
+  - verify scissors are within destination bounds when provided
+  - verify `MaskRef.viewport_rect` and `MaskRef.size` are consistent per pass
+  - reject integer overflow in scissor/rect bounds math
 - [x] Add “plan shape” diagnostics:
   - per-pass trace spans include kind/src/dst/load/scissor/render-space
   - render-scene trace span includes `plan_fingerprint`
