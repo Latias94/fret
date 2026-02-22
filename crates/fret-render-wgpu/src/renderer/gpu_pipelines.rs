@@ -60,6 +60,19 @@ pub(super) struct GpuPipelines {
     pub(super) upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) backdrop_warp_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) backdrop_warp_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) backdrop_warp_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) backdrop_warp_image_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_image_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_image_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) backdrop_warp_image_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) backdrop_warp_image_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -108,6 +121,17 @@ impl Default for GpuPipelines {
             upscale_mask_pipeline: None,
             scale_bind_group_layout: None,
             scale_mask_bind_group_layout: None,
+            backdrop_warp_pipeline_format: None,
+            backdrop_warp_pipeline: None,
+            backdrop_warp_masked_pipeline: None,
+            backdrop_warp_mask_pipeline: None,
+            backdrop_warp_bind_group_layout: None,
+            backdrop_warp_mask_bind_group_layout: None,
+            backdrop_warp_image_pipeline: None,
+            backdrop_warp_image_masked_pipeline: None,
+            backdrop_warp_image_mask_pipeline: None,
+            backdrop_warp_image_bind_group_layout: None,
+            backdrop_warp_image_mask_bind_group_layout: None,
         }
     }
 }
