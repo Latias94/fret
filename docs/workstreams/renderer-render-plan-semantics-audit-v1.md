@@ -41,7 +41,9 @@ Guardrail:
 ### 3) Coordinate spaces
 
 - `render_space_offset_u32` selects the correct `RenderSpaceUniform` for a pass.
-- Scissors passed to a pass are expressed in the destination target space (unless explicitly documented otherwise).
+- Scissors are explicitly tagged in the plan as either:
+  - absolute (render-space), or
+  - local to the destination target (`0..dst_size`).
 - Scissor mapping across downsample/upsample chains must preserve coverage monotonicity (never expands beyond the mapped bounds).
 - Absolute (render-space) scissors:
   - `PathClipMask.scissor`

@@ -3,6 +3,7 @@
 ## Done
 
 - [x] Add a debug-only `RenderPlan` validator to catch target lifetime, `LoadOp::Load`, scissor, and mask shape misuse early.
+- [x] Make scissor coordinate spaces explicit in the plan (`AbsoluteScissorRect` vs `LocalScissorRect`).
 
 ## Next
 
