@@ -1,10 +1,11 @@
 use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use super::recorders::{
-    SceneDrawRangePassArgs, record_alpha_threshold_pass, record_backdrop_warp_pass,
-    record_blur_pass, record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
+    record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
+    record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
     record_composite_premul_pass, record_drop_shadow_pass, record_fullscreen_blit_pass,
     record_path_clip_mask_pass, record_path_msaa_batch_pass, record_scale_nearest_pass,
+    record_scene_draw_range_pass,
 };
 
 pub(super) struct RenderSceneExecutor<'a> {
@@ -92,58 +93,13 @@ impl<'a> RenderSceneExecutor<'a> {
     ) {
         match planned_pass {
             RenderPlanPass::PathClipMask(mask_pass) => {
-                record_path_clip_mask_pass(
-                    self,
-                    resources.path_vertex_buffer,
-                    mask_pass,
-                    ctx.render_space_offset_u32,
-                );
+                record_path_clip_mask_pass(self, ctx, resources, mask_pass);
             }
             RenderPlanPass::SceneDrawRange(scene_pass) => {
-                let device = self.device;
-                let format = self.format;
-                let target_view = self.target_view;
-                let usage = self.usage;
-                let encoding = self.encoding;
-                let perf_enabled = self.perf_enabled;
-
-                let renderer = &mut *self.renderer;
-                let encoder = &mut *self.encoder;
-                let frame_targets = &mut *self.frame_targets;
-                let frame_perf = &mut *self.frame_perf;
-
-                let mut args = SceneDrawRangePassArgs {
-                    device,
-                    format,
-                    target_view,
-                    usage,
-                    encoder,
-                    frame_targets,
-                    encoding,
-                    render_space_offset_u32: ctx.render_space_offset_u32,
-                    perf_enabled,
-                    frame_perf,
-                    plan: ctx.plan,
-                    scene_pass,
-                    viewport_vertex_buffer: resources.viewport_vertex_buffer,
-                    text_vertex_buffer: resources.text_vertex_buffer,
-                    path_vertex_buffer: resources.path_vertex_buffer,
-                    quad_instance_bind_group: resources.quad_instance_bind_group,
-                    text_paint_bind_group: resources.text_paint_bind_group,
-                    path_paint_bind_group: resources.path_paint_bind_group,
-                };
-                renderer.record_scene_draw_range_pass(&mut args);
+                record_scene_draw_range_pass(self, ctx, resources, scene_pass);
             }
             RenderPlanPass::PathMsaaBatch(path_pass) => {
-                record_path_msaa_batch_pass(
-                    self,
-                    ctx.plan,
-                    ctx.pass_index,
-                    resources.path_vertex_buffer,
-                    resources.path_paint_bind_group,
-                    path_pass,
-                    ctx.render_space_offset_u32,
-                );
+                record_path_msaa_batch_pass(self, ctx, resources, path_pass);
             }
             RenderPlanPass::ScaleNearest(pass) => {
                 record_scale_nearest_pass(self, pass, ctx.render_space_offset_u32);

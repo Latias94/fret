@@ -1,15 +1,12 @@
 use super::super::super::*;
-use super::super::executor::RenderSceneExecutor;
+use super::super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::super::helpers::{ensure_color_dst_view_owned, set_scissor_rect_absolute};
 
 pub(in super::super) fn record_path_msaa_batch_pass(
     exec: &mut RenderSceneExecutor<'_>,
-    plan: &RenderPlan,
-    pass_index: usize,
-    path_vertex_buffer: &wgpu::Buffer,
-    path_paint_bind_group: &wgpu::BindGroup,
+    ctx: &RecordPassCtx<'_>,
+    resources: &RecordPassResources<'_>,
     path_pass: &PathMsaaBatchPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let format = exec.format;
@@ -25,7 +22,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
 
     let renderer = &mut *exec.renderer;
 
-    debug_assert!(path_pass.segment.0 < plan.segments.len());
+    debug_assert!(path_pass.segment.0 < ctx.plan.segments.len());
     let target_origin = path_pass.target_origin;
     let target_size = path_pass.target_size;
     let pass_target_view_owned = ensure_color_dst_view_owned(
@@ -91,11 +88,11 @@ pub(in super::super) fn record_path_msaa_batch_pass(
             frame_perf.pipeline_switches_path_msaa =
                 frame_perf.pipeline_switches_path_msaa.saturating_add(1);
         }
-        path_pass_rp.set_bind_group(1, path_paint_bind_group, &[]);
+        path_pass_rp.set_bind_group(1, resources.path_paint_bind_group, &[]);
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
         }
-        path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+        path_pass_rp.set_vertex_buffer(0, resources.path_vertex_buffer.slice(..));
 
         let mut active_uniform_offset: Option<u32> = None;
         let mut active_mask_image: Option<UniformMaskImageSelection> = None;
@@ -131,7 +128,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
                 path_pass_rp.set_bind_group(
                     0,
                     uniform_bind_group,
-                    &[uniform_offset, render_space_offset_u32],
+                    &[uniform_offset, ctx.render_space_offset_u32],
                 );
                 if perf_enabled {
                     frame_perf.bind_group_switches =
@@ -157,7 +154,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
     if union.w == 0 || union.h == 0 {
         return;
     }
-    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+    let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
     };
 
@@ -195,7 +192,7 @@ pub(in super::super) fn record_path_msaa_batch_pass(
     pass.set_bind_group(
         0,
         uniform_bind_group,
-        &[uniform_offset, render_space_offset_u32],
+        &[uniform_offset, ctx.render_space_offset_u32],
     );
     if perf_enabled {
         frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
