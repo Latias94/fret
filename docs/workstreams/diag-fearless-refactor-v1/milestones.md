@@ -44,6 +44,7 @@ Exit criteria:
 - Huge-bundle first-pass triage does not require loading `bundle.json` into memory:
   - `fretboard diag triage --lite ...` works from `frames.index.json`.
   - `fretboard diag hotspots --lite ...` reports slow frames from `frames.index.json`.
+- `fretboard diag ai-packet ...` includes lite reports (`triage.lite.json`, `hotspots.lite.json`) for agent-first workflows.
 - Evidence anchors in docs stay in sync with the implementation.
 
 ## Milestone 4: Debt is removed (no redundant code paths)
