@@ -161,6 +161,8 @@ pub(crate) fn cmd_doctor(
 
     let mut fix_bundle_json: bool = false;
     let mut fix_sidecars: bool = false;
+    let mut check_required: bool = false;
+    let mut check_all: bool = false;
     let mut positionals: Vec<String> = Vec::new();
 
     let mut i: usize = 0;
@@ -177,6 +179,14 @@ pub(crate) fn cmd_doctor(
             }
             "--fix-sidecars" => {
                 fix_sidecars = true;
+                i += 1;
+            }
+            "--check" | "--check-required" => {
+                check_required = true;
+                i += 1;
+            }
+            "--check-all" | "--strict" => {
+                check_all = true;
                 i += 1;
             }
             other if other.starts_with("--") => {
@@ -284,9 +294,14 @@ pub(crate) fn cmd_doctor(
                         .collect(),
                 ),
             );
+            obj.insert("check".to_string(), serde_json::Value::Bool(check_required));
+            obj.insert("check_all".to_string(), serde_json::Value::Bool(check_all));
         }
         let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
         println!("{pretty}");
+        if (check_all && !ok) || (check_required && !required_ok) {
+            std::process::exit(1);
+        }
         return Ok(());
     }
 
@@ -345,6 +360,13 @@ pub(crate) fn cmd_doctor(
         for note in &it.notes {
             println!("  note: {note}");
         }
+    }
+
+    if check_all && !ok {
+        std::process::exit(1);
+    }
+    if check_required && !required_ok {
+        std::process::exit(1);
     }
 
     Ok(())
