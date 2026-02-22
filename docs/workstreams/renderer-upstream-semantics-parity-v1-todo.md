@@ -24,11 +24,12 @@
 
 ## M3 — Intermediate reuse / lifetime parity
 
-- [ ] Compare intermediate allocation/reuse strategy vs upstream:
+- [x] Compare intermediate allocation/reuse strategy vs upstream:
   - lifetime model,
   - eviction/budgeting policy,
   - determinism under contention.
-- [ ] Add one targeted unit test for “release after last use” stability in plan shape.
+- [x] Add one targeted unit test for “release after last use” stability in plan shape.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`insert_early_releases_inserts_release_after_last_use`).
 
 ## Notes / parity template
 
@@ -100,3 +101,38 @@ Copy/paste for each seam:
   - Keep plan validation and plan trace fields sufficient to debug clip stacks when refactoring.
 - Follow-up refactor steps:
   - When touching clip-path encode/compile paths, always run `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`.
+
+## Parity note 003 — Intermediate reuse / lifetime (pool vs persistent targets)
+
+- Seam: how intermediate render targets are allocated, reused, and released; and how determinism is maintained under memory pressure.
+- Upstream evidence anchors (Zed / GPUI WGPU):
+  - Path intermediate is a persistent surface-sized texture: `repo-ref/zed/crates/gpui_wgpu/src/wgpu_renderer.rs`
+    (`path_intermediate_texture`, `create_path_intermediate`, `draw_paths_to_intermediate`).
+  - Intermediate is recreated on resize (no pool): `repo-ref/zed/crates/gpui_wgpu/src/wgpu_renderer.rs`
+    (`update_drawable_size` recreates `path_intermediate_texture` and optional `path_msaa_texture`).
+- Fret evidence anchors:
+  - Pooled intermediate allocator with budget enforcement: `crates/fret-render-wgpu/src/renderer/intermediate_pool.rs`
+    (`IntermediatePool::{acquire_texture,release,enforce_budget}`).
+  - Frame-scoped intermediate ownership + explicit release: `crates/fret-render-wgpu/src/renderer/frame_targets.rs`
+    (`FrameTargets::{ensure_target,release_target,release_all}`).
+  - Deterministic release insertion: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`insert_early_releases`),
+    `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`insert_early_releases_inserts_release_after_last_use`).
+  - Degradation recording: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`RenderPlanDegradation*`).
+- Observed behavior:
+  - Upstream (Zed/GPUI) uses a small set of persistent per-surface render targets (notably for path rasterization) and recreates them on size changes.
+    There is no explicit intermediate pool, budget accounting, or “release” concept at the per-pass level.
+  - Fret explicitly plans intermediate lifetimes within a frame (`ReleaseTarget` passes) and uses a pool to reuse textures across frames,
+    enforcing a free-texture budget at frame end.
+- Differences (gap vs deliberate):
+  - Deliberate: Fret’s renderer is designed around multi-pass pipelines (effects, clip/mask, scissor-sized intermediates) and must remain deterministic
+    under budget pressure. This requires explicit lifetimes, predictable reuse, and recorded degradations.
+  - Upstream is still a useful reference for “keep the number of persistent intermediates small” and “recreate-on-resize is acceptable” patterns,
+    but it does not have an equivalent of Fret’s plan/compiler + budget/degradation model.
+- Proposed guardrail:
+  - Keep `RenderPlan::debug_validate()` enforcing lifetime and `LoadOp::Load` invariants.
+  - Keep at least one unit test that asserts “release after last use” plan-shape stability.
+- Follow-up refactor steps:
+  - Future refactors may reorder passes internally, but must preserve:
+    - `ReleaseTarget` placement relative to last use,
+    - deterministic degradation reasons/kinds recorded in the plan,
+    - and stable pool budget enforcement semantics.
