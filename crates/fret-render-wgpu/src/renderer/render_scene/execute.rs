@@ -3491,6 +3491,108 @@ impl Renderer {
         }
     }
 
+    fn record_clip_mask_pass(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        usage: wgpu::TextureUsages,
+        encoder: &mut wgpu::CommandEncoder,
+        frame_targets: &mut FrameTargets,
+        encoding: &SceneEncoding,
+        render_space_offset_u32: u32,
+        perf_enabled: bool,
+        frame_perf: &mut RenderPerfStats,
+        pass: &ClipMaskPass,
+    ) {
+        debug_assert!(matches!(
+            pass.dst,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ));
+        queue.write_buffer(
+            &self.clip_mask_param_buffer,
+            0,
+            bytemuck::cast_slice(&[pass.dst_size.0 as f32, pass.dst_size.1 as f32, 0.0, 0.0]),
+        );
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf
+                .uniform_bytes
+                .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+        }
+        let dst_view = frame_targets.ensure_target(
+            &mut self.intermediate_pool,
+            device,
+            pass.dst,
+            pass.dst_size,
+            wgpu::TextureFormat::R8Unorm,
+            usage,
+        );
+
+        let pipeline = self
+            .clip_mask_pipeline
+            .as_ref()
+            .expect("clip mask pipeline must exist");
+        let uniform_offset = (u64::from(pass.uniform_index) * self.uniform_stride) as u32;
+
+        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("fret clip mask pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &dst_view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        rp.set_pipeline(pipeline);
+        if perf_enabled {
+            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
+            frame_perf.pipeline_switches_clip_mask =
+                frame_perf.pipeline_switches_clip_mask.saturating_add(1);
+        }
+        rp.set_bind_group(
+            0,
+            self.pick_uniform_bind_group_for_mask_image(
+                encoding
+                    .uniform_mask_images
+                    .get(pass.uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, render_space_offset_u32],
+        );
+        if perf_enabled {
+            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+            frame_perf.uniform_bind_group_switches =
+                frame_perf.uniform_bind_group_switches.saturating_add(1);
+        }
+        rp.set_bind_group(1, &self.clip_mask_param_bind_group, &[]);
+        if perf_enabled {
+            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+            frame_perf.texture_bind_group_switches =
+                frame_perf.texture_bind_group_switches.saturating_add(1);
+        }
+        if let Some(scissor) = pass.dst_scissor
+            && scissor.w != 0
+            && scissor.h != 0
+        {
+            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+            if perf_enabled {
+                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+            }
+        }
+        rp.draw(0..3, 0..1);
+        if perf_enabled {
+            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+            frame_perf.clip_mask_draw_calls = frame_perf.clip_mask_draw_calls.saturating_add(1);
+        }
+    }
+
     pub(super) fn render_scene_execute(
         &mut self,
         device: &wgpu::Device,
@@ -5226,104 +5328,18 @@ impl Renderer {
                             }
                         }
                         RenderPlanPass::ClipMask(pass) => {
-                            debug_assert!(matches!(
-                                pass.dst,
-                                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-                            ));
-                            queue.write_buffer(
-                                &self.clip_mask_param_buffer,
-                                0,
-                                bytemuck::cast_slice(&[
-                                    pass.dst_size.0 as f32,
-                                    pass.dst_size.1 as f32,
-                                    0.0,
-                                    0.0,
-                                ]),
-                            );
-                            if perf_enabled {
-                                frame_perf.uniform_bytes = frame_perf
-                                    .uniform_bytes
-                                    .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
-                            }
-                            let dst_view = frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
+                            self.record_clip_mask_pass(
                                 device,
-                                pass.dst,
-                                pass.dst_size,
-                                wgpu::TextureFormat::R8Unorm,
+                                queue,
                                 usage,
+                                &mut encoder,
+                                &mut frame_targets,
+                                &encoding,
+                                render_space_offset_u32,
+                                perf_enabled,
+                                &mut frame_perf,
+                                pass,
                             );
-
-                            let pipeline = self
-                                .clip_mask_pipeline
-                                .as_ref()
-                                .expect("clip mask pipeline must exist");
-                            let uniform_offset =
-                                (u64::from(pass.uniform_index) * self.uniform_stride) as u32;
-
-                            let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: Some("fret clip mask pass"),
-                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: &dst_view,
-                                    depth_slice: None,
-                                    resolve_target: None,
-                                    ops: wgpu::Operations {
-                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                                        store: wgpu::StoreOp::Store,
-                                    },
-                                })],
-                                depth_stencil_attachment: None,
-                                timestamp_writes: None,
-                                occlusion_query_set: None,
-                                multiview_mask: None,
-                            });
-                            rp.set_pipeline(pipeline);
-                            if perf_enabled {
-                                frame_perf.pipeline_switches =
-                                    frame_perf.pipeline_switches.saturating_add(1);
-                                frame_perf.pipeline_switches_clip_mask =
-                                    frame_perf.pipeline_switches_clip_mask.saturating_add(1);
-                            }
-                            rp.set_bind_group(
-                                0,
-                                self.pick_uniform_bind_group_for_mask_image(
-                                    encoding
-                                        .uniform_mask_images
-                                        .get(pass.uniform_index as usize)
-                                        .copied()
-                                        .flatten(),
-                                ),
-                                &[uniform_offset, render_space_offset_u32],
-                            );
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.uniform_bind_group_switches =
-                                    frame_perf.uniform_bind_group_switches.saturating_add(1);
-                            }
-                            rp.set_bind_group(1, &self.clip_mask_param_bind_group, &[]);
-                            if perf_enabled {
-                                frame_perf.bind_group_switches =
-                                    frame_perf.bind_group_switches.saturating_add(1);
-                                frame_perf.texture_bind_group_switches =
-                                    frame_perf.texture_bind_group_switches.saturating_add(1);
-                            }
-                            if let Some(scissor) = pass.dst_scissor
-                                && scissor.w != 0
-                                && scissor.h != 0
-                            {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
-                            }
-                            rp.draw(0..3, 0..1);
-                            if perf_enabled {
-                                frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-                                frame_perf.clip_mask_draw_calls =
-                                    frame_perf.clip_mask_draw_calls.saturating_add(1);
-                            }
                         }
                         RenderPlanPass::ReleaseTarget(target) => {
                             frame_targets.release_target(&mut self.intermediate_pool, *target);
