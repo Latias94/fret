@@ -1,6 +1,6 @@
 use super::super::super::*;
 use super::super::ctx::ExecuteCtx;
-use super::super::execute::set_scissor_rect_absolute;
+use super::super::helpers::set_scissor_rect_absolute;
 
 impl Renderer {
     pub(in super::super) fn record_color_adjust_pass(
