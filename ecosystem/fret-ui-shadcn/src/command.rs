@@ -260,6 +260,15 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn cmdk_trimmed_arc(value: Arc<str>) -> Arc<str> {
+    let trimmed = value.trim();
+    if trimmed == value.as_ref() {
+        value
+    } else {
+        Arc::<str>::from(trimmed)
+    }
+}
+
 fn sanitize_test_id_segment(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
     let mut prev_dash = false;
@@ -839,7 +848,7 @@ impl CommandItem {
         let label = label.into();
         Self {
             label: label.clone(),
-            value: label,
+            value: cmdk_trimmed_arc(label.clone()),
             disabled: false,
             keywords: Vec::new(),
             checked: false,
@@ -853,7 +862,7 @@ impl CommandItem {
     }
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
-        self.value = value.into();
+        self.value = cmdk_trimmed_arc(value.into());
         self
     }
 
@@ -866,7 +875,10 @@ impl CommandItem {
         I: IntoIterator<Item = S>,
         S: Into<Arc<str>>,
     {
-        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self.keywords = keywords
+            .into_iter()
+            .map(|kw| cmdk_trimmed_arc(kw.into()))
+            .collect();
         self
     }
 
@@ -1725,12 +1737,18 @@ impl CommandPalette {
     ///
     /// When omitted, the palette selects the first enabled item.
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
-        self.default_value = Some(default_value.into());
+        self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
         self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// cmdk: `loop`. When `true`, selection wraps at the list boundaries.
+    pub fn loop_(mut self, loop_: bool) -> Self {
+        self.wrap = loop_;
         self
     }
 
@@ -1961,7 +1979,7 @@ impl CommandPalette {
 
             let default_value_for_hook = default_value.clone();
             let active = controllable_state::use_controllable_model(cx, value, move || {
-                default_value_for_hook.clone()
+                default_value_for_hook.clone().map(cmdk_trimmed_arc)
             })
             .model();
 
@@ -1974,7 +1992,8 @@ impl CommandPalette {
                 }
             });
 
-            let cur_active = cx.watch_model(&active).cloned().unwrap_or(None);
+            let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
+            let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
             let next_active = cur_active
                 .as_ref()
                 .and_then(|v| {
@@ -1994,7 +2013,7 @@ impl CommandPalette {
                         .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
                         .map(|(_, e)| e.value.clone())
                 });
-            if next_active != cur_active {
+            if next_active != cur_active_raw {
                 let _ = cx
                     .app
                     .models_mut()
@@ -2379,13 +2398,14 @@ impl CommandPalette {
             };
 
             let a11y_label = self.a11y_label.clone();
+            let effective_input_test_id = input_test_id.clone().or_else(|| test_id_input.clone());
             let mut input = command_text_input(
                 cx,
                 self.model.clone(),
                 a11y_label,
                 self.placeholder.clone(),
                 self.input_role,
-                input_test_id.clone(),
+                effective_input_test_id.clone(),
                 active_descendant,
                 self.input_expanded,
                 input_h,
@@ -2858,6 +2878,12 @@ impl CommandDialog {
         self
     }
 
+    /// cmdk: `loop`. When `true`, selection wraps at the list boundaries.
+    pub fn loop_(mut self, loop_: bool) -> Self {
+        self.wrap = loop_;
+        self
+    }
+
     pub fn wrap(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
         self
@@ -2940,7 +2966,7 @@ impl CommandDialog {
 
     /// cmdk: `defaultValue` (initial selected item value).
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
-        self.default_value = Some(default_value.into());
+        self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
         self
     }
 

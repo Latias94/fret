@@ -212,6 +212,7 @@ pub(super) fn preview_command_palette(
         .unwrap_or(false);
     let shortcuts_disable_pointer_selection_for_toggle =
         shortcuts_disable_pointer_selection.clone();
+    let demo_disable_filtering_for_toggle = demo_disable_filtering.clone();
     let shortcuts_section = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -247,7 +248,111 @@ pub(super) fn preview_command_palette(
                 .into_element(cx)
                 .test_id("ui-gallery-command-shortcuts");
 
-            vec![toggle_row, palette]
+            let demo_disable_filtering_value = cx
+                .app
+                .models()
+                .get_cloned(&demo_disable_filtering)
+                .unwrap_or(false);
+
+            let set_demo_selection = |next: Option<Arc<str>>| {
+                let demo_filter_value = demo_filter_value.clone();
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          action_cx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let next = next.clone();
+                        let _ = host.models_mut().update(
+                            &demo_filter_value,
+                            |cur: &mut Option<Arc<str>>| {
+                                *cur = next;
+                            },
+                        );
+                        host.request_redraw(action_cx.window);
+                    },
+                ) as fret_ui::action::OnActivate
+            };
+
+            let demo_toggle_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N3).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Checkbox::new(demo_disable_filtering_for_toggle.clone())
+                            .control_id("demo-disable-filtering")
+                            .a11y_label("Disable filtering (shouldFilter=false) (demo-only)")
+                            .test_id("ui-gallery-command-demo-disable-filtering")
+                            .into_element(cx),
+                        shadcn::FieldLabel::new(
+                            "Disable filtering (shouldFilter=false) (demo-only)",
+                        )
+                        .for_control("demo-disable-filtering")
+                        .into_element(cx),
+                    ]
+                },
+            );
+
+            let controlled_selection_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |cx| {
+                    vec![
+                        shadcn::Button::new("Select Calendar")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .on_activate(set_demo_selection(Some(Arc::from("Calendar"))))
+                            .test_id("ui-gallery-command-demo-selection-set-calendar")
+                            .into_element(cx),
+                        shadcn::Button::new("Select Search Emoji")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .on_activate(set_demo_selection(Some(Arc::from("Search Emoji"))))
+                            .test_id("ui-gallery-command-demo-selection-set-search-emoji")
+                            .into_element(cx),
+                        shadcn::Button::new("Select Calculator")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .on_activate(set_demo_selection(Some(Arc::from("Calculator"))))
+                            .test_id("ui-gallery-command-demo-selection-set-calculator")
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let demo_palette = shadcn::CommandPalette::new(demo_filter_query.clone(), Vec::new())
+                .placeholder("Type a command or search... (demo-only)")
+                .a11y_label("Command controlled value demo")
+                .value(Some(demo_filter_value.clone()))
+                .entries(demo_filter_entries.clone())
+                .should_filter(!demo_disable_filtering_value)
+                .test_id_input("ui-gallery-command-demo-filter-input")
+                .list_test_id("ui-gallery-command-demo-filter-listbox")
+                .test_id_item_prefix("ui-gallery-command-demo-filter-item-")
+                .into_element(cx)
+                .test_id("ui-gallery-command-demo-filter");
+
+            let demo_block = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |cx| {
+                    let demo_filter_value_value = cx
+                        .app
+                        .models()
+                        .get_cloned(&demo_filter_value)
+                        .unwrap_or(None);
+                    vec![
+                        cx.text("Demo-only: controlled cmdk selection value"),
+                        cx.text(format!(
+                            "selection value (cmdk value): {}",
+                            demo_filter_value_value.as_deref().unwrap_or("<none>")
+                        )),
+                        controlled_selection_row,
+                        demo_toggle_row,
+                        demo_palette,
+                    ]
+                },
+            );
+
+            vec![toggle_row, palette, demo_block]
         },
     );
 
@@ -326,19 +431,21 @@ pub(super) fn preview_command_palette(
         .into_element(cx)
         .test_id("ui-gallery-command-scrollable");
 
-    let rtl_entries = vec![shadcn::CommandGroup::new([
-        shadcn::CommandItem::new("Search")
-            .shortcut("Cmd+F")
-            .on_select_action(on_select(Arc::from("command.rtl.search"))),
-        shadcn::CommandItem::new("Dashboard")
-            .shortcut("Cmd+D")
-            .on_select_action(on_select(Arc::from("command.rtl.dashboard"))),
-        shadcn::CommandItem::new("Settings")
-            .shortcut("Cmd+,")
-            .on_select_action(on_select(Arc::from("command.rtl.settings"))),
-    ])
-    .heading("RTL")
-    .into()];
+    let rtl_entries = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Search")
+                .shortcut("Cmd+F")
+                .on_select_action(on_select(Arc::from("command.rtl.search"))),
+            shadcn::CommandItem::new("Dashboard")
+                .shortcut("Cmd+D")
+                .on_select_action(on_select(Arc::from("command.rtl.dashboard"))),
+            shadcn::CommandItem::new("Settings")
+                .shortcut("Cmd+,")
+                .on_select_action(on_select(Arc::from("command.rtl.settings"))),
+        ])
+        .heading("RTL")
+        .into(),
+    ];
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::CommandPalette::new(rtl_query.clone(), Vec::new())
             .placeholder("Type a command or search...")
@@ -351,12 +458,6 @@ pub(super) fn preview_command_palette(
             .test_id("ui-gallery-command-rtl")
     });
 
-    let last = cx
-        .app
-        .models()
-        .get_cloned(&last_action)
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
     let notes_stack = doc_layout::notes(
         cx,
         [
@@ -365,113 +466,6 @@ pub(super) fn preview_command_palette(
             "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
             "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
         ],
-    );
-
-    let demo_state_content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            let demo_disable_filtering_value = cx
-                .app
-                .models()
-                .get_cloned(&demo_disable_filtering)
-                .unwrap_or(false);
-            let demo_disable_filtering_for_toggle = demo_disable_filtering.clone();
-            let demo_filter_value_value = cx
-                .app
-                .models()
-                .get_cloned(&demo_filter_value)
-                .unwrap_or(None);
-
-            let set_demo_selection = |next: Option<Arc<str>>| {
-                let demo_filter_value = demo_filter_value.clone();
-                Arc::new(
-                    move |host: &mut dyn fret_ui::action::UiActionHost,
-                          action_cx: fret_ui::action::ActionCx,
-                          _reason: fret_ui::action::ActivateReason| {
-                        let next = next.clone();
-                        let _ = host.models_mut().update(
-                            &demo_filter_value,
-                            |cur: &mut Option<Arc<str>>| {
-                                *cur = next;
-                            },
-                        );
-                        host.request_redraw(action_cx.window);
-                    },
-                ) as fret_ui::action::OnActivate
-            };
-
-            let toggle_row = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N3).items_center(),
-                |cx| {
-                    vec![
-                        shadcn::Checkbox::new(demo_disable_filtering_for_toggle)
-                            .control_id("demo-disable-filtering")
-                            .a11y_label("Disable filtering (shouldFilter=false) (demo-only)")
-                            .test_id("ui-gallery-command-demo-disable-filtering")
-                            .into_element(cx),
-                        shadcn::FieldLabel::new(
-                            "Disable filtering (shouldFilter=false) (demo-only)",
-                        )
-                        .for_control("demo-disable-filtering")
-                        .into_element(cx),
-                    ]
-                },
-            );
-
-            let controlled_selection_row = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        shadcn::Button::new("Select Calendar")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .on_activate(set_demo_selection(Some(Arc::from("Calendar"))))
-                            .test_id("ui-gallery-command-demo-selection-set-calendar")
-                            .into_element(cx),
-                        shadcn::Button::new("Select Search Emoji")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .on_activate(set_demo_selection(Some(Arc::from("Search Emoji"))))
-                            .test_id("ui-gallery-command-demo-selection-set-search-emoji")
-                            .into_element(cx),
-                        shadcn::Button::new("Select Calculator")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .on_activate(set_demo_selection(Some(Arc::from("Calculator"))))
-                            .test_id("ui-gallery-command-demo-selection-set-calculator")
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let palette = shadcn::CommandPalette::new(demo_filter_query.clone(), Vec::new())
-                .placeholder("Type a command or search... (demo-only)")
-                .a11y_label("Command shouldFilter demo")
-                .value(Some(demo_filter_value.clone()))
-                .entries(demo_filter_entries.clone())
-                .should_filter(!demo_disable_filtering_value)
-                .test_id_input("ui-gallery-command-demo-filter-input")
-                .list_test_id("ui-gallery-command-demo-filter-listbox")
-                .test_id_item_prefix("ui-gallery-command-demo-filter-item-")
-                .into_element(cx)
-                .test_id("ui-gallery-command-demo-filter");
-
-            vec![
-                cx.text("This section is demo-only (not part of shadcn docs)."),
-                cx.text(format!("last action: {last}")),
-                cx.text(format!(
-                    "selection value (cmdk value): {}",
-                    demo_filter_value_value.as_deref().unwrap_or("<none>")
-                )),
-                cx.text("Controlled selection (demo-only):"),
-                controlled_selection_row,
-                toggle_row,
-                palette,
-            ]
-        },
     );
 
     let body = doc_layout::render_doc_page(
@@ -552,18 +546,6 @@ with_direction_provider(LayoutDirection::Rtl, |cx| {
 );"#,
             ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
-            DocSection::new("Demo state", demo_state_content)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"let last = cx
-    .app
-    .models()
-    .get_cloned(&last_action)
-    .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-cx.text(format!("last action: {last}")).into_element(cx);"#,
-                ),
         ],
     );
 
