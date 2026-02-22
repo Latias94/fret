@@ -106,7 +106,7 @@ or stronger guardrails before larger internal refactors.
   - We rely on `LoadOp::Load` semantics for the composite step, but the exact definition of “initialized within the frame” should be documented
     precisely (what ops count as initialization for `Intermediate*` targets, and whether `Output` has any special handling).
 - `ClipMask` clear/load assumptions:
-  - We state that `ClipMask` always clears, but this should be mechanically verified against all plan pass variants and recorder code paths.
+  - Guardrail: debug validation rejects non-`Clear` `ClipMask` passes (this is treated as an invariant for refactors).
 - Mask sampling and `MaskRef.viewport_rect` mapping:
   - Today we rely on “viewport_rect is dst-local” and “size matches tier”, but the mapping rules should be explicitly documented per pass kind
     (especially for effect chains that downsample/upsample and for any pass that mixes absolute vs dst-local scissors).
