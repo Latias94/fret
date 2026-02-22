@@ -67,3 +67,5 @@ Exit criteria:
 
 Evidence:
 - `ecosystem/fret-ui-shadcn/src/textarea.rs`
+- `ecosystem/fret-ui-material3/src/text_field.rs` (multiline + `stable_line_boxes`)
+- `ecosystem/fret-ui-editor/src/controls/text_field.rs` (`stable_line_boxes`)
