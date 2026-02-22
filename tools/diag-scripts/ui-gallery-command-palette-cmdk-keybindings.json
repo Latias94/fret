@@ -1,266 +1,397 @@
 {
-    "schema_version": 2,
-    "meta": {
-        "name": "ui-gallery command palette: cmdk keybindings",
-        "required_capabilities": [
-            "diag.script_v2"
-        ]
-    },
-    "steps": [
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "exists",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-nav-search"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "set_window_inner_size",
-            "width_px": 1280.0,
-            "height_px": 1200.0
-        },
-        {
-            "type": "wait_frames",
-            "n": 20
-        },
-        {
-            "type": "click",
-            "target": {
-                "kind": "test_id",
-                "id": "ui-gallery-nav-search"
-            }
-        },
-        {
-            "type": "press_key",
-            "key": "a",
-            "modifiers": {
-                "ctrl": true
-            }
-        },
-        {
-            "type": "press_key",
-            "key": "backspace"
-        },
-        {
-            "type": "type_text",
-            "text": "command"
-        },
-        {
-            "type": "wait_frames",
-            "n": 2
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "exists",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-nav-command"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "click",
-            "target": {
-                "kind": "test_id",
-                "id": "ui-gallery-nav-command"
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "exists",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-page-command"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "exists",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "click",
-            "target": {
-                "kind": "test_id",
-                "id": "ui-gallery-command-shortcuts-input"
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "focus_is",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-item-open-project"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "press_key",
-            "key": "j",
-            "modifiers": {
-                "ctrl": true
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-item-toggle-sidebar"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "press_key",
-            "key": "arrow_down",
-            "modifiers": {
-                "meta": true
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-item-toggle-terminal"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "press_key",
-            "key": "arrow_up",
-            "modifiers": {
-                "meta": true
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-shortcuts-item-open-project"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "exists",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-input"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "click",
-            "target": {
-                "kind": "test_id",
-                "id": "ui-gallery-command-groups-input"
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "focus_is",
-                "target": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-input"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-item-calendar"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "press_key",
-            "key": "arrow_down",
-            "modifiers": {
-                "alt": true
-            }
-        },
-        {
-            "type": "wait_until",
-            "predicate": {
-                "kind": "active_item_is",
-                "container": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-input"
-                },
-                "item": {
-                    "kind": "test_id",
-                    "id": "ui-gallery-command-groups-item-profile"
-                }
-            },
-            "timeout_frames": 240
-        },
-        {
-            "type": "capture_bundle",
-            "label": "ui-gallery-command-palette-cmdk-keybindings"
-        }
+  "meta": {
+    "name": "ui-gallery command palette: cmdk keybindings",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
     ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "height_px": 1200.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "command",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-command",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-command",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-page-command",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-command-shortcuts-input",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-open-project",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "p",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-open-project",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "n",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-toggle-sidebar",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "j",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-go-to-file",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "k",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-toggle-sidebar",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_down",
+      "modifiers": {
+        "meta": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-toggle-terminal",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_down",
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-toggle-terminal",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_up",
+      "modifiers": {
+        "meta": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-open-project",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_up",
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-open-project",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-command-groups-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-command-groups-input",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-command-groups-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-groups-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-groups-item-calendar",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_down",
+      "modifiers": {
+        "alt": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-groups-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-groups-item-profile",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "arrow_up",
+      "modifiers": {
+        "alt": true
+      },
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-groups-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-groups-item-calendar",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-command-palette-cmdk-keybindings",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "ui-gallery-command-palette-cmdk-keybindings",
+      "type": "capture_screenshot"
+    }
+  ]
 }
