@@ -146,21 +146,25 @@ pub(super) fn preview_command_palette(
         }
     };
 
-    let on_select = |tag: Arc<str>| {
-        let last_action = last_action.clone();
-        Arc::new(
-            move |host: &mut dyn fret_ui::action::UiActionHost,
-                  action_cx: fret_ui::action::ActionCx,
-                  _reason: fret_ui::action::ActivateReason| {
-                let value = tag.clone();
-                let _ = host
-                    .models_mut()
-                    .update(&last_action, |cur: &mut Arc<str>| {
-                        *cur = value.clone();
-                    });
-                host.request_redraw(action_cx.window);
-            },
-        ) as fret_ui::action::OnActivate
+    let last_action_model = last_action.clone();
+    let on_select = {
+        let last_action = last_action_model.clone();
+        move |tag: Arc<str>| {
+            let last_action = last_action.clone();
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      _reason: fret_ui::action::ActivateReason| {
+                    let value = tag.clone();
+                    let _ = host
+                        .models_mut()
+                        .update(&last_action, |cur: &mut Arc<str>| {
+                            *cur = value.clone();
+                        });
+                    host.request_redraw(action_cx.window);
+                },
+            ) as fret_ui::action::OnActivate
+        }
     };
 
     let basic_items = vec![
@@ -352,17 +356,42 @@ pub(super) fn preview_command_palette(
 
             let group_force_entries = vec![
                 shadcn::CommandGroup::new([
-                    shadcn::CommandItem::new("Alpha")
-                        .on_select_action(on_select(Arc::from("command.group_force.alpha"))),
-                    shadcn::CommandItem::new("Beta")
-                        .on_select_action(on_select(Arc::from("command.group_force.beta"))),
+                    shadcn::CommandItem::new("Alpha").on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
+                    shadcn::CommandItem::new("Beta").on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
                 ])
                 .heading("Letters")
                 .force_mount(true)
                 .into(),
                 shadcn::CommandSeparator::new().into(),
                 shadcn::CommandGroup::new([shadcn::CommandItem::new("Giraffe")
-                    .on_select_action(on_select(Arc::from("command.group_force.giraffe")))])
+                    .on_select_value_action({
+                        let last_action = last_action.clone();
+                        move |host, action_cx, _reason, value| {
+                            let msg = Arc::<str>::from(format!("command.group_force: {value}"));
+                            let _ = host.models_mut().update(&last_action, |cur| {
+                                *cur = msg.clone();
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    })])
                 .heading("Animals")
                 .into(),
             ];

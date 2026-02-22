@@ -46,6 +46,14 @@ use crate::{Dialog, DialogContent, ScrollArea};
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnOpenChangeWithReason =
     Arc<dyn Fn(bool, CommandDialogOpenChangeReason) + Send + Sync + 'static>;
+type OnSelectValueAction = Arc<
+    dyn Fn(
+            &mut dyn fret_ui::action::UiActionHost,
+            fret_ui::action::ActionCx,
+            ActivateReason,
+            Arc<str>,
+        ) + 'static,
+>;
 
 type CommandPaletteFilter = dyn Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static;
 pub type CommandPaletteFilterFn = Arc<CommandPaletteFilter>;
@@ -823,6 +831,7 @@ pub struct CommandItem {
     shortcut: Option<Arc<str>>,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
+    on_select_value: Option<OnSelectValueAction>,
     children: Vec<AnyElement>,
 }
 
@@ -840,6 +849,7 @@ impl std::fmt::Debug for CommandItem {
             .field("shortcut", &self.shortcut.as_ref().map(|s| s.as_ref()))
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
+            .field("on_select_value", &self.on_select_value.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -860,6 +870,7 @@ impl CommandItem {
             shortcut: None,
             command: None,
             on_select: None,
+            on_select_value: None,
             children: Vec::new(),
         }
     }
@@ -921,6 +932,20 @@ impl CommandItem {
 
     pub fn on_select_action(mut self, on_select: fret_ui::action::OnActivate) -> Self {
         self.on_select = Some(on_select);
+        self
+    }
+
+    /// cmdk: `onSelect(value)`. Called when the item is activated, with the item's resolved `value`.
+    pub fn on_select_value_action<F>(mut self, on_select: F) -> Self
+    where
+        F: Fn(
+                &mut dyn fret_ui::action::UiActionHost,
+                fret_ui::action::ActionCx,
+                ActivateReason,
+                Arc<str>,
+            ) + 'static,
+    {
+        self.on_select_value = Some(Arc::new(on_select));
         self
     }
 
@@ -1268,6 +1293,7 @@ impl CommandList {
 
                         let query_for_row = query_for_render.clone();
                         let value_key = item.value.clone();
+                        let value_for_select = item.value.clone();
                         let label = item.label.clone();
                         let test_id = item.test_id.clone();
                         let chrome_test_id = test_id
@@ -1275,10 +1301,11 @@ impl CommandList {
                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                         let command = item.command;
                         let on_select = item.on_select.clone();
+                        let on_select_value = item.on_select_value.clone();
                         let children = item.children;
                         let text_style = text_style.clone();
 
-                        out.push(cx.keyed(value_key, |cx| {
+                        out.push(cx.keyed(value_key, move |cx| {
                             cx.pressable(
                                 PressableProps {
                                     layout: item_layout,
@@ -1295,8 +1322,27 @@ impl CommandList {
                                 },
                                 move |cx, st| {
                                     cx.pressable_dispatch_command_if_enabled_opt(command);
-                                    if let Some(on_select) = on_select.clone() {
-                                        cx.pressable_add_on_activate(on_select);
+                                    if on_select.is_some() || on_select_value.is_some() {
+                                        let on_select = on_select.clone();
+                                        let on_select_value = on_select_value.clone();
+                                        let value = value_for_select.clone();
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, action_cx, reason| {
+                                                if let Some(on_select_value) =
+                                                    on_select_value.clone()
+                                                {
+                                                    on_select_value(
+                                                        host,
+                                                        action_cx,
+                                                        reason,
+                                                        value.clone(),
+                                                    );
+                                                }
+                                                if let Some(on_select) = on_select.clone() {
+                                                    on_select(host, action_cx, reason);
+                                                }
+                                            },
+                                        ));
                                     }
                                     let hovered = st.hovered && !st.pressed;
                                     let pressed = st.pressed;
@@ -1941,6 +1987,7 @@ impl CommandPalette {
             value: Arc<str>,
             command: Option<CommandId>,
             on_select: Option<fret_ui::action::OnActivate>,
+            on_select_value: Option<OnSelectValueAction>,
             disabled: bool,
         }
 
@@ -2046,13 +2093,17 @@ impl CommandPalette {
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|i| {
-                    let disabled =
-                        disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
+                    let disabled = disabled
+                        || i.disabled
+                        || (i.command.is_none()
+                            && i.on_select.is_none()
+                            && i.on_select_value.is_none());
                     (
                         PaletteEntry {
                             value: i.value.clone(),
                             command: i.command.clone(),
                             on_select: i.on_select.clone(),
+                            on_select_value: i.on_select_value.clone(),
                             disabled,
                         },
                         disabled,
@@ -2259,6 +2310,7 @@ impl CommandPalette {
                             let shortcut = item.shortcut.clone();
                             let command = item.command;
                             let on_select = item.on_select.clone();
+                            let on_select_value = item.on_select_value.clone();
                             let children = item.children;
                             let text_style = text_style.clone();
 
@@ -2299,8 +2351,27 @@ impl CommandPalette {
                                 },
                                 move |cx, st| {
                                     cx.pressable_dispatch_command_if_enabled_opt(command);
-                                    if let Some(on_select) = on_select.clone() {
-                                        cx.pressable_add_on_activate(on_select);
+                                    if on_select.is_some() || on_select_value.is_some() {
+                                        let on_select = on_select.clone();
+                                        let on_select_value = on_select_value.clone();
+                                        let value = value.clone();
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, action_cx, reason| {
+                                                if let Some(on_select_value) =
+                                                    on_select_value.clone()
+                                                {
+                                                    on_select_value(
+                                                        host,
+                                                        action_cx,
+                                                        reason,
+                                                        value.clone(),
+                                                    );
+                                                }
+                                                if let Some(on_select) = on_select.clone() {
+                                                    on_select(host, action_cx, reason);
+                                                }
+                                            },
+                                        ));
                                     }
                                     if enabled && !disable_pointer_selection {
                                         let active = active_for_row.clone();
@@ -2727,6 +2798,15 @@ impl CommandPalette {
                                     let Some(entry) = entries.get(idx) else {
                                         return false;
                                     };
+
+                                    if let Some(on_select_value) = entry.on_select_value.clone() {
+                                        on_select_value(
+                                            host,
+                                            action_cx,
+                                            ActivateReason::Keyboard,
+                                            entry.value.clone(),
+                                        );
+                                    }
 
                                     if let Some(on_select) = entry.on_select.clone() {
                                         on_select(host, action_cx, ActivateReason::Keyboard);
@@ -3726,6 +3806,77 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn command_item_on_select_value_action_receives_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::new());
+        let selected_value = app.models_mut().insert(None::<Arc<str>>);
+
+        let items = vec![
+            CommandItem::new("Alpha")
+                .value("alpha-id")
+                .on_select_value_action({
+                    let selected_value = selected_value.clone();
+                    move |host, action_cx, _reason, value| {
+                        let _ = host.models_mut().update(&selected_value, |cur| {
+                            *cur = Some(value.clone());
+                        });
+                        host.request_redraw(action_cx.window);
+                    }
+                }),
+        ];
+
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items.clone(),
+            false,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Alpha"))
+            .map(|n| n.bounds)
+            .expect("Alpha option bounds");
+
+        click(&mut ui, &mut app, &mut services, rect_center(alpha));
+
+        let _root = render_dialog_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            query.clone(),
+            items,
+            false,
+        );
+
+        assert_eq!(
+            selected_value
+                .read_ref(&app, |v| v.clone())
+                .expect("read selected value")
+                .as_deref(),
+            Some("alpha-id")
+        );
     }
 
     #[test]
