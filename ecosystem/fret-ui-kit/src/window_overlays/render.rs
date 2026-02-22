@@ -20,6 +20,7 @@ use fret_ui::{ElementContext, Invalidation, UiHost, UiTree};
 
 use crate::primitives::dismissable_layer as dismissable_layer_prim;
 use crate::primitives::focus_scope as focus_scope_prim;
+use crate::typography::{self, TextIntent};
 
 use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip,
@@ -2533,24 +2534,26 @@ pub fn render<H: UiHost + 'static>(
                                                     // - toast box: `font-size: 13px`
                                                     // - title: `font-weight: 500`, `line-height: 1.5`
                                                     // - description: `font-weight: 400`, `line-height: 1.4`
-                                                    let title_style = TextStyle {
-                                                        font: FontId::default(),
-                                                        size: Px(13.0),
-                                                        weight: FontWeight(500),
-                                                        line_height: Some(Px(13.0 * 1.5)),
-                                                        line_height_policy:
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        ..Default::default()
-                                                    };
-                                                    let desc_style = TextStyle {
-                                                        font: FontId::default(),
-                                                        size: Px(13.0),
-                                                        weight: FontWeight(400),
-                                                        line_height: Some(Px(13.0 * 1.4)),
-                                                        line_height_policy:
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        ..Default::default()
-                                                    };
+                                                    let title_style = typography::with_intent(
+                                                        TextStyle {
+                                                            font: FontId::default(),
+                                                            size: Px(13.0),
+                                                            weight: FontWeight(500),
+                                                            line_height: Some(Px(13.0 * 1.5)),
+                                                            ..Default::default()
+                                                        },
+                                                        TextIntent::Control,
+                                                    );
+                                                    let desc_style = typography::with_intent(
+                                                        TextStyle {
+                                                            font: FontId::default(),
+                                                            size: Px(13.0),
+                                                            weight: FontWeight(400),
+                                                            line_height: Some(Px(13.0 * 1.4)),
+                                                            ..Default::default()
+                                                        },
+                                                        TextIntent::Control,
+                                                    );
 
                                                         let title = cx.text_props(fret_ui::element::TextProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
