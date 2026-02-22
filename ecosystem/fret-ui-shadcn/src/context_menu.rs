@@ -30,6 +30,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
@@ -2160,13 +2161,9 @@ fn context_menu_submenu_panel<H: UiHost>(
     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
     let font_size = theme.metric_token("font.size");
     let font_line_height = theme.metric_token("font.line_height");
-    let text_style = TextStyle {
-        font: fret_core::FontId::default(),
-        size: font_size,
-        weight: fret_core::FontWeight::NORMAL,
-        line_height: Some(font_line_height),
-        ..Default::default()
-    };
+    let mut text_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), font_size, font_line_height);
+    text_style.weight = fret_core::FontWeight::NORMAL;
     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
     let label_fg = theme.color_token("muted-foreground");
     let accent = theme.color_token("accent");
@@ -2875,13 +2872,12 @@ impl ContextMenu {
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let font_size = theme.metric_token("font.size");
                     let font_line_height = theme.metric_token("font.line_height");
-                    let text_style = TextStyle {
-                        font: fret_core::FontId::default(),
-                        size: font_size,
-                        weight: fret_core::FontWeight::NORMAL,
-                        line_height: Some(font_line_height),
-                        ..Default::default()
-                    };
+                    let mut text_style = typography::fixed_line_box_style(
+                        fret_core::FontId::ui(),
+                        font_size,
+                        font_line_height,
+                    );
+                    text_style.weight = fret_core::FontWeight::NORMAL;
                     let text_disabled = alpha_mul(theme.color_token("foreground"), 0.5);
                     let label_fg = theme.color_token("muted-foreground");
                     let accent = theme.color_token("accent");

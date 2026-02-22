@@ -1,4 +1,4 @@
-use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -10,6 +10,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
 };
@@ -206,13 +207,9 @@ impl InputOtp {
             .slot_line_height_px_override
             .unwrap_or(font_line_height);
         let slot_text_px = self.slot_text_px_override.unwrap_or(resolved.text_px);
-        let slot_text_style = TextStyle {
-            font: FontId::default(),
-            size: slot_text_px,
-            weight: FontWeight::MEDIUM,
-            line_height: Some(slot_line_height),
-            ..Default::default()
-        };
+        let mut slot_text_style =
+            typography::fixed_line_box_style(FontId::ui(), slot_text_px, slot_line_height);
+        slot_text_style.weight = FontWeight::MEDIUM;
 
         let root_layout = decl_style::layout_style(&theme, self.layout.relative());
         let separator_color = otp_separator_color(&theme);

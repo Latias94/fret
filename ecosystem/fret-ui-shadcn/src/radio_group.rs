@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextLineHeightPolicy,
-    TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -15,6 +15,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Space, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
@@ -58,14 +59,9 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.radio_group.line_height")
         .unwrap_or(px);
 
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::NORMAL;
+    style
 }
 
 fn radio_border(theme: &Theme) -> Color {

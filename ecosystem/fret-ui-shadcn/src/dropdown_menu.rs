@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
@@ -1752,13 +1753,12 @@ impl DropdownMenu {
                                                             alpha_mul(destructive_fg, destructive_bg_alpha)
                                                         });
 
-                                                    let text_style = TextStyle {
-                                                        font: fret_core::FontId::default(),
-                                                        size: font_size,
-                                                        weight: fret_core::FontWeight::NORMAL,
-                                                        line_height: Some(font_line_height),
-                                                        ..Default::default()
-                                                    };
+                                                    let mut text_style = typography::fixed_line_box_style(
+                                                        fret_core::FontId::ui(),
+                                                        font_size,
+                                                        font_line_height,
+                                                    );
+                                                    text_style.weight = fret_core::FontWeight::NORMAL;
 
                                                     let mut item_ix: usize = 0;
 
@@ -2665,13 +2665,12 @@ impl DropdownMenu {
                                                 });
                                             let label_fg = theme.color_token("muted-foreground");
 
-                                            let text_style = TextStyle {
-                                                font: FontId::default(),
-                                                size: font_size,
-                                                weight: FontWeight::NORMAL,
-                                                line_height: Some(font_line_height),
-                                                ..Default::default()
-                                            };
+                                            let mut text_style = typography::fixed_line_box_style(
+                                                FontId::ui(),
+                                                font_size,
+                                                font_line_height,
+                                            );
+                                            text_style.weight = FontWeight::NORMAL;
 
                                             let mut submenu_labels: Vec<Arc<str>> =
                                                 Vec::with_capacity(item_count);

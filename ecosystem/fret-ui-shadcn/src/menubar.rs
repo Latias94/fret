@@ -29,6 +29,7 @@ use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
@@ -1223,13 +1224,9 @@ impl MenubarMenuEntries {
 
             let font_size = theme.metric_token("font.size");
             let font_line_height = theme.metric_token("font.line_height");
-            let text_style = TextStyle {
-                font: FontId::default(),
-                size: font_size,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(font_line_height),
-                ..Default::default()
-            };
+            let mut text_style =
+                typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
+            text_style.weight = FontWeight::MEDIUM;
 
             let label = self.menu.label.clone();
             let test_id = self.menu.test_id.clone();
