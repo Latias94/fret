@@ -5,6 +5,23 @@ use serde_json::{Value, json};
 
 use super::sidecars;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct DoctorRunOptions {
+    pub(crate) fix_bundle_json: bool,
+    pub(crate) fix_sidecars: bool,
+    pub(crate) fix_dry_run: bool,
+    pub(crate) check_required: bool,
+    pub(crate) check_all: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DoctorRunResult {
+    pub(crate) bundle_dir: PathBuf,
+    pub(crate) report: Value,
+    pub(crate) fixes_planned: Vec<String>,
+    pub(crate) fixes_applied: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DoctorStatus {
     Ok,
@@ -66,6 +83,126 @@ fn bundle_index_has_script_markers(v: &serde_json::Value) -> bool {
         .and_then(|v| v.get("steps"))
         .and_then(|v| v.as_array())
         .is_some_and(|steps| !steps.is_empty())
+}
+
+pub(crate) fn run_doctor_for_bundle_dir(
+    bundle_dir: &Path,
+    warmup_frames: u64,
+    opts: DoctorRunOptions,
+) -> Result<DoctorRunResult, String> {
+    let bundle_dir = normalize_bundle_dir(bundle_dir);
+
+    let mut fixes_applied: Vec<String> = Vec::new();
+    let mut fixes_planned: Vec<String> = Vec::new();
+
+    let plan_report = doctor_report_json(&bundle_dir, warmup_frames);
+    if opts.fix_bundle_json {
+        let has_bundle_json = plan_report.get("bundle_json").is_some_and(|v| !v.is_null());
+        if !has_bundle_json {
+            let chunks = plan_report.get("manifest_chunks");
+            let can_materialize = chunks.is_some_and(|c| {
+                c.get("chunks_missing").and_then(|v| v.as_u64()) == Some(0)
+                    && c.get("chunks_bytes_mismatch").and_then(|v| v.as_u64()) == Some(0)
+            });
+            if can_materialize {
+                fixes_planned.push("materialize bundle.json from manifest chunks".to_string());
+            } else {
+                fixes_planned.push(
+                    "materialize bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
+                        .to_string(),
+                );
+            }
+        }
+    }
+    if opts.fix_sidecars {
+        let items = plan_report
+            .get("items")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+        for it in items {
+            let status = it.get("status").and_then(|v| v.as_str()).unwrap_or("");
+            if status == "ok" {
+                let notes = it
+                    .get("notes")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.as_slice())
+                    .unwrap_or(&[]);
+                let needs_upgrade = notes.iter().any(|n| {
+                    n.as_str()
+                        .is_some_and(|s| s.contains("missing script markers"))
+                });
+                if needs_upgrade {
+                    fixes_planned
+                        .push("regenerate bundle.index.json to add script markers".to_string());
+                }
+                continue;
+            }
+            let file = it.get("file_name").and_then(|v| v.as_str()).unwrap_or("");
+            if !file.is_empty() {
+                fixes_planned.push(format!("regenerate {file}"));
+            }
+        }
+    }
+
+    if opts.fix_dry_run {
+        return Ok(DoctorRunResult {
+            bundle_dir,
+            report: plan_report,
+            fixes_planned,
+            fixes_applied,
+        });
+    }
+
+    if opts.fix_bundle_json {
+        if resolve_bundle_json_path_no_materialize(&bundle_dir).is_none() {
+            let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
+            for dir in &attempts {
+                match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
+                    dir,
+                ) {
+                    Ok(Some(out)) => {
+                        fixes_applied.push(format!(
+                            "materialized bundle.json from chunks ({})",
+                            out.display()
+                        ));
+                        break;
+                    }
+                    Ok(_) => {}
+                    Err(err) => {
+                        fixes_applied.push(format!(
+                            "attempted to materialize bundle.json from chunks, but failed ({})",
+                            err
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    if opts.fix_sidecars {
+        let bundle_json = resolve_bundle_json_path_no_materialize(&bundle_dir).ok_or_else(|| {
+            "unable to regenerate sidecars: missing bundle.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains bundle.json)".to_string()
+        })?;
+        let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
+            .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));
+        let _ =
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames).map(|p| {
+                fixes_applied.push(format!("regenerated test_ids.index.json ({})", p.display()))
+            });
+        let _ =
+            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames).map(|p| {
+                fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display()))
+            });
+    }
+
+    let report = doctor_report_json(&bundle_dir, warmup_frames);
+    Ok(DoctorRunResult {
+        bundle_dir,
+        report,
+        fixes_planned,
+        fixes_applied,
+    })
 }
 
 fn try_read_sidecar_from_candidates(
@@ -241,149 +378,29 @@ pub(crate) fn cmd_doctor(
         }
     }
 
-    let mut fixes_applied: Vec<String> = Vec::new();
-    let mut fixes_planned: Vec<String> = Vec::new();
-    let plan_report = doctor_report_json(&bundle_dir, warmup_frames);
-    if fix_bundle_json {
-        let has_bundle_json = plan_report.get("bundle_json").is_some_and(|v| !v.is_null());
-        if !has_bundle_json {
-            let chunks = plan_report.get("manifest_chunks");
-            let can_materialize = chunks.is_some_and(|c| {
-                c.get("chunks_missing").and_then(|v| v.as_u64()) == Some(0)
-                    && c.get("chunks_bytes_mismatch").and_then(|v| v.as_u64()) == Some(0)
-            });
-            if can_materialize {
-                fixes_planned.push("materialize bundle.json from manifest chunks".to_string());
-            } else {
-                fixes_planned.push(
-                    "materialize bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
-                        .to_string(),
-                );
-            }
-        }
-    }
-    if fix_sidecars {
-        let items = plan_report
-            .get("items")
-            .and_then(|v| v.as_array())
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
-        for it in items {
-            let status = it.get("status").and_then(|v| v.as_str()).unwrap_or("");
-            if status == "ok" {
-                let notes = it
-                    .get("notes")
-                    .and_then(|v| v.as_array())
-                    .map(|v| v.as_slice())
-                    .unwrap_or(&[]);
-                let needs_upgrade = notes.iter().any(|n| {
-                    n.as_str()
-                        .is_some_and(|s| s.contains("missing script markers"))
-                });
-                if needs_upgrade {
-                    fixes_planned
-                        .push("regenerate bundle.index.json to add script markers".to_string());
-                }
-                continue;
-            }
-            let file = it.get("file_name").and_then(|v| v.as_str()).unwrap_or("");
-            if !file.is_empty() {
-                fixes_planned.push(format!("regenerate {file}"));
-            }
-        }
-    }
+    let opts = DoctorRunOptions {
+        fix_bundle_json,
+        fix_sidecars,
+        fix_dry_run,
+        check_required,
+        check_all,
+    };
+    let run = run_doctor_for_bundle_dir(&bundle_dir, warmup_frames, opts)?;
+    let bundle_dir = run.bundle_dir;
+    let fixes_planned = run.fixes_planned;
+    let fixes_applied = run.fixes_applied;
+    let report = run.report;
 
-    if fix_dry_run {
-        if stats_json {
-            let mut payload = plan_report;
-            if let Some(obj) = payload.as_object_mut() {
-                obj.insert(
-                    "fixes_planned".to_string(),
-                    serde_json::Value::Array(
-                        fixes_planned
-                            .iter()
-                            .map(|s| serde_json::Value::String(s.to_string()))
-                            .collect(),
-                    ),
-                );
-                obj.insert(
-                    "fixes_applied".to_string(),
-                    serde_json::Value::Array(Vec::new()),
-                );
-                obj.insert("fix_dry_run".to_string(), serde_json::Value::Bool(true));
-            }
-            let pretty =
-                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-            println!("{pretty}");
-            if (check_all && !payload.get("ok").and_then(|v| v.as_bool()).unwrap_or(false))
-                || (check_required
-                    && !payload
-                        .get("required_ok")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false))
-            {
-                std::process::exit(1);
-            }
-            return Ok(());
-        }
+    let ok = report.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+    let required_ok = report
+        .get("required_ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-        println!("bundle_dir: {}", bundle_dir.display());
-        println!("warmup_frames: {}", warmup_frames);
-        for f in &fixes_planned {
-            println!("plan: {f}");
-        }
-        return Ok(());
-    }
-
-    if fix_bundle_json {
-        if resolve_bundle_json_path_no_materialize(&bundle_dir).is_none() {
-            let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
-            for dir in attempts {
-                if !dir.is_dir() {
-                    continue;
-                }
-                match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
-                    &dir,
-                ) {
-                    Ok(Some(path)) if path.is_file() => {
-                        fixes_applied.push(format!(
-                            "materialized bundle.json from chunks ({})",
-                            path.display()
-                        ));
-                        break;
-                    }
-                    Ok(_) => {}
-                    Err(err) => {
-                        fixes_applied.push(format!(
-                            "attempted to materialize bundle.json from chunks, but failed ({})",
-                            err
-                        ));
-                    }
-                }
-            }
-        }
-    }
-
-    if fix_sidecars {
-        let bundle_json = resolve_bundle_json_path_no_materialize(&bundle_dir).ok_or_else(|| {
-            "unable to regenerate sidecars: missing bundle.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains bundle.json)".to_string()
-        })?;
-        let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
-            .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));
-        let _ =
-            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames).map(|p| {
-                fixes_applied.push(format!("regenerated test_ids.index.json ({})", p.display()))
-            });
-        let _ =
-            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames).map(|p| {
-                fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display()))
-            });
-    }
-
-    let (items, required_ok, ok) = doctor_items(&bundle_dir, warmup_frames);
+    let (items, _required_ok_items, _ok_items) = doctor_items(&bundle_dir, warmup_frames);
 
     if stats_json {
-        let mut payload = doctor_report_json(&bundle_dir, warmup_frames);
+        let mut payload = report;
         if let Some(obj) = payload.as_object_mut() {
             obj.insert(
                 "fixes_planned".to_string(),
@@ -403,12 +420,21 @@ pub(crate) fn cmd_doctor(
                         .collect(),
                 ),
             );
-            obj.insert("fix_dry_run".to_string(), serde_json::Value::Bool(false));
+            obj.insert(
+                "fix_dry_run".to_string(),
+                serde_json::Value::Bool(fix_dry_run),
+            );
             obj.insert("check".to_string(), serde_json::Value::Bool(check_required));
             obj.insert("check_all".to_string(), serde_json::Value::Bool(check_all));
         }
         let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
         println!("{pretty}");
+        if fix_dry_run {
+            if (check_all && !ok) || (check_required && !required_ok) {
+                std::process::exit(1);
+            }
+            return Ok(());
+        }
         if (check_all && !ok) || (check_required && !required_ok) {
             std::process::exit(1);
         }
@@ -417,6 +443,12 @@ pub(crate) fn cmd_doctor(
 
     println!("bundle_dir: {}", bundle_dir.display());
     println!("warmup_frames: {}", warmup_frames);
+    if fix_dry_run {
+        for f in &fixes_planned {
+            println!("plan: {f}");
+        }
+        return Ok(());
+    }
     if !fixes_applied.is_empty() {
         for f in &fixes_applied {
             println!("fixed: {f}");
@@ -429,7 +461,6 @@ pub(crate) fn cmd_doctor(
     }
     println!("required_ok: {required_ok}");
     println!("ok: {ok}");
-    let report = doctor_report_json(&bundle_dir, warmup_frames);
     let repairs = report
         .get("repairs")
         .and_then(|v| v.as_array())

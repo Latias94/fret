@@ -164,6 +164,180 @@ struct LaunchedDemo {
     launch_cmd: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BundleDoctorMode {
+    Off,
+    CheckRequired,
+    CheckAll,
+    Fix,
+    FixDryRun,
+}
+
+fn parse_bundle_doctor_mode_value(v: &str) -> Option<BundleDoctorMode> {
+    match v.trim() {
+        "" => Some(BundleDoctorMode::CheckRequired),
+        "off" | "0" | "false" => Some(BundleDoctorMode::Off),
+        "check" | "required" | "check-required" | "check_required" => {
+            Some(BundleDoctorMode::CheckRequired)
+        }
+        "check-all" | "check_all" | "all" | "strict" => Some(BundleDoctorMode::CheckAll),
+        "fix" => Some(BundleDoctorMode::Fix),
+        "fix-dry-run" | "fix_dry_run" | "fix-plan" | "fix_plan" => {
+            Some(BundleDoctorMode::FixDryRun)
+        }
+        _ => None,
+    }
+}
+
+fn parse_bundle_doctor_mode_from_rest(
+    rest: &[String],
+) -> Result<(BundleDoctorMode, Vec<String>), String> {
+    let mut mode: BundleDoctorMode = BundleDoctorMode::Off;
+    let mut out: Vec<String> = Vec::with_capacity(rest.len());
+
+    let mut i: usize = 0;
+    while i < rest.len() {
+        let arg = rest[i].as_str();
+        let (is_flag, value_inline) = if let Some(v) = arg.strip_prefix("--bundle-doctor=") {
+            (true, Some(v))
+        } else if let Some(v) = arg.strip_prefix("--doctor=") {
+            (true, Some(v))
+        } else if arg == "--bundle-doctor" || arg == "--doctor" {
+            (true, None)
+        } else {
+            (false, None)
+        };
+
+        if !is_flag {
+            out.push(rest[i].clone());
+            i += 1;
+            continue;
+        }
+
+        if let Some(v) = value_inline {
+            mode = parse_bundle_doctor_mode_value(v).ok_or_else(|| {
+                format!("invalid value for {arg} (expected off|check|check-all|fix|fix-dry-run)")
+            })?;
+            i += 1;
+            continue;
+        }
+
+        let next = rest.get(i + 1).map(|s| s.as_str()).unwrap_or("");
+        if next.starts_with('-') || next.is_empty() {
+            mode = BundleDoctorMode::CheckRequired;
+            i += 1;
+            continue;
+        }
+
+        mode = parse_bundle_doctor_mode_value(next).ok_or_else(|| {
+            format!("invalid value for {arg} {next} (expected off|check|check-all|fix|fix-dry-run)")
+        })?;
+        i += 2;
+    }
+
+    Ok((mode, out))
+}
+
+fn run_bundle_doctor_for_bundle_path(
+    bundle_path: &Path,
+    mode: BundleDoctorMode,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    if mode == BundleDoctorMode::Off {
+        return Ok(());
+    }
+
+    let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+    let opts = match mode {
+        BundleDoctorMode::Off => crate::commands::doctor::DoctorRunOptions::default(),
+        BundleDoctorMode::CheckRequired => crate::commands::doctor::DoctorRunOptions {
+            check_required: true,
+            ..Default::default()
+        },
+        BundleDoctorMode::CheckAll => crate::commands::doctor::DoctorRunOptions {
+            check_all: true,
+            ..Default::default()
+        },
+        BundleDoctorMode::Fix => crate::commands::doctor::DoctorRunOptions {
+            fix_bundle_json: true,
+            fix_sidecars: true,
+            check_required: true,
+            ..Default::default()
+        },
+        BundleDoctorMode::FixDryRun => crate::commands::doctor::DoctorRunOptions {
+            fix_bundle_json: true,
+            fix_sidecars: true,
+            fix_dry_run: true,
+            check_required: true,
+            ..Default::default()
+        },
+    };
+
+    let run = crate::commands::doctor::run_doctor_for_bundle_dir(&bundle_dir, warmup_frames, opts)?;
+    let ok = run
+        .report
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let required_ok = run
+        .report
+        .get("required_ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    if mode == BundleDoctorMode::FixDryRun {
+        if !run.fixes_planned.is_empty() {
+            eprintln!("doctor: bundle_dir: {}", run.bundle_dir.display());
+            eprintln!("doctor: warmup_frames: {warmup_frames}");
+            for f in &run.fixes_planned {
+                eprintln!("doctor: plan: {f}");
+            }
+            return Err(
+                "bundle-doctor dry-run planned fixes; re-run with `--bundle-doctor fix`"
+                    .to_string(),
+            );
+        }
+        return Ok(());
+    }
+
+    for f in &run.fixes_applied {
+        eprintln!("doctor: fixed: {f}");
+    }
+
+    match mode {
+        BundleDoctorMode::CheckRequired => {
+            if !required_ok {
+                return Err(format!(
+                    "bundle-doctor check-required failed (tip: fretboard diag doctor --fix-sidecars {} --warmup-frames {})",
+                    run.bundle_dir.display(),
+                    warmup_frames
+                ));
+            }
+        }
+        BundleDoctorMode::CheckAll => {
+            if !ok {
+                return Err(format!(
+                    "bundle-doctor check-all failed (tip: fretboard diag doctor --fix-sidecars {} --warmup-frames {})",
+                    run.bundle_dir.display(),
+                    warmup_frames
+                ));
+            }
+        }
+        BundleDoctorMode::Fix => {
+            if !required_ok {
+                return Err(format!(
+                    "bundle-doctor fix did not reach required_ok (tip: fretboard diag doctor {} --warmup-frames {})",
+                    run.bundle_dir.display(),
+                    warmup_frames
+                ));
+            }
+        }
+        BundleDoctorMode::Off | BundleDoctorMode::FixDryRun => {}
+    }
+
+    Ok(())
+}
+
 pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -2269,6 +2443,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
         ),
         "run" => {
+            let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing script path (try: fretboard diag run ./script.json)".to_string(),
@@ -2494,6 +2669,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .and_then(|p| p.file_name())
                         .and_then(|s| s.to_str())
                         .map(|s| s.to_string());
+                }
+
+                if bundle_doctor_mode != BundleDoctorMode::Off
+                    && let Some(bundle_path) = bundle_path.as_deref()
+                {
+                    run_bundle_doctor_for_bundle_path(
+                        bundle_path,
+                        bundle_doctor_mode,
+                        warmup_frames,
+                    )?;
                 }
 
                 if wants_post_run_checks
@@ -2765,6 +2950,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if exit_after_run {
                 let _ = touch(&resolved_exit_path);
             }
+
+            let mut bundle_doctor_ran: bool = false;
             if result.stage.as_deref() == Some("passed")
                 && (check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
@@ -2850,6 +3037,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "script passed but no bundle.json was found (required for post-run checks)"
                             .to_string()
                     })?;
+
+                    if bundle_doctor_mode != BundleDoctorMode::Off {
+                        run_bundle_doctor_for_bundle_path(
+                            &bundle_path,
+                            bundle_doctor_mode,
+                            warmup_frames,
+                        )?;
+                        bundle_doctor_ran = true;
+                    }
 
                     apply_post_run_checks(
                         &bundle_path,
@@ -2966,6 +3162,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 if let Some(bundle_path) = bundle_path {
+                    if !bundle_doctor_ran && bundle_doctor_mode != BundleDoctorMode::Off {
+                        run_bundle_doctor_for_bundle_path(
+                            &bundle_path,
+                            bundle_doctor_mode,
+                            warmup_frames,
+                        )?;
+                        bundle_doctor_ran = true;
+                    }
                     let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
                     let out = pack_out
                         .clone()
@@ -4665,6 +4869,7 @@ See: `docs/tracy.md`.\n";
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
+            let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
             if rest.is_empty() && suite_script_inputs.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)"
@@ -6173,6 +6378,14 @@ See: `docs/tracy.md`.\n";
                             )
                         })?;
 
+                        if bundle_doctor_mode != BundleDoctorMode::Off {
+                            run_bundle_doctor_for_bundle_path(
+                                &bundle_path,
+                                bundle_doctor_mode,
+                                warmup_frames,
+                            )?;
+                        }
+
                         let report = lint_bundle_from_path(
                             &bundle_path,
                             warmup_frames,
@@ -6405,6 +6618,14 @@ See: `docs/tracy.md`.\n";
                             src.display()
                         )
                     })?;
+
+                    if bundle_doctor_mode != BundleDoctorMode::Off {
+                        run_bundle_doctor_for_bundle_path(
+                            &bundle_path,
+                            bundle_doctor_mode,
+                            warmup_frames,
+                        )?;
+                    }
 
                     let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
                         if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
@@ -7165,6 +7386,7 @@ See: `docs/tracy.md`.\n";
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
+            let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag perf ui-gallery)"
@@ -8807,6 +9029,17 @@ See: `docs/tracy.md`.\n";
                         }
                         break;
                     };
+
+                    if bundle_doctor_mode != BundleDoctorMode::Off {
+                        if let Err(err) = run_bundle_doctor_for_bundle_path(
+                            &bundle_path,
+                            bundle_doctor_mode,
+                            warmup_frames,
+                        ) {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            return Err(err);
+                        }
+                    }
 
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
@@ -12553,7 +12786,7 @@ fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 5] {
     ]
 }
 
-fn ui_gallery_combobox_suite_scripts() -> [&'static str; 9] {
+fn ui_gallery_combobox_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
@@ -12564,6 +12797,8 @@ fn ui_gallery_combobox_suite_scripts() -> [&'static str; 9] {
         "tools/diag-scripts/ui-gallery-combobox-flip-tight-window.json",
         "tools/diag-scripts/ui-gallery-combobox-ime-tab-suppressed.json",
         "tools/diag-scripts/ui-gallery-combobox-long-list-scroll-select-last.json",
+        "tools/diag-scripts/ui-gallery-combobox-popup-trigger.json",
+        "tools/diag-scripts/ui-gallery-combobox-multiple-chips.json",
     ]
 }
 

@@ -61,6 +61,11 @@ scope: diagnostics, automation, tooling, refactor
   - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
   - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
   - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
+- [x] Add `--bundle-doctor` integration for `diag run` / `diag suite` / `diag perf` (per-bundle preflight).
+  - Modes: `check` / `check-all` / `fix` / `fix-dry-run`.
+  - Evidence anchors:
+    - `crates/fret-diag/src/lib.rs`
+    - `crates/fret-diag/src/commands/doctor.rs`
 
 ## M3: Tooling + AI loop
 
