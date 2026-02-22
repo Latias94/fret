@@ -4,6 +4,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
@@ -77,10 +78,11 @@ pub(crate) fn supporting_text_color(theme: &Theme, hovered: bool, pressed: bool)
 }
 
 pub(crate) fn input_text_style(theme: &Theme) -> TextStyle {
-    theme
+    let style = theme
         .text_style_by_key("md.comp.search-bar.input-text")
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default()
+        .unwrap_or_default();
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn hover_state_layer_color(theme: &Theme) -> Color {

@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
@@ -377,13 +378,15 @@ fn navigation_drawer_item<H: UiHost>(
 
         let label_style_base = theme
             .text_style_by_key("md.sys.typescale.label-large")
-            .unwrap_or_else(TextStyle::default);
+            .unwrap_or_default();
+        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
         let label_weight_active = drawer_tokens::label_weight(theme, true);
         let label_weight_inactive = drawer_tokens::label_weight(theme, false);
 
         let mut badge_style = theme
             .text_style_by_key("md.sys.typescale.label-small")
-            .unwrap_or_else(TextStyle::default);
+            .unwrap_or_default();
+        badge_style = typography::with_intent(badge_style, TextIntent::Control);
         let weight = theme
             .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
             .unwrap_or(500.0);

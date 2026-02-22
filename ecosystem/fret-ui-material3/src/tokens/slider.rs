@@ -5,6 +5,7 @@
 
 use fret_core::{Color, Corners, FontWeight, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SliderInteraction {
@@ -98,7 +99,7 @@ pub(crate) fn value_indicator_label_style(theme: &Theme) -> TextStyle {
         style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
     }
 
-    style
+    typography::with_intent(style, TextIntent::Control)
 }
 
 pub(crate) fn tick_mark_size(theme: &Theme) -> Px {

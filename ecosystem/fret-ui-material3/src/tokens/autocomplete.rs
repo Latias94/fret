@@ -5,6 +5,7 @@
 
 use fret_core::{Color, Corners, Edges, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::text_field::TextFieldVariant;
 
@@ -593,7 +594,9 @@ pub(crate) fn menu_list_item_label_text_style(
     theme: &Theme,
     _variant: TextFieldVariant,
 ) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.label-large")
+    theme
+        .text_style_by_key("md.sys.typescale.label-large")
+        .map(|style| typography::with_intent(style, TextIntent::Control))
 }
 
 pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: TextFieldVariant) -> Color {

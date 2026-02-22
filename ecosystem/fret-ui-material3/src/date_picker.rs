@@ -19,6 +19,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
@@ -817,6 +818,7 @@ fn month_nav_header<H: UiHost>(
             let style = theme
                 .text_style_by_key("md.sys.typescale.title-large")
                 .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
+            let style = style.map(|style| typography::with_intent(style, TextIntent::Control));
             let color = theme.color_token("md.sys.color.on-surface");
             (style, color)
         };

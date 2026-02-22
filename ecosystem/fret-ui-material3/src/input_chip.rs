@@ -24,6 +24,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -271,7 +272,8 @@ impl InputChip {
                     let default_layout_direction = theme_default_layout_direction(theme);
                     let label_style = theme
                         .text_style_by_key("md.sys.typescale.label-large")
-                        .unwrap_or_else(TextStyle::default);
+                        .unwrap_or_default();
+                    let label_style = typography::with_intent(label_style, TextIntent::Control);
                     (
                         corner_radii,
                         focus_ring,

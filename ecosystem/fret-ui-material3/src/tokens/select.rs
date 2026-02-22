@@ -3,6 +3,7 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::select::SelectVariant;
 
@@ -260,7 +261,9 @@ pub(crate) fn input_text_style(theme: &Theme, variant: SelectVariant) -> Option<
     // Material Web v30 models Select typography via `*.font/size/weight/tracking/line-height` and
     // a `*.type` mixin token (not a scalar key). For now, use the canonical sys typescale and keep
     // component-specific typography as a future import step.
-    theme.text_style_by_key("md.sys.typescale.body-large")
+    theme
+        .text_style_by_key("md.sys.typescale.body-large")
+        .map(|style| typography::with_intent(style, TextIntent::Control))
 }
 
 pub(crate) fn input_text_color(
@@ -884,7 +887,9 @@ pub(crate) fn menu_list_item_label_text_style(
     let _ = variant;
     // Material Web v30 `menu.list-item.label-text.type` is a mixin. The underlying scalars map to
     // sys `label-large`, so use that as the stable default in v1.
-    theme.text_style_by_key("md.sys.typescale.label-large")
+    theme
+        .text_style_by_key("md.sys.typescale.label-large")
+        .map(|style| typography::with_intent(style, TextIntent::Control))
 }
 
 pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVariant) -> Color {

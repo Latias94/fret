@@ -15,6 +15,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -378,12 +379,15 @@ impl Fab {
                             let content_tokens = ExtendedFabContentTokens {
                                 icon_size: fab_tokens::extended_icon_size(theme),
                                 icon_label_space: fab_tokens::extended_icon_label_space(theme),
-                                label_style: theme
-                                    .text_style_by_key("md.comp.extended-fab.label-text")
-                                    .or_else(|| {
-                                        theme.text_style_by_key("md.sys.typescale.label-large")
-                                    })
-                                    .unwrap_or_else(|| fret_core::TextStyle::default()),
+                                label_style: typography::with_intent(
+                                    theme
+                                        .text_style_by_key("md.comp.extended-fab.label-text")
+                                        .or_else(|| {
+                                            theme.text_style_by_key("md.sys.typescale.label-large")
+                                        })
+                                        .unwrap_or_default(),
+                                    TextIntent::Control,
+                                ),
                             };
 
                             let chrome_tokens = ExtendedFabChromeTokens {

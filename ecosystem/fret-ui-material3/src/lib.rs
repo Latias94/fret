@@ -124,6 +124,7 @@ mod tests {
     use std::collections::HashSet;
 
     use fret_app::App;
+    use fret_core::{TextLineHeightPolicy, TextVerticalPlacement};
     use fret_ui::Theme;
 
     use crate::tokens::v30::{ColorSchemeOptions, TypographyOptions, theme_config_with_colors};
@@ -231,6 +232,59 @@ mod tests {
         for src in sources {
             assert_material_only_tokens(src);
         }
+    }
+
+    #[test]
+    fn material3_control_typography_tokens_use_stable_line_boxes() {
+        let cfg =
+            theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
+        let mut app = App::default();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+        let theme = Theme::global(&app).clone();
+
+        let control_styles = [
+            crate::tokens::search_bar::input_text_style(&theme),
+            crate::tokens::search_view::header_input_text_style(&theme),
+            crate::tokens::slider::value_indicator_label_style(&theme),
+            crate::tokens::time_input::time_input_field_label_text_style(&theme),
+            crate::tokens::time_input::time_input_field_separator_style(&theme),
+            crate::tokens::time_input::period_selector_label_text_style(&theme),
+            crate::tokens::time_picker::headline_style(&theme),
+            crate::tokens::time_picker::clock_dial_label_text_style(&theme),
+            crate::tokens::time_picker::time_selector_label_text_style(&theme),
+            crate::tokens::time_picker::time_selector_separator_style(&theme),
+            crate::tokens::time_picker::period_selector_label_text_style(&theme),
+            crate::tokens::date_picker::weekdays_label_text_style(
+                &theme,
+                crate::tokens::date_picker::DatePickerTokenVariant::Docked,
+            ),
+            crate::tokens::date_picker::date_label_text_style(
+                &theme,
+                crate::tokens::date_picker::DatePickerTokenVariant::Docked,
+            ),
+            crate::tokens::date_picker::header_headline_style(&theme),
+        ];
+
+        for style in control_styles {
+            assert_eq!(
+                style.line_height_policy,
+                TextLineHeightPolicy::FixedFromStyle
+            );
+            assert_eq!(
+                style.vertical_placement,
+                TextVerticalPlacement::BoundsAsLineBox
+            );
+        }
+
+        let supporting = crate::tokens::time_input::time_input_field_supporting_text_style(&theme);
+        assert_eq!(
+            supporting.line_height_policy,
+            TextLineHeightPolicy::ExpandToFit
+        );
+        assert_eq!(
+            supporting.vertical_placement,
+            TextVerticalPlacement::CenterMetricsBox
+        );
     }
 
     fn extract_md_literal_keys(source: &str) -> HashSet<&str> {
