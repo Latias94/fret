@@ -1,5 +1,4 @@
 use super::super::bind_group_builders::UniformMaskImageBindGroupGlobals;
-use super::super::bind_group_caches::SamplingBindGroups;
 use super::super::*;
 
 impl Renderer {
@@ -87,25 +86,15 @@ impl Renderer {
 
             let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
             self.bind_group_caches
-                .ensure_uniform_mask_image_bind_groups(image, revision, || {
-                    let bind_group_linear = globals.create(
-                        device,
-                        "fret uniforms bind group (mask image override, linear)",
-                        &self.mask_image_sampler,
-                        view,
-                    );
-                    let bind_group_nearest = globals.create(
-                        device,
-                        "fret uniforms bind group (mask image override, nearest)",
-                        &self.mask_image_sampler_nearest,
-                        view,
-                    );
-
-                    SamplingBindGroups {
-                        linear: bind_group_linear,
-                        nearest: bind_group_nearest,
-                    }
-                });
+                .ensure_uniform_mask_image_override_bind_groups(
+                    device,
+                    &globals,
+                    &self.mask_image_sampler,
+                    &self.mask_image_sampler_nearest,
+                    view,
+                    image,
+                    revision,
+                );
         }
     }
 }

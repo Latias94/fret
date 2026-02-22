@@ -72,6 +72,33 @@ impl BindGroupCaches {
         })
     }
 
+    pub(super) fn ensure_uniform_mask_image_override_bind_groups(
+        &mut self,
+        device: &wgpu::Device,
+        globals: &super::bind_group_builders::UniformMaskImageBindGroupGlobals<'_>,
+        linear_sampler: &wgpu::Sampler,
+        nearest_sampler: &wgpu::Sampler,
+        view: &wgpu::TextureView,
+        id: fret_core::ImageId,
+        revision: u64,
+    ) -> &SamplingBindGroups {
+        self.uniform_mask_images.ensure(id, revision, || {
+            let linear = globals.create(
+                device,
+                "fret uniforms bind group (mask image override, linear)",
+                linear_sampler,
+                view,
+            );
+            let nearest = globals.create(
+                device,
+                "fret uniforms bind group (mask image override, nearest)",
+                nearest_sampler,
+                view,
+            );
+            SamplingBindGroups { linear, nearest }
+        })
+    }
+
     pub(super) fn invalidate_render_target(&mut self, id: fret_core::RenderTargetId) {
         self.viewport.remove(id);
     }
@@ -97,15 +124,6 @@ impl BindGroupCaches {
         id: fret_core::ImageId,
     ) -> Option<&SamplingBindGroups> {
         self.images.get(id)
-    }
-
-    pub(super) fn ensure_uniform_mask_image_bind_groups(
-        &mut self,
-        id: fret_core::ImageId,
-        revision: u64,
-        build: impl FnOnce() -> SamplingBindGroups,
-    ) -> &SamplingBindGroups {
-        self.uniform_mask_images.ensure(id, revision, build)
     }
 
     pub(super) fn get_uniform_mask_image_bind_groups(
