@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::sidecars;
 
@@ -185,74 +185,10 @@ pub(crate) fn cmd_doctor(
         ));
     }
 
-    let mut items: Vec<DoctorItem> = Vec::new();
-    items.push(build_item(
-        &bundle_path,
-        "bundle.index.json",
-        "bundle_index",
-        "bundle.index.json",
-        warmup_frames,
-        format!(
-            "fretboard diag index {} --warmup-frames {}",
-            bundle_path.display(),
-            warmup_frames
-        ),
-    ));
-    items.push(build_item(
-        &bundle_path,
-        "bundle.meta.json",
-        "bundle_meta",
-        "bundle.meta.json",
-        warmup_frames,
-        format!(
-            "fretboard diag meta {} --warmup-frames {}",
-            bundle_path.display(),
-            warmup_frames
-        ),
-    ));
-    items.push(build_item(
-        &bundle_path,
-        "test_ids.index.json",
-        "test_ids_index",
-        "test_ids.index.json",
-        warmup_frames,
-        format!(
-            "fretboard diag test-ids-index {} --warmup-frames {}",
-            bundle_path.display(),
-            warmup_frames
-        ),
-    ));
-
-    let required_ok = items
-        .iter()
-        .filter(|it| it.kind != "test_ids_index")
-        .all(|it| it.status == DoctorStatus::Ok);
-    let ok = items.iter().all(|it| it.status == DoctorStatus::Ok);
+    let (items, required_ok, ok) = doctor_items(&bundle_path, warmup_frames);
 
     if stats_json {
-        let payload = json!({
-            "ok": ok,
-            "required_ok": required_ok,
-            "bundle": bundle_path.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "items": items.iter().map(|it| {
-                json!({
-                    "label": it.label,
-                    "kind": it.kind,
-                    "file_name": it.file_name,
-                    "status": match it.status {
-                        DoctorStatus::Ok => "ok",
-                        DoctorStatus::Missing => "missing",
-                        DoctorStatus::Invalid => "invalid",
-                    },
-                    "resolved_path": it.resolved_path.as_ref().map(|p| p.display().to_string()),
-                    "candidates": it.candidates.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-                    "error": it.error,
-                    "suggest": it.suggest,
-                    "notes": it.notes,
-                })
-            }).collect::<Vec<_>>(),
-        });
+        let payload = doctor_report_json(&bundle_path, warmup_frames);
         let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
         println!("{pretty}");
         return Ok(());
@@ -294,4 +230,78 @@ pub(crate) fn cmd_doctor(
     }
 
     Ok(())
+}
+
+fn doctor_items(bundle_path: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool, bool) {
+    let mut items: Vec<DoctorItem> = Vec::new();
+    items.push(build_item(
+        bundle_path,
+        "bundle.index.json",
+        "bundle_index",
+        "bundle.index.json",
+        warmup_frames,
+        format!(
+            "fretboard diag index {} --warmup-frames {}",
+            bundle_path.display(),
+            warmup_frames
+        ),
+    ));
+    items.push(build_item(
+        bundle_path,
+        "bundle.meta.json",
+        "bundle_meta",
+        "bundle.meta.json",
+        warmup_frames,
+        format!(
+            "fretboard diag meta {} --warmup-frames {}",
+            bundle_path.display(),
+            warmup_frames
+        ),
+    ));
+    items.push(build_item(
+        bundle_path,
+        "test_ids.index.json",
+        "test_ids_index",
+        "test_ids.index.json",
+        warmup_frames,
+        format!(
+            "fretboard diag test-ids-index {} --warmup-frames {}",
+            bundle_path.display(),
+            warmup_frames
+        ),
+    ));
+
+    let required_ok = items
+        .iter()
+        .filter(|it| it.kind != "test_ids_index")
+        .all(|it| it.status == DoctorStatus::Ok);
+    let ok = items.iter().all(|it| it.status == DoctorStatus::Ok);
+    (items, required_ok, ok)
+}
+
+pub(crate) fn doctor_report_json(bundle_path: &Path, warmup_frames: u64) -> Value {
+    let (items, required_ok, ok) = doctor_items(bundle_path, warmup_frames);
+    json!({
+        "ok": ok,
+        "required_ok": required_ok,
+        "bundle": bundle_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "items": items.iter().map(|it| {
+            json!({
+                "label": it.label,
+                "kind": it.kind,
+                "file_name": it.file_name,
+                "status": match it.status {
+                    DoctorStatus::Ok => "ok",
+                    DoctorStatus::Missing => "missing",
+                    DoctorStatus::Invalid => "invalid",
+                },
+                "resolved_path": it.resolved_path.as_ref().map(|p| p.display().to_string()),
+                "candidates": it.candidates.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+                "error": it.error,
+                "suggest": it.suggest,
+                "notes": it.notes,
+            })
+        }).collect::<Vec<_>>(),
+    })
 }

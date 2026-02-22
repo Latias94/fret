@@ -56,6 +56,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add a small “doctor” command that reports missing/invalid sidecars and suggests the exact regen command.
   - Evidence: `crates/fret-diag/src/commands/doctor.rs`
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
+  - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
 
 ## M3: Tooling + AI loop
 
