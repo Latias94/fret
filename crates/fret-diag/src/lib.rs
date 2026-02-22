@@ -30,6 +30,7 @@ mod commands;
 mod compare;
 pub mod devtools;
 mod diag_perf_baseline;
+mod diag_run;
 mod diag_simple_dispatch;
 mod diag_suite;
 mod diag_suite_scripts;
@@ -2334,773 +2335,129 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     match sub.as_str() {
         "run" => {
-            let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing script path (try: fretboard diag run ./script.json)".to_string(),
-                );
-            };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
-
-            struct StopLaunchedDemoOnDrop<'a> {
-                child: &'a mut Option<LaunchedDemo>,
-                exit_path: &'a Path,
-                poll_ms: u64,
-            }
-
-            impl Drop for StopLaunchedDemoOnDrop<'_> {
-                fn drop(&mut self) {
-                    let _ = stop_launched_demo(self.child, self.exit_path, self.poll_ms);
-                }
-            }
-
-            let wants_pack = pack_after_run
-                || pack_out.is_some()
-                || pack_include_root_artifacts
-                || pack_include_triage
-                || pack_include_screenshots;
-
-            let mut pack_defaults = (
+            diag_run::cmd_run(diag_run::RunCmdContext {
+                pack_after_run,
+                rest: rest.clone(),
+                workspace_root: workspace_root.clone(),
+                resolved_out_dir: resolved_out_dir.clone(),
+                resolved_trigger_path: resolved_trigger_path.clone(),
+                resolved_ready_path: resolved_ready_path.clone(),
+                resolved_exit_path: resolved_exit_path.clone(),
+                resolved_script_path: resolved_script_path.clone(),
+                resolved_script_result_path: resolved_script_result_path.clone(),
+                fs_transport_cfg: fs_transport_cfg.clone(),
+                pack_out: pack_out.clone(),
                 pack_include_root_artifacts,
                 pack_include_triage,
                 pack_include_screenshots,
-            );
-            if pack_after_run && !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
-                pack_defaults = (true, true, true);
-            }
-
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let use_devtools_ws = devtools_ws_url.is_some()
-                || devtools_token.is_some()
-                || devtools_session_id.is_some();
-            if use_devtools_ws {
-                if launch.is_some() || reuse_launch {
-                    return Err(
-                        "--launch/--reuse-launch is not supported with --devtools-ws-url"
-                            .to_string(),
-                    );
-                }
-
-                let ws_url = devtools_ws_url.clone().ok_or_else(|| {
-                    "missing --devtools-ws-url (required when using DevTools WS transport)"
-                        .to_string()
-                })?;
-                let token = devtools_token.clone().ok_or_else(|| {
-                    "missing --devtools-token (required when using DevTools WS transport)"
-                        .to_string()
-                })?;
-
-                std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-                let script_json =
-                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-                        .map_err(|e| e.to_string())?;
-
-                let wants_post_run_checks = check_stale_paint_test_id.is_some()
-                    || check_stale_scene_test_id.is_some()
-                    || check_idle_no_paint_min.is_some()
-                    || check_pixels_changed_test_id.is_some()
-                    || check_ui_gallery_code_editor_torture_marker_present
-                    || check_ui_gallery_code_editor_torture_undo_redo
-                    || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-                    || check_ui_gallery_code_editor_torture_read_only_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_word_boundary
-                    || check_ui_gallery_web_ime_bridge_enabled
-                    || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
-                    || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
-                    || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
-                    || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-                    || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
-                    || check_ui_gallery_markdown_editor_source_a11y_composition
-                    || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
-                    || check_ui_gallery_markdown_editor_source_folds_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
-                    || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
-                    || check_ui_gallery_markdown_editor_source_inlays_present
-                    || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
-                    || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-                    || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
-                    || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
-                    || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
-                    || check_ui_gallery_code_editor_torture_inlays_present
-                    || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
-                    || check_ui_gallery_code_editor_word_boundary
-                    || check_ui_gallery_code_editor_a11y_selection
-                    || check_ui_gallery_code_editor_a11y_composition
-                    || check_ui_gallery_code_editor_a11y_selection_wrap
-                    || check_ui_gallery_code_editor_a11y_composition_wrap
-                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-                    || check_semantics_changed_repainted
-                    || check_wheel_scroll_test_id.is_some()
-                    || check_wheel_scroll_hit_changes_test_id.is_some()
-                    || check_prepaint_actions_min.is_some()
-                    || check_chart_sampling_window_shifts_min.is_some()
-                    || check_node_graph_cull_window_shifts_min.is_some()
-                    || check_node_graph_cull_window_shifts_max.is_some()
-                    || check_vlist_visible_range_refreshes_min.is_some()
-                    || check_vlist_visible_range_refreshes_max.is_some()
-                    || check_vlist_window_shifts_explainable
-                    || check_vlist_window_shifts_have_prepaint_actions
-                    || check_vlist_window_shifts_non_retained_max.is_some()
-                    || check_vlist_window_shifts_prefetch_max.is_some()
-                    || check_vlist_window_shifts_escape_max.is_some()
-                    || check_vlist_policy_key_stable
-                    || check_windowed_rows_offset_changes_min.is_some()
-                    || check_windowed_rows_visible_start_changes_repainted
-                    || check_layout_fast_path_min.is_some()
-                    || check_drag_cache_root_paint_only_test_id.is_some()
-                    || check_hover_layout_max.is_some()
-                    || check_gc_sweep_liveness
-                    || !check_notify_hotspot_file_max.is_empty()
-                    || check_view_cache_reuse_min.is_some()
-                    || check_view_cache_reuse_stable_min.is_some()
-                    || check_overlay_synthesis_min.is_some()
-                    || check_viewport_input_min.is_some()
-                    || check_dock_drag_min.is_some()
-                    || check_viewport_capture_min.is_some()
-                    || check_retained_vlist_reconcile_no_notify_min.is_some()
-                    || check_retained_vlist_attach_detach_max.is_some()
-                    || check_retained_vlist_keep_alive_reuse_min.is_some()
-                    || check_retained_vlist_keep_alive_budget.is_some();
-
-                let _ = write_script(&src, &resolved_script_path);
-
-                let connected = connect_devtools_ws_tooling(
-                    ws_url.as_str(),
-                    token.as_str(),
-                    devtools_session_id.as_deref(),
-                    timeout_ms,
-                    poll_ms,
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.connect.failed",
-                        err,
-                        "tooling_error",
-                        Some("connect_devtools_ws_tooling".to_string()),
-                    );
-                })?;
-
-                let (result, bundle_path) = run_script_over_transport(
-                    &resolved_out_dir,
-                    &connected,
-                    script_json,
-                    wants_post_run_checks || wants_pack,
-                    trace_chrome,
-                    Some("diag-run"),
-                    None,
-                    timeout_ms,
-                    poll_ms,
-                    &resolved_script_result_path,
-                    &resolved_out_dir.join("check.capabilities.json"),
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.run.failed",
-                        err,
-                        "tooling_error",
-                        Some("run_script_over_transport".to_string()),
-                    );
-                })?;
-
-                if exit_after_run {
-                    connected
-                        .devtools
-                        .app_exit_request(None, Some("diag.run"), None);
-                }
-
-                let stage = match result.stage {
-                    fret_diag_protocol::UiScriptStageV1::Passed => "passed",
-                    fret_diag_protocol::UiScriptStageV1::Failed => "failed",
-                    fret_diag_protocol::UiScriptStageV1::Queued => "queued",
-                    fret_diag_protocol::UiScriptStageV1::Running => "running",
-                };
-
-                let mut summary = crate::stats::ScriptResultSummary {
-                    run_id: result.run_id,
-                    stage: Some(stage.to_string()),
-                    step_index: result.step_index.map(|n| n as u64),
-                    reason_code: result.reason_code.clone(),
-                    reason: result.reason.clone(),
-                    last_bundle_dir: result.last_bundle_dir.clone(),
-                };
-
-                if summary
-                    .last_bundle_dir
-                    .as_deref()
-                    .unwrap_or("")
-                    .trim()
-                    .is_empty()
-                    && let Some(bundle_path) = bundle_path.as_ref()
-                {
-                    summary.last_bundle_dir = bundle_path
-                        .parent()
-                        .and_then(|p| p.file_name())
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string());
-                }
-
-                if bundle_doctor_mode != BundleDoctorMode::Off
-                    && let Some(bundle_path) = bundle_path.as_deref()
-                {
-                    run_bundle_doctor_for_bundle_path(
-                        bundle_path,
-                        bundle_doctor_mode,
-                        warmup_frames,
-                    )?;
-                }
-
-                if wants_post_run_checks
-                    && matches!(result.stage, fret_diag_protocol::UiScriptStageV1::Passed)
-                {
-                    let Some(bundle_path) = bundle_path.as_ref() else {
-                        return Err(
-                            "script passed but no bundle.json was captured (required for post-run checks)"
-                                .to_string(),
-                        );
-                    };
-                    apply_post_run_checks(
-                        bundle_path,
-                        &resolved_out_dir,
-                        check_idle_no_paint_min,
-                        check_stale_paint_test_id.as_deref(),
-                        check_stale_paint_eps,
-                        check_stale_scene_test_id.as_deref(),
-                        check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
-                        check_ui_gallery_code_editor_torture_marker_present,
-                        check_ui_gallery_code_editor_torture_undo_redo,
-                        check_ui_gallery_code_editor_torture_geom_fallbacks_low,
-                        check_ui_gallery_code_editor_torture_read_only_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_word_boundary,
-                        check_ui_gallery_web_ime_bridge_enabled,
-                        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
-                        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
-                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
-                        check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
-                        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
-                        check_ui_gallery_markdown_editor_source_a11y_composition,
-                        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
-                        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
-                        check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
-                        check_ui_gallery_markdown_editor_source_inlays_present,
-                        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
-                        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
-                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
-                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
-                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
-                        check_ui_gallery_code_editor_torture_inlays_present,
-                        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
-                        check_ui_gallery_code_editor_word_boundary,
-                        check_ui_gallery_code_editor_a11y_selection,
-                        check_ui_gallery_code_editor_a11y_composition,
-                        check_ui_gallery_code_editor_a11y_selection_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-                        check_ui_gallery_code_editor_a11y_composition_drag,
-                        check_semantics_changed_repainted,
-                        dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
-                        check_wheel_scroll_hit_changes_test_id.as_deref(),
-                        check_prepaint_actions_min,
-                        check_chart_sampling_window_shifts_min,
-                        check_node_graph_cull_window_shifts_min,
-                        check_node_graph_cull_window_shifts_max,
-                        check_vlist_visible_range_refreshes_min,
-                        check_vlist_visible_range_refreshes_max,
-                        check_vlist_window_shifts_explainable,
-                        check_vlist_window_shifts_have_prepaint_actions,
-                        check_vlist_window_shifts_non_retained_max,
-                        check_vlist_window_shifts_prefetch_max,
-                        check_vlist_window_shifts_escape_max,
-                        check_vlist_policy_key_stable,
-                        check_windowed_rows_offset_changes_min,
-                        check_windowed_rows_offset_changes_eps,
-                        check_windowed_rows_visible_start_changes_repainted,
-                        check_layout_fast_path_min,
-                        check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
-                        check_gc_sweep_liveness,
-                        &check_notify_hotspot_file_max,
-                        check_view_cache_reuse_stable_min,
-                        check_view_cache_reuse_min,
-                        check_overlay_synthesis_min,
-                        check_viewport_input_min,
-                        check_dock_drag_min,
-                        check_viewport_capture_min,
-                        check_retained_vlist_reconcile_no_notify_min,
-                        check_retained_vlist_attach_detach_max,
-                        check_retained_vlist_keep_alive_reuse_min,
-                        check_retained_vlist_keep_alive_budget,
-                        warmup_frames,
-                    )?;
-                }
-
-                if wants_pack {
-                    if let Some(bundle_path) = bundle_path.as_ref() {
-                        let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-                        let out = pack_out
-                            .clone()
-                            .map(|p| resolve_path(&workspace_root, p))
-                            .unwrap_or_else(|| {
-                                default_pack_out_path(&resolved_out_dir, &bundle_dir)
-                            });
-
-                        let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                            resolved_out_dir.clone()
-                        } else {
-                            bundle_dir
-                                .parent()
-                                .unwrap_or(&resolved_out_dir)
-                                .to_path_buf()
-                        };
-
-                        if let Err(err) = pack_bundle_dir_to_zip(
-                            &bundle_dir,
-                            &out,
-                            pack_defaults.0,
-                            pack_defaults.1,
-                            pack_defaults.2,
-                            false,
-                            false,
-                            &artifacts_root,
-                            stats_top,
-                            sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                            warmup_frames,
-                        ) {
-                            eprintln!("PACK-ERROR {err}");
-                        } else {
-                            println!("PACK {}", out.display());
-                        }
-                    } else {
-                        eprintln!(
-                            "PACK-ERROR no bundle.json captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
-                        );
-                    }
-                }
-
-                report_result_and_exit(&summary);
-            }
-            let script_wants_screenshots = script_requests_screenshots(&src);
-            let mut run_launch_env = launch_env.clone();
-            for (key, value) in script_env_defaults(&src) {
-                push_env_if_missing(&mut run_launch_env, &key, &value);
-            }
-            let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
-            let mut child = maybe_launch_demo(
-                &launch,
-                &run_launch_env,
-                &workspace_root,
-                &resolved_out_dir,
-                &resolved_ready_path,
-                &resolved_exit_path,
-                pack_defaults.2
-                    || check_pixels_changed_test_id.is_some()
-                    || script_wants_screenshots,
+                stats_top,
+                sort_override,
+                warmup_frames,
                 timeout_ms,
                 poll_ms,
-                launch_high_priority,
-            )?;
-            let _stop_guard = if keep_open {
-                None
-            } else {
-                Some(StopLaunchedDemoOnDrop {
-                    child: &mut child,
-                    exit_path: &resolved_exit_path,
-                    poll_ms,
-                })
-            };
-
-            let connected = connect_filesystem_tooling(
-                &fs_transport_cfg,
-                &resolved_ready_path,
-                launch.is_some(),
-                timeout_ms,
-                poll_ms,
-            )
-            .inspect_err(|err| {
-                write_tooling_failure_script_result_if_missing(
-                    &resolved_script_result_path,
-                    "tooling.connect.failed",
-                    err,
-                    "tooling_error",
-                    Some("connect_filesystem_tooling".to_string()),
-                );
-            })?;
-            let script_json: serde_json::Value =
-                serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
-                    let err = e.to_string();
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.script.read_failed",
-                        &err,
-                        "tooling_error",
-                        Some("read script json".to_string()),
-                    );
-                    err
-                })?)
-                .map_err(|e| {
-                    let err = e.to_string();
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.script.parse_failed",
-                        &err,
-                        "tooling_error",
-                        Some("parse script json".to_string()),
-                    );
-                    err
-                })?;
-            let (script_result, _bundle_path) = run_script_over_transport(
-                &resolved_out_dir,
-                &connected,
-                script_json,
-                wants_pack,
                 trace_chrome,
-                Some("diag-run"),
-                None,
-                timeout_ms,
-                poll_ms,
-                &resolved_script_result_path,
-                &resolved_out_dir.join("check.capabilities.json"),
-            )
-            .inspect_err(|err| {
-                write_tooling_failure_script_result_if_missing(
-                    &resolved_script_result_path,
-                    "tooling.run.failed",
-                    err,
-                    "tooling_error",
-                    Some("run_script_over_transport".to_string()),
-                );
-            })?;
-
-            let stage = match script_result.stage {
-                fret_diag_protocol::UiScriptStageV1::Passed => "passed",
-                fret_diag_protocol::UiScriptStageV1::Failed => "failed",
-                fret_diag_protocol::UiScriptStageV1::Queued => "queued",
-                fret_diag_protocol::UiScriptStageV1::Running => "running",
-            };
-
-            let mut result = crate::stats::ScriptResultSummary {
-                run_id: script_result.run_id,
-                stage: Some(stage.to_string()),
-                step_index: script_result.step_index.map(|n| n as u64),
-                reason_code: script_result.reason_code.clone(),
-                reason: script_result.reason.clone(),
-                last_bundle_dir: script_result.last_bundle_dir.clone(),
-            };
-
-            if result.stage.as_deref() == Some("failed")
-                && let Some(dir) =
-                    wait_for_failure_dump_bundle(&resolved_out_dir, &result, timeout_ms, poll_ms)
-                && let Some(name) = dir.file_name().and_then(|s| s.to_str())
-            {
-                result.last_bundle_dir = Some(name.to_string());
-            }
-            if exit_after_run {
-                let _ = touch(&resolved_exit_path);
-            }
-
-            let mut bundle_doctor_ran: bool = false;
-            if result.stage.as_deref() == Some("passed")
-                && (check_stale_paint_test_id.is_some()
-                    || check_stale_scene_test_id.is_some()
-                    || check_idle_no_paint_min.is_some()
-                    || check_pixels_changed_test_id.is_some()
-                    || check_ui_gallery_code_editor_torture_marker_present
-                    || check_ui_gallery_code_editor_torture_undo_redo
-                    || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-                    || check_ui_gallery_code_editor_torture_read_only_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-                    || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_word_boundary
-                    || check_ui_gallery_web_ime_bridge_enabled
-                    || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
-                    || check_ui_gallery_markdown_editor_source_a11y_composition
-                    || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
-                    || check_ui_gallery_markdown_editor_source_folds_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
-                    || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
-                    || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
-                    || check_ui_gallery_markdown_editor_source_inlays_present
-                    || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
-                    || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present
-                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
-                    || check_ui_gallery_code_editor_torture_inlays_present
-                    || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-                    || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
-                    || check_ui_gallery_code_editor_word_boundary
-                    || check_ui_gallery_code_editor_a11y_selection
-                    || check_ui_gallery_code_editor_a11y_composition
-                    || check_ui_gallery_code_editor_a11y_selection_wrap
-                    || check_ui_gallery_code_editor_a11y_composition_wrap
-                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-                    || check_semantics_changed_repainted
-                    || check_wheel_scroll_test_id.is_some()
-                    || check_wheel_scroll_hit_changes_test_id.is_some()
-                    || check_prepaint_actions_min.is_some()
-                    || check_chart_sampling_window_shifts_min.is_some()
-                    || check_node_graph_cull_window_shifts_min.is_some()
-                    || check_node_graph_cull_window_shifts_max.is_some()
-                    || check_vlist_visible_range_refreshes_min.is_some()
-                    || check_vlist_visible_range_refreshes_max.is_some()
-                    || check_vlist_window_shifts_explainable
-                    || check_vlist_window_shifts_have_prepaint_actions
-                    || check_vlist_window_shifts_non_retained_max.is_some()
-                    || check_vlist_window_shifts_prefetch_max.is_some()
-                    || check_vlist_window_shifts_escape_max.is_some()
-                    || check_vlist_policy_key_stable
-                    || check_windowed_rows_offset_changes_min.is_some()
-                    || check_windowed_rows_visible_start_changes_repainted
-                    || check_layout_fast_path_min.is_some()
-                    || check_drag_cache_root_paint_only_test_id.is_some()
-                    || check_hover_layout_max.is_some()
-                    || check_gc_sweep_liveness
-                    || !check_notify_hotspot_file_max.is_empty()
-                    || check_view_cache_reuse_min.is_some()
-                    || check_view_cache_reuse_stable_min.is_some()
-                    || check_overlay_synthesis_min.is_some()
-                    || check_viewport_input_min.is_some()
-                    || check_dock_drag_min.is_some()
-                    || check_viewport_capture_min.is_some()
-                    || check_retained_vlist_reconcile_no_notify_min.is_some()
-                    || check_retained_vlist_attach_detach_max.is_some()
-                    || check_retained_vlist_keep_alive_reuse_min.is_some()
-                    || check_retained_vlist_keep_alive_budget.is_some())
-                {
-                    let bundle_path = wait_for_bundle_json_from_script_result(
-                        &resolved_out_dir,
-                        &result,
-                        timeout_ms,
-                        poll_ms,
-                    )
-                    .ok_or_else(|| {
-                        "script passed but no bundle.json was found (required for post-run checks)"
-                            .to_string()
-                    })?;
-
-                    if bundle_doctor_mode != BundleDoctorMode::Off {
-                        run_bundle_doctor_for_bundle_path(
-                            &bundle_path,
-                            bundle_doctor_mode,
-                            warmup_frames,
-                        )?;
-                        bundle_doctor_ran = true;
-                    }
-
-                    apply_post_run_checks(
-                        &bundle_path,
-                        &resolved_out_dir,
-                        check_idle_no_paint_min,
-                        check_stale_paint_test_id.as_deref(),
-                        check_stale_paint_eps,
-                        check_stale_scene_test_id.as_deref(),
-                        check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
-                        check_ui_gallery_code_editor_torture_marker_present,
-                        check_ui_gallery_code_editor_torture_undo_redo,
-                        check_ui_gallery_code_editor_torture_geom_fallbacks_low,
-                        check_ui_gallery_code_editor_torture_read_only_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
-                        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_word_boundary,
-                        check_ui_gallery_web_ime_bridge_enabled,
-                        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
-                        check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
-                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
-                        check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
-                        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
-                        check_ui_gallery_markdown_editor_source_a11y_composition,
-                        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
-                        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
-                        check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
-                        check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
-                        check_ui_gallery_markdown_editor_source_inlays_present,
-                        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
-                        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
-                        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
-                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
-                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
-                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present,
-                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
-                        check_ui_gallery_code_editor_torture_inlays_present,
-                        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
-                        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
-                        check_ui_gallery_code_editor_word_boundary,
-                        check_ui_gallery_code_editor_a11y_selection,
-                        check_ui_gallery_code_editor_a11y_composition,
-                        check_ui_gallery_code_editor_a11y_selection_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-                        check_ui_gallery_code_editor_a11y_composition_drag,
-                        check_semantics_changed_repainted,
-                        dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
-                        check_wheel_scroll_hit_changes_test_id.as_deref(),
-                        check_prepaint_actions_min,
-                        check_chart_sampling_window_shifts_min,
-                        check_node_graph_cull_window_shifts_min,
-                        check_node_graph_cull_window_shifts_max,
-                        check_vlist_visible_range_refreshes_min,
-                        check_vlist_visible_range_refreshes_max,
-                        check_vlist_window_shifts_explainable,
-                        check_vlist_window_shifts_have_prepaint_actions,
-                        check_vlist_window_shifts_non_retained_max,
-                        check_vlist_window_shifts_prefetch_max,
-                        check_vlist_window_shifts_escape_max,
-                        check_vlist_policy_key_stable,
-                        check_windowed_rows_offset_changes_min,
-                        check_windowed_rows_offset_changes_eps,
-                        check_windowed_rows_visible_start_changes_repainted,
-                        check_layout_fast_path_min,
-                        check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
-                        check_gc_sweep_liveness,
-                        &check_notify_hotspot_file_max,
-                        check_view_cache_reuse_stable_min,
-                        check_view_cache_reuse_min,
-                        check_overlay_synthesis_min,
-                        check_viewport_input_min,
-                        check_dock_drag_min,
-                        check_viewport_capture_min,
-                        check_retained_vlist_reconcile_no_notify_min,
-                        check_retained_vlist_attach_detach_max,
-                        check_retained_vlist_keep_alive_reuse_min,
-                        check_retained_vlist_keep_alive_budget,
-                        warmup_frames,
-                    )?;
-                }
-
-            if wants_pack {
-                let mut bundle_path = wait_for_bundle_json_from_script_result(
-                    &resolved_out_dir,
-                    &result,
-                    timeout_ms,
-                    poll_ms,
-                );
-                if bundle_path.is_none() {
-                    let _ = touch(&resolved_trigger_path);
-                    bundle_path = wait_for_bundle_json_from_script_result(
-                        &resolved_out_dir,
-                        &result,
-                        timeout_ms,
-                        poll_ms,
-                    );
-                }
-
-                if let Some(bundle_path) = bundle_path {
-                    if !bundle_doctor_ran && bundle_doctor_mode != BundleDoctorMode::Off {
-                        run_bundle_doctor_for_bundle_path(
-                            &bundle_path,
-                            bundle_doctor_mode,
-                            warmup_frames,
-                        )?;
-                    }
-                    let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
-                    let out = pack_out
-                        .clone()
-                        .map(|p| resolve_path(&workspace_root, p))
-                        .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
-
-                    let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                        resolved_out_dir.clone()
-                    } else {
-                        bundle_dir
-                            .parent()
-                            .unwrap_or(&resolved_out_dir)
-                            .to_path_buf()
-                    };
-
-                    if let Err(err) = pack_bundle_dir_to_zip(
-                        &bundle_dir,
-                        &out,
-                        pack_defaults.0,
-                        pack_defaults.1,
-                        pack_defaults.2,
-                        false,
-                        false,
-                        &artifacts_root,
-                        stats_top,
-                        sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                        warmup_frames,
-                    ) {
-                        eprintln!("PACK-ERROR {err}");
-                    } else {
-                        println!("PACK {}", out.display());
-                    }
-                } else {
-                    eprintln!(
-                        "PACK-ERROR no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
-                    );
-                }
-            }
-
-            drop(_stop_guard);
-            report_result_and_exit(&result);
+                devtools_ws_url: devtools_ws_url.clone(),
+                devtools_token: devtools_token.clone(),
+                devtools_session_id: devtools_session_id.clone(),
+                exit_after_run,
+                launch: launch.clone(),
+                launch_env: launch_env.clone(),
+                reuse_launch,
+                launch_high_priority,
+                keep_open,
+                checks: diag_run::RunChecks {
+                check_chart_sampling_window_shifts_min: check_chart_sampling_window_shifts_min.clone(),
+                check_dock_drag_min: check_dock_drag_min.clone(),
+                check_drag_cache_root_paint_only_test_id: check_drag_cache_root_paint_only_test_id.clone(),
+                check_gc_sweep_liveness: check_gc_sweep_liveness.clone(),
+                check_hover_layout_max: check_hover_layout_max.clone(),
+                check_idle_no_paint_min: check_idle_no_paint_min.clone(),
+                check_layout_fast_path_min: check_layout_fast_path_min.clone(),
+                check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
+                check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
+                check_notify_hotspot_file_max: check_notify_hotspot_file_max.clone(),
+                check_overlay_synthesis_min: check_overlay_synthesis_min.clone(),
+                check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+                check_prepaint_actions_min: check_prepaint_actions_min.clone(),
+                check_retained_vlist_attach_detach_max: check_retained_vlist_attach_detach_max.clone(),
+                check_retained_vlist_keep_alive_budget: check_retained_vlist_keep_alive_budget.clone(),
+                check_retained_vlist_keep_alive_reuse_min: check_retained_vlist_keep_alive_reuse_min.clone(),
+                check_retained_vlist_reconcile_no_notify_min: check_retained_vlist_reconcile_no_notify_min.clone(),
+                check_semantics_changed_repainted: check_semantics_changed_repainted.clone(),
+                check_stale_paint_eps: check_stale_paint_eps.clone(),
+                check_stale_paint_test_id: check_stale_paint_test_id.clone(),
+                check_stale_scene_eps: check_stale_scene_eps.clone(),
+                check_stale_scene_test_id: check_stale_scene_test_id.clone(),
+                check_ui_gallery_code_editor_a11y_composition: check_ui_gallery_code_editor_a11y_composition.clone(),
+                check_ui_gallery_code_editor_a11y_composition_drag: check_ui_gallery_code_editor_a11y_composition_drag.clone(),
+                check_ui_gallery_code_editor_a11y_composition_wrap: check_ui_gallery_code_editor_a11y_composition_wrap.clone(),
+                check_ui_gallery_code_editor_a11y_composition_wrap_scroll: check_ui_gallery_code_editor_a11y_composition_wrap_scroll.clone(),
+                check_ui_gallery_code_editor_a11y_selection: check_ui_gallery_code_editor_a11y_selection.clone(),
+                check_ui_gallery_code_editor_a11y_selection_wrap: check_ui_gallery_code_editor_a11y_selection_wrap.clone(),
+                check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection.clone(),
+                check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll.clone(),
+                check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed.clone(),
+                check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_present: check_ui_gallery_code_editor_torture_folds_placeholder_present.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped: check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed.clone(),
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap.clone(),
+                check_ui_gallery_code_editor_torture_geom_fallbacks_low: check_ui_gallery_code_editor_torture_geom_fallbacks_low.clone(),
+                check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit.clone(),
+                check_ui_gallery_code_editor_torture_inlays_present: check_ui_gallery_code_editor_torture_inlays_present.clone(),
+                check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped.clone(),
+                check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations.clone(),
+                check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed: check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed.clone(),
+                check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap.clone(),
+                check_ui_gallery_code_editor_torture_marker_present: check_ui_gallery_code_editor_torture_marker_present.clone(),
+                check_ui_gallery_code_editor_torture_read_only_blocks_edits: check_ui_gallery_code_editor_torture_read_only_blocks_edits.clone(),
+                check_ui_gallery_code_editor_torture_undo_redo: check_ui_gallery_code_editor_torture_undo_redo.clone(),
+                check_ui_gallery_code_editor_word_boundary: check_ui_gallery_code_editor_word_boundary.clone(),
+                check_ui_gallery_markdown_editor_source_a11y_composition: check_ui_gallery_markdown_editor_source_a11y_composition.clone(),
+                check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap.clone(),
+                check_ui_gallery_markdown_editor_source_disabled_blocks_edits: check_ui_gallery_markdown_editor_source_disabled_blocks_edits.clone(),
+                check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds: check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds.clone(),
+                check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit.clone(),
+                check_ui_gallery_markdown_editor_source_folds_placeholder_present: check_ui_gallery_markdown_editor_source_folds_placeholder_present.clone(),
+                check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap.clone(),
+                check_ui_gallery_markdown_editor_source_folds_toggle_stable: check_ui_gallery_markdown_editor_source_folds_toggle_stable.clone(),
+                check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit.clone(),
+                check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable: check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable.clone(),
+                check_ui_gallery_markdown_editor_source_inlays_present: check_ui_gallery_markdown_editor_source_inlays_present.clone(),
+                check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap.clone(),
+                check_ui_gallery_markdown_editor_source_inlays_toggle_stable: check_ui_gallery_markdown_editor_source_inlays_toggle_stable.clone(),
+                check_ui_gallery_markdown_editor_source_line_boundary_triple_click: check_ui_gallery_markdown_editor_source_line_boundary_triple_click.clone(),
+                check_ui_gallery_markdown_editor_source_read_only_blocks_edits: check_ui_gallery_markdown_editor_source_read_only_blocks_edits.clone(),
+                check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable.clone(),
+                check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable.clone(),
+                check_ui_gallery_markdown_editor_source_word_boundary: check_ui_gallery_markdown_editor_source_word_boundary.clone(),
+                check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change.clone(),
+                check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change.clone(),
+                check_ui_gallery_text_mixed_script_bundled_fallback_conformance: check_ui_gallery_text_mixed_script_bundled_fallback_conformance.clone(),
+                check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps.clone(),
+                check_ui_gallery_web_ime_bridge_enabled: check_ui_gallery_web_ime_bridge_enabled.clone(),
+                check_view_cache_reuse_min: check_view_cache_reuse_min.clone(),
+                check_view_cache_reuse_stable_min: check_view_cache_reuse_stable_min.clone(),
+                check_viewport_capture_min: check_viewport_capture_min.clone(),
+                check_viewport_input_min: check_viewport_input_min.clone(),
+                check_vlist_policy_key_stable: check_vlist_policy_key_stable.clone(),
+                check_vlist_visible_range_refreshes_max: check_vlist_visible_range_refreshes_max.clone(),
+                check_vlist_visible_range_refreshes_min: check_vlist_visible_range_refreshes_min.clone(),
+                check_vlist_window_shifts_escape_max: check_vlist_window_shifts_escape_max.clone(),
+                check_vlist_window_shifts_explainable: check_vlist_window_shifts_explainable.clone(),
+                check_vlist_window_shifts_have_prepaint_actions: check_vlist_window_shifts_have_prepaint_actions.clone(),
+                check_vlist_window_shifts_non_retained_max: check_vlist_window_shifts_non_retained_max.clone(),
+                check_vlist_window_shifts_prefetch_max: check_vlist_window_shifts_prefetch_max.clone(),
+                check_wheel_scroll_hit_changes_test_id: check_wheel_scroll_hit_changes_test_id.clone(),
+                check_wheel_scroll_test_id: check_wheel_scroll_test_id.clone(),
+                check_windowed_rows_offset_changes_eps: check_windowed_rows_offset_changes_eps.clone(),
+                check_windowed_rows_offset_changes_min: check_windowed_rows_offset_changes_min.clone(),
+                check_windowed_rows_visible_start_changes_repainted: check_windowed_rows_visible_start_changes_repainted.clone(),
+                dump_semantics_changed_repainted_json: dump_semantics_changed_repainted_json.clone(),
+                },
+            })
         }
         "repeat" => {
             if pack_after_run {
