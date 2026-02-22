@@ -1,28 +1,30 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::ctx::ExecuteCtx;
 use super::super::helpers::set_scissor_rect_absolute;
 
 impl Renderer {
     pub(in super::super) fn record_path_msaa_batch_pass(
         &mut self,
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        usage: wgpu::TextureUsages,
-        frame_targets: &mut FrameTargets,
-        encoder: &mut wgpu::CommandEncoder,
+        ctx: &mut ExecuteCtx<'_>,
         plan: &RenderPlan,
-        encoding: &SceneEncoding,
         pass_index: usize,
         quad_vertex_bases: &[Option<u32>],
         quad_vertex_size: u64,
         path_vertex_buffer: &wgpu::Buffer,
         path_paint_bind_group: &wgpu::BindGroup,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
         path_pass: &PathMsaaBatchPass,
     ) {
+        let device = ctx.device;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let usage = ctx.usage;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoder = &mut *ctx.encoder;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         debug_assert!(path_pass.segment.0 < plan.segments.len());
         let target_origin = path_pass.target_origin;
         let target_size = path_pass.target_size;

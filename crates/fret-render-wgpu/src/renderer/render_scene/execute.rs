@@ -1003,22 +1003,13 @@ impl Renderer {
                         }
                         RenderPlanPass::PathMsaaBatch(path_pass) => {
                             self.record_path_msaa_batch_pass(
-                                ctx.device,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.usage,
-                                ctx.frame_targets,
-                                ctx.encoder,
+                                &mut ctx,
                                 &plan,
-                                ctx.encoding,
                                 pass_index,
                                 &quad_vertex_bases,
                                 quad_vertex_size,
                                 &path_vertex_buffer,
                                 &path_paint_bind_group,
-                                ctx.render_space_offset_u32,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
                                 path_pass,
                             );
                         }
