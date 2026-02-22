@@ -155,16 +155,31 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
             .placeholder("Select a timezone")
             .query_model(models.groups_query.clone())
             .test_id_prefix("ui-gallery-combobox-groups")
-            .items([
-                shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
-                shadcn::ComboboxItem::new("americas-la", "Americas / (GMT-8) Los Angeles"),
-                shadcn::ComboboxItem::new("americas-chi", "Americas / (GMT-6) Chicago"),
-                shadcn::ComboboxItem::new("europe-lon", "Europe / (GMT+0) London"),
-                shadcn::ComboboxItem::new("europe-paris", "Europe / (GMT+1) Paris"),
-                shadcn::ComboboxItem::new("europe-berlin", "Europe / (GMT+1) Berlin"),
-                shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
-                shadcn::ComboboxItem::new("asia-shanghai", "Asia/Pacific / (GMT+8) Shanghai"),
-                shadcn::ComboboxItem::new("asia-singapore", "Asia/Pacific / (GMT+8) Singapore"),
+            .groups([
+                shadcn::combobox::ComboboxGroup::new(
+                    "Americas",
+                    [
+                        shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York"),
+                        shadcn::ComboboxItem::new("americas-la", "(GMT-8) Los Angeles"),
+                        shadcn::ComboboxItem::new("americas-chi", "(GMT-6) Chicago"),
+                    ],
+                ),
+                shadcn::combobox::ComboboxGroup::new(
+                    "Europe",
+                    [
+                        shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London"),
+                        shadcn::ComboboxItem::new("europe-paris", "(GMT+1) Paris"),
+                        shadcn::ComboboxItem::new("europe-berlin", "(GMT+1) Berlin"),
+                    ],
+                ),
+                shadcn::combobox::ComboboxGroup::new(
+                    "Asia/Pacific",
+                    [
+                        shadcn::ComboboxItem::new("asia-tokyo", "(GMT+9) Tokyo"),
+                        shadcn::ComboboxItem::new("asia-shanghai", "(GMT+8) Shanghai"),
+                        shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
+                    ],
+                ),
             ])
             .into_element(cx)
             .test_id("ui-gallery-combobox-groups-trigger");

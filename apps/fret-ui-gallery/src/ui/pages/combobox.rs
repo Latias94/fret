@@ -87,16 +87,21 @@ pub(super) fn preview_combobox(
     .into_element(cx);"#,
                 ),
             DocSection::new("Groups", groups)
-                .description("Upstream groups items; current Fret demo approximates groups via prefixed labels.")
+                .description("Upstream groups items; Fret exposes grouped entries via `ComboboxGroup`.")
                 .code(
                     "rust",
                     r#"shadcn::Combobox::new(value, open)
     .placeholder("Select a timezone")
     .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
-        shadcn::ComboboxItem::new("europe-lon", "Europe / (GMT+0) London"),
-        shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
+    .groups([
+        shadcn::ComboboxGroup::new(
+            "Americas",
+            [shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York")],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Europe",
+            [shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London")],
+        ),
     ])
     .into_element(cx);"#,
                 )

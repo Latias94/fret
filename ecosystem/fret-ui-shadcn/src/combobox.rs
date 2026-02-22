@@ -26,7 +26,8 @@ use fret_ui_kit::{
 };
 
 use crate::{
-    CommandItem, CommandList, CommandPalette, Drawer, DrawerContent, Popover, PopoverContent,
+    CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
+    DrawerContent, Popover, PopoverContent,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -105,6 +106,24 @@ impl ComboboxItem {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ComboboxGroup {
+    pub heading: Arc<str>,
+    pub items: Vec<ComboboxItem>,
+}
+
+impl ComboboxGroup {
+    pub fn new(
+        heading: impl Into<Arc<str>>,
+        items: impl IntoIterator<Item = ComboboxItem>,
+    ) -> Self {
+        Self {
+            heading: heading.into(),
+            items: items.into_iter().collect(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct ComboboxState {
     query: Option<Model<String>>,
@@ -138,6 +157,7 @@ pub struct Combobox {
     open: Model<bool>,
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -171,6 +191,7 @@ impl Combobox {
             open,
             query: None,
             items: Vec::new(),
+            groups: Vec::new(),
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
@@ -256,6 +277,16 @@ impl Combobox {
 
     pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
         self.items.extend(items);
+        self
+    }
+
+    pub fn group(mut self, group: ComboboxGroup) -> Self {
+        self.groups.push(group);
+        self
+    }
+
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+        self.groups.extend(groups);
         self
     }
 
@@ -389,6 +420,7 @@ impl Combobox {
             self.open,
             self.query,
             &self.items,
+            &self.groups,
             self.test_id_prefix,
             self.trigger_test_id,
             self.width,
@@ -439,6 +471,7 @@ pub fn combobox<H: UiHost>(
         open,
         query,
         items,
+        &[],
         None,
         None,
         width,
@@ -473,6 +506,7 @@ fn combobox_with_patch<H: UiHost>(
     open: Model<bool>,
     query: Option<Model<String>>,
     items: &[ComboboxItem],
+    groups: &[ComboboxGroup],
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -595,7 +629,12 @@ fn combobox_with_patch<H: UiHost>(
 
         let (resolved_label, has_selection) = selected
             .as_ref()
-            .and_then(|v| items.iter().find(|it| it.value.as_ref() == v.as_ref()))
+            .and_then(|v| {
+                items
+                    .iter()
+                    .chain(groups.iter().flat_map(|g| g.items.iter()))
+                    .find(|it| it.value.as_ref() == v.as_ref())
+            })
             .map(|it| (it.label.clone(), true))
             .unwrap_or((placeholder.clone(), false));
 
@@ -710,6 +749,7 @@ fn combobox_with_patch<H: UiHost>(
 
         let enabled = !disabled;
         let items: Vec<ComboboxItem> = items.to_vec();
+        let groups: Vec<ComboboxGroup> = groups.to_vec();
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
@@ -1072,9 +1112,10 @@ fn combobox_with_patch<H: UiHost>(
                                 })
                                 .shadow(ShadowPreset::Md);
 
-                            let mut command_items: Vec<CommandItem> =
-                                Vec::with_capacity(items.len());
-                            for item in items.iter().cloned() {
+                            let mut entries: Vec<CommandEntry> =
+                                Vec::with_capacity(items.len() + groups.len());
+
+                            let push_item = |item: ComboboxItem, entries: &mut Vec<CommandEntry>| {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1106,12 +1147,39 @@ fn combobox_with_patch<H: UiHost>(
                                         test_id_slug(item.value.as_ref())
                                     ));
                                 }
-                                command_items.push(cmd_item);
+                                entries.push(CommandEntry::Item(cmd_item));
+                            };
+
+                            for item in items.iter().cloned() {
+                                push_item(item, &mut entries);
+                            }
+
+                            if !items.is_empty() && !groups.is_empty() {
+                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            }
+
+                            for (idx, group) in groups.iter().cloned().enumerate() {
+                                let mut group_items: Vec<CommandItem> =
+                                    Vec::with_capacity(group.items.len());
+                                for item in group.items {
+                                    let mut group_entries: Vec<CommandEntry> = Vec::new();
+                                    push_item(item, &mut group_entries);
+                                    if let Some(CommandEntry::Item(item)) = group_entries.pop() {
+                                        group_items.push(item);
+                                    }
+                                }
+                                entries.push(CommandEntry::Group(
+                                    CommandGroup::new(group_items).heading(group.heading),
+                                ));
+                                if idx + 1 < groups.len() {
+                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                }
                             }
 
                             {
                                 let mut palette =
-                                    CommandPalette::new(query_model.clone(), command_items)
+                                    CommandPalette::new(query_model.clone(), [])
+                                        .entries(entries)
                                         .a11y_label("Combobox list")
                                         .input_role(SemanticsRole::ComboBox)
                                         .input_expanded(true)
@@ -1537,8 +1605,10 @@ fn combobox_with_patch<H: UiHost>(
                         })
                         .shadow(ShadowPreset::Md);
 
-                    let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                    for item in items.iter().cloned() {
+                    let mut entries: Vec<CommandEntry> =
+                        Vec::with_capacity(items.len() + groups.len());
+
+                    let push_item = |item: ComboboxItem, entries: &mut Vec<CommandEntry>| {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1569,11 +1639,37 @@ fn combobox_with_patch<H: UiHost>(
                                 test_id_slug(item.value.as_ref())
                             ));
                         }
-                        command_items.push(cmd_item);
+                        entries.push(CommandEntry::Item(cmd_item));
+                    };
+
+                    for item in items.iter().cloned() {
+                        push_item(item, &mut entries);
+                    }
+
+                    if !items.is_empty() && !groups.is_empty() {
+                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                    }
+
+                    for (idx, group) in groups.iter().cloned().enumerate() {
+                        let mut group_items: Vec<CommandItem> = Vec::with_capacity(group.items.len());
+                        for item in group.items {
+                            let mut group_entries: Vec<CommandEntry> = Vec::new();
+                            push_item(item, &mut group_entries);
+                            if let Some(CommandEntry::Item(item)) = group_entries.pop() {
+                                group_items.push(item);
+                            }
+                        }
+                        entries.push(CommandEntry::Group(
+                            CommandGroup::new(group_items).heading(group.heading),
+                        ));
+                        if idx + 1 < groups.len() {
+                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        }
                     }
 
                     {
-                        let mut palette = CommandPalette::new(query_model.clone(), command_items)
+                        let mut palette = CommandPalette::new(query_model.clone(), [])
+                            .entries(entries)
                             .a11y_label("Combobox list")
                             .input_role(SemanticsRole::ComboBox)
                             .input_expanded(true)
