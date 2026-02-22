@@ -1,7 +1,7 @@
 use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
-use super::ctx::ExecuteCtx;
-use super::quad_vertices::build_plan_quad_vertices;
+use super::executor::RenderSceneExecutor;
+use super::quad_vertices::upload_plan_quad_vertices;
 use fret_core::time::Instant;
 
 fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str {
@@ -752,18 +752,8 @@ impl Renderer {
         // once per frame and reference it via slices, since multiple `queue.write_buffer()` calls
         // against the same buffer region in a single submission would make all passes observe the
         // final write.
-        let super::quad_vertices::PlanQuadVertices {
-            vertices: quad_vertices,
-            bases: quad_vertex_bases,
-        } = build_plan_quad_vertices(&plan, viewport_size);
-        if !quad_vertices.is_empty() {
-            self.ensure_path_composite_vertex_buffer(device, quad_vertices.len());
-            queue.write_buffer(
-                &self.path_composite_vertices,
-                0,
-                bytemuck::cast_slice(&quad_vertices),
-            );
-        }
+        let quad_vertex_bases =
+            upload_plan_quad_vertices(self, device, queue, &plan, viewport_size);
 
         drop(uploads_guard);
         if let Some(upload_started) = upload_started {
@@ -801,9 +791,30 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.record_passes", frame_index),
             || {
+                let render_space_capacity = self.render_space_capacity;
+                let render_space_stride = self.render_space_stride;
+                let mut executor = RenderSceneExecutor::new(
+                    self,
+                    device,
+                    queue,
+                    frame_index,
+                    format,
+                    target_view,
+                    viewport_size,
+                    usage,
+                    &mut encoder,
+                    &mut frame_targets,
+                    &encoding,
+                    scale_param_size,
+                    &mut scale_param_cursor,
+                    quad_vertex_size,
+                    &quad_vertex_bases,
+                    perf_enabled,
+                    &mut frame_perf,
+                );
                 for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
                     debug_assert!(
-                        pass_index < self.render_space_capacity,
+                        pass_index < render_space_capacity,
                         "render_space_capacity too small for RenderPlan passes"
                     );
                     let pass_span = if trace_enabled {
@@ -819,95 +830,21 @@ impl Renderer {
                     };
                     let _pass_guard = pass_span.enter();
                     let render_space_offset =
-                        (pass_index as u64).saturating_mul(self.render_space_stride);
+                        (pass_index as u64).saturating_mul(render_space_stride);
                     let render_space_offset_u32 = render_space_offset as u32;
 
-                    let mut ctx = ExecuteCtx {
-                        device,
-                        queue,
-                        frame_index,
-                        format,
-                        target_view,
-                        viewport_size,
-                        usage,
-                        encoder: &mut encoder,
-                        frame_targets: &mut frame_targets,
-                        encoding: &encoding,
+                    executor.record_pass(
+                        &plan,
+                        pass_index,
+                        planned_pass,
                         render_space_offset_u32,
-                        scale_param_size,
-                        scale_param_cursor: &mut scale_param_cursor,
-                        quad_vertex_size,
-                        quad_vertex_bases: &quad_vertex_bases,
-                        perf_enabled,
-                        frame_perf: &mut frame_perf,
-                    };
-
-                    match planned_pass {
-                        RenderPlanPass::PathClipMask(mask_pass) => {
-                            self.record_path_clip_mask_pass(
-                                &mut ctx,
-                                &path_vertex_buffer,
-                                mask_pass,
-                            );
-                        }
-                        RenderPlanPass::SceneDrawRange(scene_pass) => {
-                            self.record_scene_draw_range_pass(
-                                &mut ctx,
-                                &plan,
-                                scene_pass,
-                                &viewport_vertex_buffer,
-                                &text_vertex_buffer,
-                                &path_vertex_buffer,
-                                &quad_instance_bind_group,
-                                &text_paint_bind_group,
-                                &path_paint_bind_group,
-                            );
-                        }
-                        RenderPlanPass::PathMsaaBatch(path_pass) => {
-                            self.record_path_msaa_batch_pass(
-                                &mut ctx,
-                                &plan,
-                                pass_index,
-                                &path_vertex_buffer,
-                                &path_paint_bind_group,
-                                path_pass,
-                            );
-                        }
-                        RenderPlanPass::ScaleNearest(pass) => {
-                            self.record_scale_nearest_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::Blur(pass) => {
-                            self.record_blur_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::FullscreenBlit(pass) => {
-                            self.record_fullscreen_blit_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::BackdropWarp(pass) => {
-                            self.record_backdrop_warp_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::ColorAdjust(pass) => {
-                            self.record_color_adjust_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::ColorMatrix(pass) => {
-                            self.record_color_matrix_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::AlphaThreshold(pass) => {
-                            self.record_alpha_threshold_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::DropShadow(pass) => {
-                            self.record_drop_shadow_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::CompositePremul(pass) => {
-                            self.record_composite_premul_pass(&mut ctx, pass_index, pass);
-                        }
-                        RenderPlanPass::ClipMask(pass) => {
-                            self.record_clip_mask_pass(&mut ctx, pass);
-                        }
-                        RenderPlanPass::ReleaseTarget(target) => {
-                            ctx.frame_targets
-                                .release_target(&mut self.intermediate_pool, *target);
-                        }
-                    }
+                        &viewport_vertex_buffer,
+                        &text_vertex_buffer,
+                        &path_vertex_buffer,
+                        &quad_instance_bind_group,
+                        &text_paint_bind_group,
+                        &path_paint_bind_group,
+                    );
                 }
             },
         );

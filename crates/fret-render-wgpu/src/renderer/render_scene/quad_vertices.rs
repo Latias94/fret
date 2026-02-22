@@ -149,3 +149,24 @@ pub(super) fn build_plan_quad_vertices(
 
     PlanQuadVertices { vertices, bases }
 }
+
+pub(super) fn upload_plan_quad_vertices(
+    renderer: &mut Renderer,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    plan: &RenderPlan,
+    viewport_size: (u32, u32),
+) -> Vec<Option<u32>> {
+    let PlanQuadVertices { vertices, bases } = build_plan_quad_vertices(plan, viewport_size);
+
+    if !vertices.is_empty() {
+        renderer.ensure_path_composite_vertex_buffer(device, vertices.len());
+        queue.write_buffer(
+            &renderer.path_composite_vertices,
+            0,
+            bytemuck::cast_slice(&vertices),
+        );
+    }
+
+    bases
+}
