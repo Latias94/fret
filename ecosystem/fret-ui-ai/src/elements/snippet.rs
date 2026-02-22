@@ -152,6 +152,7 @@ impl SnippetText {
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
                     }),
@@ -215,6 +216,7 @@ impl SnippetInput {
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         });

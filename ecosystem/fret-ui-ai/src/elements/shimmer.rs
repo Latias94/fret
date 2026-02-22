@@ -205,6 +205,7 @@ impl Shimmer {
                             font: FontId::default(),
                             size: font_size,
                             line_height: Some(line_height),
+                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
                         };
 

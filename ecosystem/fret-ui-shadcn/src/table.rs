@@ -614,7 +614,9 @@ impl TableCaption {
                 .wrap(TextWrap::Word)
                 .overflow(TextOverflow::Clip);
             if let Some(line_height) = style.line_height {
-                caption_text = caption_text.line_height_px(line_height);
+                caption_text = caption_text
+                    .line_height_px(line_height)
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
             }
             if let Some(letter_spacing_em) = style.letter_spacing_em {
                 caption_text = caption_text.letter_spacing_em(letter_spacing_em);

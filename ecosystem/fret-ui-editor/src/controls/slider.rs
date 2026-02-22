@@ -667,6 +667,8 @@ where
                                 style: Some(TextStyle {
                                     size: frame.text_px,
                                     line_height: Some(density.row_height),
+                                    line_height_policy:
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     ..Default::default()
                                 }),
                                 color: Some(frame_visuals.fg),

@@ -181,6 +181,7 @@ impl TextField {
                     props.chrome = joined_text_input_style(chrome);
                     props.text_style = TextStyle {
                         line_height: Some(density.row_height),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..text_style
                     };
 

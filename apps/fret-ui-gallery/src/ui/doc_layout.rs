@@ -501,6 +501,7 @@ fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyEl
         weight: fret_core::FontWeight::SEMIBOLD,
         slant: fret_core::TextSlant::Normal,
         line_height: theme.metric_by_key("font.line_height"),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };

@@ -437,6 +437,7 @@ where
                     style: Some(TextStyle {
                         size: text_style.size,
                         line_height: text_style.line_height,
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..Default::default()
                     }),
                     color: Some(error_color),

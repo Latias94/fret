@@ -305,6 +305,7 @@ impl ChartTooltipContent {
                             .text_xs()
                             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_px)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                             .h_px(MetricRef::Px(text_xs_px))
                             .into_element(cx),
                     );
@@ -314,6 +315,7 @@ impl ChartTooltipContent {
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_px)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                             .h_px(MetricRef::Px(text_xs_px))
                             .into_element(cx),
                     );
@@ -350,18 +352,21 @@ impl ChartTooltipContent {
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
                     let value = ui::text(cx, item.value)
                         .text_xs()
                         .font_medium()
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
                     let suffix = ui::text(cx, "kcal")
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
 
@@ -418,18 +423,21 @@ impl ChartTooltipContent {
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
                     let value = ui::text(cx, item.value)
                         .text_xs()
                         .font_medium()
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
                     let suffix = ui::text(cx, "kcal")
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
 
@@ -471,18 +479,21 @@ impl ChartTooltipContent {
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_line_height)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
                         let total_value = ui::text(cx, total.clone())
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_line_height)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
                         let total_suffix = ui::text(cx, "kcal")
                             .text_xs()
                             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_line_height)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
 
@@ -772,6 +783,7 @@ impl ChartLegendContent {
                 let label = ui::text(cx, item.label)
                     .text_xs()
                     .line_height_px(text_xs_line_height)
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                     .h_px(MetricRef::Px(text_xs_line_height))
                     .into_element(cx);
 

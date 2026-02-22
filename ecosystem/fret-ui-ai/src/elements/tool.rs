@@ -213,6 +213,7 @@ impl ToolHeader {
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(text_sm_line_height),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -490,6 +491,7 @@ impl ToolOutput {
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(text_xs_line_height),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
                     }),
@@ -631,6 +633,7 @@ impl ToolSectionTitle {
                 weight: fret_core::FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(text_xs_line_height),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 // Tailwind `tracking-wide` is 0.025em.
                 letter_spacing_em: Some(0.025),
                 ..Default::default()

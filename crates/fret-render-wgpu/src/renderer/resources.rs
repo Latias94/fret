@@ -504,6 +504,8 @@ impl Renderer {
             mask_buffer,
             mask_capacity,
             material_catalog_texture,
+            material_catalog_view,
+            material_catalog_sampler,
             material_catalog_uploaded: false,
             quad_pipeline_format: None,
             quad_pipelines: HashMap::new(),
@@ -651,13 +653,11 @@ impl Renderer {
             intermediate_pool: IntermediatePool::default(),
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
-            viewport_bind_groups: HashMap::new(),
+            bind_group_caches: BindGroupCaches::default(),
             render_target_revisions: HashMap::new(),
             render_targets_generation: 0,
-            image_bind_groups: HashMap::new(),
             image_revisions: HashMap::new(),
             images_generation: 0,
-            uniform_mask_image_bind_groups: HashMap::new(),
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
@@ -758,8 +758,7 @@ impl Renderer {
         }
         let next = self.image_revisions.get(&id).copied().unwrap_or(0) + 1;
         self.image_revisions.insert(id, next);
-        self.image_bind_groups.remove(&id);
-        self.uniform_mask_image_bind_groups.remove(&id);
+        self.bind_group_caches.invalidate_image(id);
         self.images_generation = self.images_generation.saturating_add(1);
         true
     }
@@ -769,8 +768,7 @@ impl Renderer {
             return false;
         }
         self.image_revisions.remove(&id);
-        self.image_bind_groups.remove(&id);
-        self.uniform_mask_image_bind_groups.remove(&id);
+        self.bind_group_caches.invalidate_image(id);
         self.images_generation = self.images_generation.saturating_add(1);
         true
     }
@@ -815,7 +813,7 @@ impl Renderer {
         }
         let next = self.render_target_revisions.get(&id).copied().unwrap_or(0) + 1;
         self.render_target_revisions.insert(id, next);
-        self.viewport_bind_groups.remove(&id);
+        self.bind_group_caches.invalidate_render_target(id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
     }
@@ -869,7 +867,7 @@ impl Renderer {
             return false;
         }
         self.render_target_revisions.remove(&id);
-        self.viewport_bind_groups.remove(&id);
+        self.bind_group_caches.invalidate_render_target(id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
     }

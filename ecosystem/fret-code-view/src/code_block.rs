@@ -646,6 +646,7 @@ fn render_code_block_header<H: UiHost>(
                             weight: FontWeight::SEMIBOLD,
                             slant: Default::default(),
                             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             letter_spacing_em: None,
                             ..Default::default()
                         }),
@@ -1041,6 +1042,7 @@ fn render_code_block_line_row<H: UiHost>(
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };
@@ -1076,6 +1078,7 @@ fn render_code_block_line_row<H: UiHost>(
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(row_theme.mono_line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };
@@ -1365,6 +1368,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };
@@ -1434,6 +1438,7 @@ fn render_code_block_text<H: UiHost>(
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     };

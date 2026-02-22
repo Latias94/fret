@@ -249,6 +249,7 @@ fn badge_with_patch<H: UiHost>(
         let label = ui::text(cx, label)
             .text_size_px(text_px)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_semibold()
             .nowrap()
             .text_color(ColorRef::Color(fg))

@@ -9,7 +9,9 @@ use std::sync::Arc;
 use fret_core::geometry::{Corners, Edges, Point, Rect, Size};
 use fret_core::scene::SceneOp;
 use fret_core::time::Instant;
-use fret_core::{Color, DrawOrder, FontId, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, DrawOrder, FontId, Px, TextLineHeightPolicy, TextOverflow, TextStyle, TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::{
@@ -55,6 +57,7 @@ fn text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: font_size(theme),
         line_height: Some(font_line_height(theme)),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }

@@ -741,6 +741,7 @@ fn render_task_list_marker<H: UiHost>(
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         }),

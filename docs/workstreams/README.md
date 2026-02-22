@@ -24,6 +24,7 @@ Active workstreams:
 - `docs/workstreams/app-iteration-fast-restart-v1-todo.md`
 - `docs/workstreams/app-iteration-fast-restart-v1-milestones.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`

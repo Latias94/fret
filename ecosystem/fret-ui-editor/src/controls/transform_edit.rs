@@ -400,6 +400,7 @@ fn section_row<H: UiHost>(
                             size: Px(11.0),
                             weight: FontWeight::SEMIBOLD,
                             line_height: Some(density.row_height),
+                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
                         }),
                         color: Some(label_fg),
@@ -457,6 +458,8 @@ fn section_row<H: UiHost>(
                                     style: Some(TextStyle {
                                         size: Px(11.0),
                                         line_height: Some(density.row_height),
+                                        line_height_policy:
+                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
                                         ..Default::default()
                                     }),
                                     color: Some(label_fg),
@@ -521,6 +524,7 @@ fn section_col<H: UiHost>(
                         size: Px(11.0),
                         weight: FontWeight::SEMIBOLD,
                         line_height: Some(Px(14.0)),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         ..Default::default()
                     }),
                     color: Some(label_fg),
@@ -616,6 +620,8 @@ fn section_col_with_link<H: UiHost>(
                                 style: Some(TextStyle {
                                     size: Px(10.0),
                                     line_height: Some(Px(12.0)),
+                                    line_height_policy:
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     ..Default::default()
                                 }),
                                 color: Some(label_fg),

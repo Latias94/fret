@@ -288,7 +288,11 @@ pub mod composable {
                                                 .wrap(TextWrap::Word)
                                                 .overflow(TextOverflow::Clip);
                                             if let Some(line_height) = text_style.line_height {
-                                                label_text = label_text.line_height_px(line_height);
+                                                label_text = label_text
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
                                             }
                                             if let Some(letter_spacing_em) =
                                                 text_style.letter_spacing_em
@@ -1115,7 +1119,11 @@ impl AccordionTrigger {
                                             .wrap(TextWrap::Word)
                                             .overflow(TextOverflow::Clip);
                                         if let Some(line_height) = text_style.line_height {
-                                            label_text = label_text.line_height_px(line_height);
+                                            label_text = label_text
+                                                .line_height_px(line_height)
+                                                .line_height_policy(
+                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                );
                                         }
                                         if let Some(letter_spacing_em) =
                                             text_style.letter_spacing_em

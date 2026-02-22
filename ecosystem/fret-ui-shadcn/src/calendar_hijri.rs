@@ -189,7 +189,9 @@ fn calendar_icon_button<H: UiHost>(
                 .text_color(ColorRef::Color(fg))
                 .nowrap();
             if let Some(line_height) = style.line_height {
-                label = label.line_height_px(line_height);
+                label = label
+                    .line_height_px(line_height)
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
             }
             if let Some(letter_spacing_em) = style.letter_spacing_em {
                 label = label.letter_spacing_em(letter_spacing_em);

@@ -315,6 +315,7 @@ fn render_rich_text_inline<H: UiHost>(
         weight: base.weight,
         slant: TextSlant::Normal,
         line_height: base.line_height,
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     });
@@ -514,6 +515,7 @@ fn render_math_block_builtin<H: UiHost>(
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
                 }),
@@ -1202,6 +1204,7 @@ fn render_image_placeholder<H: UiHost>(
                     weight: FontWeight::NORMAL,
                     slant: TextSlant::Normal,
                     line_height: Some(theme.metric_token("metric.font.line_height")),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
                 }),
@@ -1224,6 +1227,7 @@ fn render_image_placeholder<H: UiHost>(
             weight: FontWeight::NORMAL,
             slant: TextSlant::Normal,
             line_height: Some(theme.metric_token("metric.font.line_height")),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         }),
@@ -1286,6 +1290,7 @@ fn render_inline_math_builtin<H: UiHost>(
                 weight: FontWeight::NORMAL,
                 slant: TextSlant::Normal,
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),

@@ -769,6 +769,7 @@ impl AttachmentInfo {
                 line_height: Some(
                     theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                 ),
+                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
             }),
@@ -795,6 +796,7 @@ impl AttachmentInfo {
                         line_height: Some(
                             theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
                         ),
+                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
                     }),
@@ -995,6 +997,7 @@ impl AttachmentEmpty {
                     line_height: Some(
                         theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
                     ),
+                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     letter_spacing_em: None,
                     ..Default::default()
                 }),

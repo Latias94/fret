@@ -10,7 +10,10 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Axis, Corners, Edges, FontId, FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextStyle,
+    TextWrap,
+};
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle, TextProps,
 };
@@ -173,6 +176,7 @@ impl ButtonGroupText {
                             size: text_px,
                             weight: FontWeight::MEDIUM,
                             line_height: Some(line_height),
+                            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
                         }),
                         color: Some(text_color),

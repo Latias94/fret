@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextLineHeightPolicy,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnKeyDown;
@@ -338,6 +338,7 @@ impl InputGroup {
                 font: FontId::default(),
                 size: resolved.text_px,
                 line_height: Some(font_line_height),
+                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
                 ..Default::default()
             };
 
@@ -910,6 +911,7 @@ impl InputGroupText {
                 size: px,
                 weight: FontWeight::NORMAL,
                 line_height: Some(line_height),
+                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
                 ..Default::default()
             }),
             color: Some(color),
@@ -1156,6 +1158,7 @@ impl InputGroupButton {
                                 size: text_px,
                                 weight: FontWeight::MEDIUM,
                                 line_height: Some(line_height),
+                                line_height_policy: TextLineHeightPolicy::FixedFromStyle,
                                 ..Default::default()
                             }),
                             color: Some(fg),

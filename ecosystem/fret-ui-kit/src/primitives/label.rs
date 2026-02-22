@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, FontId, FontWeight, TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
+    AttributedText, FontId, FontWeight, TextAlign, TextLineHeightPolicy, TextOverflow, TextSpan,
+    TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, Length, SelectableTextProps, SizeStyle, TextInkOverflow, TextProps,
@@ -59,6 +60,7 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
             size: px,
             weight: FontWeight::MEDIUM,
             line_height: Some(line_height),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
         }),
         color: Some(fg),
@@ -132,6 +134,7 @@ pub fn selectable_label<H: UiHost>(
             size: px,
             weight: FontWeight::MEDIUM,
             line_height: Some(line_height),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
         }),
         color: Some(fg),

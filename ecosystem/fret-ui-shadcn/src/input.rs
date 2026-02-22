@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Corners, FontId, KeyCode, NodeId, Px, SemanticsRole, TextLineHeightPolicy, TextStyle,
+};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
@@ -388,6 +390,7 @@ fn input_with_style_and_submit<H: UiHost>(
         font: FontId::default(),
         size: resolved.text_px,
         line_height: Some(font_line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     };
 

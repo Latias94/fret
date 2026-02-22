@@ -589,8 +589,8 @@ mod tests {
     use super::*;
     use crate::{parley_shaper::ParleyShaper, prepare_layout, wrapper};
     use fret_core::{
-        FontId, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow,
-        TextShapingStyle, TextSpan, TextStyle, TextWrap,
+        FontId, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextLineHeightPolicy,
+        TextOverflow, TextShapingStyle, TextSpan, TextStyle, TextWrap,
     };
     use std::sync::Arc;
 
@@ -1083,6 +1083,7 @@ mod tests {
             font: FontId::family("Inter"),
             size: Px(16.0),
             line_height: Some(Px(0.0)),
+            line_height_policy: TextLineHeightPolicy::ExpandToFit,
             ..Default::default()
         };
         let constraints = TextConstraints {

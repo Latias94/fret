@@ -1,7 +1,7 @@
 use crate::ThemeSnapshot;
 use fret_core::{
-    AttributedText, FontId, Px, TextAlign, TextInput, TextOverflow, TextSlant, TextSpan, TextStyle,
-    TextWrap,
+    AttributedText, FontId, Px, TextAlign, TextInput, TextLineHeightPolicy, TextOverflow,
+    TextSlant, TextSpan, TextStyle, TextWrap,
 };
 
 pub(crate) fn default_text_style(theme: ThemeSnapshot) -> TextStyle {
@@ -14,6 +14,7 @@ pub(crate) fn default_text_style(theme: ThemeSnapshot) -> TextStyle {
     TextStyle {
         size,
         line_height: Some(line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     }
 }

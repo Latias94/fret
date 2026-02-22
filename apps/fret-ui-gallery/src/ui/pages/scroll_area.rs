@@ -13,6 +13,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 let heading = ui::text(cx, "Tags")
                     .text_size_px(Px(12.0))
                     .line_height_px(Px(12.0))
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                     .font_medium()
                     .into_element(cx);
 
@@ -28,6 +29,9 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                                 ui::text(cx, tag)
                                     .text_size_px(Px(12.0))
                                     .line_height_px(Px(16.0))
+                                    .line_height_policy(
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                    )
                                     .into_element(cx),
                             );
                             out.push(

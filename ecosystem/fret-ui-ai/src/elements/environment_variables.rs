@@ -71,6 +71,7 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }
@@ -336,6 +337,7 @@ impl EnvironmentVariablesTitle {
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
             line_height: Some(theme.metric_token("font.line_height")),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
         };

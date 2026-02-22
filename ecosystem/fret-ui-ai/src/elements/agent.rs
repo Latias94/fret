@@ -56,6 +56,7 @@ fn text_sm_style(theme: &Theme, weight: FontWeight, monospace: bool) -> TextStyl
         weight,
         slant: Default::default(),
         line_height: Some(line_height),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
     }

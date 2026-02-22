@@ -2285,6 +2285,7 @@ fn calendar_day_cell<H: UiHost>(
                     let label = ui::label(cx, day_text.clone())
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                         .font_medium()
                         .w_full()
                         .text_align(fret_core::TextAlign::Center)

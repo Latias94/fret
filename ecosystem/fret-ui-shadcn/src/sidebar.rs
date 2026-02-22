@@ -1853,6 +1853,7 @@ impl SidebarGroupLabel {
         let text = ui::text(cx, self.text)
             .text_size_px(size)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_medium()
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
@@ -2701,6 +2702,7 @@ impl SidebarMenuBadge {
         let text = ui::text(cx, self.label)
             .text_size_px(text_px)
             .line_height_px(text_lh)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_medium()
             .text_color(ColorRef::Color(fg))
             .nowrap()
@@ -3242,7 +3244,9 @@ impl SidebarMenuSubButton {
                         .text_color(ColorRef::Color(fg))
                         .truncate();
                     if let Some(line_height) = style.line_height {
-                        text = text.line_height_px(line_height);
+                        text = text
+                            .line_height_px(line_height)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
                     }
 
                     out.push(text.into_element(cx));
@@ -3588,7 +3592,9 @@ impl SidebarMenuButton {
 
                     let mut text = text;
                     if let Some(line_height) = label_style.line_height {
-                        text = text.line_height_px(line_height);
+                        text = text
+                            .line_height_px(line_height)
+                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
                     }
                     if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                         text = text.letter_spacing_em(letter_spacing_em);
@@ -3663,7 +3669,9 @@ impl SidebarMenuButton {
                 .wrap(TextWrap::Word)
                 .overflow(TextOverflow::Clip);
             if let Some(line_height) = label_style.line_height {
-                text = text.line_height_px(line_height);
+                text = text
+                    .line_height_px(line_height)
+                    .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle);
             }
             if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                 text = text.letter_spacing_em(letter_spacing_em);

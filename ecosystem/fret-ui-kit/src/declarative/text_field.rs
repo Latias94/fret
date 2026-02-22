@@ -1,4 +1,4 @@
-use fret_core::{Axis, Edges, FontId, Px, TextStyle};
+use fret_core::{Axis, Edges, FontId, Px, TextLineHeightPolicy, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
 use fret_ui::Invalidation;
@@ -131,6 +131,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             line_height: Some(font_line_height),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
             ..Default::default()
         };
 

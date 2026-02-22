@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, Px, TextStyle};
+use fret_core::{Color, Corners, Edges, FontId, Px, TextLineHeightPolicy, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost};
@@ -138,6 +138,7 @@ pub fn textarea<H: UiHost>(
         font: FontId::default(),
         size: resolved.text_px,
         line_height: Some(font_line_height),
+        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
         ..Default::default()
     };
 

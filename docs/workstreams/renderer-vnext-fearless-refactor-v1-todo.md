@@ -205,6 +205,24 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed: Text draws now tighten the scissor to the glyph-quad bounds per `(kind, atlas_page)` batch.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs` (`flush_group`, `bounds_of_quad_points`)
 
+## M8 — Renderer internals modularization (fearless, contract-preserving)
+
+- [x] REN-VNEXT-refactor-001 Add a renderer-internals refactor design doc (staged plan + gates).
+  - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
+- [~] REN-VNEXT-refactor-002 Add an ADR that codifies internal ownership boundaries + always-run gates for refactors.
+  - Target: “encode/compile/execute” ownership and regression discipline without contract changes.
+  - Evidence: `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`,
+    `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row + summary update).
+- [ ] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+  - Goal: reduce churn in bind group rebuild paths and make ownership explicit.
+  - Gate: `cargo test -p fret-render-wgpu --lib` + `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+- [ ] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
+  - Goal: one place to reason about “recreate buffer → rebuild bind group → invalidate caches”.
+  - Gate: run the anchor conformance set listed in ADR 0201.
+- [ ] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
+  - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.
+  - Gate: run the anchor conformance set listed in ADR 0201.
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
