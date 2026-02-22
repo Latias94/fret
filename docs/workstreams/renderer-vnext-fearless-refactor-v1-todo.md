@@ -329,12 +329,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 1): move registry state (`ImageRegistry`, `RenderTargetRegistry`) + revision/generation counters into `GpuRegistries`.
   - Landed (step 2): move revision/generation bump rules behind `GpuRegistries` mutation helpers (register/update/unregister).
   - Landed (step 3): co-locate registry mutations + bind-group cache invalidation in `GpuResources` to make the change chain explicit.
+  - Landed (step 4): route resource reads and bind-group preparation through `GpuResources` APIs (fields are private; no call-site map poking).
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`GpuRegistries`)
     - `crates/fret-render-wgpu/src/renderer/gpu_resources.rs` (`GpuResources`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::gpu_resources`)
     - `crates/fret-render-wgpu/src/renderer/resources.rs` (register/update/unregister call sites)
-    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group keys read revisions)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`ensure_*_for_*` calls)
     - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scene encoding cache key uses generations)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`

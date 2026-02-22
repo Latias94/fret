@@ -227,7 +227,7 @@ impl Renderer {
             return;
         }
         self.gpu_resources
-            .bind_group_caches
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized)");
     }
@@ -237,7 +237,7 @@ impl Renderer {
             return;
         }
         self.gpu_resources
-            .bind_group_caches
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized render space)");
     }
@@ -247,7 +247,7 @@ impl Renderer {
             return;
         }
         self.gpu_resources
-            .bind_group_caches
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized clip buffer)");
     }
@@ -257,7 +257,7 @@ impl Renderer {
             return;
         }
         self.gpu_resources
-            .bind_group_caches
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized mask buffer)");
     }

@@ -304,7 +304,7 @@ impl Renderer {
                         );
                         let Some(bind_group) = self
                             .gpu_resources
-                            .bind_group_caches
+                            .caches()
                             .get_viewport_bind_group(draw.target)
                         else {
                             // Missing bind group should only happen if the target vanished
@@ -330,9 +330,7 @@ impl Renderer {
                                 frame_perf.viewport_draw_calls.saturating_add(1);
                             let metadata = self
                                 .gpu_resources
-                                .registries
-                                .render_targets
-                                .metadata(draw.target)
+                                .render_target_metadata(draw.target)
                                 .unwrap_or_default();
                             match metadata.ingest_strategy {
                                 fret_render_core::RenderTargetIngestStrategy::Unknown => {

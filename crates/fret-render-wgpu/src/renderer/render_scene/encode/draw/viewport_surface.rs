@@ -45,20 +45,12 @@ pub(in super::super) fn encode_viewport_surface(
     if opacity <= 0.0 || group_opacity <= 0.0 {
         return;
     }
-    if renderer
-        .gpu_resources
-        .registries
-        .render_targets
-        .get(target)
-        .is_none()
-    {
+    if renderer.gpu_resources.render_target_view(target).is_none() {
         return;
     }
     let metadata = renderer
         .gpu_resources
-        .registries
-        .render_targets
-        .metadata(target)
+        .render_target_metadata(target)
         .unwrap_or_default();
     let (x, y, w, h) = rect_to_pixels(rect, state.scale_factor);
     if w <= 0.0 || h <= 0.0 {

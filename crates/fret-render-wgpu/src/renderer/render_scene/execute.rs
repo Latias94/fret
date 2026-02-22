@@ -203,14 +203,15 @@ impl Renderer {
             frame_perf.prepare_svg += perf_svg_prepare_start.elapsed();
         }
 
+        let (render_targets_generation, images_generation) = self.gpu_resources.generations();
         let key = SceneEncodingCacheKey {
             format,
             viewport_size,
             scale_factor_bits: scale_factor.to_bits(),
             scene_fingerprint: scene.fingerprint(),
             scene_ops_len: scene.ops_len(),
-            render_targets_generation: self.gpu_resources.registries.render_targets_generation,
-            images_generation: self.gpu_resources.registries.images_generation,
+            render_targets_generation,
+            images_generation,
             text_atlas_revision,
             text_quality_key: self.text_system.text_quality_key(),
         };

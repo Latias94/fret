@@ -10,7 +10,7 @@ impl Renderer {
     ) -> Option<&wgpu::BindGroup> {
         Some(
             self.gpu_resources
-                .bind_group_caches
+                .caches()
                 .get_image_bind_groups(image)?
                 .pick(sampling),
         )
@@ -25,7 +25,7 @@ impl Renderer {
         };
         let Some(groups) = self
             .gpu_resources
-            .bind_group_caches
+            .caches()
             .get_uniform_mask_image_bind_groups(sel.image)
         else {
             return &self.uniform_bind_group;
