@@ -231,7 +231,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: one place to reason about “recreate buffer → rebuild bind group → invalidate caches”.
   - Landed (step 1): centralize uniform-dependent buffer replacement so every resize flows through a single rebuild+invalidate path.
   - Evidence:
-    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`, `rebuild_uniform_bind_group`)
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
+    - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`ensure_*_capacity`)
   - Landed (step 2): make uniform-resource invalidation explicit and versioned (uniform buffers ↔ mask-image override bind groups).
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)

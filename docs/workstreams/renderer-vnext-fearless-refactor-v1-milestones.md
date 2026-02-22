@@ -245,7 +245,7 @@ Progress record (Bind group + uniform-resource lifecycle tightening):
 - Status: Landed (Stage 2 step 2; Stage 3 follow-up)
 - Evidence anchors:
   - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources::revision`, `UniformResources::bump_revision`)
-  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`)
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
   - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`invalidate_uniform_resources`)
   - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`prepare_uniform_mask_image_bind_groups`)
 - Gates run:

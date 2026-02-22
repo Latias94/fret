@@ -590,47 +590,25 @@ impl Renderer {
         self.ensure_render_space_capacity(device, plan.passes.len());
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
-        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
-        let mut uniform_bytes =
-            vec![0u8; (self.uniforms.uniform_stride * encoding.uniforms.len() as u64) as usize];
-        for (i, u) in encoding.uniforms.iter().enumerate() {
-            let offset = (self.uniforms.uniform_stride * i as u64) as usize;
-            uniform_bytes[offset..offset + uniform_size as usize]
-                .copy_from_slice(bytemuck::bytes_of(u));
-        }
-        queue.write_buffer(&self.uniforms.uniform_buffer, 0, &uniform_bytes);
+        let uniform_bytes_written =
+            self.uniforms
+                .write_viewport_uniforms(queue, &encoding.uniforms) as u64;
         if perf_enabled {
             frame_perf.uniform_bytes = frame_perf
                 .uniform_bytes
-                .saturating_add(uniform_bytes.len() as u64);
+                .saturating_add(uniform_bytes_written);
         }
 
         self.ensure_clip_capacity(device, encoding.clips.len().max(1));
-        if !encoding.clips.is_empty() {
-            queue.write_buffer(
-                &self.uniforms.clip_buffer,
-                0,
-                bytemuck::cast_slice(&encoding.clips),
-            );
-            if perf_enabled {
-                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
-                    (std::mem::size_of::<ClipRRectUniform>() * encoding.clips.len()) as u64,
-                );
-            }
+        let clip_bytes_written = self.uniforms.write_clips(queue, &encoding.clips) as u64;
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(clip_bytes_written);
         }
 
         self.ensure_mask_capacity(device, encoding.masks.len().max(1));
-        if !encoding.masks.is_empty() {
-            queue.write_buffer(
-                &self.uniforms.mask_buffer,
-                0,
-                bytemuck::cast_slice(&encoding.masks),
-            );
-            if perf_enabled {
-                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
-                    (std::mem::size_of::<MaskGradientUniform>() * encoding.masks.len()) as u64,
-                );
-            }
+        let mask_bytes_written = self.uniforms.write_masks(queue, &encoding.masks) as u64;
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(mask_bytes_written);
         }
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
@@ -765,7 +743,9 @@ impl Renderer {
             );
         }
         if !render_space_bytes.is_empty() {
-            queue.write_buffer(&self.uniforms.render_space_buffer, 0, &render_space_bytes);
+            let _ = self
+                .uniforms
+                .write_render_space_bytes(queue, &render_space_bytes);
         }
 
         let (_, record_elapsed) = fret_perf::measure_span(
