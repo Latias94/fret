@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use crate::frames_index::TriageLiteMetric;
+
 #[derive(Debug, Clone, Default)]
 struct HotspotStat {
     count: u64,
@@ -150,6 +152,15 @@ fn human_bytes(n: u64) -> String {
     }
 }
 
+fn parse_metric(s: &str) -> Result<TriageLiteMetric, String> {
+    match s {
+        "total" => Ok(TriageLiteMetric::TotalTimeUs),
+        "layout" => Ok(TriageLiteMetric::LayoutTimeUs),
+        "paint" => Ok(TriageLiteMetric::PaintTimeUs),
+        _ => Err("invalid --metric (expected: total|layout|paint)".to_string()),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_hotspots(
     rest: &[String],
@@ -157,6 +168,7 @@ pub(crate) fn cmd_hotspots(
     workspace_root: &Path,
     out_dir: &Path,
     hotspots_out: Option<PathBuf>,
+    warmup_frames: u64,
     stats_json: bool,
 ) -> Result<(), String> {
     if pack_after_run {
@@ -168,10 +180,24 @@ pub(crate) fn cmd_hotspots(
     let mut min_bytes: u64 = 0;
     let mut top: usize = 20;
     let mut force: bool = false;
+    let mut lite: bool = false;
+    let mut metric: TriageLiteMetric = TriageLiteMetric::TotalTimeUs;
 
     let mut i: usize = 0;
     while i < rest.len() {
         match rest[i].as_str() {
+            "--lite" => {
+                lite = true;
+                i += 1;
+            }
+            "--metric" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --metric".to_string());
+                };
+                metric = parse_metric(v.as_str())?;
+                i += 1;
+            }
             "--max-depth" => {
                 i += 1;
                 let Some(v) = rest.get(i).cloned() else {
@@ -230,6 +256,100 @@ pub(crate) fn cmd_hotspots(
     let bundle_path =
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
+    if lite {
+        if min_bytes != 0 {
+            return Err("--min-bytes is not supported with --lite".to_string());
+        }
+        if max_depth != 7 {
+            return Err("--max-depth is not supported with --lite".to_string());
+        }
+
+        let frames_index_path =
+            crate::frames_index::ensure_frames_index_json(bundle_path.as_path(), warmup_frames)?;
+        let frames_index = crate::frames_index::read_frames_index_json_v1(
+            frames_index_path.as_path(),
+            warmup_frames,
+        )
+        .ok_or_else(|| "failed to read frames.index.json".to_string())?;
+
+        let payload = crate::hotspots_lite::hotspots_lite_json_from_frames_index(
+            bundle_path.as_path(),
+            frames_index_path.as_path(),
+            &frames_index,
+            warmup_frames,
+            top,
+            metric,
+        )?;
+
+        if let Some(out) = hotspots_out.map(|p| crate::resolve_path(workspace_root, p)) {
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+            if !stats_json {
+                println!("{}", out.display());
+                return Ok(());
+            }
+        }
+
+        if stats_json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+            );
+            return Ok(());
+        }
+
+        let metric_name = payload
+            .get("metric")
+            .and_then(|m| m.get("name"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("total_time_us");
+        let results = payload
+            .get("results")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        println!(
+            "bundle={} frames_index={} warmup_frames={} metric={} top={} results={}",
+            bundle_path.display(),
+            frames_index_path.display(),
+            warmup_frames,
+            metric_name,
+            top,
+            results.len()
+        );
+
+        for r in results {
+            let window = r.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+            let frame_id = r.get("frame_id").and_then(|v| v.as_u64());
+            let seq = r.get("window_snapshot_seq").and_then(|v| v.as_u64());
+            let metric_v = r
+                .get("metric")
+                .and_then(|m| m.get(metric_name))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if let Some(fid) = frame_id {
+                println!(
+                    "window={} frame_id={} {}={}",
+                    window, fid, metric_name, metric_v
+                );
+            } else if let Some(seq) = seq {
+                println!(
+                    "window={} snapshot_seq={} {}={}",
+                    window, seq, metric_name, metric_v
+                );
+            } else {
+                println!("window={} {}={}", window, metric_name, metric_v);
+            }
+        }
+
+        return Ok(());
+    }
+
     let file_bytes = std::fs::metadata(&bundle_path)
         .map(|m| m.len())
         .map_err(|e| e.to_string())?;
@@ -237,7 +357,7 @@ pub(crate) fn cmd_hotspots(
     const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
     if !force && file_bytes > DEFAULT_MAX_FILE_BYTES {
         return Err(format!(
-            "bundle.json is too large to analyze safely by default (size={} > {}); re-run with --force",
+            "bundle.json is too large to analyze safely by default (size={} > {}); re-run with --lite (recommended) or --force",
             human_bytes(file_bytes),
             human_bytes(DEFAULT_MAX_FILE_BYTES)
         ));

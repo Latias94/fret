@@ -28,6 +28,17 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Move UI gallery code-editor checks out of `crates/fret-diag/src/stats.rs` into
       `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`.
 
+## M1c: Make `fret-diag` CLI subcommands less monolithic (mechanical moves)
+
+- [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
+- [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
+- [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
+- [x] Extract `diag matrix` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_matrix.rs`.
+- [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
+  - `diag run` (context assembly + orchestration),
+  - `diag suite` (suite execution + reporting),
+  - `diag repro` (orchestration + evidence/report formatting).
+
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 
 - [x] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
@@ -36,6 +47,7 @@ scope: diagnostics, automation, tooling, refactor
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),
   - `test_ids.index.json` (test-id catalog / lookup),
+  - `frames.index.json` (per-frame lightweight stats + selectors; columnar rows for agent-friendly triage),
   - `script.result.json` + `bundle.index.json.script` (script step → snapshot mapping for fast evidence lookup, script dumps only).
 - [x] Make sidecars forward-compatible:
   - versioned schema (`kind` + `schema_version`),
@@ -57,10 +69,27 @@ scope: diagnostics, automation, tooling, refactor
   - Evidence: `crates/fret-diag/src/commands/doctor.rs`
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
+  - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars (including `frames.index.json`).
+  - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
+  - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
+  - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
+- [x] Add `--bundle-doctor` integration for `diag run` / `diag suite` / `diag perf` (per-bundle preflight).
+  - Modes: `check` / `check-all` / `fix` / `fix-dry-run`.
+  - Evidence anchors:
+    - `crates/fret-diag/src/lib.rs`
+    - `crates/fret-diag/src/commands/doctor.rs`
 
 ## M3: Tooling + AI loop
 
-- [ ] Define CLI “agent presets” (commands + env vars) for repeatable triage.
+- [x] Define CLI “agent presets” (commands + env vars) for repeatable triage.
+  - `fretboard diag agent <bundle> --warmup-frames <n>`
+- [x] Document a recommended “agent loop” that prefers sidecars over large `bundle.json`.
+  - `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`
+- [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
+- [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
+- [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
+- [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
+  - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
 - [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
 
@@ -78,6 +107,9 @@ diagnostics stack stays easy to evolve.
   - avoid “forwarder wrappers” that exist only because of historical file layout.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
+- [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
+  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
+  - Tooling: `diag doctor` should warn when bundles are produced with legacy-only knobs or unexpected schema versions.
 - [ ] Reduce “stats mega-module” churn permanently:
   - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
   - large check families stay in `crates/fret-diag/src/stats/*.rs`.

@@ -24,6 +24,14 @@ Exit criteria:
 - Extracted modules exist for large check families:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+- The `diag perf` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_perf.rs`
+- The `diag compare` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_compare.rs`
+- The `diag stats` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_stats.rs`
+- The `diag matrix` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_matrix.rs`
 - `cargo check -p fret-diag` is green.
 
 ## Milestone 2: Sidecar indexes reduce day-to-day pain
@@ -33,12 +41,20 @@ Exit criteria:
 - Tools can locate relevant snapshots without opening full `bundle.json` in memory.
 - Sidecars are documented and versioned.
 - Missing sidecars degrade gracefully (no “hang until timeout”).
+- A lightweight per-frame index exists for agentic triage:
+  - `frames.index.json` (generated via `fretboard diag frames-index` and included in `diag doctor --fix-sidecars` / `diag ai-packet`).
 
 ## Milestone 3: Agent-friendly triage loop
 
 Exit criteria:
 
 - A maintainer can run a scripted repro, collect evidence, and generate a small “triage bundle” quickly.
+- Huge-bundle first-pass triage does not require loading `bundle.json` into memory:
+  - `fretboard diag triage --lite ...` works from `frames.index.json`.
+  - `fretboard diag hotspots --lite ...` reports slow frames from `frames.index.json`.
+- `fretboard diag ai-packet ...` includes lite reports (`triage.lite.json`, `hotspots.lite.json`) for agent-first workflows.
+- A documented migration plan exists and stays in sync with implementation:
+  - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Evidence anchors in docs stay in sync with the implementation.
 
 ## Milestone 4: Debt is removed (no redundant code paths)

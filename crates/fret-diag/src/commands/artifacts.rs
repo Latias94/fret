@@ -79,31 +79,110 @@ pub(crate) fn cmd_triage(
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
-    let Some(src) = rest.first().cloned() else {
+
+    let mut lite: bool = false;
+    let mut metric: crate::frames_index::TriageLiteMetric =
+        crate::frames_index::TriageLiteMetric::TotalTimeUs;
+    let mut positionals: Vec<String> = Vec::new();
+
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--lite" | "--frames-index" | "--from-frames-index" => {
+                lite = true;
+                i += 1;
+            }
+            "--metric" => {
+                lite = true;
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err(
+                        "missing value for --metric (expected total|layout|paint)".to_string()
+                    );
+                };
+                metric = match v.as_str() {
+                    "total" | "total_time_us" => crate::frames_index::TriageLiteMetric::TotalTimeUs,
+                    "layout" | "layout_time_us" => {
+                        crate::frames_index::TriageLiteMetric::LayoutTimeUs
+                    }
+                    "paint" | "paint_time_us" => crate::frames_index::TriageLiteMetric::PaintTimeUs,
+                    other => {
+                        return Err(format!(
+                            "invalid value for --metric: {other} (expected total|layout|paint)"
+                        ));
+                    }
+                };
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag for triage: {other}"));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    let Some(src) = positionals.first().cloned() else {
         return Err(
             "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
                 .to_string(),
         );
     };
-    if rest.len() != 1 {
-        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    if positionals.len() != 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
     let bundle_path = crate::resolve_bundle_json_path(&src);
-    let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
 
-    let report = bundle_stats_from_path(
-        &bundle_path,
-        stats_top,
-        sort,
-        BundleStatsOptions { warmup_frames },
-    )?;
-    let payload = crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+    let payload = if lite {
+        let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
+        let mut v = crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
+        if v.is_none() {
+            let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
+            v = crate::frames_index::read_frames_index_json_v1(&out, warmup_frames);
+        }
+        let v = v.ok_or_else(|| {
+            format!(
+                "frames.index.json is missing or invalid (tip: fretboard diag frames-index {} --warmup-frames {})",
+                bundle_path.display(),
+                warmup_frames
+            )
+        })?;
+        crate::frames_index::triage_lite_json_from_frames_index(
+            &bundle_path,
+            &index_path,
+            &v,
+            warmup_frames,
+            stats_top,
+            metric,
+        )?
+    } else {
+        let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+        let report = bundle_stats_from_path(
+            &bundle_path,
+            stats_top,
+            sort,
+            BundleStatsOptions { warmup_frames },
+        )?;
+        crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames)
+    };
 
     let out = triage_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| crate::default_triage_out_path(&bundle_path));
+        .unwrap_or_else(|| {
+            if lite {
+                let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+                dir.join("triage.lite.json")
+            } else {
+                crate::default_triage_out_path(&bundle_path)
+            }
+        });
 
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -263,6 +342,42 @@ pub(crate) fn cmd_test_ids_index(
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
     let bundle_path = crate::resolve_bundle_json_path(&src);
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
+
+    if stats_json {
+        println!(
+            "{}",
+            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
+        );
+    } else {
+        println!("{}", out.display());
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn cmd_frames_index(
+    rest: &[String],
+    pack_after_run: bool,
+    workspace_root: &Path,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    if pack_after_run {
+        return Err("--pack is only supported with `diag run`".to_string());
+    }
+    let Some(src) = rest.first().cloned() else {
+        return Err(
+            "missing bundle path (try: fretboard diag frames-index ./target/fret-diag/1234/bundle.json)"
+                .to_string(),
+        );
+    };
+    if rest.len() != 1 {
+        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+    }
+
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
         println!(

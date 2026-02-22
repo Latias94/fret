@@ -44,7 +44,8 @@
       "padding_px": 16.0,
       "timeout_frames": 1800
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" } },
     {
       "type": "wait_until",
       "predicate": {

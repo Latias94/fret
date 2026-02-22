@@ -1265,7 +1265,7 @@ impl From<CommandSeparator> for CommandEntry {
 
 #[derive(Clone)]
 pub struct CommandList {
-    items: Vec<CommandItem>,
+    entries: Vec<CommandEntry>,
     disabled: bool,
     empty_text: Arc<str>,
     highlight_query: Option<Model<String>>,
@@ -1275,7 +1275,7 @@ pub struct CommandList {
 impl std::fmt::Debug for CommandList {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandList")
-            .field("items_len", &self.items.len())
+            .field("entries_len", &self.entries.len())
             .field("disabled", &self.disabled)
             .field("empty_text", &self.empty_text.as_ref())
             .field("scroll", &self.scroll)
@@ -1285,9 +1285,9 @@ impl std::fmt::Debug for CommandList {
 
 impl CommandList {
     pub fn new(items: impl IntoIterator<Item = CommandItem>) -> Self {
-        let items = items.into_iter().collect();
+        let entries = items.into_iter().map(CommandEntry::Item).collect();
         Self {
-            items,
+            entries,
             disabled: false,
             empty_text: Arc::from("No results."),
             highlight_query: None,
@@ -1296,6 +1296,16 @@ impl CommandList {
                 .w_full()
                 .min_w_0(),
         }
+    }
+
+    pub fn new_entries(entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        let entries = entries.into_iter().collect();
+        Self { entries, ..Self::new([]) }
+    }
+
+    pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1326,16 +1336,14 @@ impl CommandList {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let disabled = self.disabled;
-            let items = self.items;
+            let entries = self.entries;
             let highlight_query = self.highlight_query;
 
             // Note: `CommandList` is a simple list rendering helper (legacy roving-style semantics).
             // `CommandPalette` is the cmdk-style implementation that keeps focus in the input and
             // drives highlight via `active_descendant` (ADR 0073).
-            if items.is_empty() {
-                let empty = self.empty_text;
-                return CommandEmpty::new(empty).into_element(cx);
-            }
+            let (render_rows, items, _item_groups) =
+                command_palette_render_rows_for_query_with_options(entries, "", false, None);
 
             let query_for_render: Arc<str> = highlight_query
                 .as_ref()
@@ -1348,7 +1356,21 @@ impl CommandList {
                 .and_then(|trimmed| (!trimmed.is_empty()).then(|| Arc::<str>::from(trimmed)))
                 .unwrap_or_else(|| Arc::from(""));
 
-            let disabled_flags: Vec<bool> = items.iter().map(|i| disabled || i.disabled).collect();
+            if items.is_empty() {
+                let empty = self.empty_text;
+                return CommandEmpty::new(empty).into_element(cx);
+            }
+
+            let disabled_flags: Vec<bool> = items
+                .iter()
+                .map(|i| {
+                    disabled
+                        || i.disabled
+                        || (i.command.is_none()
+                            && i.on_select.is_none()
+                            && i.on_select_value.is_none())
+                })
+                .collect();
             let tab_stop = roving_focus_group::first_enabled(&disabled_flags);
 
             let roving = RovingFocusProps {
@@ -1389,6 +1411,12 @@ impl CommandList {
 
             let scroll = self.scroll.w_full().min_w_0();
 
+            let theme = Theme::global(&*cx.app);
+            let border = border(theme);
+            let heading_style = heading_text_style(theme);
+            let fg_heading = theme.color_token("muted-foreground");
+            let group_pad_y = MetricRef::space(Space::N1).resolve(theme);
+
             ScrollArea::new(vec![cx.roving_flex(
                 RovingFlexProps {
                     flex: FlexProps {
@@ -1412,123 +1440,210 @@ impl CommandList {
                 },
                 move |cx| {
                     cx.roving_nav_apg();
-                    let mut out = Vec::with_capacity(items.len());
+                    let mut out = Vec::with_capacity(render_rows.len());
 
-                    for (idx, item) in items.into_iter().enumerate() {
-                        let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                        let focusable = tab_stop.is_some_and(|i| i == idx);
-
-                        let query_for_row = query_for_render.clone();
-                        let value_key = item.value.clone();
-                        let value_for_select = item.value.clone();
-                        let label = item.label.clone();
-                        let test_id = item.test_id.clone();
-                        let chrome_test_id = test_id
-                            .clone()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                        let command = item.command;
-                        let on_select = item.on_select.clone();
-                        let on_select_value = item.on_select_value.clone();
-                        let children = item.children;
-                        let text_style = text_style.clone();
-
-                        out.push(cx.keyed(value_key, move |cx| {
-                            cx.pressable(
-                                PressableProps {
-                                    layout: item_layout,
-                                    enabled,
-                                    focusable,
-                                    focus_ring: Some(ring),
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::ListBoxOption),
-                                        label: Some(label.clone()),
-                                        test_id: test_id.clone(),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                move |cx, st| {
-                                    cx.pressable_dispatch_command_if_enabled_opt(command);
-                                    if on_select.is_some() || on_select_value.is_some() {
-                                        let on_select = on_select.clone();
-                                        let on_select_value = on_select_value.clone();
-                                        let value = value_for_select.clone();
-                                        cx.pressable_add_on_activate(Arc::new(
-                                            move |host, action_cx, reason| {
-                                                if let Some(on_select_value) =
-                                                    on_select_value.clone()
-                                                {
-                                                    on_select_value(
-                                                        host,
-                                                        action_cx,
-                                                        reason,
-                                                        value.clone(),
-                                                    );
-                                                }
-                                                if let Some(on_select) = on_select.clone() {
-                                                    on_select(host, action_cx, reason);
-                                                }
-                                            },
-                                        ));
-                                    }
-                                    let hovered = st.hovered && !st.pressed;
-                                    let pressed = st.pressed;
-
-                                    let bg = (hovered || pressed).then_some(bg_hover);
-                                    let props = ContainerProps {
+                     for row in render_rows.into_iter() {
+                         match row {
+                             CommandPaletteRenderRow::Heading(heading) => {
+                                 let heading = heading.clone();
+                                 let heading_style = heading_style.clone();
+                                 let fg_heading = fg_heading;
+                                 out.push(cx.container(
+                                    ContainerProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
                                             layout.size.width = Length::Fill;
                                             layout
                                         },
                                         padding: Edges {
-                                            top: pad_y,
+                                            top: Px(6.0),
                                             right: pad_x,
-                                            bottom: pad_y,
+                                            bottom: Px(6.0),
                                             left: pad_x,
                                         },
-                                        background: bg,
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: Corners::all(radius),
                                         ..Default::default()
-                                    };
+                                    },
+                                    move |cx| {
+                                        let mut text = ui::text(cx, heading)
+                                            .text_size_px(heading_style.size)
+                                            .font_weight(heading_style.weight)
+                                            .nowrap()
+                                            .text_color(ColorRef::Color(fg_heading));
 
-                                    let child = cx.container(props, move |cx| {
-                                        vec![cx.row(
-                                            RowProps {
-                                                layout: LayoutStyle::default(),
-                                                gap: row_gap,
-                                                padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                            },
-                                            move |cx| {
-                                                if children.is_empty() {
-                                                    vec![cmdk_highlighted_label(
-                                                        cx,
-                                                        label.clone(),
-                                                        query_for_row.as_ref(),
-                                                        fg,
-                                                        text_style.clone(),
-                                                    )]
-                                                } else {
-                                                    children
-                                                }
-                                            },
-                                        )]
-                                    });
+                                        if let Some(line_height) = heading_style.line_height {
+                                            text = text.line_height_px(line_height).line_height_policy(
+                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                            );
+                                        }
+                                        if let Some(letter_spacing_em) = heading_style.letter_spacing_em {
+                                            text = text.letter_spacing_em(letter_spacing_em);
+                                        }
 
-                                    let mut chrome = child;
-                                    if let Some(test_id) = chrome_test_id.clone() {
-                                        chrome = chrome.test_id(test_id);
-                                    }
-
-                                    vec![chrome]
+                                        vec![text.into_element(cx)]
+                                    },
+                                ));
+                            }
+                            CommandPaletteRenderRow::GroupPad => out.push(cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Px(group_pad_y);
+                                        layout
+                                    },
+                                    ..Default::default()
                                 },
-                            )
-                        }));
+                                |_cx| Vec::new(),
+                            )),
+                             CommandPaletteRenderRow::Separator(test_id) => {
+                                 let mut sep = cx.container(
+                                     ContainerProps {
+                                         layout: {
+                                             let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Px(Px(1.0));
+                                            // new-york-v4: `-mx-1 h-px`.
+                                            layout.margin.left =
+                                                fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                            layout.margin.right =
+                                                fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                            layout
+                                        },
+                                        background: Some(border),
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+                                sep = sep.attach_semantics(
+                                    SemanticsDecoration::default().role(SemanticsRole::Separator),
+                                );
+                                if let Some(test_id) = test_id.clone() {
+                                    sep = sep.test_id(test_id);
+                                 }
+                                 out.push(sep);
+                             }
+                            CommandPaletteRenderRow::Loading(loading) => {
+                                out.push(loading.into_element(cx));
+                            }
+                             CommandPaletteRenderRow::Item(idx) => {
+                                 let Some(item) = items.get(idx).cloned() else { continue };
+
+                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                 let focusable = tab_stop.is_some_and(|i| i == idx);
+
+                                let query_for_row = query_for_render.clone();
+                                let value_key = item.value.clone();
+                                let value_for_select = item.value.clone();
+                                let label = item.label.clone();
+                                let test_id = item.test_id.clone();
+                                let chrome_test_id = test_id
+                                    .clone()
+                                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                let command = item.command;
+                                let on_select = item.on_select.clone();
+                                let on_select_value = item.on_select_value.clone();
+                                let children = item.children;
+                                let text_style = text_style.clone();
+
+                                out.push(cx.keyed(value_key, move |cx| {
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: item_layout,
+                                            enabled,
+                                            focusable,
+                                            focus_ring: Some(ring),
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::ListBoxOption),
+                                                label: Some(label.clone()),
+                                                test_id: test_id.clone(),
+                                                ..Default::default()
+                                            },
+                                        ..Default::default()
+                                    },
+                                    move |cx, st| {
+                                        cx.pressable_dispatch_command_if_enabled_opt(command);
+                                        if on_select.is_some() || on_select_value.is_some() {
+                                            let on_select = on_select.clone();
+                                            let on_select_value = on_select_value.clone();
+                                            let value = value_for_select.clone();
+                                            cx.pressable_add_on_activate(Arc::new(
+                                                move |host, action_cx, reason| {
+                                                    if let Some(on_select_value) =
+                                                        on_select_value.clone()
+                                                    {
+                                                        on_select_value(
+                                                            host,
+                                                            action_cx,
+                                                            reason,
+                                                            value.clone(),
+                                                        );
+                                                    }
+                                                    if let Some(on_select) = on_select.clone() {
+                                                        on_select(host, action_cx, reason);
+                                                    }
+                                                },
+                                            ));
+                                        }
+                                        let hovered = st.hovered && !st.pressed;
+                                        let pressed = st.pressed;
+
+                                            let bg = (hovered || pressed).then_some(bg_hover);
+                                            let props = ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Fill;
+                                                    layout
+                                                },
+                                                padding: Edges {
+                                                    top: pad_y,
+                                                    right: pad_x,
+                                                    bottom: pad_y,
+                                                    left: pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: Corners::all(radius),
+                                                ..Default::default()
+                                            };
+
+                                            let child = cx.container(props, move |cx| {
+                                                vec![cx.row(
+                                                    RowProps {
+                                                        layout: LayoutStyle::default(),
+                                                        gap: row_gap,
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Start,
+                                                        align: CrossAlign::Center,
+                                                    },
+                                                    move |cx| {
+                                                        if children.is_empty() {
+                                                            vec![cmdk_highlighted_label(
+                                                                cx,
+                                                                label.clone(),
+                                                                query_for_row.as_ref(),
+                                                                fg,
+                                                                text_style.clone(),
+                                                            )]
+                                                        } else {
+                                                            children
+                                                        }
+                                                    },
+                                                )]
+                                            });
+
+                                            let mut chrome = child;
+                                            if let Some(test_id) = chrome_test_id.clone() {
+                                                chrome = chrome.test_id(test_id);
+                                            }
+
+                                            vec![chrome]
+                                        },
+                                    )
+                                }));
+                            }
+                        }
                     }
 
                     out
@@ -1587,6 +1702,7 @@ pub struct CommandPalette {
     test_id_item_prefix: Option<Arc<str>>,
     test_id_heading_prefix: Option<Arc<str>>,
     pub(crate) input_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    pub(crate) list_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
 #[derive(Clone)]
@@ -1903,6 +2019,7 @@ impl std::fmt::Debug for CommandPalette {
                 &self.test_id_heading_prefix.as_ref().map(|s| s.as_ref()),
             )
             .field("input_id_out_cell", &self.input_id_out_cell.is_some())
+            .field("list_id_out_cell", &self.list_id_out_cell.is_some())
             .finish()
     }
 }
@@ -1950,6 +2067,7 @@ impl CommandPalette {
             test_id_item_prefix: None,
             test_id_heading_prefix: None,
             input_id_out_cell: None,
+            list_id_out_cell: None,
         }
     }
 
@@ -2126,6 +2244,11 @@ impl CommandPalette {
         self
     }
 
+    pub(crate) fn list_id_out_cell(mut self, cell: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.list_id_out_cell = Some(cell);
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -2187,6 +2310,7 @@ impl CommandPalette {
             let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
+            let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
             let on_value_change = self.on_value_change.clone();
             let test_id_input = self.test_id_input;
@@ -3079,6 +3203,10 @@ impl CommandPalette {
 
                 scroll_area
             };
+
+            if let Some(cell) = list_id_out_cell.as_ref() {
+                cell.set(Some(list.id));
+            }
 
             let list = list.attach_semantics(SemanticsDecoration {
                 role: Some(SemanticsRole::ListBox),

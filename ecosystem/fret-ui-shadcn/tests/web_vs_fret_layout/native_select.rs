@@ -34,8 +34,10 @@ fn web_vs_fret_layout_native_select_heights_match_web_fixtures() {
         );
 
         let snap = run_fret_root(bounds, |cx| {
-            let mut select = fret_ui_shadcn::NativeSelect::new(case.label_text.clone())
+            let mut select =
+                fret_ui_shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
                 .a11y_label("NativeSelect")
+                .placeholder(case.label_text.clone())
                 .refine_layout(
                     LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
                 );

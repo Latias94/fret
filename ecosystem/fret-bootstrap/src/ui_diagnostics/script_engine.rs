@@ -914,6 +914,7 @@ pub(super) fn finalize_drive_script_for_window(
             // did not invalidate UI state. This ensures `wait_until`/timeouts progress and
             // cross-window gates (tear-off, hover detection) do not stall.
             output.request_redraw = true;
+            output.effects.push(Effect::Redraw(window));
             output.effects.push(Effect::RequestAnimationFrame(window));
             service.active_scripts.insert(window, active);
         }
@@ -1137,6 +1138,17 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
             true
         }
     }
+}
+
+pub(super) fn overlay_placement_trace_entry_matches_query_any_step(
+    entry: &UiOverlayPlacementTraceEntryV1,
+    query: &UiOverlayPlacementTraceQueryV1,
+) -> bool {
+    let step_index = match entry {
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel { step_index, .. } => *step_index,
+        UiOverlayPlacementTraceEntryV1::PlacedRect { step_index, .. } => *step_index,
+    };
+    overlay_placement_trace_entry_matches_query(entry, step_index, query)
 }
 
 pub(super) fn overlay_placement_trace_entry_eq(

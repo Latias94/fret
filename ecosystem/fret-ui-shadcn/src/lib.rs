@@ -41,6 +41,7 @@ pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
+pub mod combobox_chips;
 pub mod command;
 mod command_gating;
 pub mod context_menu;
@@ -152,7 +153,8 @@ pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
-pub use combobox::{Combobox, ComboboxItem, combobox};
+pub use combobox::{Combobox, ComboboxGroup, ComboboxItem, ComboboxTriggerVariant, combobox};
+pub use combobox_chips::ComboboxChips;
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
@@ -232,7 +234,9 @@ pub use menubar::{
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
 };
-pub use native_select::{NativeSelect, NativeSelectSize, native_select};
+pub use native_select::{
+    NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,
+};
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,

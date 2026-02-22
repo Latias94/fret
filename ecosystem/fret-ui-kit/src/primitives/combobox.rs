@@ -59,12 +59,13 @@ impl Default for ComboboxCloseAutoFocusPolicy {
         // shadcn/ui-like expectations:
         // - commit restores focus to trigger (asserted by diag gates)
         // - Escape restores focus to trigger
-        // - outside press / focus-out should not steal focus back to trigger
+        // - outside press restores focus to trigger (Radix Popover default; asserted by diag gates)
+        // - focus-out should not steal focus back to trigger
         Self {
             on_item_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
             on_escape: ComboboxCloseAutoFocusDecision::RestoreTrigger,
             on_trigger_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
-            on_outside_press: ComboboxCloseAutoFocusDecision::PreventDefault,
+            on_outside_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
             on_focus_out: ComboboxCloseAutoFocusDecision::PreventDefault,
             on_none: ComboboxCloseAutoFocusDecision::Default,
         }
@@ -235,6 +236,41 @@ pub fn commit_selection_on_activate<T: Clone + PartialEq + 'static>(
             let _ = host.models_mut().update(&open, |v| *v = false);
         }
         if policy.clear_query_on_commit {
+            let _ = host.models_mut().update(&query, |v| v.clear());
+        }
+        host.request_redraw(action_cx.window);
+    })
+}
+
+/// Commit policy for multi-select combobox recipes (chips).
+///
+/// This is a small helper for shadcn/Base UI-inspired recipes: selecting an item toggles it in a
+/// `Vec<T>` while leaving open/close and query behavior configurable.
+pub fn commit_multi_selection_on_activate<T: Clone + PartialEq + 'static>(
+    value: Model<Vec<T>>,
+    open: Model<bool>,
+    query: Model<String>,
+    open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
+    selected_value: T,
+    close_on_commit: bool,
+    clear_query_on_commit: bool,
+) -> OnActivate {
+    #[allow(clippy::arc_with_non_send_sync)]
+    Arc::new(move |host, action_cx, _activate_reason| {
+        let _ = host.models_mut().update(&value, |values| {
+            if let Some(idx) = values.iter().position(|v| v == &selected_value) {
+                values.remove(idx);
+            } else {
+                values.push(selected_value.clone());
+            }
+        });
+        let _ = host.models_mut().update(&open_change_reason, |v| {
+            *v = Some(ComboboxOpenChangeReason::ItemPress);
+        });
+        if close_on_commit {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+        }
+        if clear_query_on_commit {
             let _ = host.models_mut().update(&query, |v| v.clear());
         }
         host.request_redraw(action_cx.window);

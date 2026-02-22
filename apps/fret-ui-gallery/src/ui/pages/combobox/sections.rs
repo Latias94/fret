@@ -7,11 +7,27 @@ pub(super) fn demo(
     query: Model<String>,
 ) -> AnyElement {
     shadcn::Combobox::new(value.clone(), open.clone())
+        .a11y_label("Combobox demo")
+        .width(Px(260.0))
+        .placeholder("Select a fruit")
+        .query_model(query.clone())
+        .test_id_prefix("ui-gallery-combobox-demo")
+        .trigger_test_id("ui-gallery-combobox-demo-trigger")
+        .items(helpers::base_items())
+        .into_element(cx)
+}
+
+pub(super) fn basic_frameworks(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    shadcn::Combobox::new(models.basic_value.clone(), models.basic_open.clone())
         .a11y_label("Combobox basic")
         .width(Px(260.0))
         .placeholder("Select a framework")
-        .query_model(query.clone())
+        .query_model(models.basic_query.clone())
         .test_id_prefix("ui-gallery-combobox-basic")
+        .trigger_test_id("ui-gallery-combobox-basic-trigger")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
             shadcn::ComboboxItem::new("svelte", "SvelteKit"),
@@ -20,7 +36,6 @@ pub(super) fn demo(
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
         .into_element(cx)
-        .test_id("ui-gallery-combobox-basic-trigger")
 }
 
 pub(super) fn clear_button(
@@ -34,6 +49,7 @@ pub(super) fn clear_button(
         .query_model(models.clear_query.clone())
         .show_clear(true)
         .test_id_prefix("ui-gallery-combobox-clear")
+        .trigger_test_id("ui-gallery-combobox-clear-trigger")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
             shadcn::ComboboxItem::new("svelte", "SvelteKit"),
@@ -41,8 +57,7 @@ pub(super) fn clear_button(
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element(cx)
-        .test_id("ui-gallery-combobox-clear-trigger");
+        .into_element(cx);
 
     stack::vstack(
         cx,
@@ -75,14 +90,14 @@ pub(super) fn custom_items_top(
             .placeholder("Select framework")
             .query_model(models.custom_query.clone())
             .test_id_prefix("ui-gallery-combobox-custom-items")
+            .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
             .items([
                 shadcn::ComboboxItem::new("next", "Next.js (React)"),
                 shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
                 shadcn::ComboboxItem::new("svelte", "SvelteKit (Svelte)"),
                 shadcn::ComboboxItem::new("astro", "Astro (Hybrid)"),
             ])
-            .into_element(cx)
-            .test_id("ui-gallery-combobox-custom-items-trigger");
+            .into_element(cx);
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -122,9 +137,9 @@ pub(super) fn long_list(cx: &mut ElementContext<'_, App>, models: &ComboboxModel
     .placeholder("Pick an item")
     .query_model(models.long_list_query.clone())
     .test_id_prefix("ui-gallery-combobox-long-list")
+    .trigger_test_id("ui-gallery-combobox-long-list-trigger")
     .items(items)
-    .into_element(cx)
-    .test_id("ui-gallery-combobox-long-list-trigger");
+    .into_element(cx);
 
     let content = stack::vstack(
         cx,
@@ -155,19 +170,34 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
             .placeholder("Select a timezone")
             .query_model(models.groups_query.clone())
             .test_id_prefix("ui-gallery-combobox-groups")
-            .items([
-                shadcn::ComboboxItem::new("americas-ny", "Americas / (GMT-5) New York"),
-                shadcn::ComboboxItem::new("americas-la", "Americas / (GMT-8) Los Angeles"),
-                shadcn::ComboboxItem::new("americas-chi", "Americas / (GMT-6) Chicago"),
-                shadcn::ComboboxItem::new("europe-lon", "Europe / (GMT+0) London"),
-                shadcn::ComboboxItem::new("europe-paris", "Europe / (GMT+1) Paris"),
-                shadcn::ComboboxItem::new("europe-berlin", "Europe / (GMT+1) Berlin"),
-                shadcn::ComboboxItem::new("asia-tokyo", "Asia/Pacific / (GMT+9) Tokyo"),
-                shadcn::ComboboxItem::new("asia-shanghai", "Asia/Pacific / (GMT+8) Shanghai"),
-                shadcn::ComboboxItem::new("asia-singapore", "Asia/Pacific / (GMT+8) Singapore"),
+            .trigger_test_id("ui-gallery-combobox-groups-trigger")
+            .groups([
+                shadcn::ComboboxGroup::new(
+                    "Americas",
+                    [
+                        shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York"),
+                        shadcn::ComboboxItem::new("americas-la", "(GMT-8) Los Angeles"),
+                        shadcn::ComboboxItem::new("americas-chi", "(GMT-6) Chicago"),
+                    ],
+                ),
+                shadcn::ComboboxGroup::new(
+                    "Europe",
+                    [
+                        shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London"),
+                        shadcn::ComboboxItem::new("europe-paris", "(GMT+1) Paris"),
+                        shadcn::ComboboxItem::new("europe-berlin", "(GMT+1) Berlin"),
+                    ],
+                ),
+                shadcn::ComboboxGroup::new(
+                    "Asia/Pacific",
+                    [
+                        shadcn::ComboboxItem::new("asia-tokyo", "(GMT+9) Tokyo"),
+                        shadcn::ComboboxItem::new("asia-shanghai", "(GMT+8) Shanghai"),
+                        shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
+                    ],
+                ),
             ])
-            .into_element(cx)
-            .test_id("ui-gallery-combobox-groups-trigger");
+            .into_element(cx);
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -198,7 +228,7 @@ pub(super) fn popup_trigger(
         .width(Px(256.0))
         .placeholder("Select a framework")
         .query_model(models.popup_query.clone())
-        .trigger_variant(shadcn::combobox::ComboboxTriggerVariant::Button)
+        .trigger_variant(shadcn::ComboboxTriggerVariant::Button)
         .trigger_test_id("ui-gallery-combobox-popup-trigger")
         .test_id_prefix("ui-gallery-combobox-popup")
         .items([
@@ -230,6 +260,37 @@ pub(super) fn popup_trigger(
     )
 }
 
+pub(super) fn multiple_selection(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    let combo =
+        shadcn::ComboboxChips::new(models.multiple_values.clone(), models.multiple_open.clone())
+            .a11y_label("Combobox multiple selection")
+            .width(Px(260.0))
+            .placeholder("Select frameworks")
+            .query_model(models.multiple_query.clone())
+            .trigger_test_id("ui-gallery-combobox-multiple-trigger")
+            .test_id_prefix("ui-gallery-combobox-multiple")
+            .items([
+                shadcn::ComboboxItem::new("next", "Next.js"),
+                shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+                shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+                shadcn::ComboboxItem::new("remix", "Remix"),
+                shadcn::ComboboxItem::new("astro", "Astro"),
+            ])
+            .into_element(cx);
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |_cx| vec![combo],
+    )
+}
+
 pub(super) fn invalid(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> AnyElement {
     let invalid_combo =
         shadcn::Combobox::new(models.invalid_value.clone(), models.invalid_open.clone())
@@ -238,10 +299,10 @@ pub(super) fn invalid(cx: &mut ElementContext<'_, App>, models: &ComboboxModels)
             .placeholder("Select required option")
             .query_model(models.invalid_query.clone())
             .test_id_prefix("ui-gallery-combobox-invalid")
+            .trigger_test_id("ui-gallery-combobox-invalid-trigger")
             .items(helpers::base_items())
             .aria_invalid(true)
-            .into_element(cx)
-            .test_id("ui-gallery-combobox-invalid-trigger");
+            .into_element(cx);
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -271,10 +332,10 @@ pub(super) fn disabled(cx: &mut ElementContext<'_, App>, models: &ComboboxModels
             .placeholder("Disabled")
             .query_model(models.disabled_query.clone())
             .test_id_prefix("ui-gallery-combobox-disabled")
+            .trigger_test_id("ui-gallery-combobox-disabled-trigger")
             .items(helpers::base_items())
             .disabled(true)
-            .into_element(cx)
-            .test_id("ui-gallery-combobox-disabled-trigger");
+            .into_element(cx);
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -306,13 +367,13 @@ pub(super) fn input_group(cx: &mut ElementContext<'_, App>, models: &ComboboxMod
     .placeholder("Search command")
     .query_model(models.input_group_query.clone())
     .test_id_prefix("ui-gallery-combobox-input-group")
+    .trigger_test_id("ui-gallery-combobox-input-group-trigger")
     .items([
         shadcn::ComboboxItem::new("new-file", "New File"),
         shadcn::ComboboxItem::new("open-file", "Open File"),
         shadcn::ComboboxItem::new("save-all", "Save All"),
     ])
-    .into_element(cx)
-    .test_id("ui-gallery-combobox-input-group-trigger");
+    .into_element(cx);
     let content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -364,13 +425,13 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) -> 
             .placeholder("ابحث عن إطار عمل")
             .query_model(models.rtl_query.clone())
             .test_id_prefix("ui-gallery-combobox-rtl")
+            .trigger_test_id("ui-gallery-combobox-rtl-trigger")
             .items([
                 shadcn::ComboboxItem::new("next", "Next.js"),
                 shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
                 shadcn::ComboboxItem::new("svelte", "SvelteKit"),
             ])
             .into_element(cx)
-            .test_id("ui-gallery-combobox-rtl-trigger")
     });
     let content = stack::vstack(
         cx,

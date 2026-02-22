@@ -217,6 +217,7 @@ pub struct Popover {
     auto_focus: Option<bool>,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
     initial_focus_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    diagnostics_content_element_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -255,6 +256,10 @@ impl std::fmt::Debug for Popover {
             .field(
                 "initial_focus_from_cell",
                 &self.initial_focus_from_cell.is_some(),
+            )
+            .field(
+                "diagnostics_content_element_from_cell",
+                &self.diagnostics_content_element_from_cell.is_some(),
             )
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
@@ -295,6 +300,7 @@ impl Popover {
             auto_focus: None,
             initial_focus: None,
             initial_focus_from_cell: None,
+            diagnostics_content_element_from_cell: None,
             anchor_override: None,
             on_dismiss_request: None,
             on_open_auto_focus: None,
@@ -510,6 +516,14 @@ impl Popover {
         self
     }
 
+    pub(crate) fn diagnostics_content_element_from_cell(
+        mut self,
+        cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> Self {
+        self.diagnostics_content_element_from_cell = Some(cell);
+        self
+    }
+
     /// Override the element used as the placement anchor.
     ///
     /// Notes:
@@ -690,6 +704,7 @@ impl Popover {
             } else {
                 radix_popover::popover_root_name(trigger_id)
             };
+            let overlay_root_name_for_diag = overlay_root_name.clone();
 
             let motion =
                 radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
@@ -733,16 +748,18 @@ impl Popover {
                 let on_dismiss_request_for_children = self.on_dismiss_request.clone();
                 let on_dismiss_request_for_request = self.on_dismiss_request.clone();
 
-                let align = self.align;
-                let side = self.side;
-                let align_offset = self.align_offset;
-                let side_offset = self.side_offset;
-                let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
-                let window_margin = self.window_margin_override.unwrap_or_else(|| {
-                    theme
-                        .metric_by_key("component.popover.window_margin")
-                        .unwrap_or(Px(0.0))
-                });
+            let align = self.align;
+            let side = self.side;
+            let align_offset = self.align_offset;
+            let side_offset = self.side_offset;
+            let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
+            let diagnostics_content_element_from_cell =
+                self.diagnostics_content_element_from_cell.clone();
+            let window_margin = self.window_margin_override.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.popover.window_margin")
+                    .unwrap_or(Px(0.0))
+            });
                 let collision_padding = self
                     .collision_padding_override
                     .unwrap_or(Edges::all(Px(0.0)));
@@ -817,15 +834,29 @@ impl Popover {
                         max_height: None,
                     });
                     let hint_width = hint.fixed_width;
-                    let hint_height = hint.fixed_height.or(hint.max_height);
-                    let content_size = Size::new(
-                        hint_width
-                            .or_else(|| last_content_size.map(|s| s.width))
-                            .unwrap_or(estimated.width),
-                        hint_height
-                            .or_else(|| last_content_size.map(|s| s.height))
-                            .unwrap_or(estimated.height),
-                    );
+                    let hint_height = match (hint.fixed_height, hint.max_height) {
+                        // If both a fixed height and a max height exist in the subtree, treat the
+                        // fixed height as "header chrome" and the max height as "scrolling body"
+                        // (cmdk/combobox-style panels). Bias towards *overestimating* so collision
+                        // solving doesn't ignore tall panels.
+                        (Some(fixed), Some(max)) => Some(if fixed.0 <= max.0 {
+                            Px(fixed.0 + max.0)
+                        } else {
+                            fixed
+                        }),
+                        (Some(fixed), None) => Some(fixed),
+                        (None, Some(max)) => Some(max),
+                        (None, None) => None,
+                    };
+                    let mut width = last_content_size.map(|s| s.width).unwrap_or(estimated.width);
+                    if let Some(hint_width) = hint_width {
+                        width = Px(width.0.max(hint_width.0));
+                    }
+                    let mut height = last_content_size.map(|s| s.height).unwrap_or(estimated.height);
+                    if let Some(hint_height) = hint_height {
+                        height = Px(height.0.max(hint_height.0));
+                    }
+                    let content_size = Size::new(width, height);
 
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
@@ -878,16 +909,36 @@ impl Popover {
 
                     let anchor = anchor_fallback.unwrap_or_default();
                     let constrained_height = has_height_constraint_px(hint);
-                    let layout = if constrained_height {
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement)
+                    let oversized_for_boundary = content_size.width.0 > outer.size.width.0 + 0.5
+                        || content_size.height.0 > outer.size.height.0 + 0.5;
+                    let (layout, placement_trace) = if constrained_height || oversized_for_boundary {
+                        popper::popper_layout_sized_with_trace(
+                            outer,
+                            anchor,
+                            content_size,
+                            placement.side_offset,
+                            placement.side,
+                            placement.align,
+                            placement.options(),
+                        )
                     } else {
-                        popper::popper_content_layout_unclamped(
+                        popper::popper_content_layout_size_unclamped_with_trace(
                             outer,
                             anchor,
                             content_size,
                             placement,
                         )
                     };
+                    let content_element_for_diag = diagnostics_content_element_from_cell
+                        .as_ref()
+                        .and_then(|cell| cell.get())
+                        .unwrap_or(measure_id);
+                    cx.diagnostics_record_overlay_placement_anchored_panel(
+                        Some(overlay_root_name_for_diag.as_ref()),
+                        Some(anchor_id),
+                        Some(content_element_for_diag),
+                        placement_trace,
+                    );
                     if open_on_hover {
                         cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
                             st.anchor_bounds = Some(anchor);
