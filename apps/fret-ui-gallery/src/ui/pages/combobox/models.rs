@@ -93,7 +93,7 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         return models;
     }
 
-    let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("nuxt")));
+    let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("next")));
     let clear_open = cx.app.models_mut().insert(false);
     let clear_query = cx.app.models_mut().insert(String::new());
 

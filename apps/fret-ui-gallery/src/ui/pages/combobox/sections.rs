@@ -34,7 +34,13 @@ pub(super) fn clear_button(
         .query_model(models.clear_query.clone())
         .show_clear(true)
         .test_id_prefix("ui-gallery-combobox-clear")
-        .items(helpers::base_items())
+        .items([
+            shadcn::ComboboxItem::new("next", "Next.js"),
+            shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+            shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+            shadcn::ComboboxItem::new("remix", "Remix"),
+            shadcn::ComboboxItem::new("astro", "Astro"),
+        ])
         .into_element(cx)
         .test_id("ui-gallery-combobox-clear-trigger");
 

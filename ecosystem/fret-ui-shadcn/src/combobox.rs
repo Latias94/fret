@@ -851,7 +851,7 @@ fn combobox_with_patch<H: UiHost>(
                                                                 let pressable_props = PressableProps {
                                                                     layout: pressable_layout,
                                                                     enabled,
-                                                                    focusable: false,
+                                                                    focusable: true,
                                                                     focus_ring: None,
                                                                     a11y: PressableA11y {
                                                                         role: Some(
@@ -913,7 +913,9 @@ fn combobox_with_patch<H: UiHost>(
                                                     let clear = if let Some(prefix) =
                                                         test_id_prefix_for_trigger.as_deref()
                                                     {
-                                                        clear.test_id(format!("{prefix}-clear"))
+                                                        clear.test_id(format!(
+                                                            "{prefix}-clear-button"
+                                                        ))
                                                     } else {
                                                         clear
                                                     };
@@ -970,6 +972,7 @@ fn combobox_with_patch<H: UiHost>(
                             .metric_by_key("component.combobox.max_list_height")
                             .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                             .unwrap_or(Px(280.0));
+                        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                         let list = if search_enabled {
                             let max_list_h = Px(theme_max_list_h.0.max(0.0));
@@ -1326,7 +1329,7 @@ fn combobox_with_patch<H: UiHost>(
                                                     let pressable_props = PressableProps {
                                                         layout: pressable_layout,
                                                         enabled,
-                                                        focusable: false,
+                                                        focusable: true,
                                                         focus_ring: None,
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Button),
@@ -1372,7 +1375,7 @@ fn combobox_with_patch<H: UiHost>(
                                             let clear = if let Some(prefix) =
                                                 test_id_prefix_for_trigger.as_deref()
                                             {
-                                                clear.test_id(format!("{prefix}-clear"))
+                                                clear.test_id(format!("{prefix}-clear-button"))
                                             } else {
                                                 clear
                                             };
@@ -1429,6 +1432,7 @@ fn combobox_with_patch<H: UiHost>(
                     .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                     .unwrap_or(Px(280.0));
                 let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
+                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                 let list = if search_enabled {
                     let max_list_h = Px(theme_max_list_h.0.max(0.0));
