@@ -161,6 +161,20 @@ fn debug_validate_rejects_origin_size_overflow() {
 }
 
 #[test]
+fn debug_validate_rejects_clip_mask_load_op_load() {
+    let pass = RenderPlanPass::ClipMask(ClipMaskPass {
+        dst: PlanTarget::Mask0,
+        dst_size: (10, 10),
+        dst_scissor: None,
+        uniform_index: 0,
+        load: wgpu::LoadOp::Load,
+    });
+
+    let err = validate_plan_scissors(&[pass]).unwrap_err();
+    assert!(err.contains("ClipMask must clear"), "{err}");
+}
+
+#[test]
 fn insert_early_releases_inserts_release_after_last_use() {
     let mut passes = vec![
         RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
