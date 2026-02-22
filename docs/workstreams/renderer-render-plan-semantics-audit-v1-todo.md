@@ -16,7 +16,7 @@
 - [x] Add targeted semantic tests (unit or integration):
   - “LoadOp::Load requires prior init” regression (validator unit test)
   - “ReleaseTarget inserted after last use” regression (unit test)
-  - “Downsample scissor mapping never expands bounds” regression
+  - “Downsample scissor mapping never expands bounds” regression (unit test)
 - [ ] Audit pass-by-pass semantics and document any ambiguous areas:
   - `PathMsaaBatch` initialization rules
   - `ClipMask` pass clear/load assumptions

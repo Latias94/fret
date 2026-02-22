@@ -564,6 +564,56 @@ fn downsample_nearest_scissor_mapping_matches_integer_division_for_non_divisible
 }
 
 #[test]
+fn downsample_scissor_mapping_does_not_expand_across_steps() {
+    let full_size = (3, 5);
+    let scissor_in_full = Some(ScissorRect {
+        x: 1,
+        y: 3,
+        w: 1,
+        h: 2,
+    });
+
+    let mut plan = RenderPlan {
+        segments: Vec::new(),
+        passes: Vec::new(),
+        compile_stats: RenderPlanCompileStats::default(),
+        degradations: Vec::new(),
+    };
+
+    let out = append_downsample_half_quarter(
+        &mut plan,
+        PlanTarget::Intermediate0,
+        full_size,
+        PlanTarget::Intermediate2,
+        PlanTarget::Intermediate1,
+        scissor_in_full,
+        full_size,
+        wgpu::Color::TRANSPARENT,
+    );
+
+    let expected_half_scissor =
+        effects::map_scissor_to_size(scissor_in_full, full_size, downsampled_size(full_size, 2));
+    let expected_quarter_scissor =
+        effects::map_scissor_to_size(scissor_in_full, full_size, out.quarter_size);
+    let chained_quarter_scissor = effects::map_scissor_to_size(
+        expected_half_scissor,
+        downsampled_size(full_size, 2),
+        out.quarter_size,
+    );
+    assert_ne!(expected_quarter_scissor, chained_quarter_scissor);
+
+    let RenderPlanPass::ScaleNearest(half_pass) = plan.passes[0] else {
+        panic!("expected half downsample pass");
+    };
+    assert_eq!(half_pass.dst_scissor, expected_half_scissor);
+
+    let RenderPlanPass::ScaleNearest(quarter_pass) = plan.passes[1] else {
+        panic!("expected quarter downsample pass");
+    };
+    assert_eq!(quarter_pass.dst_scissor, expected_quarter_scissor);
+}
+
+#[test]
 fn blur_scissor_is_mapped_per_pass_dst_size() {
     let encoding = SceneEncoding::default();
     let viewport_size = (100, 100);
