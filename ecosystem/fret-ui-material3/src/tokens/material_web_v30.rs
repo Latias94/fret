@@ -579,6 +579,8 @@ pub(crate) fn inject_sys_typescale(
                 line_height_policy: Default::default(),
                 letter_spacing_em: Some(tracking_em),
                 vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                leading_distribution: Default::default(),
+                strut_style: None,
             },
         );
     }

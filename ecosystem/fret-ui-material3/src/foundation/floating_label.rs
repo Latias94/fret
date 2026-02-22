@@ -74,6 +74,16 @@ pub fn interpolated_label_text_style(
         line_height_policy,
         letter_spacing_em,
         vertical_placement,
+        leading_distribution: if is_floated(progress) {
+            small.leading_distribution
+        } else {
+            large.leading_distribution
+        },
+        strut_style: if is_floated(progress) {
+            small.strut_style.clone()
+        } else {
+            large.strut_style.clone()
+        },
     })
 }
 
