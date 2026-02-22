@@ -26,10 +26,13 @@ Exit criteria:
   boundary).
 - Shared helpers live in `render_scene/*` utilities (not ad-hoc `pub(super)` methods).
 
-## M3 — Optional `RenderSceneExecutor` (Option C)
+## M3 — `RenderSceneExecutor` introduced (Option C)
 
 Exit criteria:
 
 - Per-frame mutable state is isolated from `Renderer` (encoder, targets, cursors, perf).
 - Recorders have stable, small signatures and are easy to test in isolation (where practical).
 
+Evidence anchors:
+
+- Design: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`

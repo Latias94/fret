@@ -1,6 +1,6 @@
 # Renderer Execute Pass Recorder Modularization v1
 
-Status: Draft
+Status: Draft (ready to start Option C)
 
 Related:
 
@@ -9,6 +9,7 @@ Related:
 - Renderer vNext refactor design: `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - TODO tracker: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-todo.md`
 - Milestones: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-milestones.md`
+- Refactor design: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
 
 ## 0) Scope
 
@@ -83,6 +84,10 @@ Land A → B → C:
 2. Use B to consolidate shared helpers (target selection, scissor mapping, bind group pickers).
 3. Use C only when the boundaries are already clear and the move becomes mostly mechanical.
 
+We are now ready to start staging Option C via the design in:
+
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
+
 ## 6) Evidence anchors
 
 - Executor orchestration: `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
@@ -93,4 +98,3 @@ Land A → B → C:
   - `crates/fret-render-wgpu/tests/viewport_surface_metadata_conformance.rs`
   - `crates/fret-render-wgpu/tests/mask_image_conformance.rs`
   - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
-

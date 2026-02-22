@@ -17,8 +17,11 @@
   - scissor mapping helpers
   - target selection helpers (output vs intermediate vs mask)
   - uniform bind-group picking (mask-image override selection)
-- [ ] Consider consolidating per-frame cursors into `ExecuteCtx` (scale params cursor, etc.).
-- [ ] Evaluate Option C (`RenderSceneExecutor`) once most recorders are file-separated.
+- [ ] Implement Option C scaffold (`RenderSceneExecutor`) and migrate per-frame mutable state:
+  - create `render_scene/executor.rs` and route pass recording through it
+  - move per-frame cursors/transients (instance/uniform cursors) into the executor
+  - keep semantics stable; record evidence anchors per pass moved
+- [ ] Convert recorders to executor-based functions (`recorders/*` takes `&mut RenderSceneExecutor`).
 
 ## Gates (must stay green)
 
@@ -28,4 +31,3 @@
 - `cargo test -p fret-render-wgpu --test viewport_surface_metadata_conformance`
 - `cargo test -p fret-render-wgpu --test mask_image_conformance`
 - `cargo test -p fret-render-wgpu --test composite_group_conformance`
-
