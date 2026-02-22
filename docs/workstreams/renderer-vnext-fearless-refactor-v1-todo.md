@@ -228,6 +228,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::globals`)
     - `crates/fret-render-wgpu/src/renderer/pipelines/` (pipeline layouts bind `globals.*_bind_group_layout`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (prepares via `globals` samplers/layouts)
+  - Landed (step 3): extract texture ownership + upload-once state into `GpuTextures`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_textures.rs` (`GpuTextures`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::textures`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`ensure_material_catalog_uploaded`, `ensure_mask_image_identity_uploaded`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`

@@ -16,6 +16,7 @@ mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
 mod gpu_globals;
+mod gpu_textures;
 mod path;
 mod revisioned_cache;
 mod types;
@@ -44,6 +45,7 @@ use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
 use gpu_globals::GpuGlobals;
+use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
@@ -69,13 +71,9 @@ impl Default for ClearColor {
 pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
-    _mask_image_identity_texture: wgpu::Texture,
-    mask_image_identity_uploaded: bool,
     uniforms: UniformResources,
     globals: GpuGlobals,
-
-    material_catalog_texture: wgpu::Texture,
-    material_catalog_uploaded: bool,
+    textures: GpuTextures,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipelines: HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
