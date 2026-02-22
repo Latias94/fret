@@ -48,6 +48,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
   - [x] Extract click step (`click`) with window handoff + fail-fast behavior:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+  - [x] Extract move pointer step (`move_pointer`) with fail-fast behavior:
+    - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
   - [x] Extract stable click steps (`click_stable`, `click_selectable_text_span_stable`):
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
   - [x] Extract pointer session steps (`pointer_down`, `pointer_move`, `pointer_up`):
