@@ -551,6 +551,11 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let max_width = match (max_width, props.layout.size.max_width) {
+            (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
+            (None, Some(b)) => Some(b),
+            (other, None) => other,
+        };
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
@@ -613,6 +618,11 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let max_width = match (max_width, props.layout.size.max_width) {
+            (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
+            (None, Some(b)) => Some(b),
+            (other, None) => other,
+        };
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
@@ -675,6 +685,11 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
+        let max_width = match (max_width, props.layout.size.max_width) {
+            (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
+            (None, Some(b)) => Some(b),
+            (other, None) => other,
+        };
         let theme = cx.theme();
         let theme_revision = theme.revision();
         let input = props.build_text_input(theme.snapshot());
@@ -1037,6 +1052,22 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: FlexProps,
     ) -> Size {
+        let max_dimension = |available: AvailableSpace, max: Option<Px>, pad: f32| -> Dimension {
+            let max = max.map(|px| (px.0 - pad).max(0.0));
+            match (available, max) {
+                (AvailableSpace::Definite(px), Some(max)) => {
+                    Dimension::length(px.0.max(0.0).min(max))
+                }
+                (AvailableSpace::Definite(px), None) => Dimension::length(px.0.max(0.0)),
+                (AvailableSpace::MinContent | AvailableSpace::MaxContent, Some(max)) => {
+                    Dimension::length(max)
+                }
+                (AvailableSpace::MinContent | AvailableSpace::MaxContent, None) => {
+                    Dimension::auto()
+                }
+            }
+        };
+
         let pad_left = props.padding.left.0.max(0.0);
         let pad_right = props.padding.right.0.max(0.0);
         let pad_top = props.padding.top.0.max(0.0);
@@ -1089,14 +1120,8 @@ impl ElementHostWidget {
                 },
             },
             max_size: TaffySize {
-                width: match inner_available.width {
-                    AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                    AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
-                },
-                height: match inner_available.height {
-                    AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                    AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
-                },
+                width: max_dimension(inner_available.width, props.layout.size.max_width, pad_w),
+                height: max_dimension(inner_available.height, props.layout.size.max_height, pad_h),
             },
             ..Default::default()
         };
