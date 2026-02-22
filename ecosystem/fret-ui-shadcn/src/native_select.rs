@@ -513,7 +513,8 @@ pub fn native_select<H: UiHost>(
                     .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                     .unwrap_or(Px(280.0));
 
-                let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().unwrap_or_default();
+                let selected: Option<Arc<str>> =
+                    cx.watch_model(&model).cloned().unwrap_or_default();
 
                 let fg = theme
                     .color_by_key("foreground")
@@ -555,7 +556,11 @@ pub fn native_select<H: UiHost>(
                             cx,
                             fret_icons::ids::ui::CHECK,
                             Some(Px(16.0)),
-                            Some(ColorRef::Color(if item_disabled { fg_disabled } else { fg })),
+                            Some(ColorRef::Color(if item_disabled {
+                                fg_disabled
+                            } else {
+                                fg
+                            })),
                         );
                         let icon =
                             cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);

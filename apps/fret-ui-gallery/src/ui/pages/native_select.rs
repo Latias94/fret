@@ -270,19 +270,20 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let disabled_state = {
-        let native = shadcn::NativeSelect::new(disabled_value.clone(), disabled_native_open.clone())
-            .a11y_label("Native select: disabled")
-            .placeholder("Disabled")
-            .disabled(true)
-            .trigger_test_id("ui-gallery-native-select-disabled-native-trigger")
-            .test_id_prefix("ui-gallery-native-select-disabled-native")
-            .options([
-                shadcn::NativeSelectOption::new("apple", "Apple"),
-                shadcn::NativeSelectOption::new("banana", "Banana"),
-            ])
-            .refine_layout(select_width.clone())
-            .into_element(cx)
-            .test_id("ui-gallery-native-select-disabled-native");
+        let native =
+            shadcn::NativeSelect::new(disabled_value.clone(), disabled_native_open.clone())
+                .a11y_label("Native select: disabled")
+                .placeholder("Disabled")
+                .disabled(true)
+                .trigger_test_id("ui-gallery-native-select-disabled-native-trigger")
+                .test_id_prefix("ui-gallery-native-select-disabled-native")
+                .options([
+                    shadcn::NativeSelectOption::new("apple", "Apple"),
+                    shadcn::NativeSelectOption::new("banana", "Banana"),
+                ])
+                .refine_layout(select_width.clone())
+                .into_element(cx)
+                .test_id("ui-gallery-native-select-disabled-native");
         let styled = shadcn::Select::new(disabled_value, disabled_open)
             .placeholder("Disabled")
             .trigger_test_id("ui-gallery-native-select-disabled-styled-trigger")

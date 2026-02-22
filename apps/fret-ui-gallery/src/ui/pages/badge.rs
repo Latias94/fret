@@ -83,8 +83,17 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let link = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Badge::new("Link")
+                shadcn::Badge::new("Open Link")
                     .variant(shadcn::BadgeVariant::Link)
+                    .render(shadcn::BadgeRender::Link {
+                        href: Arc::from("https://example.com"),
+                        target: None,
+                        rel: None,
+                    })
+                    // Avoid launching the system browser during diag runs; the render surface
+                    // still applies link semantics and Enter-only activation.
+                    .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                    .test_id("ui-gallery-badge-link")
                     .children([icon(
                         cx,
                         "lucide.arrow-right",
@@ -93,7 +102,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     .into_element(cx),
             ]
         })
-        .test_id("ui-gallery-badge-link")
+        .test_id("ui-gallery-badge-link-row")
     };
 
     let custom_colors = {
@@ -194,7 +203,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         [
             "Badge is a small status/label primitive; prefer concise text and keep contrast high.",
             "API reference: `ecosystem/fret-ui-shadcn/src/badge.rs`.",
-            "Gap: upstream shadcn uses a `render/asChild` prop to turn a badge into a real link. Fret currently exposes a `Link` variant style but not a render hook.",
+            "Note: the Link render example installs a no-op `on_activate` so diag scripts do not launch a system browser; remove it to enable the default `Effect::OpenUrl` fallback.",
             "If you customize colors, verify hover/focus states and token-driven variants stay consistent.",
         ],
     );
@@ -241,7 +250,9 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .code(
                     "rust",
                     r#"shadcn::Badge::new("Open Link")
-    .variant(shadcn::BadgeVariant::Outline)
+    .variant(shadcn::BadgeVariant::Link)
+    .render(shadcn::BadgeRender::Link { href: Arc::from("https://example.com"), target: None, rel: None })
+    .on_activate(Arc::new(|_host, _acx, _reason| {})) // optional; remove to open the URL
     .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-up-right"))])
     .into_element(cx);"#,
                 ),

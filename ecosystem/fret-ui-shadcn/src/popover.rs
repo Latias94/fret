@@ -217,7 +217,8 @@ pub struct Popover {
     auto_focus: Option<bool>,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
     initial_focus_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
-    diagnostics_content_element_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    diagnostics_content_element_from_cell:
+        Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -748,18 +749,18 @@ impl Popover {
                 let on_dismiss_request_for_children = self.on_dismiss_request.clone();
                 let on_dismiss_request_for_request = self.on_dismiss_request.clone();
 
-            let align = self.align;
-            let side = self.side;
-            let align_offset = self.align_offset;
-            let side_offset = self.side_offset;
-            let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
-            let diagnostics_content_element_from_cell =
-                self.diagnostics_content_element_from_cell.clone();
-            let window_margin = self.window_margin_override.unwrap_or_else(|| {
-                theme
-                    .metric_by_key("component.popover.window_margin")
-                    .unwrap_or(Px(0.0))
-            });
+                let align = self.align;
+                let side = self.side;
+                let align_offset = self.align_offset;
+                let side_offset = self.side_offset;
+                let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
+                let diagnostics_content_element_from_cell =
+                    self.diagnostics_content_element_from_cell.clone();
+                let window_margin = self.window_margin_override.unwrap_or_else(|| {
+                    theme
+                        .metric_by_key("component.popover.window_margin")
+                        .unwrap_or(Px(0.0))
+                });
                 let collision_padding = self
                     .collision_padding_override
                     .unwrap_or(Edges::all(Px(0.0)));
@@ -848,11 +849,15 @@ impl Popover {
                         (None, Some(max)) => Some(max),
                         (None, None) => None,
                     };
-                    let mut width = last_content_size.map(|s| s.width).unwrap_or(estimated.width);
+                    let mut width = last_content_size
+                        .map(|s| s.width)
+                        .unwrap_or(estimated.width);
                     if let Some(hint_width) = hint_width {
                         width = Px(width.0.max(hint_width.0));
                     }
-                    let mut height = last_content_size.map(|s| s.height).unwrap_or(estimated.height);
+                    let mut height = last_content_size
+                        .map(|s| s.height)
+                        .unwrap_or(estimated.height);
                     if let Some(hint_height) = hint_height {
                         height = Px(height.0.max(hint_height.0));
                     }
@@ -911,7 +916,8 @@ impl Popover {
                     let constrained_height = has_height_constraint_px(hint);
                     let oversized_for_boundary = content_size.width.0 > outer.size.width.0 + 0.5
                         || content_size.height.0 > outer.size.height.0 + 0.5;
-                    let (layout, placement_trace) = if constrained_height || oversized_for_boundary {
+                    let (layout, placement_trace) = if constrained_height || oversized_for_boundary
+                    {
                         popper::popper_layout_sized_with_trace(
                             outer,
                             anchor,

@@ -1303,7 +1303,10 @@ impl CommandList {
 
     pub fn new_entries(entries: impl IntoIterator<Item = CommandEntry>) -> Self {
         let entries = entries.into_iter().collect();
-        Self { entries, ..Self::new([]) }
+        Self {
+            entries,
+            ..Self::new([])
+        }
     }
 
     pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
@@ -1445,13 +1448,13 @@ impl CommandList {
                     cx.roving_nav_apg();
                     let mut out = Vec::with_capacity(render_rows.len());
 
-                    for row in render_rows.into_iter() {
-                        match row {
-                            CommandPaletteRenderRow::Heading(heading) => {
-                                let heading = heading.clone();
-                                let heading_style = heading_style.clone();
-                                let fg_heading = fg_heading;
-                                out.push(cx.container(
+                     for row in render_rows.into_iter() {
+                         match row {
+                             CommandPaletteRenderRow::Heading(heading) => {
+                                 let heading = heading.clone();
+                                 let heading_style = heading_style.clone();
+                                 let fg_heading = fg_heading;
+                                 out.push(cx.container(
                                     ContainerProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
@@ -1474,11 +1477,15 @@ impl CommandList {
                                             .text_color(ColorRef::Color(fg_heading));
 
                                         if let Some(line_height) = heading_style.line_height {
-                                            text = text.line_height_px(line_height).line_height_policy(
-                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                            );
+                                            text = text
+                                                .line_height_px(line_height)
+                                                .line_height_policy(
+                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                );
                                         }
-                                        if let Some(letter_spacing_em) = heading_style.letter_spacing_em {
+                                        if let Some(letter_spacing_em) =
+                                            heading_style.letter_spacing_em
+                                        {
                                             text = text.letter_spacing_em(letter_spacing_em);
                                         }
 
@@ -1498,9 +1505,6 @@ impl CommandList {
                                 },
                                 |_cx| Vec::new(),
                             )),
-                            CommandPaletteRenderRow::Loading(loading) => {
-                                out.push(loading.into_element(cx));
-                            }
                             CommandPaletteRenderRow::Separator(test_id) => {
                                 let mut sep = cx.container(
                                     ContainerProps {
@@ -1528,11 +1532,14 @@ impl CommandList {
                                 }
                                 out.push(sep);
                             }
+                            CommandPaletteRenderRow::Loading(loading) => {
+                                out.push(loading.into_element(cx));
+                            }
                             CommandPaletteRenderRow::Item(idx) => {
                                 let Some(item) = items.get(idx).cloned() else { continue };
 
-                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                let focusable = tab_stop.is_some_and(|i| i == idx);
+                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                 let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                 let query_for_row = query_for_render.clone();
                                 let value_key = item.value.clone();
@@ -1561,34 +1568,34 @@ impl CommandList {
                                                 test_id: test_id.clone(),
                                                 ..Default::default()
                                             },
-                                        ..Default::default()
-                                    },
-                                    move |cx, st| {
-                                        cx.pressable_dispatch_command_if_enabled_opt(command);
-                                        if on_select.is_some() || on_select_value.is_some() {
-                                            let on_select = on_select.clone();
-                                            let on_select_value = on_select_value.clone();
-                                            let value = value_for_select.clone();
-                                            cx.pressable_add_on_activate(Arc::new(
-                                                move |host, action_cx, reason| {
-                                                    if let Some(on_select_value) =
-                                                        on_select_value.clone()
-                                                    {
-                                                        on_select_value(
-                                                            host,
-                                                            action_cx,
-                                                            reason,
-                                                            value.clone(),
-                                                        );
-                                                    }
-                                                    if let Some(on_select) = on_select.clone() {
-                                                        on_select(host, action_cx, reason);
-                                                    }
-                                                },
-                                            ));
-                                        }
-                                        let hovered = st.hovered && !st.pressed;
-                                        let pressed = st.pressed;
+                                            ..Default::default()
+                                        },
+                                        move |cx, st| {
+                                            cx.pressable_dispatch_command_if_enabled_opt(command);
+                                            if on_select.is_some() || on_select_value.is_some() {
+                                                let on_select = on_select.clone();
+                                                let on_select_value = on_select_value.clone();
+                                                let value = value_for_select.clone();
+                                                cx.pressable_add_on_activate(Arc::new(
+                                                    move |host, action_cx, reason| {
+                                                        if let Some(on_select_value) =
+                                                            on_select_value.clone()
+                                                        {
+                                                            on_select_value(
+                                                                host,
+                                                                action_cx,
+                                                                reason,
+                                                                value.clone(),
+                                                            );
+                                                        }
+                                                        if let Some(on_select) = on_select.clone() {
+                                                            on_select(host, action_cx, reason);
+                                                        }
+                                                    },
+                                                ));
+                                            }
+                                            let hovered = st.hovered && !st.pressed;
+                                            let pressed = st.pressed;
 
                                             let bg = (hovered || pressed).then_some(bg_hover);
                                             let props = ContainerProps {
