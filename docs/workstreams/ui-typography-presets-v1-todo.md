@@ -4,23 +4,29 @@ This is a checklist-style tracker. It is **non-normative**.
 
 ## Preset surface (`fret-ui-kit`)
 
-- [ ] Define a stable preset vocabulary for:
-  - [ ] control vs content intent
-  - [ ] ui vs monospace family
-  - [ ] xs/sm/base/prose sizes (token-backed)
+- [x] Define a stable preset vocabulary for:
+  - [x] control vs content intent
+  - [x] ui vs monospace family
+  - [x] xs/sm/base/prose sizes (token-backed)
 - [ ] Document when to use `BoundsAsLineBox` placement for fixed-height controls.
-- [ ] Provide helpers for widgets that take `TextStyle` directly (e.g. text inputs).
+- [x] Provide helpers for widgets that take `TextStyle` directly (e.g. text inputs).
+- [ ] Add an intent-first entry point (e.g. `TypographyPreset` / `TextIntent`) so components can
+      declare “control vs content” without manually composing `TextStyle`.
 
 ## Migrations
 
-- [ ] `fret-ui-shadcn`: replace ad-hoc `TextStyle { line_height: Some(...) }` for control text with presets/helpers.
+- [x] `fret-ui-shadcn`: migrate core control text (inputs, menus, tabs, sidebars, tables) to stable
+      fixed line boxes via `fret-ui-kit` helpers.
+- [ ] `fret-ui-shadcn`: finish remaining ad-hoc control text literals (e.g. `button_group.rs`) and
+      remove redundant local helpers where feasible.
 - [ ] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces.
 - [ ] `fret-ui-editor` / `fret-code-view`: audit where monospace presets should be used.
 - [ ] `fret-markdown`: decide per-surface default (control vs content) and document it.
 
 ## Regression gates
 
-- [ ] Add a “first-line jump” targeted gate for control text with:
+- [ ] Add a “first-line jump” targeted gate for control text with **real shaping** (Parley + bundled
+      fonts), not a fake `TextService`, covering:
   - emoji + mixed scripts
   - same widget height across frames
   - stable metrics snapshot (line height / baseline)
@@ -30,4 +36,3 @@ This is a checklist-style tracker. It is **non-normative**.
 
 - [ ] Remove redundant local `font_line_height(theme)` helpers once presets are adopted.
 - [ ] Consolidate duplicate token key lookups (prefer `fret-ui-kit` preset API).
-

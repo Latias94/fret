@@ -24,3 +24,11 @@ Exit criteria:
 - A targeted test/gate fails on “first-line jump” regressions.
 - Gate is documented and linked from the workstream.
 
+## M3 — Intent-first API + material3 adoption
+
+Exit criteria:
+
+- `fret-ui-kit` exposes an intent-first typography API (e.g. `TextIntent::Control/Content`) that
+  returns a ready-to-use `TextStyle` (or builder) without per-component composition.
+- `fret-ui-material3` control surfaces adopt the same stability defaults (fixed line boxes for
+  controls; expand-to-fit for content).
