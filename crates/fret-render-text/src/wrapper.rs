@@ -2110,6 +2110,49 @@ mod tests {
     }
 
     #[test]
+    fn strut_force_keeps_multiline_baseline_stable_across_fallback_glyphs() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            strut_style: Some(fret_core::TextStrutStyle {
+                force: true,
+                line_height: Some(Px(18.0)),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let text = "Settings\nSettings 😄\nSettings 漢字\n😀 你好";
+        let constraints = TextConstraints {
+            max_width: Some(Px(1000.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(text, &base), constraints);
+        assert_eq!(wrapped.lines.len(), 4, "expected one line per paragraph");
+
+        let first = &wrapped.lines[0];
+        for (i, line) in wrapped.lines.iter().enumerate() {
+            assert!(
+                (line.line_height - 18.0).abs() < 0.01,
+                "expected fixed strut line_height=18px; line[{i}] line_height={}",
+                line.line_height
+            );
+            assert!(
+                (line.baseline - first.baseline).abs() < 0.01,
+                "expected strut baseline to be stable across fallback glyphs; line[{i}] baseline={} first={}",
+                line.baseline,
+                first.baseline
+            );
+        }
+    }
+
+    #[test]
     fn wrap_measure_only_matches_line_ranges_and_sizes_for_word_wrap() {
         let mut shaper_full = shaper_with_bundled_fonts();
         let mut shaper_measure = shaper_with_bundled_fonts();
