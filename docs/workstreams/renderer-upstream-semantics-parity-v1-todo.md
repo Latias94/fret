@@ -16,9 +16,11 @@
 
 ## M2 — Clip/mask composition parity
 
-- [ ] Compare push-time capture semantics for clip path / image mask stacks.
+- [x] Compare push-time capture semantics for clip path / image mask stacks.
+  - Evidence: Parity note 002.
 - [ ] Compare cache key strategy and reuse heuristics for mask targets.
-- [ ] Add one conformance test that breaks if clip capture semantics drift.
+- [x] Add one conformance test that breaks if clip capture semantics drift.
+  - Evidence: `crates/fret-render-wgpu/tests/clip_path_conformance.rs` (`gpu_clip_path_is_captured_at_push_time_and_does_not_follow_later_transforms`).
 
 ## M3 — Intermediate reuse / lifetime parity
 
@@ -72,3 +74,29 @@ Copy/paste for each seam:
     - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
       `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
       `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`render_plan_trace_fingerprint` mixes scissor-space).
+
+## Parity note 002 — Clip capture semantics (push-time vs dynamic)
+
+- Seam: what it means to “push a clip” and whether later transforms can retroactively affect it.
+- Upstream evidence anchors (Zed / GPUI):
+  - Clip stack API (push/pop): `repo-ref/zed/crates/gpui/src/window.rs` (`with_content_mask`, `content_mask_stack`).
+  - Per-primitive capture: `repo-ref/zed/crates/gpui/src/window.rs` (`paint_quad`, `paint_path` assign `content_mask` on insert).
+  - Shader-side clip evaluation: `repo-ref/zed/crates/gpui_wgpu/src/shaders.wgsl` (`content_mask`, `distance_from_clip_rect*`, `clip_distances`).
+- Fret evidence anchors:
+  - Contract + plan markers: `docs/adr/0273-clip-path-and-image-mask-sources-v1.md`,
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`EffectMarkerKind::{ClipPathPush,ClipPathPop}`).
+  - GPU conformance: `crates/fret-render-wgpu/tests/clip_path_conformance.rs`
+    (`gpu_clip_path_is_captured_at_push_time_and_does_not_follow_later_transforms`).
+- Observed behavior:
+  - Upstream (Zed/GPUI) treats “clip” as a stack of bounds masks that is intersected on push and then copied onto each primitive at insertion time.
+    Shader evaluation uses those captured bounds (`content_mask`) rather than relying on GPU scissor state.
+  - Fret captures clip-path state at push time and bakes it into the plan/encoding such that later transforms do not retroactively affect earlier clips
+    (conformance-gated).
+- Differences (gap vs deliberate):
+  - Deliberate divergence: Fret’s clip-path is not limited to bounds rectangles; it supports shape-based clipping with deterministic degradation under budget.
+    Upstream’s `content_mask` is bounds-based, but it still supports the same “capture-at-push-time” intuition.
+- Proposed guardrail:
+  - Keep the conformance test that asserts push-time capture semantics.
+  - Keep plan validation and plan trace fields sufficient to debug clip stacks when refactoring.
+- Follow-up refactor steps:
+  - When touching clip-path encode/compile paths, always run `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`.
