@@ -82,3 +82,31 @@ This workstream follows the repo preference: **finish “Plan 1” before “Pla
 - Keep packing/hashing stable so artifacts remain shareable and integrity-checkable.
 
 See also: `docs/workstreams/diag-ai-agent-debugging-v1.md` (Phase 2 notes).
+
+## Schema migration policy (v1 → v2) (draft)
+
+This section documents an intended compatibility-first path for migrating `bundle.json` from schema v1 to v2, and
+eventually removing redundant “v1-only” emission paths. It is intentionally conservative:
+
+- **Tooling must remain backward compatible**: `crates/fret-diag` should continue to *read* v1 bundles for a long time.
+- **Runtime defaults can change only after Plan 1 is stable**: sidecars, AI packet flow, and selectors must work well
+  without requiring ad-hoc parsing of full `bundle.json`.
+
+Proposed phases:
+
+1. **Today** (current behavior):
+   - Manual dumps default to schema v1 (inline-only semantics).
+   - Script dumps default to schema v2 + semantics mode `last`.
+   - Both are overrideable via `FRET_DIAG_BUNDLE_SCHEMA_VERSION` and `FRET_DIAG_BUNDLE_SEMANTICS_MODE`.
+2. **Flip manual defaults** (after Plan 1 closure is proven in daily use):
+   - Manual dumps default to schema v2.
+   - Keep v1 emission available behind `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1`.
+3. **Deprecate v1 emission** (after tooling + consumers no longer rely on it):
+   - Keep reading v1 in tooling, but stop emitting v1 by default across runtime paths.
+   - Add a short deprecation note in docs and a “how to migrate old repros” recipe (materialize v2, re-pack, etc.).
+
+Exit criteria (what “proven” means) before flipping defaults:
+
+- `bundle.index.json` + `bundle.meta.json` + `test_ids.index.json` are present and consumed in the common pack/repro workflow.
+- `diag ai-packet` is a viable default for AI triage without opening full `bundle.json`.
+- Script step markers and `--test-id` snapshot filtering work reliably on runtime-produced bundles.

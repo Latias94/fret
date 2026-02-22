@@ -96,9 +96,10 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 ## Schema migration hygiene
 
 - [ ] Decide the migration policy for schema v1 → v2:
-  - target dates for flipping defaults for manual dumps,
-  - how long v1 stays supported by tooling,
-  - criteria for deprecating v1-only fields.
+  - [x] Document a conservative draft policy (phases + exit criteria):
+    - `docs/workstreams/diag-fearless-refactor-v1.md`
+  - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
+  - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
 - [ ] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
 
 ## Plan 2 (defer until Plan 1 is solid)
