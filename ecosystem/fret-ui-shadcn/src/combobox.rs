@@ -119,6 +119,19 @@ type OnOpenChange = kit_combobox::OnOpenChange;
 type OnOpenChangeWithReason = kit_combobox::OnOpenChangeWithReason;
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 
+/// Trigger rendering preset for [`Combobox`].
+///
+/// This is a recipe-level knob used to align the upstream Base UI "Popup" example, where the
+/// combobox is triggered from a button-like control.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ComboboxTriggerVariant {
+    /// Default Fret shadcn combobox trigger (medium weight).
+    #[default]
+    Default,
+    /// Button-like trigger (normal weight).
+    Button,
+}
+
 #[derive(Clone)]
 pub struct Combobox {
     model: Model<Option<Arc<str>>>,
@@ -126,6 +139,7 @@ pub struct Combobox {
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
     test_id_prefix: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
     responsive: bool,
     responsive_device_md_breakpoint: Px,
@@ -137,6 +151,7 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     show_clear: bool,
+    trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -157,6 +172,7 @@ impl Combobox {
             query: None,
             items: Vec::new(),
             test_id_prefix: None,
+            trigger_test_id: None,
             width: None,
             responsive: false,
             responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
@@ -168,6 +184,7 @@ impl Combobox {
             a11y_label: None,
             search_enabled: true,
             show_clear: false,
+            trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
@@ -247,6 +264,12 @@ impl Combobox {
         self
     }
 
+    /// Sets a stable `test_id` on the trigger pressable itself (useful for diag scripts).
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
+        self
+    }
+
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
         self
@@ -286,6 +309,12 @@ impl Combobox {
     /// When enabled, shows a clear affordance on the trigger when a value is selected.
     pub fn show_clear(mut self, show_clear: bool) -> Self {
         self.show_clear = show_clear;
+        self
+    }
+
+    /// Controls the trigger preset used by the recipe (e.g. "Popup / Trigger Button" styling).
+    pub fn trigger_variant(mut self, variant: ComboboxTriggerVariant) -> Self {
+        self.trigger_variant = variant;
         self
     }
 
@@ -361,6 +390,7 @@ impl Combobox {
             self.query,
             &self.items,
             self.test_id_prefix,
+            self.trigger_test_id,
             self.width,
             self.placeholder,
             self.search_placeholder,
@@ -372,6 +402,7 @@ impl Combobox {
             self.responsive_device_md_breakpoint,
             self.search_enabled,
             self.show_clear,
+            self.trigger_variant,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
             self.close_auto_focus_policy,
@@ -409,6 +440,7 @@ pub fn combobox<H: UiHost>(
         query,
         items,
         None,
+        None,
         width,
         placeholder,
         search_placeholder,
@@ -420,6 +452,7 @@ pub fn combobox<H: UiHost>(
         fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
         false,
+        ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
         kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
@@ -441,6 +474,7 @@ fn combobox_with_patch<H: UiHost>(
     query: Option<Model<String>>,
     items: &[ComboboxItem],
     test_id_prefix: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -452,6 +486,7 @@ fn combobox_with_patch<H: UiHost>(
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
     show_clear: bool,
+    trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -558,16 +593,19 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or_else(|| size.control_radius(&theme));
         let mut ring = decl_style::focus_ring(&theme, radius);
 
-        let resolved_label = selected
+        let (resolved_label, has_selection) = selected
             .as_ref()
             .and_then(|v| items.iter().find(|it| it.value.as_ref() == v.as_ref()))
-            .map(|it| it.label.clone())
-            .unwrap_or(placeholder.clone());
+            .map(|it| (it.label.clone(), true))
+            .unwrap_or((placeholder.clone(), false));
 
         let text_style = TextStyle {
             font: FontId::default(),
             size: size.control_text_px(&theme),
-            weight: FontWeight::MEDIUM,
+            weight: match trigger_variant {
+                ComboboxTriggerVariant::Default => FontWeight::MEDIUM,
+                ComboboxTriggerVariant::Button => FontWeight::NORMAL,
+            },
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_token("font.line_height"))),
@@ -628,6 +666,10 @@ fn combobox_with_patch<H: UiHost>(
             .color_by_key("accent-foreground")
             .or_else(|| theme.color_by_key("accent.foreground"))
             .unwrap_or(fg_base);
+        let muted_fg = theme
+            .color_by_key("muted-foreground")
+            .or_else(|| theme.color_by_key("muted_foreground"))
+            .unwrap_or(fg_base);
         let border_base = chrome_patch
             .border_color
             .as_ref()
@@ -671,6 +713,9 @@ fn combobox_with_patch<H: UiHost>(
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let label_is_placeholder = !has_selection;
+        let placeholder_fg_for_trigger = muted_fg;
 
         let padding = chrome_patch.padding.clone().unwrap_or_default();
         let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
@@ -693,6 +738,7 @@ fn combobox_with_patch<H: UiHost>(
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
             let test_id_prefix_for_trigger = test_id_prefix.clone();
+            let trigger_test_id_for_trigger = trigger_test_id_for_trigger.clone();
             let focus_restore_target_for_trigger = focus_restore_target.clone();
             let model_for_trigger = model.clone();
             let query_model_for_trigger = query_model.clone();
@@ -759,6 +805,7 @@ fn combobox_with_patch<H: UiHost>(
                                     label: a11y_label_for_trigger
                                         .clone()
                                         .or_else(|| Some(resolved_label.clone())),
+                                    test_id: trigger_test_id_for_trigger.clone(),
                                     expanded: Some(is_open),
                                     ..Default::default()
                                 },
@@ -971,7 +1018,13 @@ fn combobox_with_patch<H: UiHost>(
                                                         .basis_0()
                                                         .text_size_px(label_style.size)
                                                         .font_weight(label_style.weight)
-                                                        .text_color(fg_ref.clone())
+                                                        .text_color(if label_is_placeholder {
+                                                            ColorRef::Color(
+                                                                placeholder_fg_for_trigger,
+                                                            )
+                                                        } else {
+                                                            fg_ref.clone()
+                                                        })
                                                         .truncate();
                                                 if let Some(line_height) = label_style.line_height {
                                                     label = label
@@ -1261,6 +1314,7 @@ fn combobox_with_patch<H: UiHost>(
                             label: a11y_label_for_trigger
                                 .clone()
                                 .or_else(|| Some(resolved_label.clone())),
+                            test_id: trigger_test_id_for_trigger.clone(),
                             expanded: Some(is_open),
                             ..Default::default()
                         },
@@ -1430,7 +1484,11 @@ fn combobox_with_patch<H: UiHost>(
                                             .basis_0()
                                             .text_size_px(label_style.size)
                                             .font_weight(label_style.weight)
-                                            .text_color(fg_ref.clone())
+                                            .text_color(if label_is_placeholder {
+                                                ColorRef::Color(placeholder_fg_for_trigger)
+                                            } else {
+                                                fg_ref.clone()
+                                            })
                                             .truncate();
                                             if let Some(line_height) = label_style.line_height {
                                                 label = label

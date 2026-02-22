@@ -1,6 +1,7 @@
 pub(crate) mod ai_packet;
 pub(crate) mod artifacts;
 pub(crate) mod bundle_v2;
+pub(crate) mod doctor;
 pub(crate) mod hotspots;
 pub(crate) mod index;
 pub(crate) mod inspect;
@@ -8,6 +9,7 @@ pub(crate) mod pick;
 pub(crate) mod query;
 pub(crate) mod script;
 pub(crate) mod session;
+mod sidecars;
 pub(crate) mod slice;
 mod slice_payload;
 mod slice_streaming;
