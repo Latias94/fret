@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use super::{UiDiagnosticsSnapshotV1, UiDiagnosticsWindowBundleV1, UiSemanticsSnapshotV1, bundle};
 
 const DEFAULT_WARMUP_FRAMES: u64 = 0;
+const TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW: usize = 64;
 
 fn semantics_table_map<'a>(
     table: Option<&'a bundle::UiBundleSemanticsTableV1>,
@@ -81,6 +82,11 @@ pub(super) fn build_bundle_index_json(
         let mut first_timestamp_unix_ms: Option<u64> = None;
         let mut last_timestamp_unix_ms: Option<u64> = None;
 
+        let bloom_start_idx = w
+            .snapshots
+            .len()
+            .saturating_sub(TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW);
+
         for (idx, s) in w.snapshots.iter().enumerate() {
             let frame_id = s.frame_id;
             let window_snapshot_seq = s.window_snapshot_seq;
@@ -96,6 +102,21 @@ pub(super) fn build_bundle_index_json(
             let semantics_source = snapshot_semantics_source(s, &semantics_table);
             let has_semantics = semantics_source == "inline" || semantics_source == "table";
 
+            let test_id_bloom_hex = if idx >= bloom_start_idx && has_semantics {
+                let nodes = resolve_semantics_snapshot(s, &semantics_table)
+                    .map(|s| s.nodes.as_slice())
+                    .unwrap_or(&[]);
+                let mut bloom = super::test_id_bloom::TestIdBloomV1::new();
+                for n in nodes {
+                    if let Some(test_id) = n.test_id.as_deref() {
+                        bloom.add(test_id);
+                    }
+                }
+                Some(bloom.to_hex())
+            } else {
+                None
+            };
+
             snapshots_out.push(json!({
                 "window_snapshot_seq": window_snapshot_seq,
                 "frame_id": frame_id,
@@ -104,6 +125,7 @@ pub(super) fn build_bundle_index_json(
                 "semantics_fingerprint": s.semantics_fingerprint,
                 "semantics_source": semantics_source,
                 "has_semantics": has_semantics,
+                "test_id_bloom_hex": test_id_bloom_hex,
             }));
         }
 
@@ -125,6 +147,15 @@ pub(super) fn build_bundle_index_json(
         "warmup_frames": warmup_frames,
         "windows_total": windows.len(),
         "snapshots_total": total_snapshots,
+        "test_id_bloom": {
+            "schema_version": super::test_id_bloom::TEST_ID_BLOOM_V1_SCHEMA_VERSION,
+            "m_bits": super::test_id_bloom::TEST_ID_BLOOM_V1_M_BITS,
+            "k": super::test_id_bloom::TEST_ID_BLOOM_V1_K,
+            "tail_snapshots_per_window": TEST_ID_BLOOM_TAIL_SNAPSHOTS_PER_WINDOW,
+            "computed_from": "resolved_semantics_nodes",
+            "semantics_source": "resolved",
+            "covers_semantics_sources": ["inline", "table"],
+        },
         "windows": windows_out,
     })
 }

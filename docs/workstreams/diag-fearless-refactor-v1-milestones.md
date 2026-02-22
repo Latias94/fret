@@ -70,6 +70,7 @@ Definition of done:
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.
+  - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
   - [ ] Ensure `diag pack --include-all` always includes sidecars under `_root/` (even when the bundle dir is relocated).
 
 Definition of done:

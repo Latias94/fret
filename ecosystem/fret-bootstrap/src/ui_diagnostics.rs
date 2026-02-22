@@ -55,6 +55,7 @@ mod fs_triggers;
 mod inspect;
 mod pick;
 mod pick_flow;
+mod test_id_bloom;
 pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_runner;

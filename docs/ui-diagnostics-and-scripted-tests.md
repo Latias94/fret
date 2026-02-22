@@ -77,7 +77,7 @@ Overrides (for both manual and script dumps):
 On native filesystem dumps, the runtime also writes bounded sidecars next to `bundle.json`:
 
 - `bundle.meta.json`: compact per-window counts (snapshots, semantics inline vs table, test-id totals for a considered snapshot).
-- `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source).
+- `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
 - `test_ids.index.json`: a per-window `test_id` index (items + duplicate hints) derived from the last snapshot with resolved semantics.
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
@@ -85,6 +85,11 @@ These sidecars are intended to speed up CLI queries and AI triage without openin
 To disable sidecar writing (native-only):
 
 - `FRET_DIAG_BUNDLE_WRITE_INDEX=0`
+
+Notes:
+
+- `bundle.index.json` includes `test_id_bloom_hex` only for a bounded tail window (currently the last 64 snapshots per window) so that
+  `diag query snapshots --test-id <id>` can quickly prioritize likely-matching snapshots without scanning `bundle.json`.
 
 ## AI-first triage recipe (avoid sharing full `bundle.json`)
 

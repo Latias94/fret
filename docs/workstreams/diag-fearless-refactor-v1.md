@@ -56,6 +56,8 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
   - build bounded sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`),
   - export bounded “AI packets” (`fretboard diag ai-packet`),
   - slice bundles without grepping `bundle.json` (`fretboard diag slice`).
+- Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots to make
+  `diag query snapshots --test-id ...` fast without loading the full bundle.
 
 ## Plan: two-phase evolution (preferred order)
 
@@ -78,4 +80,3 @@ This workstream follows the repo preference: **finish “Plan 1” before “Pla
 - Keep packing/hashing stable so artifacts remain shareable and integrity-checkable.
 
 See also: `docs/workstreams/diag-ai-agent-debugging-v1.md` (Phase 2 notes).
-
