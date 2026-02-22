@@ -1113,6 +1113,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         self.exiting = true;
                         self.dispatcher.shutdown();
                         self.web_cursor.take();
+                        self.web_canvas_context_menu_blocker.take();
                         event_loop.exit();
                         return true;
                     }
@@ -1126,6 +1127,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     self.exiting = true;
                     self.dispatcher.shutdown();
                     self.web_cursor.take();
+                    self.web_canvas_context_menu_blocker.take();
                     event_loop.exit();
                     return true;
                 }
