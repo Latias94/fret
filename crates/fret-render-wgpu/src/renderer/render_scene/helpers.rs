@@ -67,6 +67,18 @@ pub(super) fn set_scissor_rect_absolute(
     true
 }
 
+pub(super) fn set_scissor_rect_absolute_opt(
+    rp: &mut wgpu::RenderPass<'_>,
+    scissor: Option<AbsoluteScissorRect>,
+    dst_origin: (u32, u32),
+    dst_size: (u32, u32),
+) -> bool {
+    let Some(scissor) = scissor else {
+        return false;
+    };
+    set_scissor_rect_absolute(rp, scissor.0, dst_origin, dst_size)
+}
+
 pub(super) fn set_scissor_rect_local(
     rp: &mut wgpu::RenderPass<'_>,
     scissor: LocalScissorRect,

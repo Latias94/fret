@@ -2,7 +2,7 @@ use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
-    set_scissor_rect_absolute, set_scissor_rect_local_opt,
+    set_scissor_rect_absolute_opt, set_scissor_rect_local_opt,
 };
 
 pub(in super::super) fn record_color_adjust_pass(
@@ -1180,12 +1180,8 @@ pub(in super::super) fn record_composite_premul_pass(
     let base = u64::from(base) * quad_vertex_size;
     let len = 6 * quad_vertex_size;
     rp.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
-    if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        let _ = set_scissor_rect_absolute(&mut rp, scissor, pass.dst_origin, pass.dst_size);
-    }
+    let _ =
+        set_scissor_rect_absolute_opt(&mut rp, pass.dst_scissor, pass.dst_origin, pass.dst_size);
     rp.draw(0..6, 0..1);
     if perf_enabled {
         frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
