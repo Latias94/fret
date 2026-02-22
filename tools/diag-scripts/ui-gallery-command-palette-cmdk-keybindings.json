@@ -298,6 +298,44 @@
       "type": "wait_until"
     },
     {
+      "key": "end",
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-toggle-terminal",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "home",
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-shortcuts-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-shortcuts-item-open-project",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
       "predicate": {
         "kind": "exists",
         "target": {
