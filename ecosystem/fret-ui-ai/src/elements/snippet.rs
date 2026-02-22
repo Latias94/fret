@@ -18,6 +18,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size, Space};
 
 fn alpha(color: Color, a: f32) -> Color {
@@ -146,16 +147,15 @@ impl SnippetText {
                 vec![cx.text_props(TextProps {
                     layout: Default::default(),
                     text: self.text,
-                    style: Some(TextStyle {
+                    style: Some(typography::as_control_text(TextStyle {
                         font: FontId::monospace(),
                         size: theme.metric_token("metric.font.mono_size"),
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
-                    }),
+                    })),
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
@@ -210,16 +210,15 @@ impl SnippetInput {
             },
             ..Default::default()
         };
-        props.style = Some(TextStyle {
+        props.style = Some(typography::as_control_text(TextStyle {
             font: FontId::monospace(),
             size: theme.metric_token("metric.font.mono_size"),
             weight: FontWeight::NORMAL,
             slant: Default::default(),
             line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        });
+        }));
         props.color = Some(theme.color_token("foreground"));
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Clip;

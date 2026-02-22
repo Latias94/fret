@@ -19,6 +19,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
 };
@@ -615,16 +616,15 @@ impl FileTreeName {
                 ..Default::default()
             },
             text: self.name,
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::monospace(),
                 size: theme.metric_token("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,

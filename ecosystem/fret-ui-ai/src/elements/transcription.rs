@@ -16,6 +16,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 
 pub type OnTranscriptionSeek =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, f32) + 'static>;
@@ -85,16 +86,15 @@ fn primary(theme: &Theme) -> Color {
 }
 
 fn text_sm(theme: &Theme) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::default(),
         size: theme.metric_token("component.text.sm_px"),
         weight: FontWeight::NORMAL,
         slant: Default::default(),
         line_height: Some(theme.metric_token("component.text.sm_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 fn is_blank(s: &str) -> bool {

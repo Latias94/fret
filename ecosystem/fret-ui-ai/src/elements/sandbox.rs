@@ -9,6 +9,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
@@ -26,24 +27,10 @@ fn muted_fg(theme: &Theme) -> Color {
 }
 
 fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.text.sm_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
-    let line_height = theme
-        .metric_by_key("component.text.sm_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
-    TextStyle {
-        font: Default::default(),
-        size,
-        weight,
-        slant: Default::default(),
-        line_height: Some(line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style
 }
 
 fn tool_status_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, status: ToolStatus) -> AnyElement {

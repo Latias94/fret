@@ -4,10 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, FontId, FontWeight, ImageId, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap, ViewportFit,
-};
+use fret_core::{Color, Corners, ImageId, Px, SemanticsRole, TextOverflow, TextWrap, ViewportFit};
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
@@ -19,7 +16,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -761,18 +758,10 @@ impl AttachmentInfo {
         let label_el = cx.text_props(TextProps {
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().min_w_0()),
             text: label,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(
-                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
-                ),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                    .resolve(&theme),
+            ),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
@@ -788,18 +777,10 @@ impl AttachmentInfo {
                 cx.text_props(TextProps {
                     layout: decl_style::layout_style(&theme, LayoutRefinement::default().min_w_0()),
                     text: media_type,
-                    style: Some(TextStyle {
-                        font: FontId::default(),
-                        size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
-                        weight: FontWeight::NORMAL,
-                        slant: Default::default(),
-                        line_height: Some(
-                            theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
-                        ),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                        letter_spacing_em: None,
-                        ..Default::default()
-                    }),
+                    style: Some(
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs)
+                            .resolve(&theme),
+                    ),
                     color: Some(muted_fg),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Ellipsis,
@@ -986,27 +967,21 @@ impl AttachmentEmpty {
         props.background = None;
 
         let content = if self.children.is_empty() {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: Arc::<str>::from("No attachments"),
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
-                    weight: FontWeight::NORMAL,
-                    slant: Default::default(),
-                    line_height: Some(
-                        theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
+            vec![
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: Arc::<str>::from("No attachments"),
+                    style: Some(
+                        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                            .resolve(&theme),
                     ),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                    letter_spacing_em: None,
-                    ..Default::default()
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            })]
+            ]
         } else {
             self.children
         };

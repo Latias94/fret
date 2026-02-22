@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{
@@ -14,6 +14,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef};
 use fret_ui_shadcn::button_group::ButtonGroupText;
 use fret_ui_shadcn::{
@@ -86,16 +87,10 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    TextStyle {
-        font: FontId::default(),
-        size: theme.metric_token("component.text.sm_px"),
-        weight,
-        slant: Default::default(),
-        line_height: Some(theme.metric_token("component.text.sm_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style
 }
 
 fn muted_fg(theme: &Theme) -> Color {

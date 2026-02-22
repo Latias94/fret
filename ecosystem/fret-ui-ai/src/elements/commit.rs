@@ -16,6 +16,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
 };
@@ -83,16 +84,15 @@ fn status_color(status: CommitFileStatusKind) -> ColorRef {
 }
 
 fn monospace_text_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size,
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 #[derive(Debug, Default)]
@@ -384,7 +384,7 @@ impl CommitMessage {
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.commit.message_text_px")
@@ -392,10 +392,9 @@ impl CommitMessage {
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -461,16 +460,11 @@ impl CommitSeparator {
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(12.0),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(Px(16.0)),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(typography::fixed_line_box_style(
+                FontId::default(),
+                Px(12.0),
+                Px(16.0),
+            )),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -572,16 +566,11 @@ impl CommitTimestamp {
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from(text),
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(12.0),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(Px(16.0)),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(typography::fixed_line_box_style(
+                FontId::default(),
+                Px(12.0),
+                Px(16.0),
+            )),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,

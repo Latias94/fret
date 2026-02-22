@@ -4,11 +4,12 @@
 
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonVariant, HoverCard, HoverCardContent, Progress};
 
@@ -282,16 +283,10 @@ impl ContextContent {
         let used_total = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from(format!("{used} / {total}")),
-            style: Some(TextStyle {
-                font: FontId::monospace(),
-                size: theme.metric_token("component.text.xs_px"),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(
+                typography::TypographyPreset::control_monospace(typography::UiTextSize::Xs)
+                    .resolve(&theme),
+            ),
             color: Some(theme.color_token("muted-foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -341,16 +336,10 @@ impl ContextContent {
                 cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text: Arc::<str>::from(format!("model: {model_id}")),
-                    style: Some(TextStyle {
-                        font: FontId::monospace(),
-                        size: theme.metric_token("component.text.xs_px"),
-                        weight: FontWeight::NORMAL,
-                        slant: Default::default(),
-                        line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                        letter_spacing_em: None,
-                        ..Default::default()
-                    }),
+                    style: Some(
+                        typography::TypographyPreset::control_monospace(typography::UiTextSize::Xs)
+                            .resolve(&theme),
+                    ),
                     color: Some(theme.color_token("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
@@ -367,27 +356,23 @@ impl ContextContent {
             let total = usage
                 .total_tokens
                 .unwrap_or(prompt.saturating_add(completion));
-            body_rows.push(cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: Arc::<str>::from(format!(
-                    "usage: prompt={prompt} completion={completion} total={total}"
-                )),
-                style: Some(TextStyle {
-                    font: FontId::monospace(),
-                    size: theme.metric_token("component.text.xs_px"),
-                    weight: FontWeight::NORMAL,
-                    slant: Default::default(),
-                    line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                    letter_spacing_em: None,
-                    ..Default::default()
+            body_rows.push(
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: Arc::<str>::from(format!(
+                        "usage: prompt={prompt} completion={completion} total={total}"
+                    )),
+                    style: Some(
+                        typography::TypographyPreset::control_monospace(typography::UiTextSize::Xs)
+                            .resolve(&theme),
+                    ),
+                    color: Some(theme.color_token("muted-foreground")),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
                 }),
-                color: Some(theme.color_token("muted-foreground")),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }));
+            );
         }
 
         let body = stack::vstack(

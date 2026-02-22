@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
 
@@ -207,16 +208,15 @@ impl ToolHeader {
         let label_text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: label.clone(),
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: Default::default(),
                 size: text_sm_px,
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(text_sm_line_height),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(theme.color_token("foreground")),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -485,16 +485,15 @@ impl ToolOutput {
                 cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text: error,
-                    style: Some(TextStyle {
+                    style: Some(typography::as_control_text(TextStyle {
                         font: Default::default(),
                         size: text_xs_px,
                         weight: FontWeight::NORMAL,
                         slant: Default::default(),
                         line_height: Some(text_xs_line_height),
-                        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                         letter_spacing_em: None,
                         ..Default::default()
-                    }),
+                    })),
                     color: theme
                         .color_by_key("destructive")
                         .or_else(|| theme.color_by_key("foreground")),
@@ -627,17 +626,16 @@ impl ToolSectionTitle {
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text,
-            style: Some(fret_core::TextStyle {
+            style: Some(typography::as_control_text(fret_core::TextStyle {
                 font: Default::default(),
                 size: text_xs_px,
                 weight: fret_core::FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(text_xs_line_height),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 // Tailwind `tracking-wide` is 0.025em.
                 letter_spacing_em: Some(0.025),
                 ..Default::default()
-            }),
+            })),
             color: theme.color_by_key("muted-foreground"),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,

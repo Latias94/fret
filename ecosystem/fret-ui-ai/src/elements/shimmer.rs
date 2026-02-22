@@ -9,6 +9,7 @@ use fret_ui::element::{AnyElement, CanvasProps, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 
 fn resolve_background(theme: &Theme) -> fret_core::Color {
     theme
@@ -201,13 +202,12 @@ impl Shimmer {
                         let line_height = theme
                             .metric_by_key("font.line_height")
                             .unwrap_or(theme.metrics.font_line_height);
-                        let style = TextStyle {
+                        let style = typography::as_control_text(TextStyle {
                             font: FontId::default(),
                             size: font_size,
                             line_height: Some(line_height),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                             ..Default::default()
-                        };
+                        });
 
                         let constraints = TextConstraints {
                             max_width: Some(bounds.size.width),

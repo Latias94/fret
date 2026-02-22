@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant,
-    TextStyle, TextWrap,
+    Corners, Edges, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle,
+    TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
 };
@@ -24,25 +25,11 @@ use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, Colla
 use crate::model::SourceItem;
 
 fn text_xs_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.text.xs_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.text.xs_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        weight,
-        slant: TextSlant::Normal,
-        line_height: Some(line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
+    style.weight = weight;
+    style.slant = TextSlant::Normal;
+    style
 }
 
 #[derive(Clone)]

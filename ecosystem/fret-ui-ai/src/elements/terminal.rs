@@ -6,9 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret_core::{
-    Color, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::IconId;
 use fret_runtime::{Effect, Model};
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -22,6 +20,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::ScrollArea;
 
@@ -404,16 +403,10 @@ impl TerminalTitle {
         let text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.label,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token("component.text.sm_px"),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("component.text.sm_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                    .resolve(&theme),
+            ),
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -941,16 +934,10 @@ impl TerminalContent {
         let text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from(display),
-            style: Some(TextStyle {
-                font: FontId::monospace(),
-                size: theme.metric_token("component.text.sm_px"),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("component.text.sm_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(
+                typography::TypographyPreset::control_monospace(typography::UiTextSize::Sm)
+                    .resolve(&theme),
+            ),
             color: Some(zinc_100()),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,

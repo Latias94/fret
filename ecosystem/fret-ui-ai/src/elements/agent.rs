@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+    Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
@@ -9,6 +9,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
 };
@@ -38,28 +39,13 @@ fn token_color_with_alpha(
 }
 
 fn text_sm_style(theme: &Theme, weight: FontWeight, monospace: bool) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.text.sm_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
-    let line_height = theme
-        .metric_by_key("component.text.sm_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
-    TextStyle {
-        font: if monospace {
-            FontId::monospace()
-        } else {
-            Default::default()
-        },
-        size,
-        weight,
-        slant: Default::default(),
-        line_height: Some(line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style = if monospace {
+        typography::TypographyPreset::control_monospace(typography::UiTextSize::Sm).resolve(theme)
+    } else {
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme)
+    };
+    style.weight = weight;
+    style
 }
 
 fn muted_fg(theme: &Theme) -> Color {

@@ -35,10 +35,24 @@ This is a checklist-style tracker. It is **non-normative**.
     - `ecosystem/fret-ui-shadcn/src/calendar_hijri.rs`
     - `ecosystem/fret-ui-shadcn/src/sheet.rs`
     - `ecosystem/fret-ui-shadcn/src/card.rs`
-- [ ] `fret-ui-shadcn`: continue the builder-chain audit across the remaining surfaces (context menu,
+- [x] `fret-ui-shadcn`: continue the builder-chain audit across the remaining surfaces (context menu,
       popover, tooltip, field, chart, sidebar) and remove redundant `FixedFromStyle` callsites.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+    - `ecosystem/fret-ui-shadcn/src/popover.rs`
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+    - `ecosystem/fret-ui-shadcn/src/field.rs`
+    - `ecosystem/fret-ui-shadcn/src/chart.rs`
+    - `ecosystem/fret-ui-shadcn/src/sidebar.rs`
 - [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
       toasts) to the intent-first stability defaults.
+- [x] `fret-ui-ai`: migrate AI Elements surfaces to intent-first typography helpers and remove
+      ad-hoc `FixedFromStyle` literals.
+  - Evidence:
+    - `ecosystem/fret-ui-ai/src/elements/message_parts.rs`
+    - `ecosystem/fret-ui-ai/src/elements/terminal.rs`
+    - `ecosystem/fret-ui-ai/src/elements/web_preview.rs`
+    - `ecosystem/fret-ui-ai/src/elements/snippet.rs`
 - [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
 - [x] `fret-code-view`: audit where monospace presets should be used.
   - Evidence: `ecosystem/fret-code-view/src/code_block.rs`, `ecosystem/fret-code-view/src/copy_button.rs`

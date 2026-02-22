@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle, TextWrap,
+    FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextSlant, TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -13,6 +13,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 
 use fret_ui_shadcn::{
@@ -34,47 +35,19 @@ fn hostname_for_url(url: &str) -> Option<&str> {
 }
 
 fn text_sm_style(theme: &Theme, weight: FontWeight) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.text.sm_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.text.sm_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        weight,
-        slant: TextSlant::Normal,
-        line_height: Some(line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style.slant = TextSlant::Normal;
+    style
 }
 
 fn text_xs_style(theme: &Theme, weight: FontWeight, slant: TextSlant) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.text.xs_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.text.xs_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        weight,
-        slant,
-        line_height: Some(line_height),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
+    style.weight = weight;
+    style.slant = slant;
+    style
 }
 
 #[derive(Clone)]

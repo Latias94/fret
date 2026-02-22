@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
 };
@@ -88,16 +89,15 @@ fn muted_fg(theme: &Theme) -> Color {
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size,
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 fn change_type_bg(change_type: PackageInfoChangeKind) -> ColorRef {
@@ -697,16 +697,15 @@ impl PackageInfoDescription {
         let text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme.metric_token("component.text.sm_px"),
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.sm_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
@@ -806,16 +805,15 @@ impl PackageInfoDependencies {
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: Arc::<str>::from("Dependencies"),
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme.metric_token("component.text.xs_px"),
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: Some(0.08),
                 ..Default::default()
-            }),
+            })),
             color: Some(muted_fg(&theme)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,

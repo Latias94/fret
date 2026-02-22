@@ -19,6 +19,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{Badge, BadgeVariant, Switch};
 
@@ -65,16 +66,15 @@ fn alpha(color: Color, a: f32) -> Color {
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size,
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -331,16 +331,15 @@ impl EnvironmentVariablesTitle {
             .unwrap_or_else(|| Arc::<str>::from("Environment Variables"));
 
         let px = theme.metric_token("font.size");
-        let style = TextStyle {
+        let style = typography::as_control_text(TextStyle {
             font: FontId::default(),
             size: px,
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
             line_height: Some(theme.metric_token("font.line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        };
+        });
 
         let el = cx.text_props(TextProps {
             layout: LayoutStyle::default(),

@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, Color, Corners, DecorationLineStyle, Edges, FontId, FontWeight, ImageId, Px,
+    AttributedText, Color, Corners, DecorationLineStyle, Edges, FontWeight, ImageId, Px,
     SemanticsRole, StrikethroughStyle, TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap,
     Transform2D, ViewportFit,
 };
@@ -19,7 +19,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, CollapsibleTrigger,
@@ -470,17 +470,12 @@ impl QueueSectionLabel {
         let text = cx.text_props(TextProps {
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().min_w_0()),
             text: label_text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(
-                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
-                ),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
+            style: Some({
+                let mut style =
+                    typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
+                        .resolve(&theme);
+                style.weight = FontWeight::MEDIUM;
+                style
             }),
             color: Some(fg),
             wrap: TextWrap::None,
@@ -873,16 +868,7 @@ impl QueueItemContent {
         };
 
         let style = TextStyle {
-            font: FontId::default(),
-            size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(
-                theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
-            ),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-            letter_spacing_em: None,
-            ..Default::default()
+            ..typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(&theme)
         };
 
         let el = if self.completed {
@@ -978,16 +964,7 @@ impl QueueItemDescription {
         };
 
         let style = TextStyle {
-            font: FontId::default(),
-            size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(
-                theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
-            ),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-            letter_spacing_em: None,
-            ..Default::default()
+            ..typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(&theme)
         };
 
         let mut layout = decl_style::layout_style(&theme, self.layout);
@@ -1378,18 +1355,10 @@ impl QueueItemFile {
                     .min_w_0(),
             ),
             text: self.filename,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_PX),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(
-                    theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT),
-                ),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
+            style: Some(
+                typography::TypographyPreset::control_ui(typography::UiTextSize::Xs)
+                    .resolve(&theme),
+            ),
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,

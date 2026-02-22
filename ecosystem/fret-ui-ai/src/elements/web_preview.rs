@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
@@ -13,6 +13,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space,
 };
@@ -901,16 +902,10 @@ impl WebPreviewBody {
             cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text,
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: theme.metric_token("component.text.sm_px"),
-                    weight: FontWeight::NORMAL,
-                    slant: Default::default(),
-                    line_height: Some(theme.metric_token("component.text.sm_line_height")),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                    letter_spacing_em: None,
-                    ..Default::default()
-                }),
+                style: Some(
+                    typography::TypographyPreset::content_ui(typography::UiTextSize::Sm)
+                        .resolve(&theme),
+                ),
                 color: Some(theme.color_token("muted-foreground")),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -1123,10 +1118,9 @@ impl WebPreviewConsole {
             .into_element(cx);
 
         let trigger = {
-            let mut trigger =
-                CollapsibleTrigger::new(controller.console_open.clone(), vec![button])
-                    .a11y_label("Toggle console");
-            let trigger = trigger.into_element(cx, open_now);
+            let trigger = CollapsibleTrigger::new(controller.console_open.clone(), vec![button])
+                .a11y_label("Toggle console")
+                .into_element(cx, open_now);
             if let Some(test_id) = self.test_id_trigger {
                 trigger.attach_semantics(
                     SemanticsDecoration::default()
@@ -1184,39 +1178,32 @@ impl WebPreviewConsole {
             },
         );
 
+        #[cfg(feature = "webview")]
         let (logs, backend_logs_present) = {
             let mut out: Vec<WebPreviewConsoleLog> = self.logs.iter().cloned().collect();
 
-            let mut backend_logs_present = false;
+            let backend_entries = if self.backend_logs {
+                controller
+                    .backend
+                    .as_ref()
+                    .map(|b| webview_console_entries(cx.app, b.id))
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
 
-            #[cfg(feature = "webview")]
-            {
-                let backend_entries = if self.backend_logs {
-                    controller
-                        .backend
-                        .as_ref()
-                        .map(|b| webview_console_entries(cx.app, b.id))
-                        .unwrap_or_default()
-                } else {
-                    Vec::new()
+            let backend_logs_present = !backend_entries.is_empty();
+            for entry in backend_entries {
+                let level = match entry.level {
+                    fret_webview::WebViewConsoleLevel::Log => WebPreviewConsoleLogLevel::Log,
+                    fret_webview::WebViewConsoleLevel::Warn => WebPreviewConsoleLogLevel::Warn,
+                    fret_webview::WebViewConsoleLevel::Error => WebPreviewConsoleLogLevel::Error,
                 };
-
-                backend_logs_present = !backend_entries.is_empty();
-
-                for entry in backend_entries {
-                    let level = match entry.level {
-                        fret_webview::WebViewConsoleLevel::Log => WebPreviewConsoleLogLevel::Log,
-                        fret_webview::WebViewConsoleLevel::Warn => WebPreviewConsoleLogLevel::Warn,
-                        fret_webview::WebViewConsoleLevel::Error => {
-                            WebPreviewConsoleLogLevel::Error
-                        }
-                    };
-                    out.push(WebPreviewConsoleLog {
-                        level,
-                        timestamp: Arc::<str>::from(""),
-                        message: entry.message,
-                    });
-                }
+                out.push(WebPreviewConsoleLog {
+                    level,
+                    timestamp: Arc::<str>::from(""),
+                    message: entry.message,
+                });
             }
 
             (
@@ -1224,6 +1211,12 @@ impl WebPreviewConsole {
                 backend_logs_present,
             )
         };
+
+        #[cfg(not(feature = "webview"))]
+        let (logs, backend_logs_present) = (
+            Arc::<[WebPreviewConsoleLog]>::from(self.logs.iter().cloned().collect::<Vec<_>>()),
+            false,
+        );
         let children = self.children;
         let marker_id = self.test_id_marker.clone();
         let backend_marker_id = self.test_id_backend_logs_marker.clone();
@@ -1250,16 +1243,12 @@ impl WebPreviewConsole {
                     let ts = cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
                         text: log.timestamp.clone(),
-                        style: Some(TextStyle {
-                            font: FontId::monospace(),
-                            size: theme.metric_token("component.text.xs_px"),
-                            weight: FontWeight::NORMAL,
-                            slant: Default::default(),
-                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            letter_spacing_em: None,
-                            ..Default::default()
-                        }),
+                        style: Some(
+                            typography::TypographyPreset::control_monospace(
+                                typography::UiTextSize::Xs,
+                            )
+                            .resolve(&theme),
+                        ),
                         color: Some(theme.color_token("muted-foreground")),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -1270,16 +1259,12 @@ impl WebPreviewConsole {
                     let msg = cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
                         text: log.message.clone(),
-                        style: Some(TextStyle {
-                            font: FontId::monospace(),
-                            size: theme.metric_token("component.text.xs_px"),
-                            weight: FontWeight::NORMAL,
-                            slant: Default::default(),
-                            line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            letter_spacing_em: None,
-                            ..Default::default()
-                        }),
+                        style: Some(
+                            typography::TypographyPreset::control_monospace(
+                                typography::UiTextSize::Xs,
+                            )
+                            .resolve(&theme),
+                        ),
                         color: Some(fg),
                         wrap: TextWrap::Word,
                         overflow: TextOverflow::Clip,

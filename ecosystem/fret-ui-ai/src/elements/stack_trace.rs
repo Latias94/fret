@@ -19,6 +19,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
@@ -45,16 +46,15 @@ fn muted_fg(theme: &Theme) -> Color {
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size,
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 #[derive(Debug, Clone)]

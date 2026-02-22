@@ -17,6 +17,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Command, CommandInput, CommandItem, CommandList, Popover,
@@ -97,16 +98,15 @@ fn query_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 }
 
 fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::default(),
         size: theme.metric_required("component.text.sm_px"),
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_required("component.text.sm_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 fn muted_fg(theme: &Theme) -> Color {

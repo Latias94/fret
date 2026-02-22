@@ -4,15 +4,14 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
 };
@@ -33,16 +32,10 @@ fn border_muted(theme: &Theme) -> Color {
 }
 
 fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
-    TextStyle {
-        font: FontId::default(),
-        size: theme.metric_token("component.text.sm_px"),
-        weight,
-        slant: Default::default(),
-        line_height: Some(theme.metric_token("component.text.sm_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style
 }
 
 #[derive(Clone)]

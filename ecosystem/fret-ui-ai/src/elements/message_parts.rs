@@ -5,6 +5,7 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::typography;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::elements::{
@@ -130,16 +131,15 @@ impl MessageParts {
                         .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
                     match part {
                         MessagePart::Text(text) => {
-                            let text_style = TextStyle {
+                            let text_style = typography::as_content_text(TextStyle {
                                 font: Default::default(),
                                 size: theme.metric_token("font.size"),
                                 weight: FontWeight::NORMAL,
                                 slant: Default::default(),
                                 line_height: Some(theme.metric_token("font.line_height")),
-                                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                                 letter_spacing_em: None,
                                 ..Default::default()
-                            };
+                            });
 
                             let el = cx.text_props(TextProps {
                                 layout: LayoutStyle::default(),

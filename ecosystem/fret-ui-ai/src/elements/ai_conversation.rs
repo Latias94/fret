@@ -271,7 +271,7 @@ impl AiConversationTranscript {
         let on_link_activate = self.on_link_activate;
         let test_id_message_prefix = self.test_id_message_prefix;
 
-        let mut key_at = {
+        let key_at = {
             let messages = messages.clone();
             move |index: usize| {
                 messages
@@ -281,7 +281,7 @@ impl AiConversationTranscript {
             }
         };
 
-        let mut row = {
+        let row = {
             let messages = messages.clone();
             let prefix = debug_row_test_id_prefix.clone();
             let on_link_activate = on_link_activate.clone();

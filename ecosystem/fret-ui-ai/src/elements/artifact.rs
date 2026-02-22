@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
     WidgetStateProperty, WidgetStates,
@@ -273,7 +274,7 @@ impl ArtifactTitle {
         let mut text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.artifact.title_text_px")
@@ -281,10 +282,9 @@ impl ArtifactTitle {
                 weight: FontWeight::MEDIUM,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(theme.color_token("foreground")),
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,
@@ -338,7 +338,7 @@ impl ArtifactDescription {
         let mut text = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
-            style: Some(TextStyle {
+            style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme
                     .metric_by_key("component.artifact.description_text_px")
@@ -346,10 +346,9 @@ impl ArtifactDescription {
                 weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(theme.metric_token("font.line_height")),
-                line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                 letter_spacing_em: None,
                 ..Default::default()
-            }),
+            })),
             color: Some(muted_fg),
             wrap: fret_core::TextWrap::None,
             overflow: fret_core::TextOverflow::Clip,

@@ -4,6 +4,7 @@ use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::typography;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::Card;
@@ -56,16 +57,15 @@ impl ConversationEmptyState {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let title_style = TextStyle {
+        let title_style = typography::as_control_text(TextStyle {
             font: Default::default(),
             size: theme.metric_token("font.size"),
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
             line_height: Some(theme.metric_token("font.line_height")),
-            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
             letter_spacing_em: None,
             ..Default::default()
-        };
+        });
 
         let title = cx.text_props(TextProps {
             layout: LayoutStyle::default(),

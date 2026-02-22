@@ -17,6 +17,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, MetricRef, Radius, Space,
     ui,
@@ -44,16 +45,15 @@ fn muted_fg(theme: &Theme) -> Color {
 }
 
 fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    TextStyle {
+    typography::as_control_text(TextStyle {
         font: FontId::monospace(),
         size,
         weight,
         slant: Default::default(),
         line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
         letter_spacing_em: None,
         ..Default::default()
-    }
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -550,7 +550,6 @@ impl SchemaDisplayMethod {
                 text: label.clone(),
                 style: Some(TextStyle {
                     line_height: Some(line_height),
-                    line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
                     ..monospace_style(&theme, text_px, FontWeight::SEMIBOLD)
                 }),
                 color: Some(accent),
