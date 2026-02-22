@@ -815,6 +815,7 @@ pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
     disabled: bool,
+    force_mount: bool,
     keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
@@ -831,6 +832,7 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
+            .field("force_mount", &self.force_mount)
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
@@ -850,6 +852,7 @@ impl CommandItem {
             label: label.clone(),
             value: cmdk_trimmed_arc(label.clone()),
             disabled: false,
+            force_mount: false,
             keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
@@ -889,6 +892,13 @@ impl CommandItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// cmdk: `forceMount`. When true, the item remains rendered even when it does not match the
+    /// current filter query.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
         self
     }
 
@@ -1436,7 +1446,7 @@ fn command_palette_render_rows_for_query_with_options(
             match entry {
                 CommandEntry::Item(item) => {
                     let score = score_item(&item);
-                    if score > 0.0 {
+                    if score > 0.0 || item.force_mount {
                         pending_rows.push(PendingRow::Item { group: None, item });
                     }
                 }
@@ -1470,7 +1480,7 @@ fn command_palette_render_rows_for_query_with_options(
             match entry {
                 CommandEntry::Item(item) => {
                     let score = score_item(&item);
-                    if score > 0.0 {
+                    if score > 0.0 || item.force_mount {
                         root_items.push((entry_idx, score, item));
                     }
                 }
@@ -1486,7 +1496,7 @@ fn command_palette_render_rows_for_query_with_options(
                         .enumerate()
                         .filter_map(|(idx, item)| {
                             let score = score_item(&item);
-                            (score > 0.0).then_some((idx, score, item))
+                            (score > 0.0 || item.force_mount).then_some((idx, score, item))
                         })
                         .collect();
 
@@ -4167,6 +4177,30 @@ mod tests {
                 .unwrap_or(None)
                 .as_deref(),
             Some("Beta")
+        );
+    }
+
+    #[test]
+    fn cmdk_force_mount_item_survives_filtering() {
+        let entries = vec![
+            CommandItem::new("Calendar")
+                .keywords(["events"])
+                .on_select("calendar")
+                .into(),
+            CommandItem::new("Force mounted row")
+                .value("force-mounted")
+                .force_mount(true)
+                .on_select("force-mounted")
+                .into(),
+        ];
+
+        let (_rows, items, _groups) =
+            command_palette_render_rows_for_query_with_options(entries, "zzz", true, None);
+
+        assert!(
+            items
+                .iter()
+                .any(|item| item.value.as_ref() == "force-mounted")
         );
     }
 

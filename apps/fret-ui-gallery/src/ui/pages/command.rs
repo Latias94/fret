@@ -167,8 +167,15 @@ pub(super) fn preview_command_palette(
             .keywords(["math", "calc"])
             .on_select_action(on_select(Arc::from("command.basic.calculator"))),
     ];
-    let demo_filter_entries: Vec<shadcn::CommandEntry> =
+    let mut demo_filter_entries: Vec<shadcn::CommandEntry> =
         basic_items.clone().into_iter().map(Into::into).collect();
+    demo_filter_entries.push(
+        shadcn::CommandItem::new("Force mounted row (cmdk forceMount)")
+            .value("force-mounted")
+            .force_mount(true)
+            .on_select_action(on_select(Arc::from("command.demo.force-mount")))
+            .into(),
+    );
 
     let basic_dialog =
         shadcn::CommandDialog::new(basic_open.clone(), basic_query.clone(), basic_items)
