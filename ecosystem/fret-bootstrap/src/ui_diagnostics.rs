@@ -55,6 +55,7 @@ pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_runner;
 mod script_steps;
+mod script_steps_assert;
 mod script_steps_drag;
 mod script_steps_input;
 mod script_steps_menu;
@@ -1315,140 +1316,28 @@ impl UiDiagnosticsService {
                     }
                 }
             }
-            UiActionStepV2::Assert {
-                window: target_window,
-                predicate,
-            } => {
-                active.wait_until = None;
-                active.screenshot_wait = None;
-
-                let mut predicate_window = window;
-                if let Some(target_window) = self.resolve_window_target_for_active_step(
+            step @ UiActionStepV2::Assert { .. } => {
+                let handled = script_steps_assert::handle_assert_step(
+                    self,
+                    app,
                     window,
+                    window_bounds,
                     anchor_window,
-                    target_window.as_ref(),
-                ) {
-                    if target_window != window {
-                        if Self::predicate_can_eval_off_window(&predicate) {
-                            predicate_window = target_window;
-                            output.effects.push(Effect::Redraw(target_window));
-                            output
-                                .effects
-                                .push(Effect::RequestAnimationFrame(target_window));
-                            output.request_redraw = true;
-                        } else {
-                            handoff_to = Some(target_window);
-                            output.effects.push(Effect::Redraw(target_window));
-                            output
-                                .effects
-                                .push(Effect::RequestAnimationFrame(target_window));
-                            output.request_redraw = true;
-                        }
-                    }
-                } else if target_window.is_some() {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-assert-window-not-found"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("window_target_unresolved".to_string());
-                    output.request_redraw = true;
-                }
-
-                if stop_script {
-                    // Fall through to common termination logic.
-                } else if handoff_to.is_some() {
-                    // This step is window-targeted; the runtime will migrate the script.
-                } else {
-                    let ok = match &predicate {
-                        UiPredicateV1::EventKindSeen { event_kind } => self
-                            .per_window
-                            .get(&predicate_window)
-                            .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
-                        UiPredicateV1::RunnerAccessibilityActivated => app
-                            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
-                            .and_then(|store| store.snapshot(predicate_window))
-                            .is_some_and(|snapshot| snapshot.activation_requests > 0),
-                        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
-                            text_font_stack_key_stable_frames >= *stable_frames
-                        }
-                        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
-                        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
-                        _ => {
-                            let docking_diag = app
-                                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                                .and_then(|store| {
-                                    store.docking_latest_for_window(predicate_window)
-                                });
-                            let input_ctx = app
-                                .global::<fret_runtime::WindowInputContextService>()
-                                .and_then(|svc| svc.snapshot(predicate_window));
-                            let text_input_snapshot = app
-                                .global::<fret_runtime::WindowTextInputSnapshotService>()
-                                .and_then(|svc| svc.snapshot(predicate_window));
-                            let dock_drag_runtime =
-                                dock_drag_runtime_state(app, self.known_windows.as_slice());
-                            let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
-
-                            if let Some(snapshot) = semantics_snapshot {
-                                record_overlay_placement_trace(
-                                    &mut active.overlay_placement_trace,
-                                    element_runtime,
-                                    Some(snapshot),
-                                    window,
-                                    step_index as u32,
-                                    "assert",
-                                );
-                                eval_predicate(
-                                    snapshot,
-                                    window_bounds,
-                                    predicate_window,
-                                    input_ctx,
-                                    element_runtime,
-                                    text_input_snapshot,
-                                    app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                                    app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                                    self.known_windows.as_slice(),
-                                    platform_caps,
-                                    docking_diag,
-                                    dock_drag_runtime.as_ref(),
-                                    text_font_stack_key_stable_frames,
-                                    font_catalog_populated,
-                                    system_font_rescan_idle,
-                                    &predicate,
-                                )
-                            } else {
-                                eval_predicate_without_semantics(
-                                    predicate_window,
-                                    self.known_windows.as_slice(),
-                                    platform_caps,
-                                    docking_diag,
-                                    dock_drag_runtime.as_ref(),
-                                    &predicate,
-                                )
-                                .unwrap_or_else(|| {
-                                    force_dump_label = Some(format!(
-                                        "script-step-{step_index:04}-assert-no-semantics"
-                                    ));
-                                    stop_script = true;
-                                    failure_reason = Some("no_semantics_snapshot".to_string());
-                                    output.request_redraw = true;
-                                    false
-                                })
-                            }
-                        }
-                    };
-
-                    if ok {
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-assert-failed"));
-                        stop_script = true;
-                        failure_reason = Some("assert_failed".to_string());
-                        output.request_redraw = true;
-                    }
-                }
+                    step_index,
+                    step,
+                    element_runtime,
+                    semantics_snapshot,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                debug_assert!(handled);
             }
             step @ UiActionStepV2::Click { .. } => {
                 let should_return = script_steps_pointer::handle_click_step(
