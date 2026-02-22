@@ -306,7 +306,10 @@ shadcn::Select::new(value, open)
     ])
     .into_element(cx);
 
-// Disabled / Error use `disabled(true)` + `aria_invalid(true)`."#,
+// Disabled / Error use `disabled(true)` + `aria_invalid(true)`.
+//
+// When the control is part of a `Field`, also set `Field::disabled(true)` / `Field::invalid(true)`
+// to match upstream `data-disabled` / `data-invalid` styling."#,
                 ),
             DocSection::new("Extras", rtl)
                 .description("RTL smoke check (not present in upstream demo).")

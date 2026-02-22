@@ -2,8 +2,8 @@ use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
-    ColorMatrixPass, DropShadowPass, FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass,
-    ScaleMode, ScaleNearestPass, ScissorRect,
+    ColorMatrixPass, DropShadowPass, FullscreenBlitPass, LocalScissorRect, MaskRef, PlanTarget,
+    RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -94,6 +94,7 @@ pub(super) fn apply_chain_in_place(
             dst_size: mask_size,
             dst_scissor: None,
             uniform_index,
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
         }));
         budget_bytes = budget_bytes.saturating_sub(mask_bytes);
         Some(MaskRef {
@@ -222,7 +223,7 @@ pub(super) fn apply_chain_in_place(
                     dst_size: ctx.viewport_size,
                     origin_px: (scissor.x, scissor.y),
                     bounds_size_px: (scissor.w, scissor.h),
-                    dst_scissor: Some(scissor),
+                    dst_scissor: Some(LocalScissorRect(scissor)),
                     mask_uniform_index,
                     mask,
                     strength_px: base.strength_px.0,
@@ -306,7 +307,7 @@ pub(super) fn apply_chain_in_place(
                         dst: srcdst,
                         src_size: ctx.viewport_size,
                         dst_size: ctx.viewport_size,
-                        dst_scissor: Some(scissor),
+                        dst_scissor: Some(LocalScissorRect(scissor)),
                         mask_uniform_index: None,
                         mask: None,
                         axis: BlurAxis::Horizontal,
@@ -317,7 +318,7 @@ pub(super) fn apply_chain_in_place(
                         dst: scratch_blurred,
                         src_size: ctx.viewport_size,
                         dst_size: ctx.viewport_size,
-                        dst_scissor: Some(scissor),
+                        dst_scissor: Some(LocalScissorRect(scissor)),
                         mask_uniform_index: None,
                         mask: None,
                         axis: BlurAxis::Vertical,
@@ -336,7 +337,7 @@ pub(super) fn apply_chain_in_place(
                         src_size: ctx.viewport_size,
                         dst_size: blur_size,
                         src_origin: (scissor.x, scissor.y),
-                        dst_scissor: down_scissor,
+                        dst_scissor: down_scissor.map(LocalScissorRect),
                         dst_origin: down_origin,
                         mask_uniform_index: None,
                         mask: None,
@@ -345,7 +346,7 @@ pub(super) fn apply_chain_in_place(
                         load: wgpu::LoadOp::Clear(ctx.clear),
                     }));
 
-                    let blur_scissor = down_scissor;
+                    let blur_scissor = down_scissor.map(LocalScissorRect);
                     passes.push(RenderPlanPass::Blur(BlurPass {
                         src: srcdst,
                         dst: scratch_blurred,
@@ -377,7 +378,7 @@ pub(super) fn apply_chain_in_place(
                         src_size: blur_size,
                         dst_size: ctx.viewport_size,
                         src_origin: down_origin,
-                        dst_scissor: final_scissor,
+                        dst_scissor: final_scissor.map(LocalScissorRect),
                         dst_origin: (scissor.x, scissor.y),
                         mask_uniform_index: None,
                         mask: None,
@@ -403,7 +404,7 @@ pub(super) fn apply_chain_in_place(
                     dst: srcdst,
                     src_size: ctx.viewport_size,
                     dst_size: ctx.viewport_size,
-                    dst_scissor: Some(scissor),
+                    dst_scissor: Some(LocalScissorRect(scissor)),
                     mask_uniform_index,
                     mask,
                     offset_px: (s.offset_px.x.0, s.offset_px.y.0),
@@ -688,7 +689,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: full_size,
         dst_size: blur_size,
         src_origin: (scissor.x, scissor.y),
-        dst_scissor: down_scissor,
+        dst_scissor: down_scissor.map(LocalScissorRect),
         dst_origin: down_origin,
         mask_uniform_index: None,
         mask: None,
@@ -697,7 +698,7 @@ fn append_scissored_blur_in_place_two_scratch(
         load: wgpu::LoadOp::Clear(clear),
     }));
 
-    let blur_scissor = down_scissor;
+    let blur_scissor = down_scissor.map(LocalScissorRect);
     passes.push(RenderPlanPass::Blur(BlurPass {
         src: scratch_a,
         dst: scratch_b,
@@ -728,7 +729,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: blur_size,
         dst_size: full_size,
         src_origin: down_origin,
-        dst_scissor: final_scissor,
+        dst_scissor: final_scissor.map(LocalScissorRect),
         dst_origin: (scissor.x, scissor.y),
         mask_uniform_index,
         mask,
@@ -761,7 +762,7 @@ fn append_scissored_blur_in_place_single_scratch(
         dst: scratch,
         src_size: size,
         dst_size: size,
-        dst_scissor: Some(scissor),
+        dst_scissor: Some(LocalScissorRect(scissor)),
         mask_uniform_index: None,
         mask: None,
         axis: BlurAxis::Horizontal,
@@ -772,7 +773,7 @@ fn append_scissored_blur_in_place_single_scratch(
         dst: srcdst,
         src_size: size,
         dst_size: size,
-        dst_scissor: Some(scissor),
+        dst_scissor: Some(LocalScissorRect(scissor)),
         mask_uniform_index,
         mask,
         axis: BlurAxis::Vertical,
@@ -815,7 +816,7 @@ fn append_color_adjust_in_place_single_scratch(
             dst: srcdst,
             src_size: size,
             dst_size: size,
-            dst_scissor: Some(scissor),
+            dst_scissor: Some(LocalScissorRect(scissor)),
             mask_uniform_index,
             mask,
             saturation,
@@ -884,7 +885,7 @@ fn append_backdrop_warp_in_place_single_scratch(
         dst_size: size,
         origin_px: (scissor.x, scissor.y),
         bounds_size_px: (scissor.w, scissor.h),
-        dst_scissor: Some(scissor),
+        dst_scissor: Some(LocalScissorRect(scissor)),
         mask_uniform_index,
         mask,
         strength_px: warp.strength_px.0,
@@ -934,7 +935,7 @@ fn append_color_matrix_in_place_single_scratch(
             dst: srcdst,
             src_size: size,
             dst_size: size,
-            dst_scissor: Some(scissor),
+            dst_scissor: Some(LocalScissorRect(scissor)),
             mask_uniform_index,
             mask,
             matrix,
@@ -999,7 +1000,7 @@ fn append_alpha_threshold_in_place_single_scratch(
             dst: srcdst,
             src_size: size,
             dst_size: size,
-            dst_scissor: Some(scissor),
+            dst_scissor: Some(LocalScissorRect(scissor)),
             mask_uniform_index,
             mask,
             cutoff,
@@ -1076,7 +1077,7 @@ fn append_pixelate_in_place_single_scratch(
         src_size: down_size,
         dst_size: full_size,
         src_origin: (0, 0),
-        dst_scissor: scissor,
+        dst_scissor: scissor.map(LocalScissorRect),
         dst_origin: (effect_rect.x, effect_rect.y),
         mask_uniform_index: scissor.is_some().then_some(mask_uniform_index).flatten(),
         mask: scissor.is_some().then_some(mask).flatten(),

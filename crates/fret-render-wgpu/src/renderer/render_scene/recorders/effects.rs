@@ -1,14 +1,14 @@
 use super::super::super::*;
-use super::super::executor::RenderSceneExecutor;
+use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
-    set_scissor_rect_absolute,
+    set_scissor_rect_absolute_opt,
 };
 
 pub(in super::super) fn record_color_adjust_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ColorAdjustPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -101,30 +101,12 @@ pub(in super::super) fn record_color_adjust_pass(
             .as_ref()
             .expect("color-adjust mask pipeline must exist");
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret color-adjust mask pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret color-adjust mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -132,33 +114,13 @@ pub(in super::super) fn record_color_adjust_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let layout = renderer
             .color_adjust_bind_group_layout
@@ -177,30 +139,12 @@ pub(in super::super) fn record_color_adjust_pass(
             .expect("color-adjust masked pipeline must exist");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret color-adjust masked pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret color-adjust masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -208,33 +152,13 @@ pub(in super::super) fn record_color_adjust_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else {
         let layout = renderer
             .color_adjust_bind_group_layout
@@ -256,6 +180,7 @@ pub(in super::super) fn record_color_adjust_pass(
             "fret color-adjust pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
@@ -267,8 +192,8 @@ pub(in super::super) fn record_color_adjust_pass(
 
 pub(in super::super) fn record_alpha_threshold_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &AlphaThresholdPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -360,30 +285,12 @@ pub(in super::super) fn record_alpha_threshold_pass(
             .as_ref()
             .expect("alpha-threshold mask pipeline must exist");
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret alpha-threshold mask pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret alpha-threshold mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -391,33 +298,13 @@ pub(in super::super) fn record_alpha_threshold_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let layout = renderer
             .alpha_threshold_bind_group_layout
@@ -436,30 +323,12 @@ pub(in super::super) fn record_alpha_threshold_pass(
             .expect("alpha-threshold masked pipeline must exist");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret alpha-threshold masked pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret alpha-threshold masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -467,33 +336,13 @@ pub(in super::super) fn record_alpha_threshold_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else {
         let layout = renderer
             .alpha_threshold_bind_group_layout
@@ -515,6 +364,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             "fret alpha-threshold pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
@@ -526,8 +376,8 @@ pub(in super::super) fn record_alpha_threshold_pass(
 
 pub(in super::super) fn record_color_matrix_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ColorMatrixPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -628,30 +478,12 @@ pub(in super::super) fn record_color_matrix_pass(
             .as_ref()
             .expect("color-matrix mask pipeline must exist");
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret color-matrix mask pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret color-matrix mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -659,33 +491,13 @@ pub(in super::super) fn record_color_matrix_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let layout = renderer
             .color_matrix_bind_group_layout
@@ -704,30 +516,12 @@ pub(in super::super) fn record_color_matrix_pass(
             .expect("color-matrix masked pipeline must exist");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret color-matrix masked pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret color-matrix masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -735,33 +529,13 @@ pub(in super::super) fn record_color_matrix_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else {
         let layout = renderer
             .color_matrix_bind_group_layout
@@ -783,6 +557,7 @@ pub(in super::super) fn record_color_matrix_pass(
             "fret color-matrix pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
@@ -794,8 +569,8 @@ pub(in super::super) fn record_color_matrix_pass(
 
 pub(in super::super) fn record_drop_shadow_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &DropShadowPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -897,30 +672,12 @@ pub(in super::super) fn record_drop_shadow_pass(
             .as_ref()
             .expect("drop-shadow mask pipeline must exist");
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret drop-shadow mask pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret drop-shadow mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -928,33 +685,13 @@ pub(in super::super) fn record_drop_shadow_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let layout = renderer
             .drop_shadow_bind_group_layout
@@ -973,30 +710,12 @@ pub(in super::super) fn record_drop_shadow_pass(
             .expect("drop-shadow masked pipeline must exist");
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret drop-shadow masked pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret drop-shadow masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -1004,33 +723,13 @@ pub(in super::super) fn record_drop_shadow_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else {
         let layout = renderer
             .drop_shadow_bind_group_layout
@@ -1052,6 +751,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             "fret drop-shadow pass",
             pipeline,
             dst_view,
+            pass.dst_size,
             pass.load,
             &bind_group,
             &[],
@@ -1063,9 +763,8 @@ pub(in super::super) fn record_drop_shadow_pass(
 
 pub(in super::super) fn record_composite_premul_pass(
     exec: &mut RenderSceneExecutor<'_>,
-    pass_index: usize,
+    ctx: &RecordPassCtx<'_>,
     pass: &CompositePremulPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let format = exec.format;
@@ -1168,7 +867,7 @@ pub(in super::super) fn record_composite_premul_pass(
             bind_group,
         )
     };
-    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+    let Some(base) = quad_vertex_bases.get(ctx.pass_index).and_then(|v| *v) else {
         return;
     };
 
@@ -1205,7 +904,7 @@ pub(in super::super) fn record_composite_premul_pass(
                     .copied()
                     .flatten(),
             ),
-            &[uniform_offset, render_space_offset_u32],
+            &[uniform_offset, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1214,7 +913,7 @@ pub(in super::super) fn record_composite_premul_pass(
         rp.set_bind_group(
             0,
             &renderer.uniform_bind_group,
-            &[0, render_space_offset_u32],
+            &[0, ctx.render_space_offset_u32],
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
@@ -1229,12 +928,8 @@ pub(in super::super) fn record_composite_premul_pass(
     let base = u64::from(base) * quad_vertex_size;
     let len = 6 * quad_vertex_size;
     rp.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
-    if let Some(scissor) = pass.dst_scissor
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        let _ = set_scissor_rect_absolute(&mut rp, scissor, pass.dst_origin, pass.dst_size);
-    }
+    let _ =
+        set_scissor_rect_absolute_opt(&mut rp, pass.dst_scissor, pass.dst_origin, pass.dst_size);
     rp.draw(0..6, 0..1);
     if perf_enabled {
         frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
@@ -1243,8 +938,8 @@ pub(in super::super) fn record_composite_premul_pass(
 
 pub(in super::super) fn record_clip_mask_pass(
     exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
     pass: &ClipMaskPass,
-    render_space_offset_u32: u32,
 ) {
     let device = exec.device;
     let queue = exec.queue;
@@ -1285,30 +980,12 @@ pub(in super::super) fn record_clip_mask_pass(
         .expect("clip mask pipeline must exist");
     let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniform_stride) as u32;
 
-    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("fret clip mask pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &dst_view,
-            depth_slice: None,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        depth_stencil_attachment: None,
-        timestamp_writes: None,
-        occlusion_query_set: None,
-        multiview_mask: None,
-    });
-    rp.set_pipeline(pipeline);
-    if perf_enabled {
-        frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-        frame_perf.pipeline_switches_clip_mask =
-            frame_perf.pipeline_switches_clip_mask.saturating_add(1);
-    }
-    rp.set_bind_group(
-        0,
+    run_clip_mask_triangle_pass(
+        encoder,
+        "fret clip mask pass",
+        pipeline,
+        &dst_view,
+        pass.load,
         renderer.pick_uniform_bind_group_for_mask_image(
             encoding
                 .uniform_mask_images
@@ -1316,31 +993,11 @@ pub(in super::super) fn record_clip_mask_pass(
                 .copied()
                 .flatten(),
         ),
-        &[uniform_offset, render_space_offset_u32],
+        &[uniform_offset, ctx.render_space_offset_u32],
+        &renderer.clip_mask_param_bind_group,
+        &[],
+        pass.dst_scissor,
+        pass.dst_size,
+        perf_enabled.then_some(frame_perf),
     );
-    if perf_enabled {
-        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        frame_perf.uniform_bind_group_switches =
-            frame_perf.uniform_bind_group_switches.saturating_add(1);
-    }
-    rp.set_bind_group(1, &renderer.clip_mask_param_bind_group, &[]);
-    if perf_enabled {
-        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-        frame_perf.texture_bind_group_switches =
-            frame_perf.texture_bind_group_switches.saturating_add(1);
-    }
-    if let Some(scissor) = pass.dst_scissor
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-        if perf_enabled {
-            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-        }
-    }
-    rp.draw(0..3, 0..1);
-    if perf_enabled {
-        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-        frame_perf.clip_mask_draw_calls = frame_perf.clip_mask_draw_calls.saturating_add(1);
-    }
 }

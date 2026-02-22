@@ -13,6 +13,7 @@ pub(super) fn preview_checkbox(
         invalid: Option<Model<bool>>,
         description: Option<Model<bool>>,
         disabled: Option<Model<bool>>,
+        with_title: Option<Model<bool>>,
         group_security: Option<Model<bool>>,
         group_updates: Option<Model<bool>>,
         group_marketing: Option<Model<bool>>,
@@ -29,6 +30,7 @@ pub(super) fn preview_checkbox(
         invalid,
         description,
         disabled,
+        with_title,
         group_security,
         group_updates,
         group_marketing,
@@ -44,6 +46,7 @@ pub(super) fn preview_checkbox(
             st.invalid.clone(),
             st.description.clone(),
             st.disabled.clone(),
+            st.with_title.clone(),
             st.group_security.clone(),
             st.group_updates.clone(),
             st.group_marketing.clone(),
@@ -61,6 +64,7 @@ pub(super) fn preview_checkbox(
         invalid,
         description,
         disabled,
+        with_title,
         group_security,
         group_updates,
         group_marketing,
@@ -75,6 +79,7 @@ pub(super) fn preview_checkbox(
         invalid,
         description,
         disabled,
+        with_title,
         group_security,
         group_updates,
         group_marketing,
@@ -90,6 +95,7 @@ pub(super) fn preview_checkbox(
             Some(invalid),
             Some(description),
             Some(disabled),
+            Some(with_title),
             Some(group_security),
             Some(group_updates),
             Some(group_marketing),
@@ -104,6 +110,7 @@ pub(super) fn preview_checkbox(
             invalid,
             description,
             disabled,
+            with_title,
             group_security,
             group_updates,
             group_marketing,
@@ -119,6 +126,7 @@ pub(super) fn preview_checkbox(
             let invalid = cx.app.models_mut().insert(false);
             let description = cx.app.models_mut().insert(false);
             let disabled = cx.app.models_mut().insert(true);
+            let with_title = cx.app.models_mut().insert(true);
             let group_security = cx.app.models_mut().insert(true);
             let group_updates = cx.app.models_mut().insert(false);
             let group_marketing = cx.app.models_mut().insert(false);
@@ -134,6 +142,7 @@ pub(super) fn preview_checkbox(
                 st.invalid = Some(invalid.clone());
                 st.description = Some(description.clone());
                 st.disabled = Some(disabled.clone());
+                st.with_title = Some(with_title.clone());
                 st.group_security = Some(group_security.clone());
                 st.group_updates = Some(group_updates.clone());
                 st.group_marketing = Some(group_marketing.clone());
@@ -150,6 +159,7 @@ pub(super) fn preview_checkbox(
                 invalid,
                 description,
                 disabled,
+                with_title,
                 group_security,
                 group_updates,
                 group_marketing,
@@ -162,8 +172,6 @@ pub(super) fn preview_checkbox(
         }
     };
 
-    let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
-
     let demo_checked = cx
         .get_model_copied(&model, Invalidation::Layout)
         .unwrap_or(false);
@@ -173,6 +181,9 @@ pub(super) fn preview_checkbox(
     let optional_checked = cx
         .get_model_copied(&checked_optional, Invalidation::Layout)
         .unwrap_or(None);
+    let invalid_checked = cx
+        .get_model_copied(&invalid, Invalidation::Layout)
+        .unwrap_or(false);
 
     let demo = stack::hstack(
         cx,
@@ -189,8 +200,8 @@ pub(super) fn preview_checkbox(
                     .into_element(cx),
                 shadcn::FieldLabel::new("Accept terms and conditions")
                     .for_control("ui-gallery-checkbox-demo-toggle")
-                    .into_element(cx)
-                    .test_id("ui-gallery-checkbox-demo-label"),
+                    .test_id("ui-gallery-checkbox-demo-label")
+                    .into_element(cx),
                 cx.spacer(fret_ui::element::SpacerProps::default()),
                 shadcn::typography::muted(
                     cx,
@@ -234,8 +245,8 @@ pub(super) fn preview_checkbox(
                                 .into_element(cx),
                             shadcn::FieldLabel::new("Controlled checked state")
                                 .for_control("ui-gallery-checkbox-controlled")
-                                .into_element(cx)
-                                .test_id("ui-gallery-checkbox-controlled-label"),
+                                .test_id("ui-gallery-checkbox-controlled-label")
+                                .into_element(cx),
                             cx.spacer(fret_ui::element::SpacerProps::default()),
                             shadcn::typography::muted(
                                 cx,
@@ -263,8 +274,8 @@ pub(super) fn preview_checkbox(
                                 .into_element(cx),
                             shadcn::FieldLabel::new("Optional / indeterminate state")
                                 .for_control("ui-gallery-checkbox-optional")
-                                .into_element(cx)
-                                .test_id("ui-gallery-checkbox-optional-label"),
+                                .test_id("ui-gallery-checkbox-optional-label")
+                                .into_element(cx),
                             cx.spacer(fret_ui::element::SpacerProps::default()),
                             shadcn::typography::muted(cx, optional_text),
                         ]
@@ -276,28 +287,18 @@ pub(super) fn preview_checkbox(
     .test_id("ui-gallery-checkbox-checked-state");
 
     let invalid_state = shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Accept terms")
-                .for_control("ui-gallery-checkbox-invalid")
-                .into_element(cx),
-            shadcn::FieldDescription::new("You must accept before continuing.").into_element(cx),
-            shadcn::FieldError::new("Please accept the terms to proceed.").into_element(cx),
-        ])
-        .into_element(cx),
         shadcn::Checkbox::new(invalid.clone())
             .control_id("ui-gallery-checkbox-invalid")
             .a11y_label("Invalid checkbox")
+            .aria_invalid(!invalid_checked)
             .test_id("ui-gallery-checkbox-invalid")
             .into_element(cx),
+        shadcn::FieldLabel::new("Accept terms and conditions")
+            .for_control("ui-gallery-checkbox-invalid")
+            .into_element(cx),
     ])
+    .invalid(!invalid_checked)
     .orientation(shadcn::FieldOrientation::Horizontal)
-    .refine_style(
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Md)
-            .border_color(ColorRef::Color(destructive))
-            .p(Space::N3),
-    )
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-invalid-field");
@@ -349,16 +350,67 @@ pub(super) fn preview_checkbox(
         shadcn::FieldContent::new([
             shadcn::FieldLabel::new("Marketing emails")
                 .for_control("ui-gallery-checkbox-disabled")
+                .test_id("ui-gallery-checkbox-disabled-label")
                 .into_element(cx),
             shadcn::FieldDescription::new("This preference is managed by your organization.")
                 .into_element(cx),
         ])
         .into_element(cx),
     ])
+    .disabled(true)
     .orientation(shadcn::FieldOrientation::Horizontal)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
     .test_id("ui-gallery-checkbox-disabled-field");
+
+    let with_title_section = shadcn::FieldGroup::new([
+        shadcn::FieldLabel::new("Enable notifications")
+            .for_control("ui-gallery-checkbox-with-title")
+            .test_id("ui-gallery-checkbox-with-title-label")
+            .wrap([shadcn::Field::new([
+                shadcn::Checkbox::new(with_title.clone())
+                    .control_id("ui-gallery-checkbox-with-title")
+                    .a11y_label("Enable notifications")
+                    .test_id("ui-gallery-checkbox-with-title")
+                    .into_element(cx),
+                shadcn::FieldContent::new([
+                    shadcn::FieldTitle::new("Enable notifications").into_element(cx),
+                    shadcn::FieldDescription::new(
+                        "You can enable or disable notifications at any time.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .into_element(cx)])
+            .into_element(cx),
+        shadcn::FieldLabel::new("Enable notifications (disabled)")
+            .for_control("ui-gallery-checkbox-with-title-disabled")
+            .test_id("ui-gallery-checkbox-with-title-disabled-label")
+            .wrap([shadcn::Field::new([
+                shadcn::Checkbox::new(with_title.clone())
+                    .control_id("ui-gallery-checkbox-with-title-disabled")
+                    .disabled(true)
+                    .a11y_label("Enable notifications (disabled)")
+                    .test_id("ui-gallery-checkbox-with-title-disabled")
+                    .into_element(cx),
+                shadcn::FieldContent::new([
+                    shadcn::FieldTitle::new("Enable notifications").into_element(cx),
+                    shadcn::FieldDescription::new(
+                        "You can enable or disable notifications at any time.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Horizontal)
+            .disabled(true)
+            .into_element(cx)])
+            .into_element(cx),
+    ])
+    .into_element(cx)
+    .test_id("ui-gallery-checkbox-with-title-section");
 
     let group_item = |cx: &mut ElementContext<'_, App>,
                       label: &'static str,
@@ -520,7 +572,7 @@ pub(super) fn preview_checkbox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Checkbox docs flow: Demo -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> Group -> Table -> RTL.",
+            "Preview follows shadcn Checkbox docs flow: Demo -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> With Title -> Group -> Table -> RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -594,31 +646,27 @@ stack::vstack(cx, stack::VStackProps::default().gap(Space::N3), |cx| {
 })"#,
                 ),
             DocSection::new("Invalid State", invalid_state)
-                .description("Invalid styling is currently approximated via destructive border.")
+                .description("Invalid styling uses `aria_invalid` on the checkbox and destructive label text.")
                 .code(
                     "rust",
-                    r#"let destructive = cx.with_theme(|theme| theme.color_token("destructive"));
+                    r#"let accepted = cx.app.models_mut().insert(false);
+
+let is_invalid = !cx
+    .get_model_copied(&accepted, Invalidation::Layout)
+    .unwrap_or(false);
 
 shadcn::Field::new([
-    shadcn::FieldContent::new([
-        shadcn::FieldLabel::new("Accept terms").for_control("accept").into_element(cx),
-        shadcn::FieldDescription::new("You must accept before continuing.").into_element(cx),
-        shadcn::FieldError::new("Please accept the terms to proceed.").into_element(cx),
-    ])
-    .into_element(cx),
-    shadcn::Checkbox::new(model)
+    shadcn::Checkbox::new(accepted.clone())
         .control_id("accept")
         .a11y_label("Accept terms")
+        .aria_invalid(is_invalid)
+        .into_element(cx),
+    shadcn::FieldLabel::new("Accept terms and conditions")
+        .for_control("accept")
         .into_element(cx),
 ])
 .orientation(shadcn::FieldOrientation::Horizontal)
-.refine_style(
-    ChromeRefinement::default()
-        .border_1()
-        .rounded(Radius::Md)
-        .border_color(ColorRef::Color(destructive))
-        .p(Space::N3),
-)
+.invalid(is_invalid)
 .into_element(cx);"#,
                 ),
             DocSection::new("Basic", basic)
@@ -676,20 +724,61 @@ shadcn::Field::new([
     .into_element(cx),
 ])
 .orientation(shadcn::FieldOrientation::Horizontal)
+.disabled(true)
+.into_element(cx);"#,
+                ),
+            DocSection::new("With Title", with_title_section)
+                .description("FieldLabel can wrap a full Field layout (card-style label).")
+                .code(
+                    "rust",
+                    r#"let checked = cx.app.models_mut().insert(true);
+
+shadcn::FieldGroup::new([
+    shadcn::FieldLabel::new("Enable notifications")
+        .for_control("toggle")
+        .wrap([shadcn::Field::new([
+            shadcn::Checkbox::new(checked.clone())
+                .control_id("toggle")
+                .a11y_label("Enable notifications")
+                .into_element(cx),
+            shadcn::FieldContent::new([
+                shadcn::FieldTitle::new("Enable notifications").into_element(cx),
+                shadcn::FieldDescription::new(
+                    "You can enable or disable notifications at any time.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx)])
+        .into_element(cx),
+])
 .into_element(cx);"#,
                 ),
             DocSection::new("Group", group)
                 .description("Checkbox group pattern with per-item descriptions.")
                 .code(
                     "rust",
-                    r#"let item = |cx: &mut ElementContext<'_, App>,
+                    r#"let security = cx.app.models_mut().insert(true);
+let updates = cx.app.models_mut().insert(false);
+let marketing = cx.app.models_mut().insert(false);
+
+let item = |cx: &mut ElementContext<'_, App>,
+            id: &'static str,
             label: &'static str,
             desc: &'static str,
             model: Model<bool>| {
     shadcn::Field::new([
-        shadcn::Checkbox::new(model).a11y_label(label).into_element(cx),
+        shadcn::Checkbox::new(model)
+            // Required for label click -> focus/toggle forwarding.
+            .control_id(id)
+            .a11y_label(label)
+            .into_element(cx),
         shadcn::FieldContent::new([
-            shadcn::FieldLabel::new(label).into_element(cx),
+            shadcn::FieldLabel::new(label)
+                .for_control(id)
+                .into_element(cx),
             shadcn::FieldDescription::new(desc).into_element(cx),
         ])
         .into_element(cx),
@@ -700,9 +789,27 @@ shadcn::Field::new([
 
 stack::vstack(cx, stack::VStackProps::default().gap(Space::N3).items_start(), |cx| {
     vec![
-        item(cx, "Security alerts", "Critical account changes.", model1.clone()),
-        item(cx, "Product updates", "Major feature releases.", model2.clone()),
-        item(cx, "Marketing emails", "Tips and announcements.", model3.clone()),
+        item(
+            cx,
+            "security",
+            "Security alerts",
+            "Critical account changes.",
+            security.clone(),
+        ),
+        item(
+            cx,
+            "updates",
+            "Product updates",
+            "Major feature releases.",
+            updates.clone(),
+        ),
+        item(
+            cx,
+            "marketing",
+            "Marketing emails",
+            "Tips and announcements.",
+            marketing.clone(),
+        ),
     ]
 });"#,
                 ),
@@ -710,17 +817,68 @@ stack::vstack(cx, stack::VStackProps::default().gap(Space::N3).items_start(), |c
                 .description("Table selection pattern with header and row checkboxes.")
                 .code(
                     "rust",
-                    r#"shadcn::TableCell::new(
-    shadcn::Checkbox::new(model).a11y_label("Select row").into_element(cx),
-)"#,
+                    r#"let all = cx.app.models_mut().insert(false);
+let row_1 = cx.app.models_mut().insert(true);
+
+let header = shadcn::TableRow::new(
+    3,
+    vec![
+        shadcn::TableCell::new(
+            shadcn::Checkbox::new(all.clone())
+                .a11y_label("Select all rows")
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::TableHead::new("Member").into_element(cx),
+        shadcn::TableHead::new("Role").into_element(cx),
+    ],
+)
+.border_bottom(true)
+.into_element(cx);
+
+let row = shadcn::TableRow::new(
+    3,
+    vec![
+        shadcn::TableCell::new(
+            shadcn::Checkbox::new(row_1.clone())
+                .a11y_label("Select Alex Johnson")
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::TableCell::new(cx.text("Alex Johnson")).into_element(cx),
+        shadcn::TableCell::new(cx.text("Owner")).into_element(cx),
+    ],
+)
+.border_bottom(true)
+.into_element(cx);
+
+shadcn::Table::new(vec![
+    shadcn::TableHeader::new(vec![header]).into_element(cx),
+    shadcn::TableBody::new(vec![row]).into_element(cx),
+])
+.into_element(cx)"#,
                 ),
             DocSection::new("RTL", rtl_section)
                 .description("Checkbox + label alignment under an RTL direction provider.")
                 .code(
                     "rust",
-                    r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Checkbox::new(model).into_element(cx)
-})"#,
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Field::new([
+            shadcn::Checkbox::new(model)
+                .control_id("notify")
+                .a11y_label("Enable notifications")
+                .into_element(cx),
+            shadcn::FieldLabel::new("Enable notifications (RTL)")
+                .for_control("notify")
+                .into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx)
+    },
+)"#,
                 ),
             DocSection::new("Notes", notes).description("API reference pointers and parity notes."),
         ],

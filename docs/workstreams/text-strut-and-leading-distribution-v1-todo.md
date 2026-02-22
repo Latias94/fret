@@ -4,24 +4,28 @@ This is a checklist-style tracker. It is **non-normative**.
 
 ## Mechanism (`crates/`)
 
-- [ ] Define v1 types in `crates/fret-core`:
+- [x] Define v1 types in `crates/fret-core`:
+  - `TextLeadingDistribution`
   - `TextStrutStyle` (force + leading distribution + height spec)
-  - `TextHeightBehavior` (disable first ascent / last descent knobs)
-- [ ] Plumb types through render-text shaping/layout (Parley).
+- [ ] Define `TextHeightBehavior` (disable first ascent / last descent knobs).
+- [x] Plumb types through render-text shaping/layout (Parley).
 - [ ] Decide precedence rules:
   - style line height vs strut height
   - strut leading distribution vs per-style placement
-- [ ] Ensure cache keys / stable hashing include the new fields.
+- [x] Ensure cache keys / stable hashing include the new fields.
 
 ## Ecosystem (`ecosystem/`)
 
-- [ ] Add opt-in presets in `fret-ui-kit::typography` for multiline “control-like” text areas.
+- [x] Add opt-in presets in `fret-ui-kit::typography` for multiline “control-like” text areas.
+  - Evidence: `ecosystem/fret-ui-kit/src/typography.rs` (`text_area_control_text_style`)
 - [ ] Audit form/text-area surfaces to decide default:
   - stable strut (UI-like forms) vs expand-to-fit (content/prose).
 
 ## Tooling / gates
 
-- [ ] Add a regression gate for multiline strut stability under emoji + fallback runs.
+- [x] Add a regression gate for strut stability under emoji + fallback runs.
+- [x] Add a regression gate for multiline strut stability under emoji + fallback runs.
+  - Evidence: `crates/fret-render-text/src/wrapper.rs` (`strut_force_keeps_multiline_baseline_stable_across_fallback_glyphs`)
 - [ ] Add a UI Gallery diag script that captures the multiline case (optional).
 
 ## References (informative)

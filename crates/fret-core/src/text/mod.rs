@@ -161,6 +161,51 @@ impl TextLineHeightPolicy {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextLeadingDistribution {
+    /// Distribute extra leading evenly above and below the text box ("half-leading").
+    #[default]
+    Even,
+    /// Distribute extra leading proportionally by ascent/descent.
+    Proportional,
+}
+
+impl TextLeadingDistribution {
+    fn is_even(v: &TextLeadingDistribution) -> bool {
+        *v == TextLeadingDistribution::Even
+    }
+}
+
+/// Paragraph-level strut style used to stabilize line box metrics across fallback runs.
+///
+/// This is a mechanism-only surface. Ecosystem presets (e.g. `fret-ui-kit::typography`) decide
+/// when to enable it (see ADR 0287 and related workstreams).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct TextStrutStyle {
+    /// Optional font override used for strut metrics (defaults to `TextStyle.font`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<FontId>,
+    /// Optional font size override used for strut metrics (defaults to `TextStyle.size`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<Px>,
+    /// Optional line height override, in logical px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height: Option<Px>,
+    /// Optional line height override, expressed as a multiple of the effective size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_height_em: Option<f32>,
+    /// Optional leading distribution override (defaults to `TextStyle.leading_distribution`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub leading_distribution: Option<TextLeadingDistribution>,
+    /// If true, force the strut line box even when the style's policy is `ExpandToFit`.
+    ///
+    /// This mirrors the intent of Flutter's `forceStrutHeight`: stabilize layout for UI-like
+    /// multiline surfaces, at the cost of potential glyph ink clipping.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub force: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConstraints {
     pub max_width: Option<Px>,
@@ -217,6 +262,14 @@ pub struct TextStyle {
         skip_serializing_if = "TextVerticalPlacement::is_center_metrics_box"
     )]
     pub vertical_placement: TextVerticalPlacement,
+    /// Controls how extra leading is distributed above/below the text box when a line height is
+    /// larger than font extents.
+    #[serde(default, skip_serializing_if = "TextLeadingDistribution::is_even")]
+    pub leading_distribution: TextLeadingDistribution,
+    /// Optional paragraph-level strut style used to stabilize line box metrics across fallback
+    /// runs (especially useful for multiline UI-like surfaces).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strut_style: Option<TextStrutStyle>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
@@ -240,6 +293,8 @@ impl Default for TextStyle {
             line_height_policy: TextLineHeightPolicy::ExpandToFit,
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+            leading_distribution: TextLeadingDistribution::Even,
+            strut_style: None,
         }
     }
 }

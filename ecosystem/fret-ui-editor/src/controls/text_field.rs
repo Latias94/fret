@@ -36,6 +36,11 @@ pub struct TextFieldOptions {
 
     /// When true, uses `TextArea` (multiline) instead of `TextInput`.
     pub multiline: bool,
+    /// If true, opt into stable multiline line boxes (fixed line height + forced strut).
+    ///
+    /// This is intended for UI/form surfaces where baseline stability matters more than avoiding
+    /// ink clipping for tall fallback glyphs.
+    pub stable_line_boxes: bool,
     /// Minimum height for multiline text areas.
     pub min_height: Option<Px>,
 }
@@ -60,6 +65,7 @@ impl Default for TextFieldOptions {
             test_id: None,
             clear_test_id: None,
             multiline: false,
+            stable_line_boxes: false,
             min_height: None,
         }
     }
@@ -98,6 +104,7 @@ impl TextField {
         let test_id = options.test_id.clone();
         let clear_test_id = options.clear_test_id.clone();
         let multiline = options.multiline;
+        let stable_line_boxes = options.stable_line_boxes;
         let min_height = options.min_height;
 
         let has_value = cx
@@ -132,6 +139,16 @@ impl TextField {
                             size,
                             &ChromeRefinement::default(),
                         )
+                    };
+                    let text_style = if stable_line_boxes {
+                        let theme = Theme::global(&*cx.app);
+                        typography::text_area_control_text_style_scaled(
+                            theme,
+                            fret_core::FontId::ui(),
+                            text_style.size,
+                        )
+                    } else {
+                        text_style
                     };
 
                     let mut props = TextAreaProps::new(model_for_input.clone());

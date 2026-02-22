@@ -308,6 +308,7 @@ pub(super) fn preview_input(
                 .into_element(cx),
             shadcn::FieldDescription::new("This field is currently disabled.").into_element(cx),
         ])
+        .disabled(true)
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-disabled");
@@ -325,6 +326,7 @@ pub(super) fn preview_input(
                 .into_element(cx),
             shadcn::FieldError::new("Please provide a valid email format.").into_element(cx),
         ])
+        .invalid(true)
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
         .test_id("ui-gallery-input-invalid");
@@ -666,10 +668,15 @@ pub(super) fn preview_input(
             )
             .code(
                 "rust",
-                r#"shadcn::Input::new(model)
-    .a11y_label("Disabled email")
-    .disabled(true)
-    .into_element(cx);"#,
+                r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Email").into_element(cx),
+    shadcn::Input::new(model)
+        .a11y_label("Disabled email")
+        .disabled(true)
+        .into_element(cx),
+])
+.disabled(true)
+.into_element(cx);"#,
             ),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state uses `aria_invalid` + field-level error copy.")
@@ -683,6 +690,7 @@ pub(super) fn preview_input(
         .into_element(cx),
     shadcn::FieldError::new("Please provide a valid email format.").into_element(cx),
 ])
+.invalid(true)
 .into_element(cx);"#,
                 ),
             DocSection::new("File", file).description(
