@@ -26,9 +26,8 @@
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`RenderPlanPassTraceMeta.scissor_space`),
     `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace field: `scissor_space`),
     `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`render_plan_trace_fingerprint` mixes scissor-space).
-- [ ] Extend RenderPlan JSON dump to preserve scissor coordinate space tags (absolute vs dst-local).
-  - Rationale: keep parity with trace fields and make plan-shape comparisons reviewable in dumps.
-  - Target: `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs`
+- [x] Extend RenderPlan JSON dump to preserve scissor coordinate space tags (absolute vs dst-local).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (pass `*_scissor_space` fields, effect-marker `scissor_space`).
 
 ## Nice-to-have
 
