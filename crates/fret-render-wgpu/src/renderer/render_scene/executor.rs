@@ -2,8 +2,8 @@ use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use super::ctx::ExecuteCtx;
 use super::recorders::{
-    record_backdrop_warp_pass, record_blur_pass, record_color_adjust_pass,
-    record_fullscreen_blit_pass, record_scale_nearest_pass,
+    record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
+    record_color_adjust_pass, record_fullscreen_blit_pass, record_scale_nearest_pass,
 };
 
 pub(super) struct RenderSceneExecutor<'a> {
@@ -197,24 +197,7 @@ impl<'a> RenderSceneExecutor<'a> {
                 self.renderer.record_color_matrix_pass(&mut ctx, pass);
             }
             RenderPlanPass::AlphaThreshold(pass) => {
-                let mut ctx = ExecuteCtx {
-                    device: self.device,
-                    queue: self.queue,
-                    frame_index: self.frame_index,
-                    format: self.format,
-                    target_view: self.target_view,
-                    viewport_size: self.viewport_size,
-                    usage: self.usage,
-                    encoder: self.encoder,
-                    frame_targets: self.frame_targets,
-                    encoding: self.encoding,
-                    render_space_offset_u32,
-                    quad_vertex_size: self.quad_vertex_size,
-                    quad_vertex_bases: self.quad_vertex_bases,
-                    perf_enabled: self.perf_enabled,
-                    frame_perf: self.frame_perf,
-                };
-                self.renderer.record_alpha_threshold_pass(&mut ctx, pass);
+                record_alpha_threshold_pass(self, pass, render_space_offset_u32);
             }
             RenderPlanPass::DropShadow(pass) => {
                 let mut ctx = ExecuteCtx {
