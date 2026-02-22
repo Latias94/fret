@@ -2,7 +2,13 @@
 
 This is **non-normative** and tracks delivery progress.
 
+Status key:
+- Done: exit criteria met for v1 scope.
+- Partial: core landed, follow-ups tracked in TODO.
+
 ## M0 — Preset surface exists (API + docs)
+
+Status: Done.
 
 Exit criteria:
 
@@ -10,21 +16,41 @@ Exit criteria:
 - Preset docs explain when to use `BoundsAsLineBox`.
 - At least one shadcn control uses the preset surface.
 
+Evidence:
+- `ecosystem/fret-ui-kit/src/typography.rs`
+- `docs/workstreams/ui-typography-presets-v1.md`
+
 ## M1 — shadcn control text migrated (core set)
+
+Status: Partial.
 
 Exit criteria:
 
 - `fret-ui-shadcn` core controls (button, menu item, input label, radio label) use presets/helpers.
 - No remaining ad-hoc `TextStyle` literals in those components for control text sizing/line height.
 
+Notes:
+- Remaining “builder-chain” callsites that manually set `text_size_px` + `line_height_px` +
+  `FixedFromStyle` should be audited and moved to intent/preset helpers (or at least add
+  `BoundsAsLineBox` placement where the control uses a fixed height).
+- Tracking: `docs/workstreams/ui-typography-presets-v1-todo.md`
+
 ## M2 — Regression gates in place
+
+Status: Done.
 
 Exit criteria:
 
 - A targeted test/gate fails on “first-line jump” regressions.
 - Gate is documented and linked from the workstream.
 
+Evidence:
+- `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`
+- `ecosystem/fret-ui-material3/src/lib.rs`
+
 ## M3 — Intent-first API + material3 adoption
+
+Status: Done.
 
 Exit criteria:
 
@@ -32,3 +58,7 @@ Exit criteria:
   returns a ready-to-use `TextStyle` (or builder) without per-component composition.
 - `fret-ui-material3` control surfaces adopt the same stability defaults (fixed line boxes for
   controls; expand-to-fit for content).
+
+Evidence:
+- `ecosystem/fret-ui-kit/src/typography.rs` (`TextIntent`, `TypographyPreset`, `with_intent`)
+- `ecosystem/fret-ui-material3/src/lib.rs` (token + shaping gates)

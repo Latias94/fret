@@ -19,6 +19,9 @@ This is a checklist-style tracker. It is **non-normative**.
       fixed line boxes via `fret-ui-kit` helpers.
 - [x] `fret-ui-shadcn`: finish remaining ad-hoc control text literals (e.g. `button_group.rs`) and
       remove redundant local helpers where feasible.
+- [ ] `fret-ui-shadcn`: audit remaining builder-chain control text callsites that set
+      `text_size_px` + `line_height_px` + `FixedFromStyle`, and migrate to intent/preset helpers
+      (or add `BoundsAsLineBox` placement for fixed-height controls).
 - [x] `fret-ui-kit`: migrate ad-hoc control text in primitives/overlays (e.g. labels, text fields,
       toasts) to the intent-first stability defaults.
 - [x] `fret-ui-material3`: ensure generated typography styles include stable line box policy for control surfaces (plus regression gates).
