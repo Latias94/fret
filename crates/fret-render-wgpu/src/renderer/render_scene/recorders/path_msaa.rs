@@ -8,8 +8,6 @@ impl Renderer {
         ctx: &mut ExecuteCtx<'_>,
         plan: &RenderPlan,
         pass_index: usize,
-        quad_vertex_bases: &[Option<u32>],
-        quad_vertex_size: u64,
         path_vertex_buffer: &wgpu::Buffer,
         path_paint_bind_group: &wgpu::BindGroup,
         path_pass: &PathMsaaBatchPass,
@@ -24,6 +22,8 @@ impl Renderer {
         let render_space_offset_u32 = ctx.render_space_offset_u32;
         let perf_enabled = ctx.perf_enabled;
         let frame_perf = &mut *ctx.frame_perf;
+        let quad_vertex_bases = ctx.quad_vertex_bases;
+        let quad_vertex_size = ctx.quad_vertex_size;
 
         debug_assert!(path_pass.segment.0 < plan.segments.len());
         let target_origin = path_pass.target_origin;

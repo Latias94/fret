@@ -967,6 +967,8 @@ impl Renderer {
                         render_space_offset_u32,
                         scale_param_size,
                         scale_param_cursor: &mut scale_param_cursor,
+                        quad_vertex_size,
+                        quad_vertex_bases: &quad_vertex_bases,
                         perf_enabled,
                         frame_perf: &mut frame_perf,
                     };
@@ -997,8 +999,6 @@ impl Renderer {
                                 &mut ctx,
                                 &plan,
                                 pass_index,
-                                &quad_vertex_bases,
-                                quad_vertex_size,
                                 &path_vertex_buffer,
                                 &path_paint_bind_group,
                                 path_pass,
@@ -1029,13 +1029,7 @@ impl Renderer {
                             self.record_drop_shadow_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::CompositePremul(pass) => {
-                            self.record_composite_premul_pass(
-                                &mut ctx,
-                                pass_index,
-                                &quad_vertex_bases,
-                                quad_vertex_size,
-                                pass,
-                            );
+                            self.record_composite_premul_pass(&mut ctx, pass_index, pass);
                         }
                         RenderPlanPass::ClipMask(pass) => {
                             self.record_clip_mask_pass(&mut ctx, pass);

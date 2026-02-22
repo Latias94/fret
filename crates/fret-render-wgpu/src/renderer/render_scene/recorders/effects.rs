@@ -1095,8 +1095,6 @@ impl Renderer {
         &mut self,
         ctx: &mut ExecuteCtx<'_>,
         pass_index: usize,
-        quad_vertex_bases: &[Option<u32>],
-        quad_vertex_size: u64,
         pass: &CompositePremulPass,
     ) {
         let device = ctx.device;
@@ -1110,6 +1108,8 @@ impl Renderer {
         let render_space_offset_u32 = ctx.render_space_offset_u32;
         let perf_enabled = ctx.perf_enabled;
         let frame_perf = &mut *ctx.frame_perf;
+        let quad_vertex_bases = ctx.quad_vertex_bases;
+        let quad_vertex_size = ctx.quad_vertex_size;
 
         let pipeline_ix = pass.blend_mode.pipeline_index();
 
