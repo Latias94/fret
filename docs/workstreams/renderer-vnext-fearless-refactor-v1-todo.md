@@ -227,8 +227,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
   - Goal: reduce churn in bind group rebuild paths and make ownership explicit.
   - Gate: `cargo test -p fret-render-wgpu --lib` + `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
-- [ ] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
+- [~] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
   - Goal: one place to reason about “recreate buffer → rebuild bind group → invalidate caches”.
+  - Landed (step 1): centralize uniform-dependent buffer replacement so every resize flows through a single rebuild+invalidate path.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`with_uniform_resource_update`, `rebuild_uniform_bind_group`)
   - Gate: run the anchor conformance set listed in ADR 0201.
 - [ ] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.
