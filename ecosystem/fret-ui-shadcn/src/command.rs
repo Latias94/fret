@@ -37,6 +37,7 @@ use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::theme_tokens;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::layout as shadcn_layout;
@@ -467,13 +468,9 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.command.item.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::NORMAL;
+    style
 }
 
 fn heading_text_style(theme: &Theme) -> TextStyle {
@@ -485,13 +482,9 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.command.heading.line_height")
         .unwrap_or(Px(16.0));
 
-    TextStyle {
-        font: FontId::default(),
-        size,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), size, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
@@ -506,15 +499,11 @@ pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.command.shortcut.line_height")
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
         .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(px.0)));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(line_height),
-        // new-york-v4: `tracking-widest`.
-        letter_spacing_em: Some(0.10),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::NORMAL;
+    // new-york-v4: `tracking-widest`.
+    style.letter_spacing_em = Some(0.10);
+    style
 }
 
 /// shadcn/ui `CommandShortcut` (v4).

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontWeight, Px, TextStyle};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -10,6 +10,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
@@ -97,12 +98,9 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
         .metric_by_key("component.toggle.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    TextStyle {
-        size: px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 #[derive(Debug, Clone, Default)]

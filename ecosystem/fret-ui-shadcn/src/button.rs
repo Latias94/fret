@@ -9,6 +9,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot, ShadowPreset,
     Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
@@ -284,13 +285,9 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     let px = size.component_size().control_text_px(theme);
     let line_height = theme.metric_token("font.line_height");
 
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
+    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 #[derive(Clone)]

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, Px, TextLineHeightPolicy, TextStyle};
+use fret_core::{Color, Corners, Edges, FontId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -131,16 +132,7 @@ pub fn textarea<H: UiHost>(
 
     let resolved = resolve_input_chrome(theme, size, &chrome, InputTokenKeys::none());
 
-    let font_line_height = theme
-        .metric_by_key("font.line_height")
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    let text_style = TextStyle {
-        font: FontId::default(),
-        size: resolved.text_px,
-        line_height: Some(font_line_height),
-        line_height_policy: TextLineHeightPolicy::FixedFromStyle,
-        ..Default::default()
-    };
+    let text_style = typography::control_text_style_scaled(theme, FontId::ui(), resolved.text_px);
 
     let mut chrome = TextAreaStyle::default();
     chrome.padding_x = resolved.padding.left;

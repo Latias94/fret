@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_ui::element::PressableState;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
@@ -10,6 +10,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size as ComponentSize, ui};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -131,13 +132,9 @@ pub fn native_select<H: UiHost>(
         NativeSelectSize::Default => (Px(36.0), Px(8.0)),
     };
 
-    let text_style = TextStyle {
-        font: FontId::default(),
-        size: resolved.text_px,
-        weight: FontWeight::NORMAL,
-        line_height: Some(theme.metric_token("font.line_height")),
-        ..Default::default()
-    };
+    let mut text_style =
+        typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+    text_style.weight = FontWeight::NORMAL;
 
     let mut border_color = resolved.border_color;
     let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
