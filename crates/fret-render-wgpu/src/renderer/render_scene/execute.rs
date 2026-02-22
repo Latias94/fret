@@ -70,6 +70,21 @@ fn render_plan_pass_render_space(pass: &RenderPlanPass) -> Option<((u32, u32), (
     }
 }
 
+struct ExecuteCtx<'a> {
+    device: &'a wgpu::Device,
+    queue: &'a wgpu::Queue,
+    format: wgpu::TextureFormat,
+    target_view: &'a wgpu::TextureView,
+    viewport_size: (u32, u32),
+    usage: wgpu::TextureUsages,
+    encoder: &'a mut wgpu::CommandEncoder,
+    frame_targets: &'a mut FrameTargets,
+    encoding: &'a SceneEncoding,
+    render_space_offset_u32: u32,
+    perf_enabled: bool,
+    frame_perf: &'a mut RenderPerfStats,
+}
+
 impl Renderer {
     fn pick_image_bind_group(
         &self,
@@ -2340,22 +2355,20 @@ impl Renderer {
         }
     }
 
-    fn record_color_adjust_pass(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        pass: &ColorAdjustPass,
-    ) {
+    fn record_color_adjust_pass(&mut self, ctx: &mut ExecuteCtx<'_>, pass: &ColorAdjustPass) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         queue.write_buffer(
             &self.color_adjust_param_buffer,
             0,
@@ -2606,22 +2619,20 @@ impl Renderer {
         }
     }
 
-    fn record_color_matrix_pass(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        pass: &ColorMatrixPass,
-    ) {
+    fn record_color_matrix_pass(&mut self, ctx: &mut ExecuteCtx<'_>, pass: &ColorMatrixPass) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         let m = pass.matrix;
         let packed: [f32; 20] = [
             // row0 (col0..3)
@@ -2880,22 +2891,20 @@ impl Renderer {
         }
     }
 
-    fn record_alpha_threshold_pass(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        pass: &AlphaThresholdPass,
-    ) {
+    fn record_alpha_threshold_pass(&mut self, ctx: &mut ExecuteCtx<'_>, pass: &AlphaThresholdPass) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         queue.write_buffer(
             &self.alpha_threshold_param_buffer,
             0,
@@ -3145,22 +3154,20 @@ impl Renderer {
         }
     }
 
-    fn record_drop_shadow_pass(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        pass: &DropShadowPass,
-    ) {
+    fn record_drop_shadow_pass(&mut self, ctx: &mut ExecuteCtx<'_>, pass: &DropShadowPass) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         queue.write_buffer(
             &self.drop_shadow_param_buffer,
             0,
@@ -3422,22 +3429,24 @@ impl Renderer {
 
     fn record_composite_premul_pass(
         &mut self,
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
+        ctx: &mut ExecuteCtx<'_>,
         pass_index: usize,
         quad_vertex_bases: &[Option<u32>],
         quad_vertex_size: u64,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
         pass: &CompositePremulPass,
     ) {
+        let device = ctx.device;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         let pipeline_ix = pass.blend_mode.pipeline_index();
 
         let src_view = match pass.src {
@@ -3600,19 +3609,17 @@ impl Renderer {
         }
     }
 
-    fn record_clip_mask_pass(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
-        pass: &ClipMaskPass,
-    ) {
+    fn record_clip_mask_pass(&mut self, ctx: &mut ExecuteCtx<'_>, pass: &ClipMaskPass) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         debug_assert!(matches!(
             pass.dst,
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
@@ -4613,32 +4620,47 @@ impl Renderer {
                         (pass_index as u64).saturating_mul(self.render_space_stride);
                     let render_space_offset_u32 = render_space_offset as u32;
 
+                    let mut ctx = ExecuteCtx {
+                        device,
+                        queue,
+                        format,
+                        target_view,
+                        viewport_size,
+                        usage,
+                        encoder: &mut encoder,
+                        frame_targets: &mut frame_targets,
+                        encoding: &encoding,
+                        render_space_offset_u32,
+                        perf_enabled,
+                        frame_perf: &mut frame_perf,
+                    };
+
                     match planned_pass {
                         RenderPlanPass::PathClipMask(mask_pass) => {
                             self.record_path_clip_mask_pass(
-                                device,
-                                usage,
+                                ctx.device,
+                                ctx.usage,
                                 frame_index,
-                                &mut frame_targets,
-                                &mut encoder,
-                                &encoding,
+                                ctx.frame_targets,
+                                ctx.encoder,
+                                ctx.encoding,
                                 &path_vertex_buffer,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.render_space_offset_u32,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 mask_pass,
                             );
                         }
                         RenderPlanPass::SceneDrawRange(scene_pass) => {
                             self.record_scene_draw_range_pass(
-                                device,
-                                format,
-                                target_view,
-                                usage,
-                                &mut frame_targets,
-                                &mut encoder,
+                                ctx.device,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.usage,
+                                ctx.frame_targets,
+                                ctx.encoder,
                                 &plan,
-                                &encoding,
+                                ctx.encoding,
                                 scene_pass,
                                 &viewport_vertex_buffer,
                                 &text_vertex_buffer,
@@ -4646,200 +4668,124 @@ impl Renderer {
                                 &quad_instance_bind_group,
                                 &text_paint_bind_group,
                                 &path_paint_bind_group,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.render_space_offset_u32,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                             );
                         }
                         RenderPlanPass::PathMsaaBatch(path_pass) => {
                             self.record_path_msaa_batch_pass(
-                                device,
-                                format,
-                                target_view,
-                                usage,
-                                &mut frame_targets,
-                                &mut encoder,
+                                ctx.device,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.usage,
+                                ctx.frame_targets,
+                                ctx.encoder,
                                 &plan,
-                                &encoding,
+                                ctx.encoding,
                                 pass_index,
                                 &quad_vertex_bases,
                                 quad_vertex_size,
                                 &path_vertex_buffer,
                                 &path_paint_bind_group,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.render_space_offset_u32,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 path_pass,
                             );
                         }
                         RenderPlanPass::ScaleNearest(pass) => {
                             self.record_scale_nearest_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
+                                ctx.device,
+                                ctx.queue,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.viewport_size,
+                                ctx.usage,
+                                ctx.encoder,
+                                ctx.frame_targets,
+                                ctx.encoding,
+                                ctx.render_space_offset_u32,
                                 scale_param_size,
                                 &mut scale_param_cursor,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 pass,
                             );
                         }
                         RenderPlanPass::Blur(pass) => {
                             self.record_blur_pass(
-                                device,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.device,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.viewport_size,
+                                ctx.usage,
+                                ctx.encoder,
+                                ctx.frame_targets,
+                                ctx.encoding,
+                                ctx.render_space_offset_u32,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 pass,
                             );
                         }
                         RenderPlanPass::FullscreenBlit(pass) => {
                             self.record_fullscreen_blit_pass(
-                                device,
-                                format,
-                                target_view,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.device,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.usage,
+                                ctx.encoder,
+                                ctx.frame_targets,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 pass,
                             );
                         }
                         RenderPlanPass::BackdropWarp(pass) => {
                             self.record_backdrop_warp_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
+                                ctx.device,
+                                ctx.queue,
+                                ctx.format,
+                                ctx.target_view,
+                                ctx.viewport_size,
+                                ctx.usage,
+                                ctx.encoder,
+                                ctx.frame_targets,
+                                ctx.encoding,
+                                ctx.render_space_offset_u32,
+                                ctx.perf_enabled,
+                                ctx.frame_perf,
                                 pass,
                             );
                         }
                         RenderPlanPass::ColorAdjust(pass) => {
-                            self.record_color_adjust_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
-                                pass,
-                            );
+                            self.record_color_adjust_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::ColorMatrix(pass) => {
-                            self.record_color_matrix_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
-                                pass,
-                            );
+                            self.record_color_matrix_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::AlphaThreshold(pass) => {
-                            self.record_alpha_threshold_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
-                                pass,
-                            );
+                            self.record_alpha_threshold_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::DropShadow(pass) => {
-                            self.record_drop_shadow_pass(
-                                device,
-                                queue,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
-                                pass,
-                            );
+                            self.record_drop_shadow_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::CompositePremul(pass) => {
                             self.record_composite_premul_pass(
-                                device,
-                                format,
-                                target_view,
-                                viewport_size,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
+                                &mut ctx,
                                 pass_index,
                                 &quad_vertex_bases,
                                 quad_vertex_size,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
                                 pass,
                             );
                         }
                         RenderPlanPass::ClipMask(pass) => {
-                            self.record_clip_mask_pass(
-                                device,
-                                queue,
-                                usage,
-                                &mut encoder,
-                                &mut frame_targets,
-                                &encoding,
-                                render_space_offset_u32,
-                                perf_enabled,
-                                &mut frame_perf,
-                                pass,
-                            );
+                            self.record_clip_mask_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::ReleaseTarget(target) => {
-                            frame_targets.release_target(&mut self.intermediate_pool, *target);
+                            ctx.frame_targets
+                                .release_target(&mut self.intermediate_pool, *target);
                         }
                     }
                 }
