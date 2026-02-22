@@ -130,6 +130,11 @@ impl TopAppBarScrollBehavior {
             TopAppBarScrollBehaviorKind::Pinned => (expanded_height, 0.0, initial_offset_y),
             TopAppBarScrollBehaviorKind::ExitUntilCollapsed => {
                 if !can_scroll_y {
+                    if let Some(state_rc) = self.exit_until_collapsed_state.as_ref() {
+                        let mut state = state_rc.borrow_mut();
+                        state.last_offset_y = Some(initial_offset_y);
+                        state.idle_frames = 0;
+                    }
                     return TopAppBarScrollLayout {
                         scrolled: false,
                         container_height: expanded_height,
@@ -168,6 +173,14 @@ impl TopAppBarScrollBehavior {
             }
             TopAppBarScrollBehaviorKind::EnterAlways => {
                 if !can_scroll_y {
+                    if let Some(state_rc) = self.enter_always_state.as_ref() {
+                        let mut state = state_rc.borrow_mut();
+                        state.last_offset_y = Some(initial_offset_y);
+                        state.idle_frames = 0;
+                        let tick = state.tick;
+                        let height_offset = state.height_offset;
+                        state.settle.reset(tick, height_offset);
+                    }
                     return TopAppBarScrollLayout {
                         scrolled: false,
                         container_height: expanded_height,
