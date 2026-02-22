@@ -234,6 +234,12 @@ pub(super) fn try_key_hook<H: UiHost>(
             }
         }
 
+        let ime_composing = cx
+            .app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|service| service.snapshot(window))
+            .map(|snapshot| snapshot.is_composing)
+            .unwrap_or(false);
         let mut host = KeyHookHost {
             app: &mut *cx.app,
             window,
@@ -252,6 +258,7 @@ pub(super) fn try_key_hook<H: UiHost>(
                 key,
                 modifiers,
                 repeat,
+                ime_composing,
             },
         );
         if handled {

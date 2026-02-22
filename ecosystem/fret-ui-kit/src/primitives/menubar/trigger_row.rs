@@ -1187,6 +1187,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: mods,
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);
@@ -1243,6 +1244,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: mods,
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);
@@ -1310,6 +1312,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: mods,
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);
@@ -1366,6 +1369,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: Modifiers::default(),
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);
@@ -1429,6 +1433,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: Modifiers::default(),
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);
@@ -1485,6 +1490,7 @@ mod tests {
                 key: KeyCode::KeyF,
                 modifiers: Modifiers::default(),
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(!handled);
@@ -1535,6 +1541,7 @@ mod tests {
                 key: KeyCode::Escape,
                 modifiers: Modifiers::default(),
                 repeat: false,
+                ime_composing: false,
             },
         );
         assert!(handled);

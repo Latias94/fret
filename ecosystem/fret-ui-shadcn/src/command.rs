@@ -2378,6 +2378,12 @@ impl CommandPalette {
                                 return false;
                             }
 
+                            // Align cmdk: avoid triggering navigation/activation shortcuts while IME composition
+                            // is still active (e.g. CJK preedit). See `cmdk`'s `isComposing` guard.
+                            if down.ime_composing {
+                                return false;
+                            }
+
                             let entries = entries_read.borrow();
                             let disabled_flags: Vec<bool> =
                                 entries.iter().map(|e| e.disabled).collect();

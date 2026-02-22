@@ -299,6 +299,11 @@ pub struct KeyDownCx {
     pub key: KeyCode,
     pub modifiers: Modifiers,
     pub repeat: bool,
+    /// Whether the focused text input is currently in an active IME composition session.
+    ///
+    /// When `true`, components should generally avoid treating key presses as command/selection
+    /// navigation shortcuts (see `cmdk`'s `isComposing` guard).
+    pub ime_composing: bool,
 }
 
 /// Object-safe host surface for action handlers.

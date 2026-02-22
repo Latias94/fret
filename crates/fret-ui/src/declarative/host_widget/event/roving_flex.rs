@@ -186,6 +186,12 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         |hooks| hooks.on_key_down.clone(),
     );
     if let Some(h) = key_hook {
+        let ime_composing = cx
+            .app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|service| service.snapshot(window))
+            .map(|snapshot| snapshot.is_composing)
+            .unwrap_or(false);
         let mut host = RovingHookHost {
             app: &mut *cx.app,
             window,
@@ -204,6 +210,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 key: *key,
                 modifiers: *modifiers,
                 repeat: *repeat,
+                ime_composing,
             },
         );
         if handled {

@@ -155,6 +155,7 @@ mod tests {
             key: KeyCode::F10,
             modifiers,
             repeat: false,
+            ime_composing: false,
         }));
     }
 
@@ -164,6 +165,7 @@ mod tests {
             key: KeyCode::ContextMenu,
             modifiers: Modifiers::default(),
             repeat: false,
+            ime_composing: false,
         }));
     }
 
@@ -173,6 +175,7 @@ mod tests {
             key: KeyCode::F10,
             modifiers: Modifiers::default(),
             repeat: false,
+            ime_composing: false,
         }));
     }
 
@@ -184,6 +187,7 @@ mod tests {
             key: KeyCode::F10,
             modifiers,
             repeat: true,
+            ime_composing: false,
         }));
     }
 }
