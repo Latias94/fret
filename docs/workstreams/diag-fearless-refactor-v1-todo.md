@@ -77,7 +77,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 
 ## Bundle size & AI loops (Plan 1)
 
-- [ ] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime.
+- [x] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime:
+  - `docs/ui-diagnostics-and-scripted-tests.md` (AI presets)
 - [ ] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
   - [x] Runtime writes canonical sidecars on dump (native filesystem):
     - [x] `bundle.index.json`

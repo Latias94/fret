@@ -94,6 +94,38 @@ Notes:
 - When `script.result.json` is present in the bundle directory, `bundle.index.json` also includes an additive `script.steps` section that
   maps script `step_index` values to the nearest snapshot selector (resolved by `frame_id` first, then by timestamp when needed).
 
+## Recommended env presets (AI loops)
+
+When you expect large bundles (or want fast AI/CLI iteration), keep bundles small and indexes rich:
+
+Minimal “AI triage” preset (portable defaults; copy/paste in PowerShell):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
+$env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="last"
+$env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=30
+$env:FRET_DIAG_BUNDLE_JSON_FORMAT="compact"
+```
+
+More aggressive “small bundles” preset (trade off semantics richness; best for test-id driven workflows):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
+$env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="changed"
+$env:FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1
+$env:FRET_DIAG_MAX_SEMANTICS_NODES=20000
+$env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=20
+```
+
+Authoring scripts / selectors preset (reduce friction while iterating):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_REDACT_TEXT=0
+```
+
 ## AI-first triage recipe (avoid sharing full `bundle.json`)
 
 When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
