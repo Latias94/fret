@@ -10,6 +10,7 @@ pub(super) fn preview_command_palette(
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct CommandPageModels {
+        usage_query: Option<Model<String>>,
         basic_open: Option<Model<bool>>,
         basic_query: Option<Model<String>>,
         shortcuts_query: Option<Model<String>>,
@@ -24,6 +25,7 @@ pub(super) fn preview_command_palette(
     }
 
     let (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -37,6 +39,7 @@ pub(super) fn preview_command_palette(
         demo_group_force_query,
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
+            st.usage_query.clone(),
             st.basic_open.clone(),
             st.basic_query.clone(),
             st.shortcuts_query.clone(),
@@ -52,6 +55,7 @@ pub(super) fn preview_command_palette(
     });
 
     let (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -64,6 +68,7 @@ pub(super) fn preview_command_palette(
         demo_filter_value,
         demo_group_force_query,
     ) = match (
+        usage_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -77,6 +82,7 @@ pub(super) fn preview_command_palette(
         demo_group_force_query,
     ) {
         (
+            Some(usage_query),
             Some(basic_open),
             Some(basic_query),
             Some(shortcuts_query),
@@ -89,6 +95,7 @@ pub(super) fn preview_command_palette(
             Some(demo_filter_value),
             Some(demo_group_force_query),
         ) => (
+            usage_query,
             basic_open,
             basic_query,
             shortcuts_query,
@@ -102,6 +109,7 @@ pub(super) fn preview_command_palette(
             demo_group_force_query,
         ),
         _ => {
+            let usage_query = cx.app.models_mut().insert(String::new());
             let basic_open = cx.app.models_mut().insert(false);
             let basic_query = cx.app.models_mut().insert(String::new());
             let shortcuts_query = cx.app.models_mut().insert(String::new());
@@ -117,6 +125,7 @@ pub(super) fn preview_command_palette(
                 .insert(Some(Arc::<str>::from("Calendar")));
             let demo_group_force_query = cx.app.models_mut().insert(String::new());
             cx.with_state(CommandPageModels::default, |st| {
+                st.usage_query = Some(usage_query.clone());
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
                 st.shortcuts_query = Some(shortcuts_query.clone());
@@ -131,6 +140,7 @@ pub(super) fn preview_command_palette(
                 st.demo_group_force_query = Some(demo_group_force_query.clone());
             });
             (
+                usage_query,
                 basic_open,
                 basic_query,
                 shortcuts_query,
@@ -181,6 +191,40 @@ pub(super) fn preview_command_palette(
             .keywords(["math", "calc"])
             .on_select_action(on_select(Arc::from("command.basic.calculator"))),
     ];
+
+    let usage_entries: Vec<shadcn::CommandEntry> = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Calendar")
+                .on_select_action(on_select(Arc::from("command.usage.calendar"))),
+            shadcn::CommandItem::new("Search Emoji")
+                .on_select_action(on_select(Arc::from("command.usage.search-emoji"))),
+            shadcn::CommandItem::new("Calculator")
+                .on_select_action(on_select(Arc::from("command.usage.calculator"))),
+        ])
+        .heading("Suggestions")
+        .into(),
+        shadcn::CommandSeparator::new().into(),
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Profile")
+                .on_select_action(on_select(Arc::from("command.usage.profile"))),
+            shadcn::CommandItem::new("Billing")
+                .on_select_action(on_select(Arc::from("command.usage.billing"))),
+            shadcn::CommandItem::new("Settings")
+                .on_select_action(on_select(Arc::from("command.usage.settings"))),
+        ])
+        .heading("Settings")
+        .into(),
+    ];
+
+    let usage_palette = shadcn::CommandPalette::new(usage_query.clone(), Vec::new())
+        .placeholder("Type a command or search...")
+        .a11y_label("Command usage")
+        .entries(usage_entries)
+        .test_id_input("ui-gallery-command-usage-input")
+        .list_test_id("ui-gallery-command-usage-listbox")
+        .test_id_item_prefix("ui-gallery-command-usage-item-")
+        .into_element(cx)
+        .test_id("ui-gallery-command-usage");
     let mut demo_filter_entries: Vec<shadcn::CommandEntry> =
         basic_items.clone().into_iter().map(Into::into).collect();
     demo_filter_entries.push(
@@ -420,9 +464,9 @@ pub(super) fn preview_command_palette(
                         .get_cloned(&demo_filter_value)
                         .unwrap_or(None);
                     vec![
-                        cx.text("Demo-only: controlled cmdk selection value"),
+                        cx.text("Controlled selection demo (cmdk `value`)"),
                         cx.text(format!(
-                            "selection value (cmdk value): {}",
+                            "active value: {}",
                             demo_filter_value_value.as_deref().unwrap_or("<none>")
                         )),
                         controlled_selection_row,
@@ -544,7 +588,7 @@ pub(super) fn preview_command_palette(
         cx,
         [
             "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
-            "Attach either `on_select` or `on_select_action` for every interactive item; otherwise entries are treated as disabled.",
+            "Attach either `on_select`, `on_select_action`, or `on_select_value_action` for every interactive item; otherwise entries are treated as disabled.",
             "Mirror docs order even when APIs differ so parity gaps stay explicit and testable.",
             "For long command catalogs, constrain list height via `refine_scroll_layout` to keep dialog geometry stable.",
         ],
@@ -553,9 +597,41 @@ pub(super) fn preview_command_palette(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order: Basic, Shortcuts, Groups, Scrollable, RTL.",
+            "Preview follows shadcn Command docs order: Usage, Basic, Shortcuts, Groups, Scrollable, RTL.",
         ),
         vec![
+            DocSection::new("Usage", usage_palette)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-usage")
+                .descriptions([
+                    "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
+                    "Use this pattern for inline command menus (as opposed to `CommandDialog`).",
+                ])
+                .code(
+                    "rust",
+                    r#"let entries = vec![
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Calendar"),
+        shadcn::CommandItem::new("Search Emoji"),
+        shadcn::CommandItem::new("Calculator"),
+    ])
+    .heading("Suggestions")
+    .into(),
+    shadcn::CommandSeparator::new().into(),
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Profile"),
+        shadcn::CommandItem::new("Billing"),
+        shadcn::CommandItem::new("Settings"),
+    ])
+    .heading("Settings")
+    .into(),
+];
+
+shadcn::CommandPalette::new(query, Vec::new())
+    .placeholder("Type a command or search...")
+    .entries(entries)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Basic", basic_dialog)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-basic")
