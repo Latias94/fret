@@ -1,19 +1,21 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::ctx::ExecuteCtx;
 
 impl Renderer {
     pub(in super::super) fn record_fullscreen_blit_pass(
         &mut self,
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
+        ctx: &mut ExecuteCtx<'_>,
         pass: &FullscreenBlitPass,
     ) {
+        let device = ctx.device;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         let blit_pipeline = self
             .blit_pipeline
             .as_ref()

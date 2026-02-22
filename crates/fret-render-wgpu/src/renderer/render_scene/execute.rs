@@ -964,6 +964,8 @@ impl Renderer {
                         frame_targets: &mut frame_targets,
                         encoding: &encoding,
                         render_space_offset_u32,
+                        scale_param_size,
+                        scale_param_cursor: &mut scale_param_cursor,
                         perf_enabled,
                         frame_perf: &mut frame_perf,
                     };
@@ -1028,69 +1030,16 @@ impl Renderer {
                             );
                         }
                         RenderPlanPass::ScaleNearest(pass) => {
-                            self.record_scale_nearest_pass(
-                                ctx.device,
-                                ctx.queue,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.viewport_size,
-                                ctx.usage,
-                                ctx.encoder,
-                                ctx.frame_targets,
-                                ctx.encoding,
-                                ctx.render_space_offset_u32,
-                                scale_param_size,
-                                &mut scale_param_cursor,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
-                                pass,
-                            );
+                            self.record_scale_nearest_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::Blur(pass) => {
-                            self.record_blur_pass(
-                                ctx.device,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.viewport_size,
-                                ctx.usage,
-                                ctx.encoder,
-                                ctx.frame_targets,
-                                ctx.encoding,
-                                ctx.render_space_offset_u32,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
-                                pass,
-                            );
+                            self.record_blur_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::FullscreenBlit(pass) => {
-                            self.record_fullscreen_blit_pass(
-                                ctx.device,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.usage,
-                                ctx.encoder,
-                                ctx.frame_targets,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
-                                pass,
-                            );
+                            self.record_fullscreen_blit_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::BackdropWarp(pass) => {
-                            self.record_backdrop_warp_pass(
-                                ctx.device,
-                                ctx.queue,
-                                ctx.format,
-                                ctx.target_view,
-                                ctx.viewport_size,
-                                ctx.usage,
-                                ctx.encoder,
-                                ctx.frame_targets,
-                                ctx.encoding,
-                                ctx.render_space_offset_u32,
-                                ctx.perf_enabled,
-                                ctx.frame_perf,
-                                pass,
-                            );
+                            self.record_backdrop_warp_pass(&mut ctx, pass);
                         }
                         RenderPlanPass::ColorAdjust(pass) => {
                             self.record_color_adjust_pass(&mut ctx, pass);

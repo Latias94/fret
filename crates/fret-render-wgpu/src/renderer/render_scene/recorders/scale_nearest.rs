@@ -1,25 +1,27 @@
-use super::super::super::frame_targets::FrameTargets;
 use super::super::super::*;
+use super::super::ctx::ExecuteCtx;
 
 impl Renderer {
     pub(in super::super) fn record_scale_nearest_pass(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        target_view: &wgpu::TextureView,
-        viewport_size: (u32, u32),
-        usage: wgpu::TextureUsages,
-        encoder: &mut wgpu::CommandEncoder,
-        frame_targets: &mut FrameTargets,
-        encoding: &SceneEncoding,
-        render_space_offset_u32: u32,
-        scale_param_size: u64,
-        scale_param_cursor: &mut u32,
-        perf_enabled: bool,
-        frame_perf: &mut RenderPerfStats,
+        ctx: &mut ExecuteCtx<'_>,
         pass: &ScaleNearestPass,
     ) {
+        let device = ctx.device;
+        let queue = ctx.queue;
+        let format = ctx.format;
+        let target_view = ctx.target_view;
+        let viewport_size = ctx.viewport_size;
+        let usage = ctx.usage;
+        let encoder = &mut *ctx.encoder;
+        let frame_targets = &mut *ctx.frame_targets;
+        let encoding = ctx.encoding;
+        let render_space_offset_u32 = ctx.render_space_offset_u32;
+        let scale_param_size = ctx.scale_param_size;
+        let scale_param_cursor = &mut *ctx.scale_param_cursor;
+        let perf_enabled = ctx.perf_enabled;
+        let frame_perf = &mut *ctx.frame_perf;
+
         let scale = pass.scale.max(1);
         let scale_param_offset = u64::from(*scale_param_cursor) * self.scale_param_stride;
         let scale_param_offset_u32 = scale_param_offset as u32;

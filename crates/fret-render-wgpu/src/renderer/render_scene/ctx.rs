@@ -12,6 +12,8 @@ pub(super) struct ExecuteCtx<'a> {
     pub(super) frame_targets: &'a mut FrameTargets,
     pub(super) encoding: &'a SceneEncoding,
     pub(super) render_space_offset_u32: u32,
+    pub(super) scale_param_size: u64,
+    pub(super) scale_param_cursor: &'a mut u32,
     pub(super) perf_enabled: bool,
     pub(super) frame_perf: &'a mut RenderPerfStats,
 }
