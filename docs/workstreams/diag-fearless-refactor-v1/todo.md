@@ -21,6 +21,13 @@ scope: diagnostics, automation, tooling, refactor
   - DevTools WS bridge wiring.
 - [x] Keep a regression gate: `cargo check -p fret-ui-gallery` after each extraction step.
 
+## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
+
+- [x] Move UI gallery markdown-editor checks out of `crates/fret-diag/src/stats.rs` into
+      `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`.
+- [ ] Move UI gallery code-editor checks out of `crates/fret-diag/src/stats.rs` into
+      `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`.
+
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 
 - [ ] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
