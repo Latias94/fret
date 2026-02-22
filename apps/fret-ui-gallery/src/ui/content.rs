@@ -159,11 +159,14 @@ pub(crate) fn content_view(
             // (We still key the subtree above to ensure the handle resets deterministically.)
             let scroll_handle =
                 cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-            let should_reset_scroll = cx.with_state(|| true, |reset| {
-                let out = *reset;
-                *reset = false;
-                out
-            });
+            let should_reset_scroll = cx.with_state(
+                || true,
+                |reset| {
+                    let out = *reset;
+                    *reset = false;
+                    out
+                },
+            );
             if should_reset_scroll {
                 scroll_handle.scroll_to_offset(fret_core::Point::new(
                     fret_core::Px(0.0),

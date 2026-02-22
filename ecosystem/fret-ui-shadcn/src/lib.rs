@@ -133,7 +133,7 @@ pub use aspect_ratio::AspectRatio;
 pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
 };
-pub use badge::{Badge, BadgeVariant};
+pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
