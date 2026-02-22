@@ -48,6 +48,8 @@ pub use bundle::{
     UiDiagnosticsWindowBundleV1,
 };
 
+mod bundle_index;
+
 mod bundle_dump;
 mod fs_triggers;
 mod pick;

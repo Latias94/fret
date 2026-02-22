@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use super::{
     UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService, bundle,
-    unix_ms_now, write_json, write_json_compact, write_latest_pointer,
+    bundle_index, unix_ms_now, write_json, write_json_compact, write_latest_pointer,
 };
 
 pub(super) fn dump_bundle_with_options(
@@ -80,6 +80,8 @@ pub(super) fn dump_bundle_with_options(
                 let mut bundle = bundle_v1;
                 bundle.apply_semantics_mode_v1(semantics_mode);
 
+                let bundle_schema_version = 1_u32;
+
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
                         write_json(bundle_json_path.clone(), &bundle)
@@ -111,6 +113,30 @@ pub(super) fn dump_bundle_with_options(
                     service.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
                 }
 
+                if !cfg!(target_arch = "wasm32") {
+                    let want_index = std::env::var("FRET_DIAG_BUNDLE_WRITE_INDEX")
+                        .ok()
+                        .map(|v| v.trim().to_ascii_lowercase())
+                        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+                        .unwrap_or(true);
+                    if want_index {
+                        let index = bundle_index::UiDiagnosticsBundleIndexV1::from_windows(
+                            ts,
+                            bundle_schema_version,
+                            semantics_mode,
+                            &bundle.windows,
+                        );
+                        let meta = bundle_index::UiDiagnosticsBundleMetaV1::from_windows(
+                            ts,
+                            bundle_schema_version,
+                            semantics_mode,
+                            &bundle.windows,
+                        );
+                        let _ = write_json_compact(dir.join("bundle.index.json"), &index);
+                        let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
+                    }
+                }
+
                 (
                     bundle_json_bytes,
                     window_count,
@@ -123,6 +149,8 @@ pub(super) fn dump_bundle_with_options(
             bundle::BundleSchemaVersionV1::V2 => {
                 let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
                 bundle.apply_semantics_mode_v1(semantics_mode);
+
+                let bundle_schema_version = 2_u32;
 
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
@@ -153,6 +181,30 @@ pub(super) fn dump_bundle_with_options(
                 #[cfg(feature = "diagnostics-ws")]
                 {
                     service.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
+                }
+
+                if !cfg!(target_arch = "wasm32") {
+                    let want_index = std::env::var("FRET_DIAG_BUNDLE_WRITE_INDEX")
+                        .ok()
+                        .map(|v| v.trim().to_ascii_lowercase())
+                        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+                        .unwrap_or(true);
+                    if want_index {
+                        let index = bundle_index::UiDiagnosticsBundleIndexV1::from_windows(
+                            ts,
+                            bundle_schema_version,
+                            semantics_mode,
+                            &bundle.windows,
+                        );
+                        let meta = bundle_index::UiDiagnosticsBundleMetaV1::from_windows(
+                            ts,
+                            bundle_schema_version,
+                            semantics_mode,
+                            &bundle.windows,
+                        );
+                        let _ = write_json_compact(dir.join("bundle.index.json"), &index);
+                        let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
+                    }
                 }
 
                 (
