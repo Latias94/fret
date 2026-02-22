@@ -1,3 +1,4 @@
+use super::super::bind_group_caches::SamplingBindGroups;
 use super::super::*;
 
 fn create_sampler_texture_bind_group(
@@ -161,7 +162,10 @@ impl Renderer {
                         "fret image texture bind group (nearest)",
                     );
 
-                    (bind_group_linear, bind_group_nearest)
+                    SamplingBindGroups {
+                        linear: bind_group_linear,
+                        nearest: bind_group_nearest,
+                    }
                 });
         }
     }
@@ -214,7 +218,10 @@ impl Renderer {
                         view,
                     );
 
-                    (bind_group_linear, bind_group_nearest)
+                    SamplingBindGroups {
+                        linear: bind_group_linear,
+                        nearest: bind_group_nearest,
+                    }
                 });
         }
     }

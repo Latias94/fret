@@ -8,12 +8,11 @@ impl Renderer {
         image: fret_core::ImageId,
         sampling: fret_core::scene::ImageSamplingHint,
     ) -> Option<&wgpu::BindGroup> {
-        let (linear, nearest) = self.bind_group_caches.get_image_bind_groups(image)?;
-        match sampling {
-            fret_core::scene::ImageSamplingHint::Nearest => Some(nearest),
-            fret_core::scene::ImageSamplingHint::Default
-            | fret_core::scene::ImageSamplingHint::Linear => Some(linear),
-        }
+        Some(
+            self.bind_group_caches
+                .get_image_bind_groups(image)?
+                .pick(sampling),
+        )
     }
 
     pub(super) fn pick_uniform_bind_group_for_mask_image(
@@ -23,17 +22,13 @@ impl Renderer {
         let Some(sel) = mask_image else {
             return &self.uniform_bind_group;
         };
-        let Some((linear, nearest)) = self
+        let Some(groups) = self
             .bind_group_caches
             .get_uniform_mask_image_bind_groups(sel.image)
         else {
             return &self.uniform_bind_group;
         };
-        match sel.sampling {
-            fret_core::scene::ImageSamplingHint::Nearest => nearest,
-            fret_core::scene::ImageSamplingHint::Default
-            | fret_core::scene::ImageSamplingHint::Linear => linear,
-        }
+        groups.pick(sel.sampling)
     }
 }
 
