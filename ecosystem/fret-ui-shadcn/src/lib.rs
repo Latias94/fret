@@ -129,7 +129,9 @@ pub use alert_dialog::{
     AlertDialogTitle, AlertDialogTrigger,
 };
 pub use aspect_ratio::AspectRatio;
-pub use avatar::{Avatar, AvatarFallback, AvatarImage, AvatarSize};
+pub use avatar::{
+    Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
+};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};

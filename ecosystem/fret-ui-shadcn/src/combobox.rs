@@ -136,6 +136,7 @@ pub struct Combobox {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
+    show_clear: bool,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -166,6 +167,7 @@ impl Combobox {
             disabled: false,
             a11y_label: None,
             search_enabled: true,
+            show_clear: false,
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
@@ -281,6 +283,12 @@ impl Combobox {
         self
     }
 
+    /// When enabled, shows a clear affordance on the trigger when a value is selected.
+    pub fn show_clear(mut self, show_clear: bool) -> Self {
+        self.show_clear = show_clear;
+        self
+    }
+
     pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
         self.consume_outside_pointer_events = consume;
         self
@@ -363,6 +371,7 @@ impl Combobox {
             self.responsive,
             self.responsive_device_md_breakpoint,
             self.search_enabled,
+            self.show_clear,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
             self.close_auto_focus_policy,
@@ -410,6 +419,7 @@ pub fn combobox<H: UiHost>(
         false,
         fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
+        false,
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
         kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
@@ -441,6 +451,7 @@ fn combobox_with_patch<H: UiHost>(
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
+    show_clear: bool,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -681,7 +692,11 @@ fn combobox_with_patch<H: UiHost>(
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
+            let test_id_prefix_for_trigger = test_id_prefix.clone();
             let focus_restore_target_for_trigger = focus_restore_target.clone();
+            let model_for_trigger = model.clone();
+            let query_model_for_trigger = query_model.clone();
+            let selected_for_trigger = selected.clone();
             return Drawer::new(open.clone())
                 .on_dismiss_request(Some(
                     kit_combobox::set_open_change_reason_on_dismiss_request(
@@ -694,6 +709,10 @@ fn combobox_with_patch<H: UiHost>(
                     move |cx| {
                         let open_change_reason_model = open_change_reason_model_for_trigger.clone();
                         let focus_restore_target = focus_restore_target_for_trigger.clone();
+                        let test_id_prefix_for_trigger = test_id_prefix_for_trigger.clone();
+                        let model = model_for_trigger.clone();
+                        let query_model = query_model_for_trigger.clone();
+                        let selected = selected_for_trigger.clone();
                         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                             *focus_restore_target
                                 .lock()
@@ -783,6 +802,165 @@ fn combobox_with_patch<H: UiHost>(
                                     },
                                     move |cx| {
                                         let label_style = text_style.clone();
+                                        let show_clear =
+                                            show_clear && enabled && selected.is_some();
+                                        let right = cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(0.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let mut out = Vec::new();
+                                                if show_clear {
+                                                    let model_for_clear = model.clone();
+                                                    let query_for_clear = query_model.clone();
+                                                    let theme_for_clear =
+                                                        theme_for_trigger.clone();
+                                                    let hovered_bg = bg_hover;
+                                                    let pressed_bg = bg_pressed;
+                                                    let clear_radius =
+                                                        Px((radius.0 - 5.0).max(0.0));
+                                                    let clear_size =
+                                                        Px((min_h.0 - 8.0).max(0.0));
+
+                                                    let clear =
+                                                        control_chrome_pressable_with_id_props(
+                                                            cx,
+                                                            move |cx, st, _id| {
+                                                                cx.pressable_add_on_activate(
+                                                                    Arc::new(
+                                                                        move |host,
+                                                                              _acx,
+                                                                              _reason| {
+                                                                            let _ = host
+                                                                                .models_mut()
+                                                                                .update(
+                                                                                    &model_for_clear,
+                                                                                    |v| {
+                                                                                        *v = None;
+                                                                                    },
+                                                                                );
+                                                                            let _ = host
+                                                                                .models_mut()
+                                                                                .update(
+                                                                                    &query_for_clear,
+                                                                                    |v| {
+                                                                                        v.clear();
+                                                                                    },
+                                                                                );
+                                                                        },
+                                                                    ),
+                                                                );
+
+                                                                let hovered =
+                                                                    st.hovered && enabled;
+                                                                let pressed =
+                                                                    st.pressed && enabled;
+                                                                let bg = if pressed {
+                                                                    pressed_bg
+                                                                } else if hovered {
+                                                                    hovered_bg
+                                                                } else {
+                                                                    Color::TRANSPARENT
+                                                                };
+
+                                                                let pressable_layout =
+                                                                    decl_style::layout_style(
+                                                                        &theme_for_clear,
+                                                                        LayoutRefinement::default()
+                                                                            .w_px(clear_size)
+                                                                            .h_px(clear_size)
+                                                                            .min_w(clear_size)
+                                                                            .min_h(clear_size),
+                                                                    );
+                                                                let pressable_props = PressableProps {
+                                                                    layout: pressable_layout,
+                                                                    enabled,
+                                                                    focusable: true,
+                                                                    focus_ring: None,
+                                                                    a11y: PressableA11y {
+                                                                        role: Some(
+                                                                            SemanticsRole::Button,
+                                                                        ),
+                                                                        label: Some(Arc::from(
+                                                                            "Clear",
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    ..Default::default()
+                                                                };
+
+                                                                let chrome_props = ContainerProps {
+                                                                    layout: LayoutStyle::default(),
+                                                                    background: Some(bg),
+                                                                    corner_radii: Corners::all(
+                                                                        clear_radius,
+                                                                    ),
+                                                                    ..Default::default()
+                                                                };
+
+                                                                let children =
+                                                                    move |cx: &mut ElementContext<
+                                                                        '_,
+                                                                        H,
+                                                                    >| {
+                                                                        let icon =
+                                                                            decl_icon::icon_with(
+                                                                                cx,
+                                                                                ids::ui::CLOSE,
+                                                                                Some(Px(16.0)),
+                                                                                Some(ColorRef::Color(
+                                                                                    icon_fg,
+                                                                                )),
+                                                                            );
+                                                                        vec![cx.flex(
+                                                                            FlexProps {
+                                                                                layout: LayoutStyle::default(),
+                                                                                direction: fret_core::Axis::Horizontal,
+                                                                                gap: Px(0.0),
+                                                                                padding: Edges::all(Px(0.0)),
+                                                                                justify: MainAlign::Center,
+                                                                                align: CrossAlign::Center,
+                                                                                wrap: false,
+                                                                            },
+                                                                            move |_cx| vec![icon],
+                                                                        )]
+                                                                    };
+
+                                                                (
+                                                                    pressable_props,
+                                                                    chrome_props,
+                                                                    children,
+                                                                )
+                                                            },
+                                                        );
+
+                                                    let clear = if let Some(prefix) =
+                                                        test_id_prefix_for_trigger.as_deref()
+                                                    {
+                                                        clear.test_id(format!(
+                                                            "{prefix}-clear-button"
+                                                        ))
+                                                    } else {
+                                                        clear
+                                                    };
+                                                    out.push(clear);
+                                                } else {
+                                                    out.push(decl_icon::icon_with(
+                                                        cx,
+                                                        ids::ui::CHEVRON_DOWN,
+                                                        Some(Px(16.0)),
+                                                        Some(ColorRef::Color(icon_fg)),
+                                                    ));
+                                                }
+                                                out
+                                            },
+                                        );
                                         vec![
                                             {
                                                 let mut label =
@@ -810,12 +988,7 @@ fn combobox_with_patch<H: UiHost>(
                                                 }
                                                 label.into_element(cx)
                                             },
-                                            decl_icon::icon_with(
-                                                cx,
-                                                ids::ui::CHEVRON_DOWN,
-                                                Some(Px(16.0)),
-                                                Some(ColorRef::Color(icon_fg)),
-                                            ),
+                                            right,
                                         ]
                                     },
                                 )]
@@ -829,6 +1002,7 @@ fn combobox_with_patch<H: UiHost>(
                             .metric_by_key("component.combobox.max_list_height")
                             .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                             .unwrap_or(Px(280.0));
+                        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                         let list = if search_enabled {
                             let max_list_h = Px(theme_max_list_h.0.max(0.0));
@@ -1011,7 +1185,11 @@ fn combobox_with_patch<H: UiHost>(
         let open_change_reason_model_for_trigger = open_change_reason_model.clone();
         let open_change_reason_model_for_content = open_change_reason_model.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
+        let test_id_prefix_for_trigger = test_id_prefix.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
+        let model_for_trigger = model.clone();
+        let query_model_for_trigger = query_model.clone();
+        let selected_for_trigger = selected.clone();
 
         let search_input_id = search_enabled.then(|| Rc::new(Cell::new(None)));
         let search_input_id_for_content = search_input_id.clone();
@@ -1035,6 +1213,10 @@ fn combobox_with_patch<H: UiHost>(
             move |cx| {
                 let open_change_reason_model = open_change_reason_model_for_trigger.clone();
                 let focus_restore_target = focus_restore_target_for_trigger.clone();
+                let test_id_prefix_for_trigger = test_id_prefix_for_trigger.clone();
+                let model = model_for_trigger.clone();
+                let query_model = query_model_for_trigger.clone();
+                let selected = selected_for_trigger.clone();
                 control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                     *focus_restore_target
                         .lock()
@@ -1114,6 +1296,131 @@ fn combobox_with_patch<H: UiHost>(
                             },
                             move |cx| {
                                 let label_style = text_style.clone();
+                                let show_clear = show_clear && enabled && selected.is_some();
+                                let right = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(0.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let mut out = Vec::new();
+                                        if show_clear {
+                                            let model_for_clear = model.clone();
+                                            let query_for_clear = query_model.clone();
+                                            let theme_for_clear = theme_for_trigger.clone();
+                                            let hovered_bg = bg_hover;
+                                            let pressed_bg = bg_pressed;
+                                            let clear_radius = Px((radius.0 - 5.0).max(0.0));
+                                            let clear_size = Px((min_h.0 - 8.0).max(0.0));
+
+                                            let clear = control_chrome_pressable_with_id_props(
+                                                cx,
+                                                move |cx, st, _id| {
+                                                    cx.pressable_add_on_activate(Arc::new(
+                                                        move |host, _acx, _reason| {
+                                                            let _ = host.models_mut().update(
+                                                                &model_for_clear,
+                                                                |v| {
+                                                                    *v = None;
+                                                                },
+                                                            );
+                                                            let _ = host.models_mut().update(
+                                                                &query_for_clear,
+                                                                |v| {
+                                                                    v.clear();
+                                                                },
+                                                            );
+                                                        },
+                                                    ));
+
+                                                    let hovered = st.hovered && enabled;
+                                                    let pressed = st.pressed && enabled;
+                                                    let bg = if pressed {
+                                                        pressed_bg
+                                                    } else if hovered {
+                                                        hovered_bg
+                                                    } else {
+                                                        Color::TRANSPARENT
+                                                    };
+
+                                                    let pressable_layout = decl_style::layout_style(
+                                                        &theme_for_clear,
+                                                        LayoutRefinement::default()
+                                                            .w_px(clear_size)
+                                                            .h_px(clear_size)
+                                                            .min_w(clear_size)
+                                                            .min_h(clear_size),
+                                                    );
+                                                    let pressable_props = PressableProps {
+                                                        layout: pressable_layout,
+                                                        enabled,
+                                                        focusable: true,
+                                                        focus_ring: None,
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::Button),
+                                                            label: Some(Arc::from("Clear")),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    };
+
+                                                    let chrome_props = ContainerProps {
+                                                        layout: LayoutStyle::default(),
+                                                        background: Some(bg),
+                                                        corner_radii: Corners::all(clear_radius),
+                                                        ..Default::default()
+                                                    };
+
+                                                    let children =
+                                                        move |cx: &mut ElementContext<'_, H>| {
+                                                            let icon = decl_icon::icon_with(
+                                                                cx,
+                                                                ids::ui::CLOSE,
+                                                                Some(Px(16.0)),
+                                                                Some(ColorRef::Color(icon_fg)),
+                                                            );
+                                                            vec![cx.flex(
+                                                                FlexProps {
+                                                                    layout: LayoutStyle::default(),
+                                                                    direction: fret_core::Axis::Horizontal,
+                                                                    gap: Px(0.0),
+                                                                    padding: Edges::all(Px(0.0)),
+                                                                    justify: MainAlign::Center,
+                                                                    align: CrossAlign::Center,
+                                                                    wrap: false,
+                                                                },
+                                                                move |_cx| vec![icon],
+                                                            )]
+                                                        };
+
+                                                    (pressable_props, chrome_props, children)
+                                                },
+                                            );
+
+                                            let clear = if let Some(prefix) =
+                                                test_id_prefix_for_trigger.as_deref()
+                                            {
+                                                clear.test_id(format!("{prefix}-clear-button"))
+                                            } else {
+                                                clear
+                                            };
+                                            out.push(clear);
+                                        } else {
+                                            out.push(decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHEVRON_DOWN,
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(icon_fg)),
+                                            ));
+                                        }
+                                        out
+                                    },
+                                );
                                 vec![
                                     {
                                         let mut label = ui::label(cx, resolved_label.clone())
@@ -1139,12 +1446,7 @@ fn combobox_with_patch<H: UiHost>(
                                         }
                                         label.into_element(cx)
                                     },
-                                    decl_icon::icon_with(
-                                        cx,
-                                        ids::ui::CHEVRON_DOWN,
-                                        Some(Px(16.0)),
-                                        Some(ColorRef::Color(icon_fg)),
-                                    ),
+                                    right,
                                 ]
                             },
                         )]
@@ -1160,6 +1462,7 @@ fn combobox_with_patch<H: UiHost>(
                     .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                     .unwrap_or(Px(280.0));
                 let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
+                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                 let list = if search_enabled {
                     let max_list_h = Px(theme_max_list_h.0.max(0.0));

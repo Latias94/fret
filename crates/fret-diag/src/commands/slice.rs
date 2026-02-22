@@ -123,7 +123,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
     max_matches: usize,
     max_ancestors: usize,
 ) -> Result<serde_json::Value, String> {
-    let bundle_index = try_read_bundle_index(bundle_path);
+    let bundle_index = try_read_bundle_index(bundle_path, warmup_frames);
 
     let index_default = if frame_id.is_none() && window_snapshot_seq.is_none() {
         bundle_index
@@ -342,14 +342,44 @@ struct BundleIndexSliceCandidate {
     sort_timestamp_unix_ms: Option<u64>,
 }
 
-fn try_read_bundle_index(bundle_path: &Path) -> Option<serde_json::Value> {
+fn try_read_bundle_index(bundle_path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
     let index_path = crate::bundle_index::default_bundle_index_path(bundle_path);
     let bytes = std::fs::read(index_path).ok()?;
     let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
     if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
         return None;
     }
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return None;
+    }
+    if v.get("warmup_frames").and_then(|v| v.as_u64()) != Some(warmup_frames) {
+        return None;
+    }
     Some(v)
+}
+
+fn bundle_index_has_script_markers(v: &serde_json::Value) -> bool {
+    v.get("script")
+        .and_then(|v| v.get("steps"))
+        .and_then(|v| v.as_array())
+        .is_some_and(|steps| !steps.is_empty())
+}
+
+fn read_bundle_index_for_step_index(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<Option<serde_json::Value>, String> {
+    let v = try_read_bundle_index(bundle_path, warmup_frames);
+    if v.as_ref().is_some_and(bundle_index_has_script_markers) {
+        return Ok(v);
+    }
+    let index_path = crate::bundle_index::ensure_bundle_index_json(bundle_path, warmup_frames)?;
+    let bytes = std::fs::read(&index_path).map_err(|e| e.to_string())?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    if v.get("kind").and_then(|v| v.as_str()) != Some("bundle_index") {
+        return Ok(None);
+    }
+    Ok(Some(v))
 }
 
 fn find_snapshot_in_bundle_index(
@@ -841,12 +871,15 @@ pub(crate) fn cmd_slice(
         return Err("--step-index cannot be combined with --frame-id/--snapshot-seq".to_string());
     }
 
-    fn try_read_bundle_index_from_dir(dir: &Path) -> Option<serde_json::Value> {
+    fn try_read_bundle_index_from_dir(dir: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
         let direct = dir.join("bundle.index.json");
         if direct.is_file() {
             let bytes = std::fs::read(direct).ok()?;
             let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index") {
+            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index")
+                && v.get("schema_version").and_then(|v| v.as_u64()) == Some(1)
+                && v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
+            {
                 return Some(v);
             }
         }
@@ -854,7 +887,10 @@ pub(crate) fn cmd_slice(
         if root.is_file() {
             let bytes = std::fs::read(root).ok()?;
             let v: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index") {
+            if v.get("kind").and_then(|v| v.as_str()) == Some("bundle_index")
+                && v.get("schema_version").and_then(|v| v.as_u64()) == Some(1)
+                && v.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames)
+            {
                 return Some(v);
             }
         }
@@ -883,11 +919,18 @@ pub(crate) fn cmd_slice(
     // Resolve `--step-index` as early as possible so it can validate / select precomputed slices.
     if let (Some(step_index), Some(bundle_arg)) = (step_index, bundle_arg.as_deref()) {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
-        if src.is_dir()
-            && let Some(idx) = try_read_bundle_index_from_dir(&src)
-            && let Some((step_window, step_frame_id, step_seq)) =
-                resolve_step_selector_from_bundle_index(&idx, step_index)
-        {
+        if src.is_dir() {
+            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let idx = if bundle_path.is_file() {
+                read_bundle_index_for_step_index(&bundle_path, warmup_frames).ok().flatten()
+            } else {
+                try_read_bundle_index_from_dir(&src, warmup_frames)
+            };
+
+            if let Some(idx) = idx
+                && let Some((step_window, step_frame_id, step_seq)) =
+                    resolve_step_selector_from_bundle_index(&idx, step_index)
+            {
             if let Some(req) = window_id
                 && req != step_window
             {
@@ -900,6 +943,7 @@ pub(crate) fn cmd_slice(
                 window_snapshot_seq = step_seq;
             } else {
                 frame_id = step_frame_id;
+            }
             }
         }
     }
@@ -968,14 +1012,7 @@ pub(crate) fn cmd_slice(
         resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
     if let Some(step_index) = step_index {
-        let bundle_index = try_read_bundle_index(&bundle_path).or_else(|| {
-            // Best-effort: generate the index so it can also attach script markers when
-            // `script.result.json` is adjacent (run-id layout).
-            crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)
-                .ok()
-                .and_then(|p| std::fs::read(&p).ok())
-                .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
-        });
+        let bundle_index = read_bundle_index_for_step_index(&bundle_path, warmup_frames)?;
         let Some(idx) = bundle_index else {
             return Err(format!(
                 "unable to resolve --step-index {step_index}: missing bundle.index.json"

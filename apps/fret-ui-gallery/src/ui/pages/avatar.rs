@@ -72,15 +72,93 @@ pub(super) fn preview_avatar(
         .test_id("ui-gallery-avatar-fallback")
     };
 
-    let (with_badge_title, with_badge) = doc_layout::gap_card(
-        cx,
-        "With Badge",
-        "Upstream shadcn `AvatarBadge` overlays a small status dot/plus icon. Fret shadcn `AvatarBadge` is not implemented yet; this section is a parity placeholder.",
-        "ui-gallery-avatar-badge-gap",
-    );
+    let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, size: Px, fg: ColorRef| {
+        shadcn::icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static(name),
+            Some(size),
+            Some(fg),
+        )
+    };
+
+    let with_badge = {
+        let dot_row = doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
+            let avatar = |cx: &mut ElementContext<'_, App>,
+                          size: shadcn::AvatarSize,
+                          badge: shadcn::AvatarBadge,
+                          test_id: &'static str| {
+                let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+                let fallback = shadcn::AvatarFallback::new("CN")
+                    .when_image_missing_model(avatar_image.clone())
+                    .delay_ms(120)
+                    .into_element(cx);
+                let badge = badge.into_element(cx);
+                shadcn::Avatar::new([image, fallback, badge])
+                    .size(size)
+                    .into_element(cx)
+                    .test_id(test_id)
+            };
+
+            let custom_badge = shadcn::AvatarBadge::new().refine_style(
+                ChromeRefinement::default().bg(ColorRef::Color(theme.color_token("destructive"))),
+            );
+
+            vec![
+                avatar(
+                    cx,
+                    shadcn::AvatarSize::Sm,
+                    shadcn::AvatarBadge::new(),
+                    "ui-gallery-avatar-badge-sm",
+                ),
+                avatar(
+                    cx,
+                    shadcn::AvatarSize::Default,
+                    custom_badge,
+                    "ui-gallery-avatar-badge-default",
+                ),
+                avatar(
+                    cx,
+                    shadcn::AvatarSize::Lg,
+                    shadcn::AvatarBadge::new(),
+                    "ui-gallery-avatar-badge-lg",
+                ),
+            ]
+        })
+        .test_id("ui-gallery-avatar-badge-dot-row");
+
+        let icon_row = doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
+            let fg = ColorRef::Color(theme.color_token("primary-foreground"));
+            let badge =
+                shadcn::AvatarBadge::new().children([icon(cx, "lucide.plus", Px(10.0), fg)]);
+            let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+            let fallback = shadcn::AvatarFallback::new("CN")
+                .when_image_missing_model(avatar_image.clone())
+                .delay_ms(120)
+                .into_element(cx);
+            vec![
+                shadcn::Avatar::new([image, fallback, badge.into_element(cx)])
+                    .size(shadcn::AvatarSize::Default)
+                    .into_element(cx)
+                    .test_id("ui-gallery-avatar-badge-icon"),
+            ]
+        })
+        .test_id("ui-gallery-avatar-badge-icon-row");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| vec![dot_row, icon_row],
+        )
+        .test_id("ui-gallery-avatar-badge")
+    };
 
     let avatar_group = {
-        let group = |cx: &mut ElementContext<'_, App>, size: shadcn::AvatarSize| {
+        let group = |cx: &mut ElementContext<'_, App>,
+                     size: shadcn::AvatarSize,
+                     test_id: &'static str| {
             let avatars = (0..3)
                 .map(|idx| {
                     let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
@@ -88,31 +166,17 @@ pub(super) fn preview_avatar(
                         .when_image_missing_model(avatar_image.clone())
                         .delay_ms(120)
                         .into_element(cx);
-
-                    let mut avatar = shadcn::Avatar::new([image, fallback]).size(size);
-                    if idx > 0 {
-                        avatar =
-                            avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
-                    }
-
-                    avatar
+                    shadcn::Avatar::new([image, fallback])
+                        .size(size)
                         .into_element(cx)
-                        .test_id(format!("ui-gallery-avatar-group-item-{idx}"))
+                        .test_id(format!("ui-gallery-avatar-group-item-{test_id}-{idx}"))
                 })
                 .collect::<Vec<_>>();
 
-            cx.flex(
-                fret_ui::element::FlexProps {
-                    layout: fret_ui::element::LayoutStyle::default(),
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: fret_ui::element::MainAlign::Start,
-                    align: fret_ui::element::CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| avatars,
-            )
+            shadcn::AvatarGroup::new(avatars)
+                .size(size)
+                .into_element(cx)
+                .test_id(test_id)
         };
 
         stack::vstack(
@@ -123,22 +187,107 @@ pub(super) fn preview_avatar(
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
             move |cx| {
                 vec![
-                    group(cx, shadcn::AvatarSize::Sm).test_id("ui-gallery-avatar-group-sm"),
-                    group(cx, shadcn::AvatarSize::Default)
-                        .test_id("ui-gallery-avatar-group-default"),
-                    group(cx, shadcn::AvatarSize::Lg).test_id("ui-gallery-avatar-group-lg"),
+                    group(cx, shadcn::AvatarSize::Sm, "ui-gallery-avatar-group-sm"),
+                    group(
+                        cx,
+                        shadcn::AvatarSize::Default,
+                        "ui-gallery-avatar-group-default",
+                    ),
+                    group(cx, shadcn::AvatarSize::Lg, "ui-gallery-avatar-group-lg"),
                 ]
             },
         )
         .test_id("ui-gallery-avatar-group")
     };
 
-    let (group_count_title, group_count) = doc_layout::gap_card(
-        cx,
-        "Avatar Group Count",
-        "Upstream shadcn `AvatarGroupCount` renders a trailing count bubble (e.g. `+3`) that matches the group's size. Fret does not expose an equivalent shadcn builder yet.",
-        "ui-gallery-avatar-group-count-gap",
-    );
+    let group_count = {
+        let group_with_count = |cx: &mut ElementContext<'_, App>,
+                                size: shadcn::AvatarSize,
+                                test_id: &'static str| {
+            let avatars = (0..3)
+                .map(|idx| {
+                    let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+                    let fallback = shadcn::AvatarFallback::new(["CN", "ML", "ER"][idx])
+                        .when_image_missing_model(avatar_image.clone())
+                        .delay_ms(120)
+                        .into_element(cx);
+                    shadcn::Avatar::new([image, fallback])
+                        .size(size)
+                        .into_element(cx)
+                })
+                .collect::<Vec<_>>();
+
+            let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+3")
+                .font_medium()
+                .nowrap()
+                .into_element(cx)])
+            .into_element(cx);
+
+            shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+                .size(size)
+                .into_element(cx)
+                .test_id(test_id)
+        };
+
+        let group_with_icon_count = |cx: &mut ElementContext<'_, App>,
+                                     size: shadcn::AvatarSize,
+                                     test_id: &'static str| {
+            let avatars = (0..2)
+                .map(|idx| {
+                    let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+                    let fallback = shadcn::AvatarFallback::new(["CN", "ML"][idx])
+                        .when_image_missing_model(avatar_image.clone())
+                        .delay_ms(120)
+                        .into_element(cx);
+                    shadcn::Avatar::new([image, fallback])
+                        .size(size)
+                        .into_element(cx)
+                })
+                .collect::<Vec<_>>();
+
+            let fg = ColorRef::Color(theme.color_token("muted-foreground"));
+            let count = shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg)])
+                .into_element(cx);
+
+            shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+                .size(size)
+                .into_element(cx)
+                .test_id(test_id)
+        };
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |cx| {
+                vec![
+                    group_with_count(
+                        cx,
+                        shadcn::AvatarSize::Sm,
+                        "ui-gallery-avatar-group-count-sm",
+                    ),
+                    group_with_count(
+                        cx,
+                        shadcn::AvatarSize::Default,
+                        "ui-gallery-avatar-group-count-default",
+                    ),
+                    group_with_count(
+                        cx,
+                        shadcn::AvatarSize::Lg,
+                        "ui-gallery-avatar-group-count-lg",
+                    ),
+                    group_with_icon_count(
+                        cx,
+                        shadcn::AvatarSize::Default,
+                        "ui-gallery-avatar-group-count-icon",
+                    ),
+                ]
+            },
+        )
+        .test_id("ui-gallery-avatar-group-count")
+    };
 
     let notes = doc_layout::notes(
         cx,
@@ -171,35 +320,42 @@ pub(super) fn preview_avatar(
     .size(shadcn::AvatarSize::Sm)
     .into_element(cx);"#,
                 ),
-            DocSection::new(with_badge_title, with_badge)
-                .max_w(Px(760.0))
-                .code(
-                    "rust",
-                    r#"// Not yet implemented: upstream Avatar demo composes an `AvatarBadge` overlay.
-// Track as a dedicated shadcn API surface (badge positioning + sizing + theming) before adding it."#,
-                ),
-            DocSection::new("Avatar Group", avatar_group)
+            DocSection::new("With Badge", with_badge)
                 .description(
-                    "Fret composes groups via negative margins (no `AvatarGroup` builder yet).",
+                    "`AvatarBadge` overlays a status dot or icon at the avatar's bottom-right.",
                 )
                 .code(
                     "rust",
-                    r#"let avatars = (0..3).map(|idx| {
-    let mut avatar = shadcn::Avatar::new([/* ... */]).size(size).into_element(cx);
-    if idx > 0 {
-        avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
-    }
-    avatar
-});
+                    r#"let image = shadcn::AvatarImage::model(avatar_image).into_element(cx);
+let fallback = shadcn::AvatarFallback::new("CN").into_element(cx);
+let badge = shadcn::AvatarBadge::new().into_element(cx);
 
-cx.flex(FlexProps::default(), |_cx| avatars.collect::<Vec<_>>());"#,
+shadcn::Avatar::new([image, fallback, badge])
+    .size(shadcn::AvatarSize::Default)
+    .into_element(cx);"#,
                 ),
-            DocSection::new(group_count_title, group_count)
-                .max_w(Px(760.0))
+            DocSection::new("Avatar Group", avatar_group)
+                .description("Overlapping avatar group (`-space-x-2`).")
                 .code(
                     "rust",
-                    r#"// Not yet implemented: upstream shadcn exposes `AvatarGroupCount` (e.g. `+3`).
-// Current Fret demo uses manual composition; add a proper shadcn builder once sizing tokens are settled."#,
+                    r#"let avatars = (0..3)
+    .map(|_idx| shadcn::Avatar::new([/* ... */]).size(shadcn::AvatarSize::Default).into_element(cx))
+    .collect::<Vec<_>>();
+
+shadcn::AvatarGroup::new(avatars)
+    .size(shadcn::AvatarSize::Default)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Avatar Group Count", group_count)
+                .description("Trailing count bubble that matches the group's size.")
+                .code(
+                    "rust",
+                    r#"let avatars = vec![/* ... */];
+let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+3").into_element(cx)]).into_element(cx);
+
+shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+    .size(shadcn::AvatarSize::Default)
+    .into_element(cx);"#,
                 ),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
