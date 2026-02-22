@@ -436,6 +436,19 @@ Progress record (GpuRegistries mutation API):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (GpuResources extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 4 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_resources.rs` (`GpuResources`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::gpu_resources`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (registry mutation call sites)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group cache reads via `gpu_resources`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

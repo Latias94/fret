@@ -302,8 +302,10 @@ impl Renderer {
                             mask_image,
                             frame_perf,
                         );
-                        let Some(bind_group) =
-                            self.bind_group_caches.get_viewport_bind_group(draw.target)
+                        let Some(bind_group) = self
+                            .gpu_resources
+                            .bind_group_caches
+                            .get_viewport_bind_group(draw.target)
                         else {
                             // Missing bind group should only happen if the target vanished
                             // between encoding and rendering.
@@ -327,6 +329,7 @@ impl Renderer {
                             frame_perf.viewport_draw_calls =
                                 frame_perf.viewport_draw_calls.saturating_add(1);
                             let metadata = self
+                                .gpu_resources
                                 .registries
                                 .render_targets
                                 .metadata(draw.target)

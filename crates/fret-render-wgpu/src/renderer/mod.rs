@@ -17,6 +17,7 @@ mod gpu_effect_params;
 mod gpu_globals;
 mod gpu_pipelines;
 mod gpu_registries;
+mod gpu_resources;
 mod gpu_textures;
 mod path;
 mod revisioned_cache;
@@ -42,13 +43,12 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
-use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
 use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
-use gpu_registries::GpuRegistries;
+use gpu_resources::GpuResources;
 use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
@@ -148,9 +148,7 @@ pub struct Renderer {
     intermediate_perf: IntermediatePerfStats,
     intermediate_pool: IntermediatePool,
 
-    registries: GpuRegistries,
-
-    bind_group_caches: BindGroupCaches,
+    gpu_resources: GpuResources,
 
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,

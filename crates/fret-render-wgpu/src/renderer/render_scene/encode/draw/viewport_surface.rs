@@ -45,10 +45,17 @@ pub(in super::super) fn encode_viewport_surface(
     if opacity <= 0.0 || group_opacity <= 0.0 {
         return;
     }
-    if renderer.registries.render_targets.get(target).is_none() {
+    if renderer
+        .gpu_resources
+        .registries
+        .render_targets
+        .get(target)
+        .is_none()
+    {
         return;
     }
     let metadata = renderer
+        .gpu_resources
         .registries
         .render_targets
         .metadata(target)

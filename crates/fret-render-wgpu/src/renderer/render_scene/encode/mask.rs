@@ -121,7 +121,13 @@ pub(super) fn push_mask(
             }
 
             // Missing mask source is a deterministic degrade-to-unmasked.
-            if renderer.registries.images.get(image).is_none() {
+            if renderer
+                .gpu_resources
+                .registries
+                .images
+                .get(image)
+                .is_none()
+            {
                 state.mask_pop_stack.push(MaskPop::NoShader);
                 return true;
             }
@@ -132,6 +138,7 @@ pub(super) fn push_mask(
 
             // Prefer alpha for sRGB textures (avoid sRGB conversion on RGB channels).
             let use_alpha_channel = renderer
+                .gpu_resources
                 .registries
                 .images
                 .format(image)

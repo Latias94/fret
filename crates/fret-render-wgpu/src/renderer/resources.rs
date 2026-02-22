@@ -545,8 +545,7 @@ impl Renderer {
             intermediate_perf_enabled: false,
             intermediate_perf: IntermediatePerfStats::default(),
             intermediate_pool: IntermediatePool::default(),
-            bind_group_caches: BindGroupCaches::default(),
-            registries: super::gpu_registries::GpuRegistries::default(),
+            gpu_resources: super::gpu_resources::GpuResources::default(),
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
@@ -628,28 +627,20 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        let id = self.registries.register_render_target(desc);
+        let id = self.gpu_resources.register_render_target(desc);
         id
     }
 
     pub fn register_image(&mut self, desc: ImageDescriptor) -> fret_core::ImageId {
-        self.registries.register_image(desc)
+        self.gpu_resources.register_image(desc)
     }
 
     pub fn update_image(&mut self, id: fret_core::ImageId, desc: ImageDescriptor) -> bool {
-        if !self.registries.update_image(id, desc) {
-            return false;
-        }
-        self.bind_group_caches.invalidate_image(id);
-        true
+        self.gpu_resources.update_image(id, desc)
     }
 
     pub fn unregister_image(&mut self, id: fret_core::ImageId) -> bool {
-        if !self.registries.unregister_image(id) {
-            return false;
-        }
-        self.bind_group_caches.invalidate_image(id);
-        true
+        self.gpu_resources.unregister_image(id)
     }
 
     pub fn update_render_target(
@@ -687,11 +678,7 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        if !self.registries.update_render_target(id, desc) {
-            return false;
-        }
-        self.bind_group_caches.invalidate_render_target(id);
-        true
+        self.gpu_resources.update_render_target(id, desc)
     }
 
     fn render_target_color_encoding_conflicts_with_portable_rgb_assumption(
@@ -739,11 +726,7 @@ impl Renderer {
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
-        if !self.registries.unregister_render_target(id) {
-            return false;
-        }
-        self.bind_group_caches.invalidate_render_target(id);
-        true
+        self.gpu_resources.unregister_render_target(id)
     }
 
     pub(super) fn ensure_mask_image_identity_uploaded(&mut self, queue: &wgpu::Queue) {

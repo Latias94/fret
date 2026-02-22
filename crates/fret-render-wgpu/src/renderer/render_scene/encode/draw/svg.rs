@@ -34,7 +34,13 @@ pub(in super::super) fn encode_svg_mask_icon(
     let Some(entry) = renderer.svg_rasters.get(&key) else {
         return;
     };
-    if renderer.registries.images.get(entry.image).is_none() {
+    if renderer
+        .gpu_resources
+        .registries
+        .images
+        .get(entry.image)
+        .is_none()
+    {
         return;
     }
 
@@ -143,7 +149,13 @@ pub(in super::super) fn encode_svg_image(
     let Some(entry) = renderer.svg_rasters.get(&key) else {
         return;
     };
-    if renderer.registries.images.get(entry.image).is_none() {
+    if renderer
+        .gpu_resources
+        .registries
+        .images
+        .get(entry.image)
+        .is_none()
+    {
         return;
     }
 

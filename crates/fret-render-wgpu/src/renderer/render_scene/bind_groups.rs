@@ -13,17 +13,19 @@ impl Renderer {
             };
 
             let target = draw.target;
-            let Some(view) = self.registries.render_targets.get(target) else {
+            let Some(view) = self.gpu_resources.registries.render_targets.get(target) else {
                 continue;
             };
 
             let revision = self
+                .gpu_resources
                 .registries
                 .render_target_revisions
                 .get(&target)
                 .copied()
                 .unwrap_or(0);
-            self.bind_group_caches
+            self.gpu_resources
+                .bind_group_caches
                 .ensure_viewport_sampler_texture_bind_group(
                     device,
                     &self.globals.viewport_bind_group_layout,
@@ -46,17 +48,19 @@ impl Renderer {
                 OrderedDraw::Mask(draw) => draw.image,
                 _ => continue,
             };
-            let Some(view) = self.registries.images.get(image) else {
+            let Some(view) = self.gpu_resources.registries.images.get(image) else {
                 continue;
             };
 
             let revision = self
+                .gpu_resources
                 .registries
                 .image_revisions
                 .get(&image)
                 .copied()
                 .unwrap_or(0);
-            self.bind_group_caches
+            self.gpu_resources
+                .bind_group_caches
                 .ensure_image_sampler_texture_bind_groups(
                     device,
                     &self.globals.viewport_bind_group_layout,
@@ -86,17 +90,19 @@ impl Renderer {
 
         for &sel in uniform_mask_images.iter().flatten() {
             let image = sel.image;
-            let Some(view) = self.registries.images.get(image) else {
+            let Some(view) = self.gpu_resources.registries.images.get(image) else {
                 continue;
             };
 
             let image_revision = self
+                .gpu_resources
                 .registries
                 .image_revisions
                 .get(&image)
                 .copied()
                 .unwrap_or(0);
-            self.bind_group_caches
+            self.gpu_resources
+                .bind_group_caches
                 .ensure_uniform_mask_image_override_bind_groups(
                     device,
                     &globals,

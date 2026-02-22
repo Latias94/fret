@@ -9,7 +9,8 @@ impl Renderer {
         sampling: fret_core::scene::ImageSamplingHint,
     ) -> Option<&wgpu::BindGroup> {
         Some(
-            self.bind_group_caches
+            self.gpu_resources
+                .bind_group_caches
                 .get_image_bind_groups(image)?
                 .pick(sampling),
         )
@@ -23,6 +24,7 @@ impl Renderer {
             return &self.uniform_bind_group;
         };
         let Some(groups) = self
+            .gpu_resources
             .bind_group_caches
             .get_uniform_mask_image_bind_groups(sel.image)
         else {
