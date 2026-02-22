@@ -2,7 +2,6 @@ use super::super::super::*;
 use super::super::executor::{RecordPassCtx, RenderSceneExecutor};
 use super::super::helpers::{
     ensure_color_dst_view_owned, require_color_src_view, require_mask_view,
-    set_scissor_rect_local_opt,
 };
 
 pub(in super::super) fn record_backdrop_warp_pass(
@@ -181,30 +180,12 @@ pub(in super::super) fn record_backdrop_warp_pass(
             ("fret backdrop-warp mask pass", bind_group, pipeline)
         };
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some(label),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            label,
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -213,26 +194,12 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     .flatten(),
             ),
             &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
-            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
             let layout = renderer
@@ -282,30 +249,12 @@ pub(in super::super) fn record_backdrop_warp_pass(
         };
         let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret backdrop-warp masked pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_fullscreen =
-                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
-        }
-        rp.set_bind_group(
-            0,
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret backdrop-warp masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -314,26 +263,12 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     .flatten(),
             ),
             &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
         );
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
-        }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        if set_scissor_rect_local_opt(&mut rp, pass.dst_scissor, pass.dst_size) && perf_enabled {
-            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-        }
-        rp.draw(0..3, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.fullscreen_draw_calls = frame_perf.fullscreen_draw_calls.saturating_add(1);
-        }
     } else {
         let (bind_group, pipeline) = if let Some(warp_view) = warp_view {
             let layout = renderer
