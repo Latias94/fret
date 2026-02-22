@@ -19,7 +19,7 @@
 - [ ] Decide the final ownership shape for `SceneDrawRange`:
   - keep as a `Renderer` method with explicit args (status quo), or
   - migrate to an executor-based recorder function (more churn; higher uniformity)
-- [ ] Reduce remaining argument surface area where practical (batch args into focused structs).
+- [x] Reduce remaining argument surface area where practical (batch args into focused structs).
 
 ## Gates (must stay green)
 
