@@ -1,5 +1,9 @@
 # Renderer Execute Pass Recorder Modularization v1 — TODO
 
+See also:
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-design.md`
+- `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-milestones.md`
+
 ## Done
 
 - [x] Split pass recording into `render_scene/recorders/*`.
@@ -12,6 +16,7 @@
 - [x] Extract uniform bind-group picking out of `execute.rs`.
 - [x] Centralize plan-pass trace/render-space helpers out of `execute.rs`.
 - [x] Extract target selection helpers (output vs intermediate vs mask) into `render_scene/helpers.rs`.
+- [x] Pack pass resources (buffers + bind groups) into `RecordPassResources`.
 
 ## Next
 

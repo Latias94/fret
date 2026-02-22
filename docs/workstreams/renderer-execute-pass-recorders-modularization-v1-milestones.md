@@ -1,38 +1,45 @@
 # Renderer Execute Pass Recorder Modularization v1 — Milestones
 
-## M0 — Baseline refactor gates
+This workstream is intentionally “mechanical”: reorganize code while keeping semantics unchanged.
 
-Exit criteria:
+## Milestone 1 — Executor routing
 
-- Conformance anchors + layering checks are the default “before/after” gate set.
+Completion criteria:
+- All `RenderPlanPass` variants are recorded through `RenderSceneExecutor`.
+- No `ExecuteCtx`-style secondary context object is required.
+- Conformance tests stay green.
 
-## M1 — Effect recorders modularized
+## Milestone 2 — Shared helpers extracted
 
-Exit criteria:
+Completion criteria:
+- Target selection (output/intermediate/mask) is centralized in `render_scene/helpers.rs`.
+- Scissor mapping and bind-group picking are centralized (no duplicated logic in `execute.rs`).
+- `execute.rs` focuses on orchestration and data uploads.
 
-- Effect passes live under `render_scene/recorders/`.
-- `execute.rs` remains an orchestration-only executor loop.
+## Milestone 3 — Recorder parameter surface reduction
 
-Evidence anchors:
+Completion criteria:
+- `execute.rs` builds stable “input bundles” once per frame and passes references through.
+- `RecordPassResources` exists and is used by `RenderSceneExecutor::record_pass`.
+- Pass-specific args are grouped into structs where it reduces churn.
 
-- `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
+## Milestone 4 — Decision: `SceneDrawRange` ownership
 
-## M2 — All pass recorders file-separated
+Completion criteria:
+- Choose one of:
+  - keep `Renderer::record_scene_draw_range_pass` as the canonical impl (explicit args struct), or
+  - migrate it into `render_scene/recorders/*` for uniformity
+- Document the choice and rationale in the workstream TODO.
 
-Exit criteria:
+## Gates
 
-- Each `RenderPlanPass` kind has a dedicated recorder module (or small grouped modules with a clear
-  boundary).
-- Shared helpers live in `render_scene/*` utilities (not ad-hoc `pub(super)` methods).
+Minimum gates (per change):
+- `cargo check -p fret-render-wgpu`
+- `cargo nextest run -p fret-render-wgpu --test viewport_surface_metadata_conformance`
+- `cargo nextest run -p fret-render-wgpu --test mask_image_conformance`
+- `cargo nextest run -p fret-render-wgpu --test composite_group_conformance`
+- `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
+- `cargo nextest run -p fret-render-wgpu --test materials_conformance`
+- `cargo nextest run -p fret-render-wgpu --test text_paint_conformance`
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
-## M3 — `RenderSceneExecutor` introduced (Option C)
-
-Exit criteria:
-
-- Per-frame mutable state is isolated from `Renderer` (encoder, targets, cursors, perf).
-- Recorders have stable, small signatures and are easy to test in isolation (where practical).
-
-Evidence anchors:
-
-- Design: `docs/workstreams/renderer-execute-pass-recorders-modularization-v1-refactor-design.md`
-- Executor: `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs`

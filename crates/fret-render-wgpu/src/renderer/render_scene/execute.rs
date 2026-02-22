@@ -1,6 +1,6 @@
 use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
-use super::executor::RenderSceneExecutor;
+use super::executor::{RecordPassResources, RenderSceneExecutor};
 use super::helpers::{render_plan_pass_render_space, render_plan_pass_trace_kind};
 use super::quad_vertices::upload_plan_quad_vertices;
 use fret_core::time::Instant;
@@ -775,6 +775,14 @@ impl Renderer {
                     perf_enabled,
                     &mut frame_perf,
                 );
+                let resources = RecordPassResources {
+                    viewport_vertex_buffer: &viewport_vertex_buffer,
+                    text_vertex_buffer: &text_vertex_buffer,
+                    path_vertex_buffer: &path_vertex_buffer,
+                    quad_instance_bind_group: &quad_instance_bind_group,
+                    text_paint_bind_group: &text_paint_bind_group,
+                    path_paint_bind_group: &path_paint_bind_group,
+                };
                 for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
                     debug_assert!(
                         pass_index < render_space_capacity,
@@ -801,12 +809,7 @@ impl Renderer {
                         pass_index,
                         planned_pass,
                         render_space_offset_u32,
-                        &viewport_vertex_buffer,
-                        &text_vertex_buffer,
-                        &path_vertex_buffer,
-                        &quad_instance_bind_group,
-                        &text_paint_bind_group,
-                        &path_paint_bind_group,
+                        &resources,
                     );
                 }
             },

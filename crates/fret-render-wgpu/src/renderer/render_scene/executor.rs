@@ -27,6 +27,15 @@ pub(super) struct RenderSceneExecutor<'a> {
     pub(super) frame_perf: &'a mut RenderPerfStats,
 }
 
+pub(super) struct RecordPassResources<'a> {
+    pub(super) viewport_vertex_buffer: &'a wgpu::Buffer,
+    pub(super) text_vertex_buffer: &'a wgpu::Buffer,
+    pub(super) path_vertex_buffer: &'a wgpu::Buffer,
+    pub(super) quad_instance_bind_group: &'a wgpu::BindGroup,
+    pub(super) text_paint_bind_group: &'a wgpu::BindGroup,
+    pub(super) path_paint_bind_group: &'a wgpu::BindGroup,
+}
+
 impl<'a> RenderSceneExecutor<'a> {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn new(
@@ -69,25 +78,19 @@ impl<'a> RenderSceneExecutor<'a> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn record_pass(
         &mut self,
         plan: &RenderPlan,
         pass_index: usize,
         planned_pass: &RenderPlanPass,
         render_space_offset_u32: u32,
-        viewport_vertex_buffer: &wgpu::Buffer,
-        text_vertex_buffer: &wgpu::Buffer,
-        path_vertex_buffer: &wgpu::Buffer,
-        quad_instance_bind_group: &wgpu::BindGroup,
-        text_paint_bind_group: &wgpu::BindGroup,
-        path_paint_bind_group: &wgpu::BindGroup,
+        resources: &RecordPassResources<'_>,
     ) {
         match planned_pass {
             RenderPlanPass::PathClipMask(mask_pass) => {
                 record_path_clip_mask_pass(
                     self,
-                    path_vertex_buffer,
+                    resources.path_vertex_buffer,
                     mask_pass,
                     render_space_offset_u32,
                 );
@@ -118,12 +121,12 @@ impl<'a> RenderSceneExecutor<'a> {
                     frame_perf,
                     plan,
                     scene_pass,
-                    viewport_vertex_buffer,
-                    text_vertex_buffer,
-                    path_vertex_buffer,
-                    quad_instance_bind_group,
-                    text_paint_bind_group,
-                    path_paint_bind_group,
+                    viewport_vertex_buffer: resources.viewport_vertex_buffer,
+                    text_vertex_buffer: resources.text_vertex_buffer,
+                    path_vertex_buffer: resources.path_vertex_buffer,
+                    quad_instance_bind_group: resources.quad_instance_bind_group,
+                    text_paint_bind_group: resources.text_paint_bind_group,
+                    path_paint_bind_group: resources.path_paint_bind_group,
                 };
                 renderer.record_scene_draw_range_pass(&mut args);
             }
@@ -132,8 +135,8 @@ impl<'a> RenderSceneExecutor<'a> {
                     self,
                     plan,
                     pass_index,
-                    path_vertex_buffer,
-                    path_paint_bind_group,
+                    resources.path_vertex_buffer,
+                    resources.path_paint_bind_group,
                     path_pass,
                     render_space_offset_u32,
                 );
