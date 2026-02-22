@@ -564,8 +564,23 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     let manifest_chunks = manifest
         .as_ref()
         .and_then(|m| manifest_bundle_json_chunks_summary(manifest_dir, m));
+    let manifest_schema_version = manifest
+        .as_ref()
+        .and_then(|m| m.get("schema_version"))
+        .and_then(|v| v.as_u64());
+    let manifest_run_id = manifest
+        .as_ref()
+        .and_then(|m| m.get("run_id"))
+        .and_then(|v| v.as_u64());
 
     let mut repairs: Vec<Value> = Vec::new();
+    if !items.iter().all(|it| it.status == DoctorStatus::Ok) {
+        repairs.push(json!({
+            "code": "fix_sidecars",
+            "note": "regenerate common sidecars in one step",
+            "command": format!("fretboard diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+        }));
+    }
     for it in &items {
         if it.status != DoctorStatus::Ok {
             repairs.push(json!({
@@ -582,6 +597,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             "code": "invalid_manifest_json",
             "note": "manifest.json exists but could not be parsed as JSON",
             "error": err,
+            "repair_hint": "re-extract the share zip (ensure manifest.json is intact) or re-capture the bundle",
         }));
     }
 
@@ -598,8 +614,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             if missing == 0 && bytes_mismatch == 0 {
                 repairs.push(json!({
                     "code": "materialize_bundle_json",
-                    "note": "bundle.json is missing but manifest chunks look complete; running a command that resolves bundle.json from chunks should restore it",
-                    "command": format!("fretboard diag index {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                    "note": "bundle.json is missing but manifest chunks look complete; materialize it from chunks",
+                    "command": format!("fretboard diag doctor --fix-bundle-json {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                 }));
             } else {
                 repairs.push(json!({
@@ -642,6 +658,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "script_result": script_result,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,
+        "manifest_schema_version": manifest_schema_version,
+        "manifest_run_id": manifest_run_id,
         "manifest_error": manifest_error,
         "repairs": repairs,
         "items": items.iter().map(|it| {
