@@ -250,6 +250,18 @@ impl Renderer {
         })
     }
 
+    fn rebuild_uniform_bind_group(&mut self, device: &wgpu::Device, label: &'static str) {
+        self.uniform_bind_group = self.create_uniform_bind_group(
+            device,
+            label,
+            &self.uniform_buffer,
+            &self.clip_buffer,
+            &self.mask_buffer,
+            &self.render_space_buffer,
+        );
+        self.bind_group_caches.clear_uniform_mask_images();
+    }
+
     pub(super) fn ensure_uniform_capacity(&mut self, device: &wgpu::Device, needed: usize) {
         if needed <= self.uniform_capacity {
             return;
@@ -266,18 +278,8 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized)",
-            &uniform_buffer,
-            &self.clip_buffer,
-            &self.mask_buffer,
-            &self.render_space_buffer,
-        );
-
         self.uniform_buffer = uniform_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized)");
         self.uniform_capacity = new_capacity;
     }
 
@@ -297,19 +299,8 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        // Rebuild the uniform bind group because it references `render_space_buffer`.
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized render space)",
-            &self.uniform_buffer,
-            &self.clip_buffer,
-            &self.mask_buffer,
-            &render_space_buffer,
-        );
-
         self.render_space_buffer = render_space_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized render space)");
         self.render_space_capacity = new_capacity;
     }
 
@@ -347,18 +338,8 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized clip buffer)",
-            &self.uniform_buffer,
-            &clip_buffer,
-            &self.mask_buffer,
-            &self.render_space_buffer,
-        );
-
         self.clip_buffer = clip_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized clip buffer)");
         self.clip_capacity = new_capacity;
     }
 
@@ -378,18 +359,8 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        let uniform_bind_group = self.create_uniform_bind_group(
-            device,
-            "fret uniforms bind group (resized mask buffer)",
-            &self.uniform_buffer,
-            &self.clip_buffer,
-            &mask_buffer,
-            &self.render_space_buffer,
-        );
-
         self.mask_buffer = mask_buffer;
-        self.uniform_bind_group = uniform_bind_group;
-        self.bind_group_caches.clear_uniform_mask_images();
+        self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized mask buffer)");
         self.mask_capacity = new_capacity;
     }
 }
