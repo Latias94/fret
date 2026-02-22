@@ -316,7 +316,8 @@ impl InputGroup {
             addon_py,
             compact_px,
             textarea_py,
-            text_style,
+            input_text_style,
+            textarea_text_style,
             root_layout,
             root_shadow,
             border_color,
@@ -333,8 +334,13 @@ impl InputGroup {
             let compact_px = fret_ui_kit::MetricRef::space(Space::N2).resolve(theme);
             let textarea_py = fret_ui_kit::MetricRef::space(Space::N3).resolve(theme);
 
-            let text_style =
+            let input_text_style =
                 typography::control_text_style_scaled(theme, FontId::ui(), resolved.text_px);
+            let textarea_text_style = typography::text_area_control_text_style_scaled(
+                theme,
+                FontId::ui(),
+                resolved.text_px,
+            );
 
             let root_layout = decl_style::layout_style(theme, {
                 let mut root = self.layout.relative().w_full().min_w_0();
@@ -373,7 +379,8 @@ impl InputGroup {
                 addon_py,
                 compact_px,
                 textarea_py,
-                text_style,
+                input_text_style,
+                textarea_text_style,
                 root_layout,
                 root_shadow,
                 border_color,
@@ -481,7 +488,7 @@ impl InputGroup {
                             input.submit_command = submit_command;
                             input.cancel_command = cancel_command;
                             input.chrome = chrome;
-                            input.text_style = text_style.clone();
+                            input.text_style = input_text_style.clone();
                             input.layout = {
                                 let theme = Theme::global(&*cx.app);
                                 decl_style::layout_style(
@@ -513,7 +520,7 @@ impl InputGroup {
                             props.a11y_label = a11y_label.clone();
                             props.test_id = control_test_id.clone();
                             props.chrome = chrome;
-                            props.text_style = text_style.clone();
+                            props.text_style = textarea_text_style.clone();
                             props.min_height = textarea_min_height;
                             props.layout = {
                                 let theme = Theme::global(&*cx.app);
@@ -720,7 +727,7 @@ impl InputGroup {
                     input.submit_command = submit_command;
                     input.cancel_command = cancel_command;
                     input.chrome = chrome;
-                    input.text_style = text_style;
+                    input.text_style = input_text_style.clone();
                     input.layout = {
                         let theme = Theme::global(&*cx.app);
                         decl_style::layout_style(
