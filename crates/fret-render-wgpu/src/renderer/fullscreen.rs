@@ -1,3 +1,34 @@
+fn apply_dst_local_scissor(
+    rp: &mut wgpu::RenderPass<'_>,
+    dst_scissor: Option<super::LocalScissorRect>,
+    dst_size: (u32, u32),
+) -> bool {
+    if dst_size.0 == 0 || dst_size.1 == 0 {
+        return false;
+    }
+
+    let Some(scissor) = dst_scissor.map(|s| s.0) else {
+        return false;
+    };
+    if scissor.w == 0 || scissor.h == 0 {
+        return false;
+    }
+
+    let x0 = scissor.x.min(dst_size.0);
+    let y0 = scissor.y.min(dst_size.1);
+    let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
+    let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
+
+    let w = x1.saturating_sub(x0);
+    let h = y1.saturating_sub(y0);
+    if w == 0 || h == 0 {
+        return false;
+    }
+
+    rp.set_scissor_rect(x0, y0, w, h);
+    true
+}
+
 pub(super) fn run_fullscreen_triangle_pass(
     encoder: &mut wgpu::CommandEncoder,
     label: &str,
@@ -29,23 +60,7 @@ pub(super) fn run_fullscreen_triangle_pass(
     rp.set_pipeline(pipeline);
     rp.set_bind_group(0, bind_group0, bind_group0_offsets);
     let has_scissor = dst_scissor.is_some();
-    if dst_size.0 != 0
-        && dst_size.1 != 0
-        && let Some(scissor) = dst_scissor.map(|s| s.0)
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        let x0 = scissor.x.min(dst_size.0);
-        let y0 = scissor.y.min(dst_size.1);
-        let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
-        let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
-
-        let w = x1.saturating_sub(x0);
-        let h = y1.saturating_sub(y0);
-        if w != 0 && h != 0 {
-            rp.set_scissor_rect(x0, y0, w, h);
-        }
-    }
+    let _ = apply_dst_local_scissor(&mut rp, dst_scissor, dst_size);
     rp.draw(0..3, 0..1);
 
     if let Some(perf) = perf {
@@ -95,28 +110,7 @@ pub(super) fn run_fullscreen_triangle_pass_uniform_texture(
     rp.set_bind_group(0, uniform_bind_group, uniform_offsets);
     rp.set_bind_group(1, texture_bind_group, texture_offsets);
 
-    let applied_scissor = if dst_size.0 == 0 || dst_size.1 == 0 {
-        false
-    } else if let Some(scissor) = dst_scissor.map(|s| s.0)
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        let x0 = scissor.x.min(dst_size.0);
-        let y0 = scissor.y.min(dst_size.1);
-        let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
-        let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
-
-        let w = x1.saturating_sub(x0);
-        let h = y1.saturating_sub(y0);
-        if w != 0 && h != 0 {
-            rp.set_scissor_rect(x0, y0, w, h);
-            true
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    let applied_scissor = apply_dst_local_scissor(&mut rp, dst_scissor, dst_size);
 
     rp.draw(0..3, 0..1);
 
@@ -170,28 +164,7 @@ pub(super) fn run_clip_mask_triangle_pass(
     rp.set_bind_group(0, uniform_bind_group, uniform_offsets);
     rp.set_bind_group(1, param_bind_group, param_offsets);
 
-    let applied_scissor = if dst_size.0 == 0 || dst_size.1 == 0 {
-        false
-    } else if let Some(scissor) = dst_scissor.map(|s| s.0)
-        && scissor.w != 0
-        && scissor.h != 0
-    {
-        let x0 = scissor.x.min(dst_size.0);
-        let y0 = scissor.y.min(dst_size.1);
-        let x1 = scissor.x.saturating_add(scissor.w).min(dst_size.0);
-        let y1 = scissor.y.saturating_add(scissor.h).min(dst_size.1);
-
-        let w = x1.saturating_sub(x0);
-        let h = y1.saturating_sub(y0);
-        if w != 0 && h != 0 {
-            rp.set_scissor_rect(x0, y0, w, h);
-            true
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    let applied_scissor = apply_dst_local_scissor(&mut rp, dst_scissor, dst_size);
 
     rp.draw(0..3, 0..1);
 
