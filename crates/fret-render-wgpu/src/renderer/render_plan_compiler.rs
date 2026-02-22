@@ -333,6 +333,19 @@ fn compile_for_scene_inner(
             *scene_range_start = end;
         };
 
+    let take_scope_load_for_write =
+        |draw_scopes: &mut Vec<DrawScope>, dst: super::PlanTarget| -> wgpu::LoadOp<wgpu::Color> {
+            let Some(index) = draw_scopes.iter().rposition(|s| s.target == dst) else {
+                return wgpu::LoadOp::Load;
+            };
+            if draw_scopes[index].needs_clear {
+                draw_scopes[index].needs_clear = false;
+                wgpu::LoadOp::Clear(draw_scopes[index].clear_color)
+            } else {
+                wgpu::LoadOp::Load
+            }
+        };
+
     let apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
@@ -628,6 +641,8 @@ fn compile_for_scene_inner(
 
                             let cropped = scope.content_origin != (0, 0)
                                 || scope.content_size != viewport_size;
+                            let load =
+                                take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
                             passes.push(RenderPlanPass::CompositePremul(
                                 super::CompositePremulPass {
                                     src: content_target,
@@ -641,7 +656,7 @@ fn compile_for_scene_inner(
                                     mask: None,
                                     blend_mode: fret_core::BlendMode::Over,
                                     opacity: 1.0,
-                                    load: wgpu::LoadOp::Load,
+                                    load,
                                 },
                             ));
 
@@ -824,7 +839,10 @@ fn compile_for_scene_inner(
                                     }),
                                     blend_mode: fret_core::BlendMode::Over,
                                     opacity: 1.0,
-                                    load: wgpu::LoadOp::Load,
+                                    load: take_scope_load_for_write(
+                                        &mut draw_scopes,
+                                        scope.parent_target,
+                                    ),
                                 },
                             ));
 
@@ -935,6 +953,8 @@ fn compile_for_scene_inner(
                                 content_target
                             );
 
+                            let load =
+                                take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
                             passes.push(RenderPlanPass::CompositePremul(
                                 super::CompositePremulPass {
                                     src: content_target,
@@ -948,7 +968,7 @@ fn compile_for_scene_inner(
                                     mask: None,
                                     blend_mode: scope.mode,
                                     opacity: scope.opacity,
-                                    load: wgpu::LoadOp::Load,
+                                    load,
                                 },
                             ));
 

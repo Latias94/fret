@@ -346,6 +346,246 @@ impl RenderPlan {
             intermediate_budget_bytes,
         )
     }
+
+    #[cfg(debug_assertions)]
+    pub(super) fn debug_validate(&self) {
+        if let Err(message) = validate_plan_target_lifetimes(&self.passes) {
+            panic!("RenderPlan validation failed: {message}");
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub(super) fn debug_validate(&self) {}
+}
+
+#[cfg(debug_assertions)]
+fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), String> {
+    fn slot(t: PlanTarget) -> Option<usize> {
+        match t {
+            PlanTarget::Intermediate0 => Some(0),
+            PlanTarget::Intermediate1 => Some(1),
+            PlanTarget::Intermediate2 => Some(2),
+            PlanTarget::Mask0 => Some(3),
+            PlanTarget::Mask1 => Some(4),
+            PlanTarget::Mask2 => Some(5),
+            PlanTarget::Output => None,
+        }
+    }
+
+    fn target_label(t: PlanTarget) -> &'static str {
+        match t {
+            PlanTarget::Output => "Output",
+            PlanTarget::Intermediate0 => "Intermediate0",
+            PlanTarget::Intermediate1 => "Intermediate1",
+            PlanTarget::Intermediate2 => "Intermediate2",
+            PlanTarget::Mask0 => "Mask0",
+            PlanTarget::Mask1 => "Mask1",
+            PlanTarget::Mask2 => "Mask2",
+        }
+    }
+
+    let mut live: [bool; 6] = [false; 6];
+    let mut initialized: [bool; 6] = [false; 6];
+
+    fn mark_read(
+        live: &[bool; 6],
+        initialized: &[bool; 6],
+        pass_index: usize,
+        t: PlanTarget,
+    ) -> Result<(), String> {
+        let Some(slot) = slot(t) else {
+            return Ok(());
+        };
+        if !live[slot] {
+            return Err(format!(
+                "pass[{pass_index}] reads {} after release (not live)",
+                target_label(t)
+            ));
+        }
+        if !initialized[slot] {
+            return Err(format!(
+                "pass[{pass_index}] reads {} before initialization",
+                target_label(t)
+            ));
+        }
+        Ok(())
+    }
+
+    fn mark_write(
+        live: &mut [bool; 6],
+        initialized: &mut [bool; 6],
+        pass_index: usize,
+        t: PlanTarget,
+        load: Option<wgpu::LoadOp<wgpu::Color>>,
+    ) -> Result<(), String> {
+        let Some(slot) = slot(t) else {
+            return Ok(());
+        };
+
+        if let Some(wgpu::LoadOp::Load) = load {
+            if !initialized[slot] {
+                return Err(format!(
+                    "pass[{pass_index}] writes {} with LoadOp::Load before initialization",
+                    target_label(t)
+                ));
+            }
+            if !live[slot] {
+                return Err(format!(
+                    "pass[{pass_index}] writes {} with LoadOp::Load after release (not live)",
+                    target_label(t)
+                ));
+            }
+        }
+
+        live[slot] = true;
+        // Passes without an explicit LoadOp are assumed to initialize the destination.
+        initialized[slot] = true;
+        Ok(())
+    }
+
+    fn mark_release(
+        live: &mut [bool; 6],
+        initialized: &mut [bool; 6],
+        pass_index: usize,
+        t: PlanTarget,
+    ) -> Result<(), String> {
+        let Some(slot) = slot(t) else {
+            return Err(format!(
+                "pass[{pass_index}] releases {}, but releasing Output is invalid",
+                target_label(t)
+            ));
+        };
+        if !live[slot] {
+            return Err(format!(
+                "pass[{pass_index}] releases {} when not live",
+                target_label(t)
+            ));
+        }
+        live[slot] = false;
+        initialized[slot] = false;
+        Ok(())
+    }
+
+    for (pass_index, pass) in passes.iter().enumerate() {
+        match *pass {
+            RenderPlanPass::SceneDrawRange(SceneDrawRangePass { target, load, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, target, Some(load))?;
+            }
+            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, target, None)?;
+            }
+            RenderPlanPass::PathClipMask(PathClipMaskPass { dst, load, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::ClipMask(ClipMaskPass { dst, .. }) => {
+                mark_write(&mut live, &mut initialized, pass_index, dst, None)?;
+            }
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass { src, dst, load, .. }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::CompositePremul(CompositePremulPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::Blur(BlurPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::BackdropWarp(BackdropWarpPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::ColorAdjust(ColorAdjustPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::ColorMatrix(ColorMatrixPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::AlphaThreshold(AlphaThresholdPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::DropShadow(DropShadowPass { src, dst, load, .. }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::ReleaseTarget(t) => {
+                mark_release(&mut live, &mut initialized, pass_index, t)?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn estimate_plan_peak_intermediate_bytes(

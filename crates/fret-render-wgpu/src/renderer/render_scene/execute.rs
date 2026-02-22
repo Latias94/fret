@@ -336,6 +336,7 @@ impl Renderer {
         if let Some(plan_elapsed) = plan_elapsed {
             frame_perf.plan_compile += plan_elapsed;
         }
+        plan.debug_validate();
         render_scene_span.record("plan_passes", plan.passes.len() as u64);
         render_scene_span.record("plan_segments", plan.segments.len() as u64);
         render_scene_span.record("plan_degradations", plan.degradations.len() as u64);
