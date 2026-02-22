@@ -1,7 +1,7 @@
 use super::render_plan::{
-    AbsoluteScissorRect, BlurAxis, DebugPostprocess, MaskRef, PlanTarget, RenderPlan,
-    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
-    ScaleMode,
+    AbsoluteScissorRect, BlurAxis, DebugPostprocess, LocalScissorRect, MaskRef, PlanTarget,
+    RenderPlan, RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason,
+    RenderPlanPass, ScaleMode,
 };
 use super::{EffectMarker, EffectMarkerKind, ScissorRect};
 
@@ -29,6 +29,12 @@ impl From<ScissorRect> for JsonDumpScissorRect {
 
 impl From<AbsoluteScissorRect> for JsonDumpScissorRect {
     fn from(r: AbsoluteScissorRect) -> Self {
+        r.0.into()
+    }
+}
+
+impl From<LocalScissorRect> for JsonDumpScissorRect {
+    fn from(r: LocalScissorRect) -> Self {
         r.0.into()
     }
 }

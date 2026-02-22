@@ -72,8 +72,13 @@ pub(super) struct MaskRef {
     pub(super) viewport_rect: ScissorRect,
 }
 
+/// A scissor rect in render-space, relative to the output viewport.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct AbsoluteScissorRect(pub(super) ScissorRect);
+
+/// A scissor rect in the destination texture's local space (`0..dst_size`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct LocalScissorRect(pub(super) ScissorRect);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DebugPostprocess {
@@ -134,7 +139,7 @@ pub(super) struct PathClipMaskPass {
 pub(super) struct ClipMaskPass {
     pub(super) dst: PlanTarget,
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) uniform_index: u32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
@@ -151,7 +156,7 @@ pub(super) struct BlurPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) axis: BlurAxis,
@@ -166,7 +171,7 @@ pub(super) struct BackdropWarpPass {
     pub(super) dst_size: (u32, u32),
     pub(super) origin_px: (u32, u32),
     pub(super) bounds_size_px: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) strength_px: f32,
@@ -187,7 +192,7 @@ pub(super) struct ColorAdjustPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) saturation: f32,
@@ -202,7 +207,7 @@ pub(super) struct ColorMatrixPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) matrix: [f32; 20],
@@ -215,7 +220,7 @@ pub(super) struct AlphaThresholdPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) cutoff: f32,
@@ -229,7 +234,7 @@ pub(super) struct DropShadowPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) offset_px: (f32, f32),
@@ -243,7 +248,7 @@ pub(super) struct FullscreenBlitPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -276,7 +281,7 @@ pub(super) struct ScaleNearestPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) src_origin: (u32, u32),
-    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) dst_scissor: Option<LocalScissorRect>,
     pub(super) dst_origin: (u32, u32),
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
@@ -751,8 +756,8 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     pass.src_origin,
                     pass.src_size,
                 )?;
-                if let Some(scissor) = pass.dst_scissor
-                    && !intersects_absolute(scissor.0, pass.dst_origin, pass.dst_size)
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !intersects_absolute(scissor, pass.dst_origin, pass.dst_size)
                 {
                     return Err(format!(
                         "pass[{pass_index}] CompositePremul dst_scissor does not intersect destination"
@@ -764,7 +769,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::ScaleNearest(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -786,7 +791,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::Blur(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -803,7 +808,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::BackdropWarp(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -820,7 +825,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::ColorAdjust(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -837,7 +842,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::ColorMatrix(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -854,7 +859,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::AlphaThreshold(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -871,7 +876,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::DropShadow(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -888,7 +893,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::FullscreenBlit(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -897,7 +902,7 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::ClipMask(pass) => {
-                if let Some(scissor) = pass.dst_scissor
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
                 {
                     return Err(format!(
@@ -1195,7 +1200,7 @@ fn push_scale_nearest(
             src_size,
             dst_size,
             src_origin: (0, 0),
-            dst_scissor,
+            dst_scissor: dst_scissor.map(LocalScissorRect),
             dst_origin: (0, 0),
             mask_uniform_index: None,
             mask: None,
@@ -1220,7 +1225,7 @@ fn push_fullscreen_blit(
             dst,
             src_size,
             dst_size,
-            dst_scissor,
+            dst_scissor: dst_scissor.map(LocalScissorRect),
             load,
         }));
 }
@@ -1240,7 +1245,7 @@ fn push_blur(
         dst,
         src_size,
         dst_size,
-        dst_scissor,
+        dst_scissor: dst_scissor.map(LocalScissorRect),
         mask_uniform_index: None,
         mask: None,
         axis,

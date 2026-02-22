@@ -224,7 +224,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -331,7 +331,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -401,7 +401,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             perf_enabled.then_some(frame_perf),
         );
     }

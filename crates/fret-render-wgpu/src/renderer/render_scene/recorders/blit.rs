@@ -54,7 +54,7 @@ pub(in super::super) fn record_fullscreen_blit_pass(
         pass.load,
         &blit_bind_group,
         &[],
-        pass.dst_scissor,
+        pass.dst_scissor.map(|s| s.0),
         perf_enabled.then_some(frame_perf),
     );
 }

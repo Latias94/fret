@@ -145,7 +145,7 @@ pub(in super::super) fn record_color_adjust_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -221,7 +221,7 @@ pub(in super::super) fn record_color_adjust_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -259,7 +259,7 @@ pub(in super::super) fn record_color_adjust_pass(
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -404,7 +404,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -480,7 +480,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -518,7 +518,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -672,7 +672,7 @@ pub(in super::super) fn record_color_matrix_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -748,7 +748,7 @@ pub(in super::super) fn record_color_matrix_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -786,7 +786,7 @@ pub(in super::super) fn record_color_matrix_pass(
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -941,7 +941,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -1017,7 +1017,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -1055,7 +1055,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             pass.load,
             &bind_group,
             &[],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             perf_enabled.then_some(frame_perf),
         );
     }
@@ -1328,7 +1328,7 @@ pub(in super::super) fn record_clip_mask_pass(
         frame_perf.texture_bind_group_switches =
             frame_perf.texture_bind_group_switches.saturating_add(1);
     }
-    if let Some(scissor) = pass.dst_scissor
+    if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
         && scissor.w != 0
         && scissor.h != 0
     {

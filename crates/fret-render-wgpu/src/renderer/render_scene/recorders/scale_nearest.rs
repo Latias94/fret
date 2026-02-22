@@ -161,7 +161,7 @@ pub(in super::super) fn record_scale_nearest_pass(
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(LocalScissorRect(scissor)) = pass.dst_scissor
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -239,7 +239,7 @@ pub(in super::super) fn record_scale_nearest_pass(
             frame_perf.texture_bind_group_switches =
                 frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
+        if let Some(LocalScissorRect(scissor)) = pass.dst_scissor
             && scissor.w != 0
             && scissor.h != 0
         {
@@ -289,7 +289,7 @@ pub(in super::super) fn record_scale_nearest_pass(
             pass.load,
             &bind_group,
             &[scale_param_offset_u32],
-            pass.dst_scissor,
+            pass.dst_scissor.map(|s| s.0),
             if perf_enabled { Some(frame_perf) } else { None },
         );
     }

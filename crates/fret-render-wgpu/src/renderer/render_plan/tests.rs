@@ -700,12 +700,15 @@ fn downsample_scissor_mapping_does_not_expand_across_steps() {
     let RenderPlanPass::ScaleNearest(half_pass) = plan.passes[0] else {
         panic!("expected half downsample pass");
     };
-    assert_eq!(half_pass.dst_scissor, expected_half_scissor);
+    assert_eq!(half_pass.dst_scissor.map(|s| s.0), expected_half_scissor);
 
     let RenderPlanPass::ScaleNearest(quarter_pass) = plan.passes[1] else {
         panic!("expected quarter downsample pass");
     };
-    assert_eq!(quarter_pass.dst_scissor, expected_quarter_scissor);
+    assert_eq!(
+        quarter_pass.dst_scissor.map(|s| s.0),
+        expected_quarter_scissor
+    );
 }
 
 #[test]
@@ -741,7 +744,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected half downsample pass");
     assert_eq!(
-        half.dst_scissor,
+        half.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 5,
             y: 5,
@@ -758,7 +761,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected blur-h pass");
     assert_eq!(
-        blur_h.dst_scissor,
+        blur_h.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 5,
             y: 5,
@@ -793,7 +796,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         })
         .expect("expected upscale-to-output pass");
     assert_eq!(
-        upscale.dst_scissor,
+        upscale.dst_scissor.map(|s| s.0),
         Some(ScissorRect {
             x: 10,
             y: 10,
