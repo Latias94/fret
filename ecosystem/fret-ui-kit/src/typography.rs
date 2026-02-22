@@ -171,6 +171,23 @@ pub fn text_area_control_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
+/// Returns an opt-in text style intended for UI/form multiline text areas, scaled to an explicit
+/// size.
+pub fn text_area_control_text_style_scaled(theme: &Theme, font: FontId, size: Px) -> TextStyle {
+    let ratio = base_line_height_ratio(theme);
+    let line_height = Px((size.0 * ratio).max(size.0));
+
+    let mut style = TextStyle {
+        font,
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    };
+    style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
+    style.strut_style = force_strut_from_style(&style);
+    style
+}
+
 /// Returns a control-text style intended for UI components (stable line box).
 ///
 /// This is a policy helper for ecosystem components. It is intentionally not a `fret-ui` runtime
