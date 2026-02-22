@@ -576,6 +576,31 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     )
     .test_id("ui-gallery-item-demo");
 
+    let link_render = {
+        let media = shadcn::ItemMedia::new([icon(cx, "lucide.home")])
+            .variant(shadcn::ItemMediaVariant::Icon)
+            .into_element(cx);
+        let content = shadcn::ItemContent::new([
+            shadcn::ItemTitle::new("Dashboard").into_element(cx),
+            shadcn::ItemDescription::new("Overview of your account and activity.").into_element(cx),
+        ])
+        .into_element(cx);
+
+        shadcn::Item::new([media, content])
+            .render(shadcn::ItemRender::Link {
+                href: Arc::<str>::from("https://example.com/dashboard"),
+                target: None,
+                rel: None,
+            })
+            // Keep the gallery deterministic: demonstrate link semantics + styling without opening
+            // the browser during scripted runs.
+            .on_click(CMD_APP_OPEN)
+            .a11y_label("Dashboard")
+            .test_id("ui-gallery-item-link-render")
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+    };
+
     let rtl = doc_layout::rtl(cx, |cx| {
         let action = outline_button_sm(cx, "فتح");
         item_basic(
@@ -593,7 +618,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         cx,
         [
             "Preview aligns to shadcn Item demo layout (4 columns).",
-            "Upstream uses `asChild` anchors and DOM images; Fret uses `on_click` + placeholder media in this gallery.",
+            "Upstream uses `render={<a .../>}`; Fret uses `ItemRender::Link` to express link semantics on the pressable root.",
             "API reference: `ecosystem/fret-ui-shadcn/src/item.rs`.",
         ],
     );
@@ -610,9 +635,19 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .code(
                     "rust",
                     r#"// Item columns are laid out with a wrap row.
-doc_layout::wrap_row_snapshot(cx, &theme, Space::N6, CrossAlign::Start, |cx| {
-    vec![/* col 1 */, /* col 2 */, /* col 3 */, /* col 4 */]
-});"#,
+ doc_layout::wrap_row_snapshot(cx, &theme, Space::N6, CrossAlign::Start, |cx| {
+     vec![/* col 1 */, /* col 2 */, /* col 3 */, /* col 4 */]
+ });"#,
+                ),
+            DocSection::new("Link (render)", link_render)
+                .description("shadcn supports rendering Item as an anchor; Fret models this via link semantics on the pressable root.")
+                .no_shell()
+                .max_w(Px(640.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Item::new([/* ... */])
+    .render(shadcn::ItemRender::Link { href: Arc::from("..."), target: None, rel: None })
+    .into_element(cx);"#,
                 ),
             DocSection::new("Extras", rtl)
                 .description("RTL smoke check (not present in upstream demo).")

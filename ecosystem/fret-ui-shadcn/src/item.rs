@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Px, TextOverflow, TextWrap};
-use fret_runtime::CommandId;
+use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_runtime::{CommandId, Effect};
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, MainAlign,
-    PressableProps,
+    PressableKeyActivation, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -13,6 +14,29 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
 };
+
+#[derive(Debug, Clone)]
+pub enum ItemRender {
+    Link {
+        href: Arc<str>,
+        target: Option<Arc<str>>,
+        rel: Option<Arc<str>>,
+    },
+}
+
+fn open_url_on_activate(
+    url: Arc<str>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
+) -> OnActivate {
+    Arc::new(move |host, _acx, _reason| {
+        host.push_effect(Effect::OpenUrl {
+            url: url.to_string(),
+            target: target.as_ref().map(|v| v.to_string()),
+            rel: rel.as_ref().map(|v| v.to_string()),
+        });
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
@@ -610,15 +634,37 @@ impl ItemStyle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Item {
     variant: ItemVariant,
     size: ItemSize,
     on_click: Option<CommandId>,
+    on_activate: Option<OnActivate>,
     enabled: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    render: Option<ItemRender>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for Item {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Item")
+            .field("variant", &self.variant)
+            .field("size", &self.size)
+            .field("on_click", &self.on_click)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("enabled", &self.enabled)
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .field("render", &self.render)
+            .field("children_len", &self.children.len())
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl Item {
@@ -628,7 +674,11 @@ impl Item {
             variant: ItemVariant::default(),
             size: ItemSize::default(),
             on_click: None,
+            on_activate: None,
             enabled: true,
+            a11y_label: None,
+            test_id: None,
+            render: None,
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -650,8 +700,28 @@ impl Item {
         self
     }
 
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.enabled = !disabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn render(mut self, render: ItemRender) -> Self {
+        self.render = Some(render);
         self
     }
 
@@ -720,17 +790,34 @@ impl Item {
         let children = std::rc::Rc::new(self.children);
         let enabled = self.enabled;
         let on_click = self.on_click;
+        let on_activate = self.on_activate;
+        let a11y_label = self.a11y_label;
+        let test_id = self.test_id;
         let user_chrome = self.chrome;
         let user_bg_override = user_chrome.background.is_some();
         let user_border_override = user_chrome.border_color.is_some();
+        let should_fallback_open_url = on_click.is_none() && on_activate.is_none();
+        let (render_role, render_key_activation, render_on_activate) = match self.render {
+            Some(ItemRender::Link { href, target, rel }) => (
+                Some(SemanticsRole::Link),
+                PressableKeyActivation::EnterOnly,
+                should_fallback_open_url.then(|| open_url_on_activate(href, target, rel)),
+            ),
+            None => (None, PressableKeyActivation::EnterAndSpace, None),
+        };
         let padding = match size {
             ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
             ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
         };
 
-        if on_click.is_some() {
+        if on_click.is_some() || on_activate.is_some() || render_role.is_some() {
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(on_click);
+                if let Some(on_activate) = on_activate.clone() {
+                    cx.pressable_on_activate(on_activate);
+                } else if let Some(on_activate) = render_on_activate.clone() {
+                    cx.pressable_on_activate(on_activate);
+                }
 
                 let hovered = st.hovered && enabled;
                 let pressed = st.pressed && enabled;
@@ -773,6 +860,13 @@ impl Item {
                     layout: pressable_layout,
                     enabled,
                     focus_ring: Some(focus_ring),
+                    key_activation: render_key_activation,
+                    a11y: fret_ui::element::PressableA11y {
+                        role: render_role,
+                        label: a11y_label.clone(),
+                        test_id: test_id.clone(),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 };
 

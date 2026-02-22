@@ -132,7 +132,7 @@ pub use aspect_ratio::AspectRatio;
 pub use avatar::{Avatar, AvatarFallback, AvatarImage, AvatarSize};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
-pub use button::{Button, ButtonSize, ButtonVariant};
+pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::{Calendar, CalendarCaptionLayout};
 pub use calendar_hijri::CalendarHijri;
@@ -221,7 +221,7 @@ pub use input_group::{
 pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
-    ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
+    ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
 };
 pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
