@@ -28,6 +28,14 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Move UI gallery code-editor checks out of `crates/fret-diag/src/stats.rs` into
       `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`.
 
+## M1c: Make `fret-diag` CLI subcommands less monolithic (mechanical moves)
+
+- [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
+- [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
+  - `diag run` (context assembly + orchestration),
+  - `diag suite` (suite execution + reporting),
+  - `diag stats` (dispatch + formatting).
+
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 
 - [x] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
