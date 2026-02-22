@@ -1,5 +1,4 @@
 use super::super::super::*;
-use super::super::ctx::ExecuteCtx;
 use super::super::executor::RenderSceneExecutor;
 use super::super::helpers::set_scissor_rect_absolute;
 
@@ -1087,261 +1086,154 @@ pub(in super::super) fn record_drop_shadow_pass(
     }
 }
 
-impl Renderer {
-    pub(in super::super) fn record_composite_premul_pass(
-        &mut self,
-        ctx: &mut ExecuteCtx<'_>,
-        pass_index: usize,
-        pass: &CompositePremulPass,
-    ) {
-        let device = ctx.device;
-        let format = ctx.format;
-        let target_view = ctx.target_view;
-        let viewport_size = ctx.viewport_size;
-        let usage = ctx.usage;
-        let encoder = &mut *ctx.encoder;
-        let frame_targets = &mut *ctx.frame_targets;
-        let encoding = ctx.encoding;
-        let render_space_offset_u32 = ctx.render_space_offset_u32;
-        let perf_enabled = ctx.perf_enabled;
-        let frame_perf = &mut *ctx.frame_perf;
-        let quad_vertex_bases = ctx.quad_vertex_bases;
-        let quad_vertex_size = ctx.quad_vertex_size;
+pub(in super::super) fn record_composite_premul_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    pass_index: usize,
+    pass: &CompositePremulPass,
+    render_space_offset_u32: u32,
+) {
+    let device = exec.device;
+    let format = exec.format;
+    let target_view = exec.target_view;
+    let viewport_size = exec.viewport_size;
+    let usage = exec.usage;
+    let encoder = &mut *exec.encoder;
+    let frame_targets = &mut *exec.frame_targets;
+    let encoding = exec.encoding;
+    let perf_enabled = exec.perf_enabled;
+    let frame_perf = &mut *exec.frame_perf;
+    let quad_vertex_bases = exec.quad_vertex_bases;
+    let quad_vertex_size = exec.quad_vertex_size;
 
-        let pipeline_ix = pass.blend_mode.pipeline_index();
+    let renderer = &mut *exec.renderer;
 
-        let src_view = match pass.src {
-            PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-                debug_assert!(false, "CompositePremul src cannot be Output/mask targets");
-                return;
-            }
-            PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-                frame_targets.require_target(pass.src, pass.src_size)
-            }
-        };
+    let pipeline_ix = pass.blend_mode.pipeline_index();
 
-        let dst_view_owned = match pass.dst {
-            PlanTarget::Output => None,
-            PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-                Some(frame_targets.ensure_target(
-                    &mut self.intermediate_pool,
-                    device,
-                    pass.dst,
-                    pass.dst_size,
-                    format,
-                    usage,
-                ))
-            }
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
-                debug_assert!(false, "CompositePremul dst cannot be mask targets");
-                None
-            }
-        };
-        let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
-
-        let (composite_pipeline, bind_group) = if let Some(mask) = pass.mask {
-            debug_assert!(matches!(
-                mask.target,
-                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-            ));
-            debug_assert_eq!(
-                pass.dst_size, viewport_size,
-                "mask-based composite expects full-size destination"
-            );
-
-            let mask_view = frame_targets.require_target(mask.target, mask.size);
-            let layout = self
-                .composite_mask_bind_group_layout
-                .as_ref()
-                .expect("composite mask bind group layout must exist");
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("fret composite premul mask bind group"),
-                layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(&src_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::TextureView(&mask_view),
-                    },
-                ],
-            });
-
-            (
-                self.composite_mask_pipelines[pipeline_ix]
-                    .as_ref()
-                    .expect("composite mask pipeline must exist"),
-                bind_group,
-            )
-        } else {
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("fret composite premul bind group"),
-                layout: &self.viewport_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(&src_view),
-                    },
-                ],
-            });
-            (
-                self.composite_pipelines[pipeline_ix]
-                    .as_ref()
-                    .expect("composite pipeline must exist"),
-                bind_group,
-            )
-        };
-        let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+    let src_view = match pass.src {
+        PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+            debug_assert!(false, "CompositePremul src cannot be Output/mask targets");
             return;
-        };
+        }
+        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+            frame_targets.require_target(pass.src, pass.src_size)
+        }
+    };
 
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret composite premul pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: pass.load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        rp.set_pipeline(composite_pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_composite =
-                frame_perf.pipeline_switches_composite.saturating_add(1);
+    let dst_view_owned = match pass.dst {
+        PlanTarget::Output => None,
+        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+            Some(frame_targets.ensure_target(
+                &mut renderer.intermediate_pool,
+                device,
+                pass.dst,
+                pass.dst_size,
+                format,
+                usage,
+            ))
         }
-        if let Some(mask_uniform_index) = pass.mask_uniform_index {
-            let uniform_offset = (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
-            rp.set_bind_group(
-                0,
-                self.pick_uniform_bind_group_for_mask_image(
-                    encoding
-                        .uniform_mask_images
-                        .get(mask_uniform_index as usize)
-                        .copied()
-                        .flatten(),
-                ),
-                &[uniform_offset, render_space_offset_u32],
-            );
-            if perf_enabled {
-                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            }
-        } else {
-            rp.set_bind_group(0, &self.uniform_bind_group, &[0, render_space_offset_u32]);
-            if perf_enabled {
-                frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            }
+        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+            debug_assert!(false, "CompositePremul dst cannot be mask targets");
+            None
         }
-        rp.set_bind_group(1, &bind_group, &[]);
-        if perf_enabled {
-            frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
-        }
-        let base = u64::from(base) * quad_vertex_size;
-        let len = 6 * quad_vertex_size;
-        rp.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            let _ = set_scissor_rect_absolute(&mut rp, scissor, pass.dst_origin, pass.dst_size);
-        }
-        rp.draw(0..6, 0..1);
-        if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-        }
-    }
+    };
+    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    pub(in super::super) fn record_clip_mask_pass(
-        &mut self,
-        ctx: &mut ExecuteCtx<'_>,
-        pass: &ClipMaskPass,
-    ) {
-        let device = ctx.device;
-        let queue = ctx.queue;
-        let usage = ctx.usage;
-        let encoder = &mut *ctx.encoder;
-        let frame_targets = &mut *ctx.frame_targets;
-        let encoding = ctx.encoding;
-        let render_space_offset_u32 = ctx.render_space_offset_u32;
-        let perf_enabled = ctx.perf_enabled;
-        let frame_perf = &mut *ctx.frame_perf;
-
+    let (composite_pipeline, bind_group) = if let Some(mask) = pass.mask {
         debug_assert!(matches!(
-            pass.dst,
+            mask.target,
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
         ));
-        queue.write_buffer(
-            &self.clip_mask_param_buffer,
-            0,
-            bytemuck::cast_slice(&[pass.dst_size.0 as f32, pass.dst_size.1 as f32, 0.0, 0.0]),
-        );
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf
-                .uniform_bytes
-                .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
-        }
-        let dst_view = frame_targets.ensure_target(
-            &mut self.intermediate_pool,
-            device,
-            pass.dst,
-            pass.dst_size,
-            wgpu::TextureFormat::R8Unorm,
-            usage,
+        debug_assert_eq!(
+            pass.dst_size, viewport_size,
+            "mask-based composite expects full-size destination"
         );
 
-        let pipeline = self
-            .clip_mask_pipeline
+        let mask_view = frame_targets.require_target(mask.target, mask.size);
+        let layout = renderer
+            .composite_mask_bind_group_layout
             .as_ref()
-            .expect("clip mask pipeline must exist");
-        let uniform_offset = (u64::from(pass.uniform_index) * self.uniform_stride) as u32;
-
-        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("fret clip mask pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &dst_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                    store: wgpu::StoreOp::Store,
+            .expect("composite mask bind group layout must exist");
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret composite premul mask bind group"),
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
                 },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&src_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                },
+            ],
         });
-        rp.set_pipeline(pipeline);
-        if perf_enabled {
-            frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
-            frame_perf.pipeline_switches_clip_mask =
-                frame_perf.pipeline_switches_clip_mask.saturating_add(1);
-        }
+
+        (
+            renderer.composite_mask_pipelines[pipeline_ix]
+                .as_ref()
+                .expect("composite mask pipeline must exist"),
+            bind_group,
+        )
+    } else {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret composite premul bind group"),
+            layout: &renderer.viewport_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&renderer.viewport_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&src_view),
+                },
+            ],
+        });
+        (
+            renderer.composite_pipelines[pipeline_ix]
+                .as_ref()
+                .expect("composite pipeline must exist"),
+            bind_group,
+        )
+    };
+    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+        return;
+    };
+
+    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("fret composite premul pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: dst_view,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: pass.load,
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    rp.set_pipeline(composite_pipeline);
+    if perf_enabled {
+        frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
+        frame_perf.pipeline_switches_composite =
+            frame_perf.pipeline_switches_composite.saturating_add(1);
+    }
+    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+        let uniform_offset = (u64::from(mask_uniform_index) * renderer.uniform_stride) as u32;
         rp.set_bind_group(
             0,
-            self.pick_uniform_bind_group_for_mask_image(
+            renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
-                    .get(pass.uniform_index as usize)
+                    .get(mask_uniform_index as usize)
                     .copied()
                     .flatten(),
             ),
@@ -1349,28 +1241,139 @@ impl Renderer {
         );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.uniform_bind_group_switches =
-                frame_perf.uniform_bind_group_switches.saturating_add(1);
         }
-        rp.set_bind_group(1, &self.clip_mask_param_bind_group, &[]);
+    } else {
+        rp.set_bind_group(
+            0,
+            &renderer.uniform_bind_group,
+            &[0, render_space_offset_u32],
+        );
         if perf_enabled {
             frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
-            frame_perf.texture_bind_group_switches =
-                frame_perf.texture_bind_group_switches.saturating_add(1);
         }
-        if let Some(scissor) = pass.dst_scissor
-            && scissor.w != 0
-            && scissor.h != 0
-        {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-            if perf_enabled {
-                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-            }
-        }
-        rp.draw(0..3, 0..1);
+    }
+    rp.set_bind_group(1, &bind_group, &[]);
+    if perf_enabled {
+        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+        frame_perf.texture_bind_group_switches =
+            frame_perf.texture_bind_group_switches.saturating_add(1);
+    }
+    let base = u64::from(base) * quad_vertex_size;
+    let len = 6 * quad_vertex_size;
+    rp.set_vertex_buffer(0, renderer.path_composite_vertices.slice(base..base + len));
+    if let Some(scissor) = pass.dst_scissor
+        && scissor.w != 0
+        && scissor.h != 0
+    {
+        let _ = set_scissor_rect_absolute(&mut rp, scissor, pass.dst_origin, pass.dst_size);
+    }
+    rp.draw(0..6, 0..1);
+    if perf_enabled {
+        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+    }
+}
+
+pub(in super::super) fn record_clip_mask_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    pass: &ClipMaskPass,
+    render_space_offset_u32: u32,
+) {
+    let device = exec.device;
+    let queue = exec.queue;
+    let usage = exec.usage;
+    let encoder = &mut *exec.encoder;
+    let frame_targets = &mut *exec.frame_targets;
+    let encoding = exec.encoding;
+    let perf_enabled = exec.perf_enabled;
+    let frame_perf = &mut *exec.frame_perf;
+
+    let renderer = &mut *exec.renderer;
+
+    debug_assert!(matches!(
+        pass.dst,
+        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+    ));
+    queue.write_buffer(
+        &renderer.clip_mask_param_buffer,
+        0,
+        bytemuck::cast_slice(&[pass.dst_size.0 as f32, pass.dst_size.1 as f32, 0.0, 0.0]),
+    );
+    if perf_enabled {
+        frame_perf.uniform_bytes = frame_perf
+            .uniform_bytes
+            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+    }
+    let dst_view = frame_targets.ensure_target(
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        wgpu::TextureFormat::R8Unorm,
+        usage,
+    );
+
+    let pipeline = renderer
+        .clip_mask_pipeline
+        .as_ref()
+        .expect("clip mask pipeline must exist");
+    let uniform_offset = (u64::from(pass.uniform_index) * renderer.uniform_stride) as u32;
+
+    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("fret clip mask pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: &dst_view,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    rp.set_pipeline(pipeline);
+    if perf_enabled {
+        frame_perf.pipeline_switches = frame_perf.pipeline_switches.saturating_add(1);
+        frame_perf.pipeline_switches_clip_mask =
+            frame_perf.pipeline_switches_clip_mask.saturating_add(1);
+    }
+    rp.set_bind_group(
+        0,
+        renderer.pick_uniform_bind_group_for_mask_image(
+            encoding
+                .uniform_mask_images
+                .get(pass.uniform_index as usize)
+                .copied()
+                .flatten(),
+        ),
+        &[uniform_offset, render_space_offset_u32],
+    );
+    if perf_enabled {
+        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+        frame_perf.uniform_bind_group_switches =
+            frame_perf.uniform_bind_group_switches.saturating_add(1);
+    }
+    rp.set_bind_group(1, &renderer.clip_mask_param_bind_group, &[]);
+    if perf_enabled {
+        frame_perf.bind_group_switches = frame_perf.bind_group_switches.saturating_add(1);
+        frame_perf.texture_bind_group_switches =
+            frame_perf.texture_bind_group_switches.saturating_add(1);
+    }
+    if let Some(scissor) = pass.dst_scissor
+        && scissor.w != 0
+        && scissor.h != 0
+    {
+        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
         if perf_enabled {
-            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
-            frame_perf.clip_mask_draw_calls = frame_perf.clip_mask_draw_calls.saturating_add(1);
+            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
         }
+    }
+    rp.draw(0..3, 0..1);
+    if perf_enabled {
+        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+        frame_perf.clip_mask_draw_calls = frame_perf.clip_mask_draw_calls.saturating_add(1);
     }
 }
