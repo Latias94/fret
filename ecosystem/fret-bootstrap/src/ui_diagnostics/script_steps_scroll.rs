@@ -1,5 +1,34 @@
 use super::*;
 
+fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = ax0 + a.size.width.0.max(0.0);
+    let ay1 = ay0 + a.size.height.0.max(0.0);
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = bx0 + b.size.width.0.max(0.0);
+    let by1 = by0 + b.size.height.0.max(0.0);
+
+    let ix0 = ax0.max(bx0);
+    let iy0 = ay0.max(by0);
+    let ix1 = ax1.min(bx1);
+    let iy1 = ay1.min(by1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return None;
+    }
+
+    Some(Rect {
+        origin: Point::new(Px(ix0), Px(iy0)),
+        size: fret_core::Size {
+            width: Px(ix1 - ix0),
+            height: Px(iy1 - iy0),
+        },
+    })
+}
+
 pub(super) fn handle_scroll_into_view_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
@@ -154,22 +183,91 @@ pub(super) fn handle_scroll_into_view_step(
             &mut active.selector_resolution_trace,
         );
         if let Some(container_node) = container_node {
-            let pos = ui
-                .as_deref()
-                .map(|ui| {
-                    wheel_position_prefer_intended_hit(
-                        snapshot,
-                        ui,
-                        container_node,
-                        container_node.bounds,
-                        window_bounds,
-                    )
-                })
-                .unwrap_or_else(|| {
-                    center_of_rect_clamped_to_rect(container_node.bounds, window_bounds)
-                });
+            let target_node = select_semantics_node_with_trace(
+                snapshot,
+                window,
+                element_runtime,
+                &target,
+                step_index as u32,
+                svc.cfg.redact_text,
+                &mut active.selector_resolution_trace,
+            );
+
+            let insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+            let visible_container = rect_intersection(container_node.bounds, window_bounds)
+                .unwrap_or(window_bounds);
+            let inner_visible = rect_inset(visible_container, insets);
+
+            let mut effective_dx = delta_x;
+            let mut effective_dy = delta_y;
+            if let Some(target_node) = target_node {
+                if effective_dx.abs() > 0.01 {
+                    let abs_dx = effective_dx.abs();
+                    let target_left = target_node.bounds.origin.x.0;
+                    let target_right = target_left + target_node.bounds.size.width.0.max(0.0);
+                    let inner_left = inner_visible.origin.x.0;
+                    let inner_right = inner_left + inner_visible.size.width.0.max(0.0);
+                    if target_left < inner_left {
+                        effective_dx = abs_dx;
+                    } else if target_right > inner_right {
+                        effective_dx = -abs_dx;
+                    }
+                }
+
+                if effective_dy.abs() > 0.01 {
+                    let abs_dy = effective_dy.abs();
+                    let target_top = target_node.bounds.origin.y.0;
+                    let target_bottom = target_top + target_node.bounds.size.height.0.max(0.0);
+                    let inner_top = inner_visible.origin.y.0;
+                    let inner_bottom = inner_top + inner_visible.size.height.0.max(0.0);
+                    if target_top < inner_top {
+                        effective_dy = abs_dy;
+                    } else if target_bottom > inner_bottom {
+                        effective_dy = -abs_dy;
+                    }
+                }
+            }
+
+            let ix0 = inner_visible.origin.x.0;
+            let iy0 = inner_visible.origin.y.0;
+            let ix1 = ix0 + inner_visible.size.width.0.max(0.0);
+            let iy1 = iy0 + inner_visible.size.height.0.max(0.0);
+
+            let pad_x = 8.0f32.min((ix1 - ix0).max(0.0) * 0.5);
+            let pad_y = 8.0f32.min((iy1 - iy0).max(0.0) * 0.5);
+
+            let x_mid = (ix0 + ix1) * 0.5;
+            let y_mid = (iy0 + iy1) * 0.5;
+
+            let x_pref = target_node
+                .map(|n| n.bounds.origin.x.0 + n.bounds.size.width.0.max(0.0) * 0.5)
+                .unwrap_or(x_mid)
+                .clamp(ix0 + pad_x, ix1 - pad_x);
+
+            let candidates = [
+                Point::new(Px(x_pref), Px(y_mid.clamp(iy0 + pad_y, iy1 - pad_y))),
+                Point::new(Px(x_pref), Px((iy0 + pad_y).clamp(iy0, iy1))),
+                Point::new(Px(x_pref), Px((iy1 - pad_y).clamp(iy0, iy1))),
+                Point::new(Px(x_mid.clamp(ix0 + pad_x, ix1 - pad_x)), Px(y_mid)),
+            ];
+
+            let intended_id = container_node.id.data().as_ffi();
+            let pos = if let Some(ui) = ui.as_deref() {
+                candidates
+                    .into_iter()
+                    .find(|pos| {
+                        pick_semantics_node_at(snapshot, ui, *pos)
+                            .is_some_and(|hit| hit.id.data().as_ffi() != intended_id)
+                    })
+                    .unwrap_or(candidates[0])
+            } else {
+                candidates[0]
+            };
+
             if let Some(ui) = ui.as_deref_mut() {
-                let note = format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
+                let note = format!(
+                    "scroll_into_view.wheel dx={delta_x} dy={delta_y} -> dx={effective_dx} dy={effective_dy}"
+                );
                 record_hit_test_trace_for_selector(
                     &mut active.hit_test_trace,
                     ui,
@@ -184,7 +282,9 @@ pub(super) fn handle_scroll_into_view_step(
                     svc.cfg.max_debug_string_bytes,
                 );
             }
-            output.events.push(wheel_event(pos, delta_x, delta_y));
+
+            output.events.push(move_pointer_event(pos));
+            output.events.push(wheel_event(pos, effective_dx, effective_dy));
         }
 
         state.remaining_frames = state.remaining_frames.saturating_sub(1);

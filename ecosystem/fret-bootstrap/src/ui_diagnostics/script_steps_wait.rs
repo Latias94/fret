@@ -295,10 +295,10 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
     };
 
     let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
-    let found = active
-        .overlay_placement_trace
-        .iter()
-        .any(|entry| overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query));
+    let found = active.overlay_placement_trace.iter().any(|entry| {
+        overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query)
+            || overlay_placement_trace_entry_matches_query_any_step(entry, &query)
+    });
 
     if found {
         active.wait_overlay_placement_trace = None;

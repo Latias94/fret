@@ -205,10 +205,12 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::ResetDiagnostics) => {
-            let handled = script_steps::handle_effect_only_steps(service, window, step, active, output);
+            let handled =
+                script_steps::handle_effect_only_steps(service, window, step, active, output);
             debug_assert!(handled);
         }
-        step @ (UiActionStepV2::CaptureBundle { .. } | UiActionStepV2::CaptureScreenshot { .. }) => {
+        step
+        @ (UiActionStepV2::CaptureBundle { .. } | UiActionStepV2::CaptureScreenshot { .. }) => {
             let handled = script_steps::handle_capture_steps(
                 service,
                 app,
@@ -912,6 +914,7 @@ pub(super) fn finalize_drive_script_for_window(
             // did not invalidate UI state. This ensures `wait_until`/timeouts progress and
             // cross-window gates (tear-off, hover detection) do not stall.
             output.request_redraw = true;
+            output.effects.push(Effect::Redraw(window));
             output.effects.push(Effect::RequestAnimationFrame(window));
             service.active_scripts.insert(window, active);
         }
@@ -1135,6 +1138,17 @@ pub(super) fn overlay_placement_trace_entry_matches_query(
             true
         }
     }
+}
+
+pub(super) fn overlay_placement_trace_entry_matches_query_any_step(
+    entry: &UiOverlayPlacementTraceEntryV1,
+    query: &UiOverlayPlacementTraceQueryV1,
+) -> bool {
+    let step_index = match entry {
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel { step_index, .. } => *step_index,
+        UiOverlayPlacementTraceEntryV1::PlacedRect { step_index, .. } => *step_index,
+    };
+    overlay_placement_trace_entry_matches_query(entry, step_index, query)
 }
 
 pub(super) fn overlay_placement_trace_entry_eq(
@@ -1392,7 +1406,6 @@ impl UiDiagnosticsService {
             }
         }
 
-
         return finalize_drive_script_for_window(
             self,
             app,
@@ -1419,6 +1432,4 @@ impl UiDiagnosticsService {
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
     }
-
 }
-
