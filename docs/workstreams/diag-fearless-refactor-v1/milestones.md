@@ -30,6 +30,8 @@ Exit criteria:
   - Evidence: `crates/fret-diag/src/diag_compare.rs`
 - The `diag stats` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_stats.rs`
+- The `diag matrix` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_matrix.rs`
 - `cargo check -p fret-diag` is green.
 
 ## Milestone 2: Sidecar indexes reduce day-to-day pain
