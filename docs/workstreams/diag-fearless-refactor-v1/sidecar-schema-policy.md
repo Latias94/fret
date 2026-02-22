@@ -31,6 +31,7 @@ Every sidecar JSON object should include:
 
 - `kind`: a stable identifier for the sidecar payload (e.g. `bundle_index`, `bundle_meta`, `test_ids_index`).
 - `schema_version`: an integer schema version for that `kind`.
+- `warmup_frames`: the warmup frame count the sidecar was generated with (treat mismatches as invalid).
 - `bundle`: a string label/path for traceability (best-effort).
 
 Recommended (when available):
@@ -84,4 +85,3 @@ This policy covers only sidecars intended for:
 It does not define `bundle.json` itself; that contract is described in:
 
 - `docs/workstreams/diag-fearless-refactor-v1/minimum-useful-bundle.md`
-

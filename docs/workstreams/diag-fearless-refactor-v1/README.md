@@ -34,6 +34,11 @@ Related living docs:
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+- `fret-diag` CLI commands treat sidecars as optional accelerators:
+  - validate `kind` / `schema_version` / `warmup_frames`,
+  - accept `_root/` bundle layouts,
+  - regenerate invalid sidecars from adjacent `bundle.json` when possible.
+  - Evidence: `crates/fret-diag/src/commands/sidecars.rs`
 
 ## Goals
 
