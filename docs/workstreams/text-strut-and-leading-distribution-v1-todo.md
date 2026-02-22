@@ -23,7 +23,8 @@ This is a checklist-style tracker. It is **non-normative**.
 ## Tooling / gates
 
 - [x] Add a regression gate for strut stability under emoji + fallback runs.
-- [ ] Add a regression gate for multiline strut stability under emoji + fallback runs.
+- [x] Add a regression gate for multiline strut stability under emoji + fallback runs.
+  - Evidence: `crates/fret-render-text/src/wrapper.rs` (`strut_force_keeps_multiline_baseline_stable_across_fallback_glyphs`)
 - [ ] Add a UI Gallery diag script that captures the multiline case (optional).
 
 ## References (informative)

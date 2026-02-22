@@ -47,14 +47,14 @@ Evidence:
 
 ## M3 — Regression gates in place
 
-Status: Partial.
+Status: Done.
 
 Exit criteria:
 
 - A bundled-font regression test covers multiline stability with emoji/fallback runs.
 
 Evidence:
-- `crates/fret-render-text/src/parley_shaper.rs`
+- `crates/fret-render-text/src/wrapper.rs` (`strut_force_keeps_multiline_baseline_stable_across_fallback_glyphs`)
 
 ## M4 — Ecosystem opt-in adopted for text areas
 
