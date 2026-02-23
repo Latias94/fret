@@ -228,6 +228,7 @@ fn page_preview(
     let motion_preset_open = models.motion_preset_open.clone();
     let view_cache_enabled = models.view_cache_enabled.clone();
     let view_cache_cache_shell = models.view_cache_cache_shell.clone();
+    let view_cache_cache_content = models.view_cache_cache_content.clone();
     let view_cache_inner_enabled = models.view_cache_inner_enabled.clone();
     let view_cache_popover_open = models.view_cache_popover_open.clone();
     let view_cache_continuous = models.view_cache_continuous.clone();
@@ -312,6 +313,7 @@ fn page_preview(
             theme,
             view_cache_enabled,
             view_cache_cache_shell,
+            view_cache_cache_content,
             view_cache_inner_enabled,
             view_cache_popover_open,
             view_cache_continuous,

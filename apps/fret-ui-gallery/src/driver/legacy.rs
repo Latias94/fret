@@ -149,6 +149,7 @@ struct UiGalleryWindowState {
     applied_motion_preset_theme_preset: Option<Arc<str>>,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
+    view_cache_cache_content: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
     view_cache_popover_open: Model<bool>,
     view_cache_continuous: Model<bool>,
@@ -253,6 +254,7 @@ impl UiGalleryWindowState {
             motion_preset_open: self.motion_preset_open.clone(),
             view_cache_enabled: self.view_cache_enabled.clone(),
             view_cache_cache_shell: self.view_cache_cache_shell.clone(),
+            view_cache_cache_content: self.view_cache_cache_content.clone(),
             view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
             view_cache_popover_open: self.view_cache_popover_open.clone(),
             view_cache_continuous: self.view_cache_continuous.clone(),
@@ -1146,6 +1148,13 @@ impl UiGalleryDriver {
             view_cache_shell_default,
         );
         let view_cache_cache_shell = app.models_mut().insert(view_cache_cache_shell_value);
+        let view_cache_cache_content = app
+            .models_mut()
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
+                "fret_ui_gallery_view_cache_content",
+                true,
+            ));
         let view_cache_inner_enabled = app
             .models_mut()
             .insert(config_bool(
@@ -1208,6 +1217,7 @@ impl UiGalleryDriver {
             applied_motion_preset_theme_preset: None,
             view_cache_enabled,
             view_cache_cache_shell,
+            view_cache_cache_content,
             view_cache_inner_enabled,
             view_cache_popover_open,
             view_cache_continuous,

@@ -31,12 +31,16 @@ pub(super) fn status_bar_view(
         let status_cache_shell = cx
             .get_model_copied(&models.view_cache_cache_shell, Invalidation::Layout)
             .unwrap_or(false);
+        let status_cache_content = cx
+            .get_model_copied(&models.view_cache_cache_content, Invalidation::Layout)
+            .unwrap_or(true);
 
         let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
-            "theme: {} view_cache={} shell_cache={} layout_us={} paint_us={}",
+            "theme: {} view_cache={} shell_cache={} content_cache={} layout_us={} paint_us={}",
             status_theme.as_ref(),
             status_view_cache as u8,
             status_cache_shell as u8,
+            status_cache_content as u8,
             layout_time_us,
             paint_time_us
         ))];

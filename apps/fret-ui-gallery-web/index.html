@@ -38,6 +38,7 @@
           var viewCacheKeys = [
             "fret_ui_gallery_view_cache",
             "fret_ui_gallery_view_cache_shell",
+            "fret_ui_gallery_view_cache_content",
             "fret_ui_gallery_view_cache_inner",
             "fret_ui_gallery_view_cache_continuous",
           ];
@@ -85,6 +86,19 @@
             window[shellKey] = "1";
             if (window.localStorage) {
               window.localStorage.setItem(shellKey, "1");
+            }
+          }
+
+          // If view-cache is explicitly enabled via URL, default content-root caching on as well
+          // unless explicitly overridden. (Some perf runs may choose to disable content caching
+          // while keeping sidebar caching enabled.)
+          var vcContentProvided =
+            url.searchParams.get("fret_ui_gallery_view_cache_content") != null;
+          if (vcEnabled === true && !vcContentProvided) {
+            var contentKey = "__FRET_UI_GALLERY_VIEW_CACHE_CONTENT";
+            window[contentKey] = "1";
+            if (window.localStorage) {
+              window.localStorage.setItem(contentKey, "1");
             }
           }
 

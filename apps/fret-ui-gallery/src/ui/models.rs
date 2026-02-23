@@ -14,6 +14,7 @@ pub(crate) struct UiGalleryModels {
 
     pub(crate) view_cache_enabled: Model<bool>,
     pub(crate) view_cache_cache_shell: Model<bool>,
+    pub(crate) view_cache_cache_content: Model<bool>,
     pub(crate) view_cache_inner_enabled: Model<bool>,
     pub(crate) view_cache_popover_open: Model<bool>,
     pub(crate) view_cache_continuous: Model<bool>,

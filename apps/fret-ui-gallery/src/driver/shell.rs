@@ -14,12 +14,12 @@ pub(super) fn sidebar_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     bisect: u32,
-    cache_shell: bool,
+    cache_sidebar: bool,
     nav_query: &Model<String>,
     selected_page: &Model<Arc<str>>,
     workspace_tabs: &Model<Vec<Arc<str>>>,
 ) -> AnyElement {
-    if cache_shell {
+    if cache_sidebar {
         cx.view_cache(
             {
                 let mut layout = LayoutStyle::default();
@@ -102,7 +102,7 @@ pub(super) fn content_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     bisect: u32,
-    cache_shell: bool,
+    cache_content: bool,
     selected_page: &Model<Arc<str>>,
     models: &ui::UiGalleryModels,
 ) -> AnyElement {
@@ -113,7 +113,7 @@ pub(super) fn content_view(
     // Do not cache the content subtree for pages that intentionally animate without input.
     // View-cache reuse skips rerendering declarative closures, which would freeze time-driven
     // material params like the magic patterns torture stripes.
-    let cache_content = cache_shell && selected.as_ref() != PAGE_MAGIC_PATTERNS_TORTURE;
+    let cache_content = cache_content && selected.as_ref() != PAGE_MAGIC_PATTERNS_TORTURE;
 
     if cache_content {
         cx.view_cache(

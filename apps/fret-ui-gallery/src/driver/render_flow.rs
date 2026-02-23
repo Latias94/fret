@@ -19,7 +19,8 @@ use super::{
 
 pub(super) struct PreparedFrame {
     pub(super) bisect: u32,
-    pub(super) cache_shell: bool,
+    pub(super) cache_sidebar: bool,
+    pub(super) cache_content: bool,
     pub(super) content_models: Arc<ui::UiGalleryModels>,
     pub(super) selected_page: Model<Arc<str>>,
     pub(super) workspace_tabs: Model<Vec<Arc<str>>>,
@@ -88,10 +89,13 @@ pub(super) fn begin_frame(
         .models()
         .get_copied(&state.view_cache_cache_shell)
         .unwrap_or(false);
-    // Web evidence runs rely on URL flags and can suffer from stale localStorage overrides.
-    // When view-cache mode is enabled, treat shell caching as enabled as well so we actually
-    // mount view-cache roots and can measure reuse behavior.
-    let cache_shell = cache_shell || (cfg!(target_arch = "wasm32") && cache_enabled);
+    let cache_content = app
+        .models()
+        .get_copied(&state.view_cache_cache_content)
+        .unwrap_or(true);
+
+    let cache_sidebar = cache_shell;
+    let cache_content = cache_shell && cache_content;
 
     if state.ui.view_cache_enabled() != cache_enabled {
         state.ui.set_view_cache_enabled(cache_enabled);
@@ -149,7 +153,8 @@ pub(super) fn begin_frame(
 
     PreparedFrame {
         bisect,
-        cache_shell,
+        cache_sidebar,
+        cache_content,
         content_models,
         selected_page,
         workspace_tabs,
@@ -215,7 +220,7 @@ fn render_root_contents(
         cx,
         &theme,
         frame.bisect,
-        frame.cache_shell,
+        frame.cache_sidebar,
         &frame.nav_query,
         &frame.selected_page,
         &frame.workspace_tabs,
@@ -224,7 +229,7 @@ fn render_root_contents(
         cx,
         &theme,
         frame.bisect,
-        frame.cache_shell,
+        frame.cache_content,
         &frame.selected_page,
         frame.content_models.as_ref(),
     );

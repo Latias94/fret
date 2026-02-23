@@ -36,6 +36,7 @@ These URL query flags are read from either `?` or `#...?...` (hash routing):
 
 - `fret_ui_gallery_view_cache=1|0`
 - `fret_ui_gallery_view_cache_shell=1|0`
+- `fret_ui_gallery_view_cache_content=1|0`
 - `fret_ui_gallery_view_cache_inner=1|0`
 - `fret_ui_gallery_view_cache_continuous=1|0`
 

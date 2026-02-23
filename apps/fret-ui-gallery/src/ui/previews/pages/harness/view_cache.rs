@@ -6,6 +6,7 @@ pub(in crate::ui) fn preview_view_cache(
     _theme: &Theme,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
+    view_cache_cache_content: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
     view_cache_popover_open: Model<bool>,
     view_cache_continuous: Model<bool>,
@@ -19,6 +20,9 @@ pub(in crate::ui) fn preview_view_cache(
     let cache_shell = cx
         .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
         .unwrap_or(false);
+    let cache_content = cx
+        .get_model_copied(&view_cache_cache_content, Invalidation::Layout)
+        .unwrap_or(true);
     let cache_inner = cx
         .get_model_copied(&view_cache_inner_enabled, Invalidation::Layout)
         .unwrap_or(true);
@@ -54,6 +58,19 @@ pub(in crate::ui) fn preview_view_cache(
                                 .test_id("ui-gallery-view-cache-cache-shell")
                                 .into_element(cx),
                             cx.text("Cache shell (sidebar/content wrappers)"),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            shadcn::Switch::new(view_cache_cache_content.clone())
+                                .a11y_label("Cache the gallery content root")
+                                .test_id("ui-gallery-view-cache-cache-content")
+                                .into_element(cx),
+                            cx.text("Cache content root (requires 'Cache shell')"),
                         ]
                     },
                 ),
@@ -117,8 +134,12 @@ pub(in crate::ui) fn preview_view_cache(
             vec![
                 cx.text("Goal: validate cached-subtree correctness under real interaction."),
                 cx.text(format!(
-                    "Current settings: view_cache={} shell_cache={} inner_cache={} continuous={}",
-                    enabled as u8, cache_shell as u8, cache_inner as u8, continuous as u8
+                    "Current settings: view_cache={} shell_cache={} content_cache={} inner_cache={} continuous={}",
+                    enabled as u8,
+                    cache_shell as u8,
+                    cache_content as u8,
+                    cache_inner as u8,
+                    continuous as u8
                 )),
                 toggles,
                 actions,
