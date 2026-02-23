@@ -16,7 +16,6 @@ use fret_ui_kit::{
 /// Notes:
 /// - Upstream is `@xyflow/react`-backed (`NodeToolbar`) and handles placement automatically.
 /// - In Fret this is a styling/composition wrapper only; apps own positioning.
-#[derive(Clone)]
 pub struct WorkflowToolbar {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

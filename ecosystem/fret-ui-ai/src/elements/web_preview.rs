@@ -510,7 +510,7 @@ impl Default for WebPreview {
 }
 
 /// Navigation bar aligned with AI Elements `WebPreviewNavigation`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WebPreviewNavigation {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -584,7 +584,6 @@ impl WebPreviewNavigation {
 }
 
 /// Navigation button with tooltip aligned with AI Elements `WebPreviewNavigationButton`.
-#[derive(Clone)]
 pub struct WebPreviewNavigationButton {
     tooltip: Option<Arc<str>>,
     disabled: bool,
@@ -837,7 +836,7 @@ impl WebPreviewUrl {
 }
 
 /// Body container aligned with AI Elements `WebPreviewBody`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WebPreviewBody {
     loading: Option<AnyElement>,
     child: Option<AnyElement>,
@@ -991,7 +990,7 @@ impl WebPreviewConsoleLog {
 }
 
 /// Console disclosure aligned with AI Elements `WebPreviewConsole`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WebPreviewConsole {
     logs: Arc<[WebPreviewConsoleLog]>,
     backend_logs: bool,

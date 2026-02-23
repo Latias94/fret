@@ -520,7 +520,7 @@ fn prompt_input_handle_drop_files(
     true
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct PromptInputSlots {
     pub block_start: Vec<AnyElement>,
     pub block_end: Vec<AnyElement>,
@@ -1644,7 +1644,6 @@ impl PromptInput {
     }
 }
 
-#[derive(Clone)]
 /// Block-start header row aligned with AI Elements `PromptInputHeader`.
 pub struct PromptInputHeader {
     children: Vec<AnyElement>,
@@ -1683,7 +1682,6 @@ impl PromptInputHeader {
     }
 }
 
-#[derive(Clone)]
 /// Block-end footer row aligned with AI Elements `PromptInputFooter`.
 pub struct PromptInputFooter {
     leading: Vec<AnyElement>,
@@ -1746,7 +1744,6 @@ impl PromptInputFooter {
     }
 }
 
-#[derive(Clone)]
 /// Left-aligned tools container aligned with AI Elements `PromptInputTools`.
 pub struct PromptInputTools {
     children: Vec<AnyElement>,
@@ -1785,7 +1782,6 @@ impl PromptInputTools {
     }
 }
 
-#[derive(Clone)]
 /// Generic prompt input button aligned with AI Elements `PromptInputButton` (ghost by default).
 pub struct PromptInputButton {
     label: Arc<str>,
@@ -1928,7 +1924,6 @@ impl PromptInputActionMenuTrigger {
     }
 }
 
-#[derive(Clone)]
 /// Action menu item aligned with AI Elements `PromptInputActionMenuItem`.
 pub struct PromptInputActionMenuItem {
     label: Arc<str>,
@@ -1997,7 +1992,6 @@ impl PromptInputActionMenuItem {
     }
 }
 
-#[derive(Clone)]
 /// Action menu content wrapper aligned with AI Elements `PromptInputActionMenuContent`.
 pub struct PromptInputActionMenuContent {
     entries: Vec<DropdownMenuEntry>,
@@ -2034,7 +2028,6 @@ fn prompt_input_action_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>
     }
 }
 
-#[derive(Clone)]
 /// Action menu root aligned with AI Elements `PromptInputActionMenu`.
 pub struct PromptInputActionMenu {
     align: DropdownMenuAlign,

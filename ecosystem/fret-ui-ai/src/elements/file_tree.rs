@@ -963,7 +963,7 @@ fn render_folder_row<H: UiHost + 'static>(
             move |cx| {
                 let indent = file_tree_indent_el(cx, theme, row_height, depth);
                 let mut out = vec![indent, chevron, folder_icon, name];
-                if let Some(actions) = actions.clone() {
+                if let Some(actions) = actions {
                     out.push(actions);
                 }
                 out
@@ -1066,7 +1066,7 @@ fn render_file_row<H: UiHost + 'static>(
             move |cx| {
                 let indent = file_tree_indent_el(cx, theme, row_height, depth);
                 let mut out = vec![indent, spacer, icon, name];
-                if let Some(actions) = actions.clone() {
+                if let Some(actions) = actions {
                     out.push(actions);
                 }
                 out

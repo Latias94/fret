@@ -56,7 +56,6 @@ fn muted_fg(theme: &Theme) -> Color {
 }
 
 /// Agent root container aligned with AI Elements `agent.tsx`.
-#[derive(Clone)]
 pub struct Agent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -254,7 +253,6 @@ impl AgentHeader {
 }
 
 /// Agent content wrapper (`p-4 pt-0 space-y-4`).
-#[derive(Clone)]
 pub struct AgentContent {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -399,7 +397,6 @@ impl AgentInstructions {
 }
 
 /// `Tools` section wrapper (label + bordered accordion).
-#[derive(Clone)]
 pub struct AgentTools {
     accordion: Accordion,
     layout: LayoutRefinement,

@@ -14,7 +14,6 @@ use fret_ui_shadcn::{
 
 use crate::model::MessageRole;
 
-#[derive(Clone)]
 /// A row container for per-message action buttons (AI Elements `MessageActions`-style).
 pub struct MessageActions {
     children: Vec<AnyElement>,
@@ -202,7 +201,6 @@ impl MessageActionTemplate {
     }
 }
 
-#[derive(Clone)]
 /// A single action button with an optional tooltip (AI Elements `MessageAction`-style).
 pub struct MessageAction {
     tooltip: Option<Arc<str>>,

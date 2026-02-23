@@ -31,7 +31,6 @@ fn alpha(color: Color, a: f32) -> Color {
 }
 
 /// AI Elements-aligned snippet surface (inline copyable code).
-#[derive(Clone)]
 pub struct Snippet {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -91,6 +90,8 @@ impl Snippet {
         props.focus_within = true;
         props.focus_border_color = Some(chrome.border_color_focused);
         props.focus_ring = Some(decl_style::focus_ring(&theme, chrome.radius));
+        let children = self.children;
+        let test_id = self.test_id;
         let el = cx.container(props, move |cx| {
             vec![stack::hstack(
                 cx,
@@ -98,11 +99,11 @@ impl Snippet {
                     .gap(Space::N0)
                     .items_center()
                     .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |_cx| self.children.clone(),
+                move |_cx| children,
             )]
         });
 
-        let Some(test_id) = self.test_id else {
+        let Some(test_id) = test_id else {
             return el;
         };
         el.attach_semantics(
