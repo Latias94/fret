@@ -38,6 +38,8 @@ Definition: “initialized in the current frame” (v1)
   - and `LoadOp::Load` into `Output` is therefore permitted by the validator.
   - For deterministic output (tests, diagnostics, refactors), ensure the first write to `Output` uses `LoadOp::Clear`.
     - Guardrail: unit tests assert the plan’s first `Output` write is `Clear` for the common plan shapes.
+    - Optional runtime guardrail (debug-only): set `FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR=1` to panic if the plan’s first `Output` write uses
+      `LoadOp::Load` (useful when refactoring without running tests).
 
 Guardrail:
 - `RenderPlan::debug_validate()` (debug-only) must remain enabled at `render_scene_execute` call sites.
