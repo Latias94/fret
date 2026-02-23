@@ -213,6 +213,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `renderer_encode_scene_us` p95 ≈ 1.3ms (not a top hotspot in this workload).
     - View-cache reuse was off (`cache_roots=0`, `cache_roots_reused=0`), and paint cache misses were high (`paint_cache_misses≈1150`).
     Keep `REN-VNEXT-webgpu-004` pending until a bundle/profiler shows quad fragment material eval dominates (or we otherwise eliminate paint-side costs first).
+  - Status note (2026-02-23): web view-cache evidence harness is now reliable and produces reuse on `wasm32`:
+    - View-cache harness (off): `.fret/diag/exports/1771841870144-bundle` (`view_cache_active=false`, `view_cache_roots_total=1`).
+    - View-cache harness (on): `.fret/diag/exports/1771842156088-bundle` (`view_cache_active=true`, `view_cache_roots_total=2`, `view_cache_roots_reused=2` steady-state).
+    - Recommended evidence URL flags for WebGPU perf bundles: enable `fret_ui_gallery_view_cache=1`, `fret_ui_gallery_view_cache_shell=1`,
+      and `fret_ui_gallery_view_cache_continuous=1` so DevTools WS scripts can progress even when the page is otherwise idle.
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.
