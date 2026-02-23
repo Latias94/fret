@@ -1118,19 +1118,41 @@ impl UiGalleryDriver {
             !(v == "0" || v == "false" || v == "no" || v == "off")
         };
 
+        let config_bool = |env_name: &str, query_name: &str, default: bool| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(v) = bool_from_window_query(query_name) {
+                    return v;
+                }
+            }
+            env_bool(env_name, default)
+        };
+
         let view_cache_enabled = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
+            .insert(config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false));
         let view_cache_cache_shell = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_SHELL", false));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+                "fret_ui_gallery_view_cache_shell",
+                false,
+            ));
         let view_cache_inner_enabled = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_INNER", true));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_INNER",
+                "fret_ui_gallery_view_cache_inner",
+                true,
+            ));
         let view_cache_popover_open = app.models_mut().insert(false);
         let view_cache_continuous = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS", false));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
+                "fret_ui_gallery_view_cache_continuous",
+                false,
+            ));
         let view_cache_counter = app.models_mut().insert(0u64);
 
         // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the inspector/debug HUD by
@@ -1146,7 +1168,11 @@ impl UiGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_view_cache_enabled(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
+        ui.set_view_cache_enabled(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE",
+            "fret_ui_gallery_view_cache",
+            false,
+        ));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
                 || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
@@ -2313,6 +2339,64 @@ impl UiGalleryDriver {
         let root = render_flow::render_root(app, services, window, state, bounds, &frame);
         render_flow::end_frame(app, services, window, state, bounds, &frame, root);
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn bool_from_window_query(key: &str) -> Option<bool> {
+    let Some(window) = web_sys::window() else {
+        return None;
+    };
+
+    let location = window.location();
+    let search = location.search().unwrap_or_default();
+    let hash = location.hash().unwrap_or_default();
+
+    fn parse_query_params(query: &str) -> Option<web_sys::UrlSearchParams> {
+        let query = query.trim();
+        if query.is_empty() {
+            return None;
+        }
+        let query = query.trim_start_matches('?');
+        web_sys::UrlSearchParams::new_with_str(query).ok()
+    }
+
+    fn parse_hash_query_params(hash: &str) -> Option<web_sys::UrlSearchParams> {
+        let hash = hash.trim();
+        if hash.is_empty() {
+            return None;
+        }
+
+        let hash = hash.trim_start_matches('#');
+        let query = hash.split_once('?').map(|(_, q)| q).unwrap_or(hash);
+        parse_query_params(query)
+    }
+
+    fn parse_bool(v: Option<String>) -> Option<bool> {
+        let v = v?;
+        let v = v.trim().to_ascii_lowercase();
+        if v.is_empty() {
+            return Some(true);
+        }
+        match v.as_str() {
+            "1" | "true" | "yes" | "on" => Some(true),
+            "0" | "false" | "no" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
+    if let Some(params) = parse_query_params(&search) {
+        if let Some(v) = parse_bool(params.get(key)) {
+            return Some(v);
+        }
+    }
+
+    if let Some(params) = parse_hash_query_params(&hash) {
+        if let Some(v) = parse_bool(params.get(key)) {
+            return Some(v);
+        }
+    }
+
+    None
 }
 
 pub fn build_app() -> App {

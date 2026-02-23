@@ -62,7 +62,7 @@ fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = fal
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
 fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing", "query-integration"] }
-web-sys = { version = "0.3", features = ["Window", "Location"] }
+web-sys = { version = "0.3", features = ["Window", "Location", "UrlSearchParams"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["syntax-all"] }
