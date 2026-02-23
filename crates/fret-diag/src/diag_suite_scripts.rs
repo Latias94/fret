@@ -135,7 +135,7 @@ pub(crate) fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 5] {
     ]
 }
 
-pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 14] {
+pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 15] {
     [
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
@@ -151,6 +151,7 @@ pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 14] {
         "tools/diag-scripts/ui-gallery-combobox-groups-filter-select-paris.json",
         "tools/diag-scripts/ui-gallery-combobox-groups-separator-smoke.json",
         "tools/diag-scripts/ui-gallery-combobox-auto-highlight-first-match.json",
+        "tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json",
     ]
 }
 
