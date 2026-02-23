@@ -46,6 +46,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Slider: populate numeric value/min/max/step (and jump if chosen) on slider semantics nodes.
 - [x] Progress: populate numeric now/min/max for determinate progress.
 - [x] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
+- [x] ScrollArea: gate `SemanticsRole::ScrollBar` emission via `scroll_area_scrollbar_semantics` snapshot.
 
 ## Additional gates
 
