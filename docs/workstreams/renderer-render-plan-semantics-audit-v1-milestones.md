@@ -38,6 +38,14 @@ Progress record (Scissored in-place effect preservation tests):
   - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`scissored_*` tests)
   - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (in-place patterns + `LoadOp::Load`)
 
+Progress record (PathMsaaBatch init pass shape test):
+
+- Date: 2026-02-23
+- Status: Landed (unit test)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`flush_scene_range` before `PathMsaaBatch`)
+
 ## M3 — Plan diagnostics for refactors
 
 Completion criteria:

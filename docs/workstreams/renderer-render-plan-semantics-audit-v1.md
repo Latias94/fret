@@ -132,6 +132,9 @@ This section is intentionally terse: it is meant to be a checklist for refactors
 - `PathMsaaBatch`
   - Clears an internal MSAA intermediate, then composites into its `target` using `LoadOp::Load`.
   - Therefore requires `target` to be initialized earlier in the frame.
+  - Plan compiler guardrail: if `PathMsaaBatch` is the first “real” draw in a scope, the compiler emits an (optionally empty) `SceneDrawRange`
+    pass with `LoadOp::Clear` to initialize the destination target, so `PathMsaaBatch(load=Load)` never relies on undefined prior surface
+    contents (including `Output`).
   - Uses absolute (render-space) scissors mapped against `target_origin`/`target_size`.
 - `PathClipMask`
   - Writes a mask target (`Mask*`) and always clears to transparent (initialization pass).
@@ -178,9 +181,6 @@ This section records the scissor mapping rules we rely on for scale-related pass
 This section is deliberately explicit: these are areas where the current implementation *may* be correct, but where we want tighter documentation
 or stronger guardrails before larger internal refactors.
 
-- `PathMsaaBatch` initialization rules:
-  - We rely on `LoadOp::Load` semantics for the composite step; the remaining ambiguity is *which* pass is expected to initialize the destination
-    target in each supported plan shape (and whether any shape relies on `Output` prior contents rather than an explicit clear).
 - `ClipMask` clear/load assumptions:
   - Guardrail: debug validation rejects non-`Clear` `ClipMask` passes (this is treated as an invariant for refactors).
 - Mask sampling and `MaskRef.viewport_rect` mapping:

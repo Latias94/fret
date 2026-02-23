@@ -19,6 +19,7 @@
   - “ReleaseTarget inserted after last use” regression (unit test)
   - “Downsample scissor mapping never expands bounds” regression (unit test)
   - “Scissored in-place effects preserve outside-region content” regression (unit test)
+  - “PathMsaaBatch is preceded by an init clear when it is the first draw in a scope” regression (unit test)
 - [x] Audit pass-by-pass semantics and document any ambiguous areas:
   - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
   - `ClipMask` pass clear/load assumptions (always `Clear`)
