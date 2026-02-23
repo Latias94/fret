@@ -32,10 +32,49 @@ fn parse_semantics_mode(mode: &str) -> Result<&'static str, String> {
     }
 }
 
-fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
-    fn snapshot_has_semantics(s: &serde_json::Value) -> bool {
-        crate::json_bundle::snapshot_semantics(s).is_some_and(|v| !v.is_null())
+struct BundleSemanticsPresence {
+    table_keys: HashSet<(u64, u64)>,
+}
+
+impl BundleSemanticsPresence {
+    fn new(bundle: &serde_json::Value) -> Self {
+        let mut table_keys: HashSet<(u64, u64)> = HashSet::new();
+        if let Some(entries) = bundle
+            .get("tables")
+            .and_then(|v| v.get("semantics"))
+            .and_then(|v| v.get("entries"))
+            .and_then(|v| v.as_array())
+        {
+            for e in entries {
+                let Some(window) = e.get("window").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                let Some(fp) = e.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                table_keys.insert((window, fp));
+            }
+        }
+        Self { table_keys }
     }
+
+    fn snapshot_has_semantics(&self, snapshot: &serde_json::Value, default_window: u64) -> bool {
+        if let Some(sem) = crate::json_bundle::snapshot_semantics(snapshot) {
+            return !sem.is_null();
+        }
+        let window = crate::json_bundle::snapshot_window_id(snapshot).unwrap_or(default_window);
+        let Some(fp) = crate::json_bundle::snapshot_semantics_fingerprint(snapshot) else {
+            return false;
+        };
+        self.table_keys.contains(&(window, fp))
+    }
+}
+
+fn apply_semantics_mode_inline(
+    windows: &mut [serde_json::Value],
+    mode: &str,
+    semantics: &BundleSemanticsPresence,
+) {
 
     fn clear_snapshot_semantics(s: &mut serde_json::Value) {
         // Clear any known inline semantics locations so tooling won't accidentally treat legacy
@@ -72,12 +111,13 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
         }
         "last" => {
             for w in windows {
+                let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
                 let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut()) else {
                     continue;
                 };
                 let mut keep_idx: Option<usize> = None;
                 for (idx, s) in snaps.iter().enumerate() {
-                    if snapshot_has_semantics(s) {
+                    if semantics.snapshot_has_semantics(s, window_id) {
                         keep_idx = Some(idx);
                     }
                 }
@@ -91,13 +131,14 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
         }
         "changed" => {
             for w in windows {
+                let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
                 let Some(snaps) = w.get_mut("snapshots").and_then(|v| v.as_array_mut()) else {
                     continue;
                 };
                 let snapshots_len = snaps.len();
                 let mut last_kept_fingerprint: Option<u64> = None;
                 for (idx, s) in snaps.iter_mut().enumerate() {
-                    if !snapshot_has_semantics(s) {
+                    if !semantics.snapshot_has_semantics(s, window_id) {
                         continue;
                     }
                     let is_last = idx + 1 == snapshots_len;
@@ -128,7 +169,7 @@ fn schema_version(v: &serde_json::Value) -> Option<u64> {
     v.get("schema_version").and_then(|v| v.as_u64())
 }
 
-fn prune_semantics_table(bundle: &mut serde_json::Value) {
+fn prune_semantics_table(bundle: &mut serde_json::Value, semantics: &BundleSemanticsPresence) {
     let Some(windows) = bundle.get("windows").and_then(|v| v.as_array()) else {
         return;
     };
@@ -141,8 +182,7 @@ fn prune_semantics_table(bundle: &mut serde_json::Value) {
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v.as_slice());
         for s in snaps {
-            let has_semantics =
-                crate::json_bundle::snapshot_semantics(s).is_some_and(|v| !v.is_null());
+            let has_semantics = semantics.snapshot_has_semantics(s, window_id);
             if !has_semantics {
                 continue;
             }
@@ -313,18 +353,20 @@ pub(crate) fn cmd_bundle_v2(
         }
     }
 
+    let semantics = BundleSemanticsPresence::new(&bundle);
+
     let windows_mut = bundle
         .get_mut("windows")
         .and_then(|v| v.as_array_mut())
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
-    apply_semantics_mode_inline(windows_mut.as_mut_slice(), mode);
+    apply_semantics_mode_inline(windows_mut.as_mut_slice(), mode, &semantics);
     if mode == "off" {
         if let Some(obj) = bundle.as_object_mut() {
             obj.insert("tables".to_string(), serde_json::json!({}));
         }
     } else {
-        prune_semantics_table(&mut bundle);
+        prune_semantics_table(&mut bundle, &semantics);
     }
 
     let convert_ms = t_convert.elapsed().as_millis() as u64;
@@ -366,4 +408,61 @@ pub(crate) fn cmd_bundle_v2(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn semantics_mode_last_keeps_table_only_semantics_for_last_snapshot() {
+        let mut bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 1, "window": 1, "semantics_fingerprint": 10, "debug": {} },
+                    { "frame_id": 2, "window": 1, "semantics_fingerprint": 20, "debug": {} }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "schema_version": 1,
+                    "entries": [
+                        { "window": 1, "semantics_fingerprint": 10, "semantics": { "nodes": [{ "id": 1 }] } },
+                        { "window": 1, "semantics_fingerprint": 20, "semantics": { "nodes": [{ "id": 2 }] } }
+                    ]
+                }
+            }
+        });
+
+        let semantics = BundleSemanticsPresence::new(&bundle);
+        let windows_mut = bundle
+            .get_mut("windows")
+            .and_then(|v| v.as_array_mut())
+            .expect("windows must be an array");
+
+        apply_semantics_mode_inline(windows_mut.as_mut_slice(), "last", &semantics);
+        prune_semantics_table(&mut bundle, &semantics);
+
+        let snaps = bundle["windows"][0]["snapshots"]
+            .as_array()
+            .expect("snapshots must be an array");
+        assert_eq!(
+            snaps[0]["debug"]["semantics"].as_null(),
+            Some(()),
+            "expected non-last snapshot semantics cleared"
+        );
+        assert!(
+            snaps[1]["debug"].get("semantics").is_none(),
+            "expected last snapshot to remain table-only"
+        );
+
+        let entries = bundle["tables"]["semantics"]["entries"]
+            .as_array()
+            .expect("entries must be an array");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["semantics_fingerprint"].as_u64(), Some(20));
+    }
 }

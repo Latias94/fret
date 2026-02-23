@@ -55,8 +55,9 @@ Snapshots may omit `debug.semantics` entirely and rely on:
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
   - default: script-driven dumps `last`, non-script dumps `changed`
   - in v2:
-    - this controls which snapshots keep inline semantics (`debug.semantics`)
-    - after applying the mode, `tables.semantics.entries[]` is pruned to only entries still referenced by remaining snapshots
+    - this controls which snapshots keep semantics after resolution (inline `debug.semantics` if present, otherwise `tables.semantics`)
+    - when dropping semantics for a snapshot, tooling writes an explicit `debug.semantics = null` sentinel so consumers do not fall back to the table
+    - after applying the mode, `tables.semantics.entries[]` is pruned to only entries still referenced by snapshots that still have semantics
     - `off` drops both inline semantics and the semantics table
 
 Additional size knobs (dump-time policies):
