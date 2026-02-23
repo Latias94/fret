@@ -2884,6 +2884,7 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
+ "fret-ui-app",
  "fret-ui-headless",
  "fret-ui-kit",
  "serde",

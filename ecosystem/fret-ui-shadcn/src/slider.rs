@@ -1353,6 +1353,70 @@ mod tests {
             .id
     }
 
+    #[test]
+    fn slider_set_value_numeric_updates_model_via_accessibility_driver() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![50.0]);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-a11y-set-value-numeric",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .step(1.0)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let thumb = node_id_by_test_id(&ui, "slider-thumb-0");
+        let thumb_node = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|n| n.id == thumb)
+            .expect("thumb semantics node");
+        assert!(
+            thumb_node.actions.set_value,
+            "expected slider thumb to support SetValue"
+        );
+
+        fret_ui_app::accessibility_actions::set_value_numeric(
+            &mut ui,
+            &mut app,
+            &mut services,
+            thumb,
+            42.0,
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 42.0).abs() < 0.01, "expected slider=42, got {v}");
+    }
+
     struct FakeServices;
 
     impl TextService for FakeServices {
