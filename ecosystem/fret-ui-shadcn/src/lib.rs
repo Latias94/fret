@@ -286,7 +286,7 @@ pub use sonner::{
     ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
-pub use switch::{Switch, switch};
+pub use switch::{Switch, SwitchSize, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
