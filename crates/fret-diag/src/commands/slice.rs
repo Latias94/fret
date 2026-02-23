@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::json_bundle::{
-    SemanticsResolver, pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id,
+    SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
     snapshot_window_snapshot_seq,
 };
 use crate::test_id_bloom::TestIdBloomV1;
@@ -67,7 +67,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
                 .iter()
                 .find(|s| snapshot_window_snapshot_seq(s) == Some(req_seq))
         } else {
-            pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
+            pick_last_snapshot_with_resolved_semantics_after_warmup(snaps, warmup_frames, semantics)
         };
         let Some(snapshot) = snapshot else {
             continue;
@@ -1247,6 +1247,53 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn build_test_id_slice_payload_picks_last_snapshot_with_resolved_semantics() {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 1, "window_snapshot_seq": 1, "timestamp_unix_ms": 100, "window": 1, "semantics_fingerprint": 1, "debug": {} },
+                    { "frame_id": 2, "window_snapshot_seq": 2, "timestamp_unix_ms": 200, "window": 1, "semantics_fingerprint": 2, "debug": { "semantics": null } }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "schema_version": 1,
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 1,
+                        "semantics": { "nodes": [{ "id": 10, "test_id": "target", "role": "button" }] }
+                    }, {
+                        "window": 1,
+                        "semantics_fingerprint": 2,
+                        "semantics": { "nodes": [{ "id": 11, "test_id": "target", "role": "button" }] }
+                    }]
+                }
+            }
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+
+        let payload = build_test_id_slice_payload_from_bundle(
+            Path::new("bundle.json"),
+            &bundle,
+            &semantics,
+            0,
+            "target",
+            None,
+            None,
+            None,
+            10,
+            10,
+        )
+        .expect("expected payload");
+
+        assert_eq!(payload["kind"].as_str(), Some("slice.test_id"));
+        assert_eq!(payload["frame_id"].as_u64(), Some(1));
     }
 
     #[test]

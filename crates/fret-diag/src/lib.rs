@@ -6661,14 +6661,23 @@ fn check_out_dir_for_pixels_changed(
             bundle
         };
 
-        let bounds =
-            match find_semantics_bounds_for_test_id(&bundle, window, tick_id, frame_id, test_id) {
+        let semantics = crate::json_bundle::SemanticsResolver::new(&bundle);
+
+        let bounds = match find_semantics_bounds_for_test_id(
+            &bundle, &semantics, window, tick_id, frame_id, test_id,
+        ) {
+            Some(r) => r,
+            None => match find_semantics_bounds_for_test_id_latest(
+                &bundle,
+                &semantics,
+                window,
+                warmup_frames,
+                test_id,
+            ) {
                 Some(r) => r,
-                None => match find_semantics_bounds_for_test_id_latest(&bundle, window, test_id) {
-                    Some(r) => r,
-                    None => continue,
-                },
-            };
+                None => continue,
+            },
+        };
 
         let img = image::ImageReader::open(&screenshot_path)
             .map_err(|e| {
@@ -6780,6 +6789,7 @@ fn check_out_dir_for_pixels_changed(
 
 fn find_semantics_bounds_for_test_id(
     bundle: &serde_json::Value,
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     window: u64,
     tick_id: u64,
     frame_id: u64,
@@ -6796,11 +6806,7 @@ fn find_semantics_bounds_for_test_id(
             && s.get("frame_id").and_then(|v| v.as_u64()) == Some(frame_id)
     })?;
 
-    let nodes = snap
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())?;
+    let nodes = semantics.nodes(snap)?;
 
     let node = nodes
         .iter()
@@ -6817,7 +6823,9 @@ fn find_semantics_bounds_for_test_id(
 
 fn find_semantics_bounds_for_test_id_latest(
     bundle: &serde_json::Value,
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
     window: u64,
+    warmup_frames: u64,
     test_id: &str,
 ) -> Option<RectF> {
     let windows = bundle.get("windows").and_then(|v| v.as_array())?;
@@ -6826,17 +6834,22 @@ fn find_semantics_bounds_for_test_id_latest(
         .find(|w| w.get("window").and_then(|v| v.as_u64()) == Some(window))?;
     let snaps = w.get("snapshots").and_then(|v| v.as_array())?;
 
-    let snap = snaps.iter().max_by_key(|s| {
+    let ts = |s: &serde_json::Value| -> u64 {
         s.get("timestamp_unix_ms")
             .and_then(|v| v.as_u64())
+            .or_else(|| s.get("timestamp_ms").and_then(|v| v.as_u64()))
             .unwrap_or(0)
-    })?;
+    };
 
-    let nodes = snap
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array())?;
+    let snap = snaps
+        .iter()
+        .filter(|s| crate::json_bundle::snapshot_frame_id(s) >= warmup_frames)
+        .filter(|s| semantics.nodes(s).is_some())
+        .max_by_key(|s| ts(s))
+        .or_else(|| snaps.iter().filter(|s| semantics.nodes(s).is_some()).max_by_key(|s| ts(s)))
+        .or_else(|| snaps.iter().max_by_key(|s| ts(s)))?;
+
+    let nodes = semantics.nodes(snap)?;
 
     let node = nodes
         .iter()
@@ -10240,6 +10253,56 @@ mod tests {
             .expect("bundle.json write should succeed");
     }
 
+    fn write_bundle_v2_table_only_with_bounds(
+        out_dir: &std::path::Path,
+        bundle_dir_name: &str,
+        window: u64,
+        tick_id: u64,
+        frame_id: u64,
+        test_id: &str,
+        bounds: RectF,
+    ) {
+        let path = out_dir.join(bundle_dir_name).join("bundle.json");
+        let _ = std::fs::create_dir_all(
+            path.parent()
+                .expect("bundle output must have a parent directory"),
+        );
+
+        let semantics_fingerprint = 1u64;
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": window,
+                "snapshots": [{
+                    "window": window,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "semantics_fingerprint": semantics_fingerprint,
+                    "debug": {}
+                }]
+            }],
+            "tables": {
+                "semantics": {
+                    "schema_version": 1,
+                    "entries": [{
+                        "window": window,
+                        "semantics_fingerprint": semantics_fingerprint,
+                        "semantics": {
+                            "nodes": [{
+                                "id": 1,
+                                "test_id": test_id,
+                                "bounds": { "x": bounds.x, "y": bounds.y, "w": bounds.w, "h": bounds.h }
+                            }]
+                        }
+                    }]
+                }
+            }
+        });
+
+        std::fs::write(&path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+    }
+
     #[test]
     fn gc_sweep_liveness_writes_evidence_json_on_failure() {
         let out_dir = tmp_out_dir("gc_sweep_liveness_evidence");
@@ -11185,6 +11248,53 @@ mod tests {
 
         write_bundle_with_bounds(&out_dir, "b0", window, 10, 10, test_id, bounds);
         write_bundle_with_bounds(&out_dir, "b1", window, 20, 20, test_id, bounds);
+
+        write_png_solid(
+            &out_dir.join("screenshots").join("b0").join("shot0.png"),
+            10,
+            10,
+            [0, 0, 0, 255],
+        );
+        write_png_solid(
+            &out_dir.join("screenshots").join("b1").join("shot1.png"),
+            10,
+            10,
+            [255, 0, 0, 255],
+        );
+
+        let result = json!({
+            "schema_version": 1,
+            "completed": [
+                { "bundle_dir_name": "b0", "file": "shot0.png", "window": window, "tick_id": 10, "frame_id": 10, "scale_factor": 1.0 },
+                { "bundle_dir_name": "b1", "file": "shot1.png", "window": window, "tick_id": 20, "frame_id": 20, "scale_factor": 1.0 }
+            ]
+        });
+        std::fs::write(
+            out_dir.join("screenshots.result.json"),
+            serde_json::to_vec_pretty(&result).unwrap(),
+        )
+        .expect("screenshots.result.json write should succeed");
+
+        check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap();
+        assert!(out_dir.join("check.pixels_changed.json").is_file());
+    }
+
+    #[test]
+    fn pixels_changed_check_supports_schema_v2_table_only_semantics() {
+        let out_dir = tmp_out_dir("pixels_changed_v2_table_only");
+        let _ = std::fs::create_dir_all(out_dir.join("screenshots"));
+
+        let window = 1u64;
+        let test_id = "root";
+        let bounds = RectF {
+            x: 0.0,
+            y: 0.0,
+            w: 10.0,
+            h: 10.0,
+        };
+
+        write_bundle_v2_table_only_with_bounds(&out_dir, "b0", window, 10, 10, test_id, bounds);
+        write_bundle_v2_table_only_with_bounds(&out_dir, "b1", window, 20, 20, test_id, bounds);
 
         write_png_solid(
             &out_dir.join("screenshots").join("b0").join("shot0.png"),
