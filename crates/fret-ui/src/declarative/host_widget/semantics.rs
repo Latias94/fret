@@ -76,6 +76,7 @@ impl ElementHostWidget {
                     cx.set_url(Some(url.as_ref().to_string()));
                 }
                 cx.set_level(props.level);
+                cx.set_orientation(props.orientation);
                 cx.set_numeric_value(props.numeric_value);
                 cx.set_numeric_range(props.min_numeric_value, props.max_numeric_value);
                 cx.set_numeric_step(props.numeric_value_step);
@@ -329,6 +330,14 @@ impl ElementHostWidget {
                 cx.set_role(SemanticsRole::Viewport);
                 cx.set_scroll_by_supported(true);
 
+                let scroll_x = props.axis.scroll_x();
+                let scroll_y = props.axis.scroll_y();
+                cx.set_orientation(match (scroll_x, scroll_y) {
+                    (true, false) => Some(fret_core::SemanticsOrientation::Horizontal),
+                    (false, true) => Some(fret_core::SemanticsOrientation::Vertical),
+                    _ => None,
+                });
+
                 let external_handle = props.scroll_handle.clone();
                 let handle = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -344,10 +353,10 @@ impl ElementHostWidget {
                 );
                 let offset = handle.offset();
                 let max = handle.max_offset();
-                if props.axis.scroll_x() {
+                if scroll_x {
                     cx.set_scroll_x(Some(offset.x.0 as f64), Some(0.0), Some(max.x.0 as f64));
                 }
-                if props.axis.scroll_y() {
+                if scroll_y {
                     cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
                 }
             }
@@ -395,6 +404,9 @@ impl ElementHostWidget {
             }
             if let Some(level) = decoration.level {
                 cx.set_level(Some(level));
+            }
+            if let Some(orientation) = decoration.orientation {
+                cx.set_orientation(Some(orientation));
             }
             if let Some(value) = decoration.numeric_value {
                 cx.set_numeric_value(Some(value));

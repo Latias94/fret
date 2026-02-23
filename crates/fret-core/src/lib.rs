@@ -90,7 +90,8 @@ pub use scene::{
 };
 pub use semantics::{
     SemanticsActions, SemanticsFlags, SemanticsInlineSpan, SemanticsNode, SemanticsNodeExtra,
-    SemanticsNumeric, SemanticsRole, SemanticsRoot, SemanticsScroll, SemanticsSnapshot,
+    SemanticsNumeric, SemanticsOrientation, SemanticsRole, SemanticsRoot, SemanticsScroll,
+    SemanticsSnapshot,
 };
 pub use services::UiServices;
 pub use share::{ShareItem, ShareSheetOutcome};

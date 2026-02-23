@@ -1,7 +1,7 @@
 use crate::{Theme, UiHost};
 use fret_core::{
-    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
-    Transform2D, UiServices,
+    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsOrientation,
+    SemanticsRole, Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1226,6 +1226,14 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_level(&mut self, level: Option<u32>) {
         self.extra.level = level;
+    }
+
+    pub fn set_orientation(&mut self, orientation: Option<SemanticsOrientation>) {
+        self.extra.orientation = orientation;
+    }
+
+    pub fn clear_orientation(&mut self) {
+        self.extra.orientation = None;
     }
 
     pub fn set_numeric_value(&mut self, value: Option<f64>) {

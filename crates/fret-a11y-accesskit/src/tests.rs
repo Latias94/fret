@@ -1,7 +1,7 @@
 use accesskit::Role;
 use fret_core::{
     AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsNodeExtra,
-    SemanticsRole, SemanticsRoot, SemanticsSnapshot,
+    SemanticsOrientation, SemanticsRole, SemanticsRoot, SemanticsSnapshot,
 };
 use slotmap::KeyData;
 
@@ -58,6 +58,7 @@ fn numeric_and_extra_properties_are_emitted_when_present() {
     extra.scroll.x_min = Some(0.0);
     extra.scroll.x_max = Some(10.0);
     extra.level = Some(3);
+    extra.orientation = Some(SemanticsOrientation::Vertical);
     extra.url = Some("https://example.com".to_string());
 
     let snapshot = SemanticsSnapshot {
@@ -136,6 +137,10 @@ fn numeric_and_extra_properties_are_emitted_when_present() {
     assert_eq!(slider_node.scroll_x_min(), Some(0.0));
     assert_eq!(slider_node.scroll_x_max(), Some(10.0));
     assert_eq!(slider_node.level(), Some(3));
+    assert_eq!(
+        slider_node.orientation(),
+        Some(accesskit::Orientation::Vertical)
+    );
     assert_eq!(slider_node.url(), Some("https://example.com"));
 }
 

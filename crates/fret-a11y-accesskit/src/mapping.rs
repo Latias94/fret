@@ -4,7 +4,7 @@ use accesskit::{
     Action, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree, TreeId,
     TreeUpdate,
 };
-use fret_core::{SemanticsNode, SemanticsRole, SemanticsSnapshot};
+use fret_core::{SemanticsNode, SemanticsOrientation, SemanticsRole, SemanticsSnapshot};
 
 use crate::ids::{ROOT_ID, text_run_id_for, to_accesskit_id};
 use crate::roles::map_role;
@@ -253,6 +253,17 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             .and_then(|level| usize::try_from(level).ok())
         {
             out.set_level(level);
+        }
+
+        if let Some(orientation) = node.extra.orientation {
+            let orientation = match orientation {
+                SemanticsOrientation::Horizontal => Some(accesskit::Orientation::Horizontal),
+                SemanticsOrientation::Vertical => Some(accesskit::Orientation::Vertical),
+                _ => None,
+            };
+            if let Some(orientation) = orientation {
+                out.set_orientation(orientation);
+            }
         }
 
         let numeric = node.extra.numeric;

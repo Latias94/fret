@@ -98,6 +98,8 @@ As of 2026-02-23, `SemanticsRole::Viewport` maps to AccessKit `ScrollView`. In p
 positions/ranges via `SemanticsNodeExtra.scroll` on scrollable host widgets (e.g. `Scroll`) when available. Portable
 scroll properties enable both AT and automation to reason about scroll state.
 
+Update (2026-02-23): Scroll containers also publish `extra.orientation` (horizontal/vertical) when the axis is known.
+
 Candidate fields on `SemanticsNodeExtra.scroll`:
 
 - `x`, `x_min`, `x_max`

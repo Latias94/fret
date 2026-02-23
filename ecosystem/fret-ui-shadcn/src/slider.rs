@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, CursorIcon, Edges, MouseButton, Px};
+use fret_core::{Axis, Color, Corners, CursorIcon, Edges, MouseButton, Px, SemanticsOrientation};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
@@ -489,6 +489,10 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
         semantics.test_id = test_id.clone();
+        semantics.orientation = Some(match orientation {
+            radix_slider::SliderOrientation::Horizontal => SemanticsOrientation::Horizontal,
+            radix_slider::SliderOrientation::Vertical => SemanticsOrientation::Vertical,
+        });
         if min.is_finite() {
             semantics.min_numeric_value = Some(min as f64);
         }
@@ -1004,6 +1008,14 @@ pub fn slider<H: UiHost>(
                                 disabled,
                             );
                             thumb_semantics.layout = thumb_layout;
+                            thumb_semantics.orientation = Some(match orientation {
+                                radix_slider::SliderOrientation::Horizontal => {
+                                    SemanticsOrientation::Horizontal
+                                }
+                                radix_slider::SliderOrientation::Vertical => {
+                                    SemanticsOrientation::Vertical
+                                }
+                            });
                             if min_value.is_finite() {
                                 thumb_semantics.min_numeric_value = Some(min_value as f64);
                             }

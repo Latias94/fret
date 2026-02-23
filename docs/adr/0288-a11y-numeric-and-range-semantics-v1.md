@@ -44,6 +44,7 @@ Instead of growing many top-level optional fields on `SemanticsNode`, we introdu
 - `SemanticsNodeExtra` contains:
   - `numeric: SemanticsNumeric { value/min/max/step/jump }`
   - `scroll: SemanticsScroll { x/x_min/x_max/y/y_min/y_max }`
+  - `orientation: Option<SemanticsOrientation>` (horizontal/vertical when applicable)
   - plus a small set of other mechanismizable fields (`placeholder`, `url`, `level`) that map directly into AccessKit.
 
 Rationale:
@@ -116,6 +117,7 @@ When structured fields are present, the AccessKit adapter emits:
 
 - numeric properties (`numeric_value`, `min_numeric_value`, `max_numeric_value`, `numeric_value_step`, `numeric_value_jump`)
 - scroll properties (`scroll_x`, `scroll_x_min`, …; per-axis)
+- orientation (`orientation`) when provided
 - other extras (`placeholder`, `url`, `level`)
 - action availability (increment/decrement/scroll_by/set_value) mapped to AccessKit actions when supported.
 

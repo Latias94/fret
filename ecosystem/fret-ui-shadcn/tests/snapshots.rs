@@ -194,6 +194,8 @@ struct SnapSemanticsExtra {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     level: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    orientation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     numeric: Option<SnapSemanticsNumeric>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     scroll: Option<SnapSemanticsScroll>,
@@ -204,6 +206,7 @@ impl SnapSemanticsExtra {
         self.placeholder.is_none()
             && self.url.is_none()
             && self.level.is_none()
+            && self.orientation.is_none()
             && self.numeric.is_none()
             && self.scroll.is_none()
     }
@@ -460,6 +463,7 @@ fn snap_semantics_extra(e: &fret_core::SemanticsNodeExtra) -> Option<SnapSemanti
     out.placeholder = e.placeholder.clone();
     out.url = e.url.clone();
     out.level = e.level;
+    out.orientation = e.orientation.map(|v| format!("{v:?}"));
     out.numeric = snap_semantics_numeric(e.numeric);
     out.scroll = snap_semantics_scroll(e.scroll);
 

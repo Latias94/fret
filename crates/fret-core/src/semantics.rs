@@ -43,6 +43,13 @@ pub enum SemanticsRole {
     Viewport,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsOrientation {
+    Horizontal,
+    Vertical,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsActions {
     pub focus: bool,
@@ -102,6 +109,7 @@ pub struct SemanticsNodeExtra {
     pub url: Option<String>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
     pub numeric: SemanticsNumeric,
     pub scroll: SemanticsScroll,
 }

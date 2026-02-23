@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextAlign,
-    TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsOrientation, SemanticsRole, Size,
+    SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -536,6 +536,7 @@ pub struct SemanticsDecoration {
     pub url: Option<Arc<str>>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
     pub numeric_value: Option<f64>,
     pub min_numeric_value: Option<f64>,
     pub max_numeric_value: Option<f64>,
@@ -573,6 +574,7 @@ impl SemanticsDecoration {
             placeholder: other.placeholder.or(self.placeholder),
             url: other.url.or(self.url),
             level: other.level.or(self.level),
+            orientation: other.orientation.or(self.orientation),
             numeric_value: other.numeric_value.or(self.numeric_value),
             min_numeric_value: other.min_numeric_value.or(self.min_numeric_value),
             max_numeric_value: other.max_numeric_value.or(self.max_numeric_value),
@@ -650,6 +652,11 @@ impl SemanticsDecoration {
 
     pub fn level(mut self, level: u32) -> Self {
         self.level = Some(level);
+        self
+    }
+
+    pub fn orientation(mut self, orientation: SemanticsOrientation) -> Self {
+        self.orientation = Some(orientation);
         self
     }
 
@@ -731,6 +738,7 @@ pub struct SemanticsProps {
     pub url: Option<Arc<str>>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
     pub numeric_value: Option<f64>,
     pub min_numeric_value: Option<f64>,
     pub max_numeric_value: Option<f64>,
@@ -792,6 +800,7 @@ impl Default for SemanticsProps {
             placeholder: None,
             url: None,
             level: None,
+            orientation: None,
             numeric_value: None,
             min_numeric_value: None,
             max_numeric_value: None,

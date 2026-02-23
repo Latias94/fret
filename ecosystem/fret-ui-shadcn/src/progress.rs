@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
-use fret_core::{Edges, Px};
+use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, FractionalRenderTransformProps, LayoutStyle, Length, SemanticsDecoration,
@@ -207,7 +206,9 @@ impl Progress {
                 )]
             });
 
-            let mut semantics = SemanticsDecoration::default().role(SemanticsRole::ProgressBar);
+            let mut semantics = SemanticsDecoration::default()
+                .role(SemanticsRole::ProgressBar)
+                .orientation(SemanticsOrientation::Horizontal);
             if let Some(label) = a11y_label {
                 semantics = semantics.label(label);
             }

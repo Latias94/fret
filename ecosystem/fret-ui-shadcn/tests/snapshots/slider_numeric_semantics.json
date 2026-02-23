@@ -277,6 +277,7 @@
         "checked": null
       },
       "extra": {
+        "orientation": "Horizontal",
         "numeric": {
           "value": 80.0,
           "min": 0.0,
@@ -309,6 +310,7 @@
         "checked": null
       },
       "extra": {
+        "orientation": "Horizontal",
         "numeric": {
           "value": 80.0,
           "min": 0.0,
