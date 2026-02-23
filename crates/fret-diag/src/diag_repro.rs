@@ -345,6 +345,75 @@ fn stop_demo_and_collect_renderdoc_captures(
     (repro_process_footprint, Some(payload))
 }
 
+fn build_captures_json(
+    with_tracy: bool,
+    with_renderdoc: bool,
+    prepared_launch: &PreparedReproLaunch,
+    renderdoc_capture_payload: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "tracy": if with_tracy {
+            serde_json::json!({
+                "requested": true,
+                "env_enabled": prepared_launch.tracy_env_enabled,
+                "feature_injected": prepared_launch.tracy_feature_injected,
+                "note": "Capture is not recorded automatically yet; use the Tracy UI to save a capture."
+            })
+        } else {
+            serde_json::Value::Null
+        },
+        "renderdoc": if with_renderdoc {
+            renderdoc_capture_payload.cloned().unwrap_or_else(|| serde_json::json!({
+                "schema_version": 2,
+                "generated_unix_ms": now_unix_ms(),
+                "capture_dir": "renderdoc",
+                "autocapture_after_frames": prepared_launch.renderdoc_autocapture_after_frames,
+                "captures": [],
+            }))
+        } else {
+            serde_json::Value::Null
+        }
+    })
+}
+
+fn summary_json_with_error(
+    summary_json: &serde_json::Value,
+    overall_error: Option<&str>,
+    overall_reason_code: Option<&str>,
+) -> serde_json::Value {
+    summary_json
+        .as_object()
+        .cloned()
+        .map(|mut obj| {
+            if let Some(err) = overall_error {
+                obj.insert(
+                    "error".to_string(),
+                    serde_json::Value::String(err.to_string()),
+                );
+            }
+            if let Some(code) = overall_reason_code {
+                obj.insert(
+                    "error_reason_code".to_string(),
+                    serde_json::Value::String(code.to_string()),
+                );
+            }
+            serde_json::Value::Object(obj)
+        })
+        .unwrap_or_else(|| summary_json.clone())
+}
+
+fn write_summary_and_evidence_best_effort(
+    resolved_out_dir: &Path,
+    summary_path: &Path,
+    summary_json: &serde_json::Value,
+) {
+    if let Some(parent) = summary_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = write_json_value(summary_path, summary_json);
+    let _ = write_evidence_index(resolved_out_dir, summary_path, Some(summary_json));
+}
+
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
@@ -1060,29 +1129,12 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             check_redraw_hitches_max_total_ms(&resolved_out_dir, max_total_ms).ok();
     }
 
-    let captures_json = serde_json::json!({
-        "tracy": if with_tracy {
-            serde_json::json!({
-                "requested": true,
-                "env_enabled": prepared_launch.tracy_env_enabled,
-                "feature_injected": prepared_launch.tracy_feature_injected,
-                "note": "Capture is not recorded automatically yet; use the Tracy UI to save a capture."
-            })
-        } else {
-            serde_json::Value::Null
-        },
-        "renderdoc": if with_renderdoc {
-            renderdoc_capture_payload.clone().unwrap_or_else(|| serde_json::json!({
-                "schema_version": 2,
-                "generated_unix_ms": now_unix_ms(),
-                "capture_dir": "renderdoc",
-                "autocapture_after_frames": prepared_launch.renderdoc_autocapture_after_frames,
-                "captures": [],
-            }))
-        } else {
-            serde_json::Value::Null
-        }
-    });
+    let captures_json = build_captures_json(
+        with_tracy,
+        with_renderdoc,
+        &prepared_launch,
+        renderdoc_capture_payload.as_ref(),
+    );
 
     let summary_json = serde_json::json!({
         "schema_version": 1,
@@ -1119,11 +1171,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         "error": overall_error,
     });
 
-    if let Some(parent) = summary_path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    let _ = write_json_value(&summary_path, &summary_json);
-    let _ = write_evidence_index(&resolved_out_dir, &summary_path, Some(&summary_json));
+    write_summary_and_evidence_best_effort(&resolved_out_dir, &summary_path, &summary_json);
 
     if overall_error.is_none() {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
@@ -1195,26 +1243,12 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
         if overall_error.is_some() {
             // Keep the summary coherent even when packing fails.
-            let _ = write_json_value(
-                &summary_path,
-                &summary_json
-                    .as_object()
-                    .cloned()
-                    .map(|mut obj| {
-                        obj.insert(
-                            "error".to_string(),
-                            serde_json::Value::String(overall_error.clone().unwrap_or_default()),
-                        );
-                        if let Some(code) = overall_reason_code.as_ref() {
-                            obj.insert(
-                                "error_reason_code".to_string(),
-                                serde_json::Value::String(code.clone()),
-                            );
-                        }
-                        serde_json::Value::Object(obj)
-                    })
-                    .unwrap_or(summary_json.clone()),
+            let packing_failed_summary_json = summary_json_with_error(
+                &summary_json,
+                overall_error.as_deref(),
+                overall_reason_code.as_deref(),
             );
+            let _ = write_json_value(&summary_path, &packing_failed_summary_json);
         }
     }
 
@@ -1241,22 +1275,11 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         overall_reason_code = Some("tooling.redraw_hitches.failed".to_string());
     }
 
-    let final_summary_json = summary_json
-        .as_object()
-        .cloned()
-        .map(|mut obj| {
-            if let Some(err) = overall_error.as_ref() {
-                obj.insert("error".to_string(), serde_json::Value::String(err.clone()));
-            }
-            if let Some(code) = overall_reason_code.as_ref() {
-                obj.insert(
-                    "error_reason_code".to_string(),
-                    serde_json::Value::String(code.clone()),
-                );
-            }
-            serde_json::Value::Object(obj)
-        })
-        .unwrap_or_else(|| summary_json.clone());
+    let final_summary_json = summary_json_with_error(
+        &summary_json,
+        overall_error.as_deref(),
+        overall_reason_code.as_deref(),
+    );
     let _ = write_json_value(&summary_path, &final_summary_json);
     if let Err(err) =
         write_evidence_index(&resolved_out_dir, &summary_path, Some(&final_summary_json))
