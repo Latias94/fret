@@ -2,7 +2,10 @@
 
 use super::super::intermediate_pool::estimate_texture_bytes;
 use super::super::render_plan_effects as effects;
-use super::super::{EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw};
+use super::super::{
+    ClipPathMaskDraw, EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw, QuadDraw,
+    QuadPipelineKey,
+};
 use super::*;
 
 fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
@@ -849,6 +852,133 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
         .count();
     assert_eq!(count, 0);
 
+    assert_first_output_write_is_clear(&plan.passes);
+}
+
+#[test]
+fn compile_for_scene_composite_group_preserves_output_clear_guardrail() {
+    let viewport_size = (100, 100);
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut encoding = SceneEncoding::default();
+    encoding.effect_markers = vec![
+        EffectMarker {
+            draw_ix: 0,
+            kind: EffectMarkerKind::CompositeGroupPush {
+                scissor,
+                uniform_index: 0,
+                mode: fret_core::BlendMode::Add,
+                quality: fret_core::EffectQuality::Auto,
+                opacity: 1.0,
+            },
+        },
+        EffectMarker {
+            draw_ix: 1,
+            kind: EffectMarkerKind::CompositeGroupPop,
+        },
+    ];
+    encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 0,
+        instance_count: 0,
+        pipeline: QuadPipelineKey {
+            fill_kind: 0,
+            border_kind: 0,
+            border_present: false,
+            dash_enabled: false,
+            fill_material_sampled: false,
+            border_material_sampled: false,
+        },
+    }));
+
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    assert!(
+        plan.passes.iter().any(|p| matches!(
+            p,
+            RenderPlanPass::CompositePremul(p)
+                if p.blend_mode == fret_core::BlendMode::Add
+        )),
+        "expected at least one CompositePremul(Add) pass"
+    );
+    assert!(plan.degradations.is_empty(), "unexpected degradations");
+    assert_first_output_write_is_clear(&plan.passes);
+}
+
+#[test]
+fn compile_for_scene_clip_path_preserves_output_clear_guardrail() {
+    let viewport_size = (64, 64);
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut encoding = SceneEncoding::default();
+    encoding.effect_markers = vec![
+        EffectMarker {
+            draw_ix: 0,
+            kind: EffectMarkerKind::ClipPathPush {
+                scissor,
+                uniform_index: 0,
+                mask_draw_index: 0,
+            },
+        },
+        EffectMarker {
+            draw_ix: 1,
+            kind: EffectMarkerKind::ClipPathPop,
+        },
+    ];
+    encoding.clip_path_masks.push(ClipPathMaskDraw {
+        scissor,
+        uniform_index: 0,
+        first_vertex: 0,
+        vertex_count: 0,
+        cache_key: 123,
+    });
+    encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 0,
+        instance_count: 0,
+        pipeline: QuadPipelineKey {
+            fill_kind: 0,
+            border_kind: 0,
+            border_present: false,
+            dash_enabled: false,
+            fill_material_sampled: false,
+            border_material_sampled: false,
+        },
+    }));
+
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    assert!(
+        plan.passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::PathClipMask(_))),
+        "expected at least one PathClipMask pass"
+    );
+    assert!(
+        plan.passes.iter().any(|p| matches!(
+            p,
+            RenderPlanPass::CompositePremul(p) if p.mask.is_some()
+        )),
+        "expected at least one CompositePremul pass with a mask"
+    );
     assert_first_output_write_is_clear(&plan.passes);
 }
 
