@@ -154,3 +154,5 @@ diagnostics stack stays easy to evolve.
 - [x] Factor dump finalization (write bundle.json, WS notify, sidecars, counters) into a shared helper
       to reduce v1/v2 duplication.
 - [x] Reuse `UiArtifactStatsV1` directly as the dump return value (remove intermediate count structs).
+- [x] Migrate `diag bundle-v2` conversion to shared semantics helpers (`json_bundle::snapshot_semantics`) and
+      prune `tables.semantics` after applying semantics mode (avoid oversized converted bundles).

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -33,6 +34,31 @@ fn parse_semantics_mode(mode: &str) -> Result<&'static str, String> {
 }
 
 fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
+    fn snapshot_has_semantics(s: &serde_json::Value) -> bool {
+        crate::json_bundle::snapshot_semantics(s).is_some_and(|v| !v.is_null())
+    }
+
+    fn clear_snapshot_semantics(s: &mut serde_json::Value) {
+        // Clear any known inline semantics locations so tooling won't accidentally treat legacy
+        // keys as semantics when producing a v2 bundle.
+        if let Some(debug) = s.get_mut("debug").and_then(|v| v.as_object_mut()) {
+            debug.insert("semantics".to_string(), serde_json::Value::Null);
+        }
+        if let Some(obj) = s.as_object_mut() {
+            for k in [
+                "semantics",
+                "semantic_tree",
+                "semanticTree",
+                "semantic_tree_v1",
+                "tree",
+            ] {
+                if obj.contains_key(k) {
+                    obj.insert(k.to_string(), serde_json::Value::Null);
+                }
+            }
+        }
+    }
+
     match mode {
         "all" => {}
         "off" => {
@@ -41,11 +67,7 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
                     continue;
                 };
                 for s in snaps {
-                    if let Some(debug) = s.get_mut("debug")
-                        && let Some(obj) = debug.as_object_mut()
-                    {
-                        obj.insert("semantics".to_string(), serde_json::Value::Null);
-                    }
+                    clear_snapshot_semantics(s);
                 }
             }
         }
@@ -56,10 +78,7 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
                 };
                 let mut keep_idx: Option<usize> = None;
                 for (idx, s) in snaps.iter().enumerate() {
-                    if s.get("debug")
-                        .and_then(|v| v.get("semantics"))
-                        .is_some_and(|v| !v.is_null())
-                    {
+                    if snapshot_has_semantics(s) {
                         keep_idx = Some(idx);
                     }
                 }
@@ -67,11 +86,7 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
                     if Some(idx) == keep_idx {
                         continue;
                     }
-                    if let Some(debug) = s.get_mut("debug")
-                        && let Some(obj) = debug.as_object_mut()
-                    {
-                        obj.insert("semantics".to_string(), serde_json::Value::Null);
-                    }
+                    clear_snapshot_semantics(s);
                 }
             }
         }
@@ -83,20 +98,16 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
                 let snapshots_len = snaps.len();
                 let mut last_kept_fingerprint: Option<u64> = None;
                 for (idx, s) in snaps.iter_mut().enumerate() {
-                    let has_semantics = s
-                        .get("debug")
-                        .and_then(|v| v.get("semantics"))
-                        .is_some_and(|v| !v.is_null());
-                    if !has_semantics {
+                    if !snapshot_has_semantics(s) {
                         continue;
                     }
                     let is_last = idx + 1 == snapshots_len;
                     if is_last {
                         last_kept_fingerprint =
-                            s.get("semantics_fingerprint").and_then(|v| v.as_u64());
+                            crate::json_bundle::snapshot_semantics_fingerprint(s);
                         continue;
                     }
-                    let fp = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
+                    let fp = crate::json_bundle::snapshot_semantics_fingerprint(s);
                     let keep = match (last_kept_fingerprint, fp) {
                         (None, _) => true,
                         (_, None) => true,
@@ -104,10 +115,8 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
                     };
                     if keep {
                         last_kept_fingerprint = fp;
-                    } else if let Some(debug) = s.get_mut("debug")
-                        && let Some(obj) = debug.as_object_mut()
-                    {
-                        obj.insert("semantics".to_string(), serde_json::Value::Null);
+                    } else {
+                        clear_snapshot_semantics(s);
                     }
                 }
             }
@@ -118,6 +127,60 @@ fn apply_semantics_mode_inline(windows: &mut [serde_json::Value], mode: &str) {
 
 fn schema_version(v: &serde_json::Value) -> Option<u64> {
     v.get("schema_version").and_then(|v| v.as_u64())
+}
+
+fn prune_semantics_table(bundle: &mut serde_json::Value) {
+    let Some(windows) = bundle.get("windows").and_then(|v| v.as_array()) else {
+        return;
+    };
+
+    let mut referenced: HashSet<(u64, u64)> = HashSet::new();
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v.as_slice());
+        for s in snaps {
+            let has_semantics =
+                crate::json_bundle::snapshot_semantics(s).is_some_and(|v| !v.is_null());
+            if !has_semantics {
+                continue;
+            }
+            let Some(fp) = crate::json_bundle::snapshot_semantics_fingerprint(s) else {
+                continue;
+            };
+            let snap_window = crate::json_bundle::snapshot_window_id(s).unwrap_or(window_id);
+            referenced.insert((snap_window, fp));
+        }
+    }
+
+    let Some(entries) = bundle
+        .get_mut("tables")
+        .and_then(|v| v.get_mut("semantics"))
+        .and_then(|v| v.get_mut("entries"))
+        .and_then(|v| v.as_array_mut())
+    else {
+        return;
+    };
+
+    entries.retain(|e| {
+        let Some(window) = e.get("window").and_then(|v| v.as_u64()) else {
+            return false;
+        };
+        let Some(fp) = e.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
+            return false;
+        };
+        referenced.contains(&(window, fp))
+    });
+
+    if entries.is_empty() {
+        if let Some(tables) = bundle.get_mut("tables").and_then(|v| v.as_object_mut()) {
+            if let Some(sem) = tables.get_mut("semantics") {
+                *sem = serde_json::json!({});
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -246,19 +309,17 @@ pub(crate) fn cmd_bundle_v2(
                     .and_then(|v| v.as_array())
                     .map_or(&[][..], |v| v.as_slice());
                 for s in snaps {
-                    let Some(sem) = s.get("debug").and_then(|v| v.get("semantics")) else {
+                    let Some(sem) = crate::json_bundle::snapshot_semantics(s) else {
                         continue;
                     };
                     if sem.is_null() {
                         continue;
                     }
-                    let Some(fp) = s.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
+                    let Some(fp) = crate::json_bundle::snapshot_semantics_fingerprint(s) else {
                         continue;
                     };
-                    let snap_window = s
-                        .get("window")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(window_id);
+                    let snap_window =
+                        crate::json_bundle::snapshot_window_id(s).unwrap_or(window_id);
                     table
                         .entry((snap_window, fp))
                         .or_insert_with(|| sem.clone());
@@ -293,6 +354,13 @@ pub(crate) fn cmd_bundle_v2(
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
     apply_semantics_mode_inline(windows_mut.as_mut_slice(), mode);
+    if mode == "off" {
+        if let Some(obj) = bundle.as_object_mut() {
+            obj.insert("tables".to_string(), serde_json::json!({}));
+        }
+    } else {
+        prune_semantics_table(&mut bundle);
+    }
 
     let convert_ms = t_convert.elapsed().as_millis() as u64;
 
