@@ -518,6 +518,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-210 Stage 21: remove per-dump String allocations in RenderPlan JSON dump.
+  - Goal: reduce dump-time heap churn by using `&'static str` for stable labels (targets, modes, axes, degradation names).
+  - Landed (step 1): encode stable dump labels as `&'static str` while keeping JSON shape and field names unchanged.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`JsonDumpPass`, `JsonDumpMaskRef`, `JsonDumpDegradation`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
