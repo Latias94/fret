@@ -246,6 +246,9 @@ diagnostics stack stays easy to evolve.
 - [x] Remove legacy screenshot env aliases from runtime parsing:
   - `FRET_DIAG_SCREENSHOTS`
   - `FRET_DIAG_SCREENSHOT`
+- [x] Remove legacy fixed delta env alias:
+  - `FRET_DIAG_FRAME_DELTA_MS`
+- [x] Remove schema-v1 bundle emission from the runtime (schema v2 only).
 
 ## Evidence anchors (keep updated as implementation changes)
 

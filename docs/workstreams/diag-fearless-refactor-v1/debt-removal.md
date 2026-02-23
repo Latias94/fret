@@ -53,8 +53,6 @@ Evidence anchors:
 
 - Canonical:
   - `FRET_DIAG_FIXED_FRAME_DELTA_MS=<n>`: forces a fixed frame tick for deterministic scripts.
-- Legacy aliases (planned removal once in-tree docs + scripts migrate):
-  - `FRET_DIAG_FRAME_DELTA_MS=<n>` (legacy name)
 
 Evidence anchors:
 
@@ -64,7 +62,6 @@ Evidence anchors:
 ### Bundle schema / dump policy
 
 - Canonical:
-  - `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
   - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
   - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty` (optional; for human review)
 
@@ -89,3 +86,5 @@ Completed:
     `crates/fret-launch/src/runner/desktop/runner/diag_bundle_screenshots.rs`
 - Removed legacy fixed frame delta env alias (`FRET_DIAG_FRAME_DELTA_MS`) (`f93507648`).
   - Evidence: `crates/fret-core/src/window.rs`
+- Removed schema-v1 bundle emission from the runtime (`bundle.schema_version` is now always v2) (`e3b5b6d5d`).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`

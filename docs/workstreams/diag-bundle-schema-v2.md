@@ -50,8 +50,6 @@ Snapshots may omit `debug.semantics` entirely and rely on:
 
 ### Controls
 
-- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
-  - default: `2` for both manual and script-driven dumps (can be forced to `1` for legacy tooling)
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
   - default: script-driven dumps `last`, non-script dumps `changed`
   - in v2:
@@ -69,6 +67,11 @@ Additional size knobs (dump-time policies):
 - `FRET_DIAG_BUNDLE_WRITE_INDEX=0|1`
   - controls writing agent/tool-friendly sidecars (`bundle.index.json`, `bundle.meta.json`, `test_ids.index.json`, plus `script.result.json` for script dumps)
   - default: enabled
+
+Schema note:
+
+- The runtime now always emits schema v2 bundles.
+- Older schema v1 bundles remain readable by tooling; upgrade via `fretboard diag bundle-v2 <bundle_dir|bundle.json> ...` when needed.
 
 ## Compatibility expectations
 

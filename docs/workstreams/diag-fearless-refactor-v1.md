@@ -35,7 +35,6 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
 1. **Modular runtime**: extract cohesive subsystems out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
    small modules with clear responsibilities and narrow visibility.
 2. **Explicit schema evolution**: keep `bundle.json` versioned and backward compatible.
-   - Runtime supports `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`.
    - Runtime supports `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`.
 3. **Small-by-default AI evidence**: keep default debugging workflows bounded:
    - prefer `bundle.index.json` + targeted slices + `diag ai-packet` over shipping the full bundle.
@@ -50,7 +49,8 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
 
 ## Current state (as of 2026-02-21)
 
-- Runtime can export schema v1 and v2 bundles (configurable via env vars; defaults differ for manual vs script dumps).
+- Runtime exports schema v2 bundles by default (semantics are deduplicated via `tables.semantics`).
+- Older bundles may still be schema v1 (inline-only semantics, no tables); tooling remains compatible.
 - Tooling can:
   - convert bundles (`fretboard diag bundle-v2`) for measurement/compat,
   - build bounded sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`),
@@ -95,15 +95,11 @@ eventually removing redundant “v1-only” emission paths. It is intentionally 
 Proposed phases:
 
 1. **Today** (current behavior):
-   - Manual dumps default to schema v1 (inline-only semantics).
-   - Script dumps default to schema v2 + semantics mode `last`.
-   - Both are overrideable via `FRET_DIAG_BUNDLE_SCHEMA_VERSION` and `FRET_DIAG_BUNDLE_SEMANTICS_MODE`.
-2. **Flip manual defaults** (after Plan 1 closure is proven in daily use):
-   - Manual dumps default to schema v2.
-   - Keep v1 emission available behind `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1`.
-3. **Deprecate v1 emission** (after tooling + consumers no longer rely on it):
-   - Keep reading v1 in tooling, but stop emitting v1 by default across runtime paths.
-   - Add a short deprecation note in docs and a “how to migrate old repros” recipe (materialize v2, re-pack, etc.).
+   - Runtime emits schema v2 bundles (semantics are deduplicated via `tables.semantics`).
+   - Tooling continues to read v1/v2 bundles.
+2. **Remove v1 emission** (after Plan 1 closure is proven in daily use):
+   - Runtime no longer emits schema v1 bundles; only v2 is produced.
+   - Tooling keeps reading v1 and can upgrade bundles when needed (`fretboard diag bundle-v2`).
 
 Exit criteria (what “proven” means) before flipping defaults:
 

@@ -56,21 +56,25 @@ Implementation pointers (where the code lives today):
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
-## Bundle schema defaults (v1 vs v2, semantics mode)
+## Bundle schema (v2) and semantics mode
 
-The runtime can export two bundle schema versions:
+The runtime now always exports `bundle.json` schema v2:
 
-- `bundle.json` schema v1: inline-only semantics (no tables).
 - `bundle.json` schema v2: semantics tables (`tables.semantics`) + per-snapshot fingerprints.
+
+Legacy note:
+
+- Older bundles may still be schema v1 (inline-only semantics, no tables).
+- Tooling remains compatible: `fretboard diag meta/query/slice/stats/compare` resolve semantics from either inline
+  semantics or the schema-v2 semantics table.
 
 Defaults:
 
-- Manual dumps default to schema v1 and semantics mode `all`.
-- Script dumps default to schema v2 and semantics mode `last` (to keep bundles smaller while still preserving at least one full semantics snapshot).
+- Manual dumps default to semantics mode `changed`.
+- Script dumps default to semantics mode `last` (keep bundles smaller while still preserving at least one full semantics snapshot).
 
-Overrides (for both manual and script dumps):
+Overrides (both manual and script dumps):
 
-- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
 
 ## Sidecars (index/meta/test-id index)
@@ -105,7 +109,6 @@ Minimal “AI triage” preset (portable defaults; copy/paste in PowerShell):
 
 ```powershell
 $env:FRET_DIAG=1
-$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
 $env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="last"
 $env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=30
 $env:FRET_DIAG_BUNDLE_JSON_FORMAT="compact"
@@ -115,7 +118,6 @@ More aggressive “small bundles” preset (trade off semantics richness; best f
 
 ```powershell
 $env:FRET_DIAG=1
-$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
 $env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="changed"
 $env:FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1
 $env:FRET_DIAG_MAX_SEMANTICS_NODES=20000
@@ -536,9 +538,6 @@ Core:
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
-- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`: choose the `bundle.json` schema version (default: `2` for script-driven dumps; `1` for manual dumps).
-  - Schema v2 adds `tables.semantics.entries[]` to deduplicate exported semantics snapshots by `(window, semantics_fingerprint)`.
-  - Details + migration notes: `docs/workstreams/diag-bundle-schema-v2.md`.
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -555,7 +554,7 @@ Semantics export:
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`: controls how often bundles include semantics snapshots.
-  - `all`: include semantics on every snapshot (default for manual dumps).
+  - `all`: include semantics on every snapshot.
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
