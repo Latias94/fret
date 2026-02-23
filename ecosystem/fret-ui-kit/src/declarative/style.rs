@@ -236,7 +236,7 @@ pub fn container_props(
         layout,
         padding,
         background,
-        background_paint: None,
+        background_paint: chrome.background_paint,
         shadow,
         border: Edges::all(border_width),
         border_color,
