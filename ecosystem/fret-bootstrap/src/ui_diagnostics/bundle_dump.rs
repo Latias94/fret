@@ -6,8 +6,9 @@ use super::bundle_dump_policy::{
 };
 use super::bundle_sidecars::{want_sidecars, write_bundle_sidecars};
 use super::{
-    UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService, bundle,
-    unix_ms_now, write_json, write_json_compact, write_latest_pointer,
+    UiArtifactStatsV1, UiDiagnosticsBundleConfigV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2,
+    UiDiagnosticsService, UiDiagnosticsWindowBundleV1, bundle, unix_ms_now, write_json,
+    write_json_compact, write_latest_pointer,
 };
 
 struct DumpArtifactCounts {
@@ -163,43 +164,36 @@ fn write_bundle_json_bytes<T: serde::Serialize>(
     Some(None)
 }
 
-fn dump_schema_v1(
+fn finalize_dump(
     service: &mut UiDiagnosticsService,
     exported_unix_ms: u64,
     dir: &PathBuf,
     bundle_json_path: &PathBuf,
     want_pretty: bool,
-    mut bundle: UiDiagnosticsBundleV1,
-    semantics_mode: bundle::BundleSemanticsModeV1,
-    dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
+    bundle: &impl serde::Serialize,
+    windows: &[UiDiagnosticsWindowBundleV1],
+    semantics_table: Option<&bundle::UiBundleSemanticsTableV1>,
+    config: &UiDiagnosticsBundleConfigV1,
     is_script_dump: bool,
     request_id: Option<u64>,
 ) -> Option<DumpArtifactCounts> {
     #[cfg(not(feature = "diagnostics-ws"))]
-    let _ = request_id;
-    #[cfg(not(feature = "diagnostics-ws"))]
     let _ = exported_unix_ms;
-
-    bundle.apply_semantics_mode_v1(semantics_mode);
-    bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
-    apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = request_id;
 
     let bundle_json_bytes =
-        write_bundle_json_bytes(service, bundle_json_path, want_pretty, &bundle)?;
+        write_bundle_json_bytes(service, bundle_json_path, want_pretty, bundle)?;
 
-    let window_count = bundle.windows.len() as u64;
-    let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-    let snapshot_count = bundle
-        .windows
-        .iter()
-        .map(|w| w.snapshots.len() as u64)
-        .sum();
-    let max_snapshots = bundle.config.max_snapshots as u64;
-    let dump_max_snapshots = bundle.config.dump_max_snapshots.map(|n| n as u64);
+    let window_count = windows.len() as u64;
+    let event_count = windows.iter().map(|w| w.events.len() as u64).sum();
+    let snapshot_count = windows.iter().map(|w| w.snapshots.len() as u64).sum();
+    let max_snapshots = config.max_snapshots as u64;
+    let dump_max_snapshots = config.dump_max_snapshots.map(|n| n as u64);
 
     #[cfg(feature = "diagnostics-ws")]
     {
-        service.ws_send_bundle_dumped_v1(exported_unix_ms, dir, &bundle, request_id);
+        service.ws_send_bundle_dumped_v1(exported_unix_ms, dir, bundle, request_id);
     }
 
     if !cfg!(target_arch = "wasm32") && want_sidecars() {
@@ -207,8 +201,8 @@ fn dump_schema_v1(
             service,
             dir,
             bundle_json_path,
-            &bundle.windows,
-            None,
+            windows,
+            semantics_table,
             is_script_dump,
         );
     }
@@ -223,6 +217,37 @@ fn dump_schema_v1(
     })
 }
 
+fn dump_schema_v1(
+    service: &mut UiDiagnosticsService,
+    exported_unix_ms: u64,
+    dir: &PathBuf,
+    bundle_json_path: &PathBuf,
+    want_pretty: bool,
+    mut bundle: UiDiagnosticsBundleV1,
+    semantics_mode: bundle::BundleSemanticsModeV1,
+    dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
+    is_script_dump: bool,
+    request_id: Option<u64>,
+) -> Option<DumpArtifactCounts> {
+    bundle.apply_semantics_mode_v1(semantics_mode);
+    bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
+    apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
+
+    finalize_dump(
+        service,
+        exported_unix_ms,
+        dir,
+        bundle_json_path,
+        want_pretty,
+        &bundle,
+        &bundle.windows,
+        None,
+        &bundle.config,
+        is_script_dump,
+        request_id,
+    )
+}
+
 fn dump_schema_v2(
     service: &mut UiDiagnosticsService,
     exported_unix_ms: u64,
@@ -235,11 +260,6 @@ fn dump_schema_v2(
     is_script_dump: bool,
     request_id: Option<u64>,
 ) -> Option<DumpArtifactCounts> {
-    #[cfg(not(feature = "diagnostics-ws"))]
-    let _ = request_id;
-    #[cfg(not(feature = "diagnostics-ws"))]
-    let _ = exported_unix_ms;
-
     let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
     bundle.apply_semantics_mode_v1(semantics_mode);
     bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
@@ -248,42 +268,18 @@ fn dump_schema_v2(
         apply_dump_semantics_policy_to_semantics_table(table, dump_semantics_policy);
     }
 
-    let bundle_json_bytes =
-        write_bundle_json_bytes(service, bundle_json_path, want_pretty, &bundle)?;
-
-    let window_count = bundle.windows.len() as u64;
-    let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-    let snapshot_count = bundle
-        .windows
-        .iter()
-        .map(|w| w.snapshots.len() as u64)
-        .sum();
-    let max_snapshots = bundle.config.max_snapshots as u64;
-    let dump_max_snapshots = bundle.config.dump_max_snapshots.map(|n| n as u64);
-
-    #[cfg(feature = "diagnostics-ws")]
-    {
-        service.ws_send_bundle_dumped_v1(exported_unix_ms, dir, &bundle, request_id);
-    }
-
-    if !cfg!(target_arch = "wasm32") && want_sidecars() {
-        let semantics_table = bundle.tables.semantics.as_ref();
-        write_bundle_sidecars(
-            service,
-            dir,
-            bundle_json_path,
-            &bundle.windows,
-            semantics_table,
-            is_script_dump,
-        );
-    }
-
-    Some(DumpArtifactCounts {
-        bundle_json_bytes,
-        window_count,
-        event_count,
-        snapshot_count,
-        max_snapshots,
-        dump_max_snapshots,
-    })
+    let semantics_table = bundle.tables.semantics.as_ref();
+    finalize_dump(
+        service,
+        exported_unix_ms,
+        dir,
+        bundle_json_path,
+        want_pretty,
+        &bundle,
+        &bundle.windows,
+        semantics_table,
+        &bundle.config,
+        is_script_dump,
+        request_id,
+    )
 }

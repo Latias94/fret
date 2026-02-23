@@ -151,3 +151,5 @@ diagnostics stack stays easy to evolve.
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
 - [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
       `dump_bundle_with_options` mostly about option resolution + dispatch.
+- [x] Factor dump finalization (write bundle.json, WS notify, sidecars, counters) into a shared helper
+      to reduce v1/v2 duplication.
