@@ -368,6 +368,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [~] REN-VNEXT-refactor-070 Stage 7: extract per-frame plan dispatch into a dedicated helper.
+  - Goal: isolate command-encoder / frame-target lifetime + pass recording loop to keep `render_scene_execute` orchestrative.
+  - Landed (step 1): move pass recording + encoder finish + intermediate release tracking into `Renderer::dispatch_render_plan`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` (`dispatch_render_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
