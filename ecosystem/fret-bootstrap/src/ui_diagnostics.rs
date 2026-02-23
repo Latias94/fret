@@ -115,14 +115,6 @@ mod config;
 pub use config::UiDiagnosticsConfig;
 include!("ui_diagnostics/service.rs");
 
-fn read_touch_stamp(path: &Path) -> Option<u64> {
-    let bytes = std::fs::read(path).ok()?;
-    let text = std::str::from_utf8(&bytes).ok()?;
-    text.lines()
-        .rev()
-        .find_map(|line| line.trim().parse::<u64>().ok())
-}
-
 #[derive(Debug, Clone)]
 struct PendingPick {
     run_id: u64,
@@ -3027,45 +3019,5 @@ mod tests {
                 .iter()
                 .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
         );
-    }
-}
-
-trait PointerEventExt {
-    fn kind(&self) -> &'static str;
-    fn position(&self) -> Point;
-}
-
-impl PointerEventExt for fret_core::PointerEvent {
-    fn kind(&self) -> &'static str {
-        match self {
-            fret_core::PointerEvent::Down { .. } => "down",
-            fret_core::PointerEvent::Up { .. } => "up",
-            fret_core::PointerEvent::Move { .. } => "move",
-            fret_core::PointerEvent::Wheel { .. } => "wheel",
-            fret_core::PointerEvent::PinchGesture { .. } => "pinch_gesture",
-        }
-    }
-
-    fn position(&self) -> Point {
-        match self {
-            fret_core::PointerEvent::Down { position, .. } => *position,
-            fret_core::PointerEvent::Up { position, .. } => *position,
-            fret_core::PointerEvent::Move { position, .. } => *position,
-            fret_core::PointerEvent::Wheel { position, .. } => *position,
-            fret_core::PointerEvent::PinchGesture { position, .. } => *position,
-        }
-    }
-}
-
-trait EventPointerExt {
-    fn pointer_event(&self) -> Option<&fret_core::PointerEvent>;
-}
-
-impl EventPointerExt for Event {
-    fn pointer_event(&self) -> Option<&fret_core::PointerEvent> {
-        match self {
-            Event::Pointer(p) => Some(p),
-            _ => None,
-        }
     }
 }

@@ -8,6 +8,14 @@ fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io
     std::fs::write(path, rel.to_string_lossy().as_bytes())
 }
 
+fn read_touch_stamp(path: &Path) -> Option<u64> {
+    let bytes = std::fs::read(path).ok()?;
+    let text = std::str::from_utf8(&bytes).ok()?;
+    text.lines()
+        .rev()
+        .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
 fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;

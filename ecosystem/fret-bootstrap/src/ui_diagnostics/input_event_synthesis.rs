@@ -601,3 +601,43 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         }
     }
 }
+
+trait PointerEventExt {
+    fn kind(&self) -> &'static str;
+    fn position(&self) -> Point;
+}
+
+impl PointerEventExt for fret_core::PointerEvent {
+    fn kind(&self) -> &'static str {
+        match self {
+            fret_core::PointerEvent::Down { .. } => "down",
+            fret_core::PointerEvent::Up { .. } => "up",
+            fret_core::PointerEvent::Move { .. } => "move",
+            fret_core::PointerEvent::Wheel { .. } => "wheel",
+            fret_core::PointerEvent::PinchGesture { .. } => "pinch_gesture",
+        }
+    }
+
+    fn position(&self) -> Point {
+        match self {
+            fret_core::PointerEvent::Down { position, .. } => *position,
+            fret_core::PointerEvent::Up { position, .. } => *position,
+            fret_core::PointerEvent::Move { position, .. } => *position,
+            fret_core::PointerEvent::Wheel { position, .. } => *position,
+            fret_core::PointerEvent::PinchGesture { position, .. } => *position,
+        }
+    }
+}
+
+trait EventPointerExt {
+    fn pointer_event(&self) -> Option<&fret_core::PointerEvent>;
+}
+
+impl EventPointerExt for Event {
+    fn pointer_event(&self) -> Option<&fret_core::PointerEvent> {
+        match self {
+            Event::Pointer(p) => Some(p),
+            _ => None,
+        }
+    }
+}
