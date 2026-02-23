@@ -7,6 +7,7 @@ mod encoding_cache;
 mod execute;
 mod executor;
 mod frame_bindings;
+mod frame_pipelines;
 mod frame_prepare;
 mod helpers;
 mod perf_finalize;
