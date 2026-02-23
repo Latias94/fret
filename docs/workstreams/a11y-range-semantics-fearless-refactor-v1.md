@@ -98,6 +98,9 @@ Candidate actions (portable):
 
 ### B) Tree/outline hierarchy level (for `TreeItem`, future `Heading`)
 
+Update (2026-02-23): The portable `extra.level` field exists and maps to AccessKit `level`. The remaining work is
+ecosystem adoption (populate levels for `TreeItem`, and later `Heading`).
+
 We have `SemanticsRole::TreeItem`, but no portable “level” field, so platforms cannot announce hierarchy depth.
 
 Candidate field:

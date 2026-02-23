@@ -15,7 +15,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 
 - [x] Scroll semantics: add `extra.scroll.{x,x_min,x_max,y,y_min,y_max}` and map to AccessKit.
 - [x] Scroll actions: add a portable `scroll_by` action (payload) and wire it through AccessKit where supported.
-- [ ] Tree/outline hierarchy: populate `extra.level` for `TreeItem` (and future `Heading`) and map to AccessKit `level`.
+- [x] Tree/outline hierarchy: populate `extra.level` for `TreeItem` (and future `Heading`) and map to AccessKit `level`.
 - [x] Text flags: add `SemanticsFlags::read_only` and map to AccessKit flags.
 - [x] Text placeholder: add `extra.placeholder` and map to AccessKit `placeholder`.
 - [x] Link URL: add `extra.url` and map to AccessKit `url`.

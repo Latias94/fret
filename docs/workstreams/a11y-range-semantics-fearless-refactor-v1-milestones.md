@@ -5,9 +5,9 @@ Last updated: 2026-02-23
 ## Current progress (2026-02-23)
 
 - M1: Complete (core contract + AccessKit mapping + unit tests).
-- M1.5: Partially complete (scroll semantics + `scroll_by`, read-only, placeholder, url).
-- M2: In progress (ecosystem semantics snapshots landed; broaden adoption as needed).
-- M3: Not started (diag scripts prefer numeric fields; keep string fallback).
+- M1.5: Complete (scroll semantics + `scroll_by`, level, read-only, placeholder, url).
+- M2: Complete (shadcn slider + progress populate numeric semantics; snapshots gated).
+- M3: Complete (SetSliderValue prefers structured numeric semantics; string parsing as fallback).
 
 ## M0 — Agreement on contract (design)
 
