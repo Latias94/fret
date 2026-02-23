@@ -77,6 +77,91 @@ fn resolve_repro_scripts(rest: &[String], workspace_root: &Path) -> (Vec<PathBuf
     }
 }
 
+struct PreparedReproLaunch {
+    launch: Option<Vec<String>>,
+    launch_env: Vec<(String, String)>,
+    tracy_feature_injected: bool,
+    tracy_env_enabled: bool,
+    renderdoc_capture_dir: Option<PathBuf>,
+    renderdoc_autocapture_after_frames: Option<u32>,
+}
+
+fn prepare_repro_launch(
+    resolved_out_dir: &Path,
+    launch: Option<Vec<String>>,
+    launch_env: Vec<(String, String)>,
+    check_redraw_hitches_max_total_ms_threshold: Option<u64>,
+    with_tracy: bool,
+    with_renderdoc: bool,
+    renderdoc_after_frames: Option<u32>,
+) -> PreparedReproLaunch {
+    let mut repro_launch = launch;
+    let mut repro_launch_env = launch_env;
+    let _ = ensure_env_var(&mut repro_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+
+    if check_redraw_hitches_max_total_ms_threshold.is_some() {
+        let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
+        let _ = ensure_env_var(
+            &mut repro_launch_env,
+            "FRET_REDRAW_HITCH_LOG_PATH",
+            "redraw_hitches.log",
+        );
+    }
+
+    let mut tracy_feature_injected: bool = false;
+    let mut tracy_env_enabled: bool = false;
+    if with_tracy {
+        tracy_env_enabled = ensure_env_var(&mut repro_launch_env, "FRET_TRACY", "1");
+        if let Some(cmd) = repro_launch.as_mut() {
+            tracy_feature_injected = cargo_run_inject_feature(cmd, "fret-bootstrap/tracy");
+        }
+
+        let note = "\
+# Tracy capture (best-effort)\n\
+\n\
+This repro was run with `FRET_TRACY=1` (and may have auto-injected `--features fret-bootstrap/tracy` when the launch command was `cargo run`).\n\
+\n\
+Notes:\n\
+- Tracy requires running the target with the `fret-bootstrap/tracy` feature enabled.\n\
+- The capture file is not recorded automatically by `fretboard` yet. Use the Tracy UI to connect and save a capture.\n\
+\n\
+See: `docs/tracy.md`.\n";
+        let _ = std::fs::write(resolved_out_dir.join("tracy.note.md"), note);
+    }
+
+    let mut renderdoc_capture_dir: Option<PathBuf> = None;
+    let mut renderdoc_autocapture_after_frames: Option<u32> = None;
+    if with_renderdoc {
+        let after = renderdoc_after_frames.unwrap_or(60);
+        let capture_dir = resolved_out_dir.join("renderdoc");
+        let _ = std::fs::create_dir_all(&capture_dir);
+
+        let _ = ensure_env_var(&mut repro_launch_env, "FRET_RENDERDOC", "1");
+        let _ = ensure_env_var(
+            &mut repro_launch_env,
+            "FRET_RENDERDOC_CAPTURE_DIR",
+            capture_dir.to_string_lossy().as_ref(),
+        );
+        let _ = ensure_env_var(
+            &mut repro_launch_env,
+            "FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES",
+            &after.to_string(),
+        );
+
+        renderdoc_capture_dir = Some(capture_dir);
+        renderdoc_autocapture_after_frames = Some(after);
+    }
+
+    PreparedReproLaunch {
+        launch: repro_launch,
+        launch_env: repro_launch_env,
+        tracy_feature_injected,
+        tracy_env_enabled,
+        renderdoc_capture_dir,
+        renderdoc_autocapture_after_frames,
+    }
+}
+
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
@@ -234,66 +319,19 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let mut overall_reason_code: Option<String> = None;
 
-    let mut repro_launch = launch.clone();
-    let mut repro_launch_env = launch_env.clone();
-    let _ = ensure_env_var(&mut repro_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
-
-    if check_redraw_hitches_max_total_ms_threshold.is_some() {
-        let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_REDRAW_HITCH_LOG_PATH",
-            "redraw_hitches.log",
-        );
-    }
-
-    let mut tracy_feature_injected: bool = false;
-    let mut tracy_env_enabled: bool = false;
-    if with_tracy {
-        tracy_env_enabled = ensure_env_var(&mut repro_launch_env, "FRET_TRACY", "1");
-        if let Some(cmd) = repro_launch.as_mut() {
-            tracy_feature_injected = cargo_run_inject_feature(cmd, "fret-bootstrap/tracy");
-        }
-
-        let note = "\
-# Tracy capture (best-effort)\n\
-\n\
-This repro was run with `FRET_TRACY=1` (and may have auto-injected `--features fret-bootstrap/tracy` when the launch command was `cargo run`).\n\
-\n\
-Notes:\n\
-- Tracy requires running the target with the `fret-bootstrap/tracy` feature enabled.\n\
-- The capture file is not recorded automatically by `fretboard` yet. Use the Tracy UI to connect and save a capture.\n\
-\n\
-See: `docs/tracy.md`.\n";
-        let _ = std::fs::write(resolved_out_dir.join("tracy.note.md"), note);
-    }
-
-    let mut renderdoc_capture_dir: Option<PathBuf> = None;
-    let mut renderdoc_autocapture_after_frames: Option<u32> = None;
-    if with_renderdoc {
-        let after = renderdoc_after_frames.unwrap_or(60);
-        let capture_dir = resolved_out_dir.join("renderdoc");
-        let _ = std::fs::create_dir_all(&capture_dir);
-
-        let _ = ensure_env_var(&mut repro_launch_env, "FRET_RENDERDOC", "1");
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_RENDERDOC_CAPTURE_DIR",
-            capture_dir.to_string_lossy().as_ref(),
-        );
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES",
-            &after.to_string(),
-        );
-
-        renderdoc_capture_dir = Some(capture_dir);
-        renderdoc_autocapture_after_frames = Some(after);
-    }
+    let prepared_launch = prepare_repro_launch(
+        &resolved_out_dir,
+        launch,
+        launch_env,
+        check_redraw_hitches_max_total_ms_threshold,
+        with_tracy,
+        with_renderdoc,
+        renderdoc_after_frames,
+    );
 
     let mut child = match maybe_launch_demo(
-        &repro_launch,
-        &repro_launch_env,
+        &prepared_launch.launch,
+        &prepared_launch.launch_env,
         &workspace_root,
         &resolved_out_dir,
         &resolved_ready_path,
@@ -364,7 +402,7 @@ See: `docs/tracy.md`.\n";
                 "error": err,
             });
             let _ = write_json_value(&summary_path, &payload);
-            if repro_launch.is_some() {
+            if prepared_launch.launch.is_some() {
                 let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
             return Err("repro setup failed (see repro.summary.json)".to_string());
@@ -828,7 +866,7 @@ See: `docs/tracy.md`.\n";
             renderdoc_markers.clone()
         };
 
-        if let Some(dir) = renderdoc_capture_dir.as_ref() {
+        if let Some(dir) = prepared_launch.renderdoc_capture_dir.as_ref() {
             let captures = wait_for_files_with_extensions(dir, &["rdc"], 10_000, poll_ms);
             repro_process_footprint = repro_process_footprint.or(stop_launched_demo(
                 &mut child,
@@ -946,7 +984,7 @@ See: `docs/tracy.md`.\n";
                 "schema_version": 2,
                 "generated_unix_ms": now_unix_ms(),
                 "capture_dir": "renderdoc",
-                "autocapture_after_frames": renderdoc_autocapture_after_frames,
+                "autocapture_after_frames": prepared_launch.renderdoc_autocapture_after_frames,
                 "captures": capture_rows,
             });
             let _ = write_json_value(&resolved_out_dir.join("renderdoc.captures.json"), &payload);
@@ -987,8 +1025,8 @@ See: `docs/tracy.md`.\n";
         "tracy": if with_tracy {
             serde_json::json!({
                 "requested": true,
-                "env_enabled": tracy_env_enabled,
-                "feature_injected": tracy_feature_injected,
+                "env_enabled": prepared_launch.tracy_env_enabled,
+                "feature_injected": prepared_launch.tracy_feature_injected,
                 "note": "Capture is not recorded automatically yet; use the Tracy UI to save a capture."
             })
         } else {
@@ -999,7 +1037,7 @@ See: `docs/tracy.md`.\n";
                 "schema_version": 2,
                 "generated_unix_ms": now_unix_ms(),
                 "capture_dir": "renderdoc",
-                "autocapture_after_frames": renderdoc_autocapture_after_frames,
+                "autocapture_after_frames": prepared_launch.renderdoc_autocapture_after_frames,
                 "captures": [],
             }))
         } else {
