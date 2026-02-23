@@ -720,6 +720,8 @@ pub(super) fn check_bundle_for_layout_fast_path_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_layout_fast_path_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -784,6 +786,8 @@ pub(super) fn check_bundle_for_prepaint_actions_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_prepaint_actions_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -814,6 +818,8 @@ pub(super) fn check_bundle_for_chart_sampling_window_shifts_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -844,6 +850,8 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -874,6 +882,8 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1005,6 +1015,8 @@ pub(super) fn check_bundle_for_view_cache_reuse_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_view_cache_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1045,6 +1057,8 @@ pub(super) fn check_bundle_for_overlay_synthesis_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_overlay_synthesis_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1071,6 +1085,8 @@ pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1097,6 +1113,8 @@ pub(super) fn check_bundle_for_retained_vlist_attach_detach_max(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_retained_vlist_attach_detach_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1119,6 +1137,8 @@ pub(super) fn check_bundle_for_viewport_input_min(
     interaction_gates::check_bundle_for_viewport_input_min(bundle_path, min_events, warmup_frames)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_viewport_input_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1141,6 +1161,8 @@ pub(super) fn check_bundle_for_dock_drag_min(
     interaction_gates::check_bundle_for_dock_drag_min(bundle_path, min_active_frames, warmup_frames)
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_dock_drag_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1167,6 +1189,8 @@ pub(super) fn check_bundle_for_viewport_capture_min(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_viewport_capture_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1449,6 +1473,8 @@ pub(super) fn check_bundle_for_notify_hotspot_file_max(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_notify_hotspot_file_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
