@@ -170,7 +170,7 @@ pub(crate) fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 18] {
+pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 19] {
     [
         "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
         "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
@@ -189,6 +189,7 @@ pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 18
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json",
         "tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json",
+        "tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json",
         "tools/diag-scripts/ui-gallery-badge-link-render.json",
     ]
 }

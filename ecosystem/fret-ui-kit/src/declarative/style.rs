@@ -175,6 +175,9 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
     }
 
     if let Some(flex) = refinement.flex_item {
+        if let Some(order) = flex.order {
+            layout.flex.order = order;
+        }
         if let Some(grow) = flex.grow {
             layout.flex.grow = grow;
         }

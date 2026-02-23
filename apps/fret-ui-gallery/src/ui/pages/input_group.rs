@@ -314,9 +314,11 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let dropdown = {
         let content = shadcn::InputGroup::new(dropdown_value)
             .a11y_label("Dropdown example")
+            .control_test_id("ui-gallery-input-group-dropdown-control")
             .leading([
                 shadcn::InputGroupButton::new("All")
                     .variant(shadcn::ButtonVariant::Ghost)
+                    .test_id("ui-gallery-input-group-dropdown-leading-button")
                     .into_element(cx),
                 shadcn::InputGroupText::new("v").into_element(cx),
             ])

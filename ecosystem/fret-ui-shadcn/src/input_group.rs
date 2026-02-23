@@ -550,7 +550,7 @@ impl InputGroup {
                                 fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
+                                    LayoutRefinement::default().w_full().min_w_0().order(-1),
                                 ),
                             )
                         };
@@ -613,7 +613,7 @@ impl InputGroup {
                                 fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
+                                    LayoutRefinement::default().w_full().min_w_0().order(1),
                                 ),
                             )
                         };
@@ -680,10 +680,10 @@ impl InputGroup {
                         },
                         move |_cx| {
                             let mut children = Vec::new();
+                            children.push(control_el);
                             if let Some(block_start) = block_start {
                                 children.push(block_start);
                             }
-                            children.push(control_el);
                             if let Some(block_end) = block_end {
                                 children.push(block_end);
                             }
@@ -747,11 +747,17 @@ impl InputGroup {
 
                     let leading = (!leading.is_empty()).then(|| {
                         let layout = if leading_has_button {
-                            LayoutRefinement::default().flex_none().ml_neg(Space::N2)
+                            LayoutRefinement::default()
+                                .flex_none()
+                                .order(-1)
+                                .ml_neg(Space::N2)
                         } else if leading_has_kbd {
-                            LayoutRefinement::default().flex_none().ml_neg(Space::N1p5)
+                            LayoutRefinement::default()
+                                .flex_none()
+                                .order(-1)
+                                .ml_neg(Space::N1p5)
                         } else {
-                            LayoutRefinement::default().flex_none()
+                            LayoutRefinement::default().flex_none().order(-1)
                         };
                         let (layout, gap) = {
                             let theme = Theme::global(&*cx.app);
@@ -781,11 +787,17 @@ impl InputGroup {
 
                     let trailing = (!trailing.is_empty()).then(|| {
                         let layout = if trailing_has_button {
-                            LayoutRefinement::default().flex_none().mr_neg(Space::N2)
+                            LayoutRefinement::default()
+                                .flex_none()
+                                .order(1)
+                                .mr_neg(Space::N2)
                         } else if trailing_has_kbd {
-                            LayoutRefinement::default().flex_none().mr_neg(Space::N1p5)
+                            LayoutRefinement::default()
+                                .flex_none()
+                                .order(1)
+                                .mr_neg(Space::N1p5)
                         } else {
-                            LayoutRefinement::default().flex_none()
+                            LayoutRefinement::default().flex_none().order(1)
                         };
                         let (layout, gap) = {
                             let theme = Theme::global(&*cx.app);
@@ -827,10 +839,10 @@ impl InputGroup {
                         },
                         move |_cx| {
                             let mut children = Vec::new();
+                            children.push(input);
                             if let Some(leading) = leading {
                                 children.push(leading);
                             }
-                            children.push(input);
                             if let Some(trailing) = trailing {
                                 children.push(trailing);
                             }
@@ -933,6 +945,7 @@ pub enum InputGroupButtonSize {
 pub struct InputGroupButton {
     label: Arc<str>,
     children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
     command: Option<CommandId>,
     disabled: bool,
     variant: ButtonVariant,
@@ -947,6 +960,7 @@ impl InputGroupButton {
         Self {
             label: label.into(),
             children: Vec::new(),
+            test_id: None,
             command: None,
             disabled: false,
             variant: ButtonVariant::Ghost,
@@ -962,6 +976,11 @@ impl InputGroupButton {
         I: IntoIterator<Item = AnyElement>,
     {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -1087,6 +1106,7 @@ impl InputGroupButton {
             let label = self.label;
             let a11y_label = self.a11y_label;
             let children = self.children;
+            let test_id = self.test_id;
             let fill_content_width = matches!(
                 self.size,
                 InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm
@@ -1116,6 +1136,7 @@ impl InputGroupButton {
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Button),
                         label: Some(a11y_label.clone().unwrap_or_else(|| label.clone())),
+                        test_id: test_id.clone(),
                         ..Default::default()
                     },
                 };
