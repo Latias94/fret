@@ -326,7 +326,7 @@ impl ElementHostWidget {
                 cx.set_role(SemanticsRole::Generic);
             }
             ElementInstance::Scroll(props) => {
-                cx.set_role(SemanticsRole::Generic);
+                cx.set_role(SemanticsRole::Viewport);
                 cx.set_scroll_by_supported(true);
 
                 let external_handle = props.scroll_handle.clone();

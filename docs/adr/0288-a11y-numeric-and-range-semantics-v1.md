@@ -148,6 +148,7 @@ When structured fields are present, the AccessKit adapter emits:
 
 ## Follow-ups (not required by this ADR)
 
-- Decide whether scroll containers should use a dedicated scroll-view role consistently (and align ecosystem snapshots).
+- Audit `SemanticsRole::Viewport` usage across scroll-like containers vs embedded viewport surfaces; if needed, introduce a
+  dedicated scroll-container role in a future ADR.
 - Expand numeric/range semantics to additional widgets (spinbutton, scrollbar, splitter) once ownership boundaries are
   clear.

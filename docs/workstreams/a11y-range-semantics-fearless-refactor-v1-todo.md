@@ -29,7 +29,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Add snapshot validation for numeric/scroll invariants via `SemanticsNode::validate()` (finite values, bounds order, out-of-bounds values, positive step/jump, `level` is 1-based).
 - [x] Wire default `fret-bootstrap` UI driver hooks for common a11y actions (text selection, replace selected text, numeric set value, slider stepping).
 - [x] Implement best-effort slider `SetValue` numeric handling via key sequences (Home/End/PageUp/PageDown/ArrowUp/ArrowDown).
-- [ ] Decide whether scroll containers should use `SemanticsRole::Viewport` (vs `Generic`) for clearer platform mappings.
+- [x] Scroll containers use `SemanticsRole::Viewport` (instead of `Generic`) for clearer platform mappings.
 
 ## AccessKit adapter
 
