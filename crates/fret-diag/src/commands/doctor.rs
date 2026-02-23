@@ -678,7 +678,7 @@ fn sniff_schema_version_from_json_prefix(bytes: &[u8]) -> Option<u64> {
             .ok()
     }
 
-    for key in [br#""schema_version""#, br#""schemaVersion""#] {
+    for key in [&br#""schema_version""#[..], &br#""schemaVersion""#[..]] {
         let Some(off) = find_subslice(bytes, key) else {
             continue;
         };
