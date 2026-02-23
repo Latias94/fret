@@ -1175,7 +1175,13 @@ fn combobox_with_patch<H: UiHost>(
                             let non_empty_groups_len = non_empty_groups.len();
 
                             if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
-                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
                             }
 
                             for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1185,7 +1191,13 @@ fn combobox_with_patch<H: UiHost>(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
                                 if group_separators && idx + 1 < non_empty_groups_len {
-                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                        CommandSeparator::new()
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
+                                    } else {
+                                        CommandSeparator::new()
+                                    };
+                                    entries.push(CommandEntry::Separator(sep));
                                 }
                             }
 
@@ -1313,7 +1325,13 @@ fn combobox_with_patch<H: UiHost>(
                                 .collect();
                             let non_empty_groups_len = non_empty_groups.len();
                             if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
-                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
                             }
 
                             for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1326,7 +1344,13 @@ fn combobox_with_patch<H: UiHost>(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
                                 if group_separators && idx + 1 < non_empty_groups_len {
-                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                        CommandSeparator::new()
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
+                                    } else {
+                                        CommandSeparator::new()
+                                    };
+                                    entries.push(CommandEntry::Separator(sep));
                                 }
                             }
 
@@ -1729,7 +1753,12 @@ fn combobox_with_patch<H: UiHost>(
                     let non_empty_groups_len = non_empty_groups.len();
 
                     if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
-                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
+                        } else {
+                            CommandSeparator::new()
+                        };
+                        entries.push(CommandEntry::Separator(sep));
                     }
 
                     for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1739,7 +1768,12 @@ fn combobox_with_patch<H: UiHost>(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
                         if group_separators && idx + 1 < non_empty_groups_len {
-                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
+                            } else {
+                                CommandSeparator::new()
+                            };
+                            entries.push(CommandEntry::Separator(sep));
                         }
                     }
 
@@ -1865,7 +1899,12 @@ fn combobox_with_patch<H: UiHost>(
                         .collect();
                     let non_empty_groups_len = non_empty_groups.len();
                     if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
-                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
+                        } else {
+                            CommandSeparator::new()
+                        };
+                        entries.push(CommandEntry::Separator(sep));
                     }
 
                     for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1878,7 +1917,12 @@ fn combobox_with_patch<H: UiHost>(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
                         if group_separators && idx + 1 < non_empty_groups_len {
-                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
+                            } else {
+                                CommandSeparator::new()
+                            };
+                            entries.push(CommandEntry::Separator(sep));
                         }
                     }
 
