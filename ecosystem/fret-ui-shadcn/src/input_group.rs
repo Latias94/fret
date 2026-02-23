@@ -4,6 +4,7 @@ use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
+use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnKeyDown;
 use fret_ui::element::{
@@ -14,6 +15,8 @@ use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
@@ -933,6 +936,9 @@ pub enum InputGroupButtonSize {
 pub struct InputGroupButton {
     label: Arc<str>,
     children: Vec<AnyElement>,
+    icon: Option<IconId>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     command: Option<CommandId>,
     disabled: bool,
     variant: ButtonVariant,
@@ -947,6 +953,9 @@ impl InputGroupButton {
         Self {
             label: label.into(),
             children: Vec::new(),
+            icon: None,
+            leading_icon: None,
+            trailing_icon: None,
             command: None,
             disabled: false,
             variant: ButtonVariant::Ghost,
@@ -962,6 +971,27 @@ impl InputGroupButton {
         I: IntoIterator<Item = AnyElement>,
     {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Sets an icon-only affordance rendered under the button's `currentColor` scope.
+    ///
+    /// When set, the label and `children` are ignored for the visual content (but can still be
+    /// used as the accessibility label via `a11y_label`).
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    /// Adds a leading icon rendered under the button's `currentColor` scope.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon rendered under the button's `currentColor` scope.
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
         self
     }
 
@@ -1087,6 +1117,9 @@ impl InputGroupButton {
             let label = self.label;
             let a11y_label = self.a11y_label;
             let children = self.children;
+            let icon = self.icon;
+            let leading_icon = self.leading_icon;
+            let trailing_icon = self.trailing_icon;
             let fill_content_width = matches!(
                 self.size,
                 InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm
@@ -1138,54 +1171,77 @@ impl InputGroupButton {
                 };
 
                 let content = move |cx: &mut ElementContext<'_, H>| {
-                    let mut row = Vec::new();
-                    if !label.is_empty() {
-                        let mut style =
-                            typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
-                        style.weight = FontWeight::MEDIUM;
-                        row.push(cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Auto,
-                                    height: Length::Px(line_height),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            text: label,
-                            style: Some(style),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        }));
-                    }
-                    row.extend(children);
+                    current_color::with_current_color_provider(
+                        cx,
+                        fret_ui_kit::ColorRef::Color(fg),
+                        |cx| {
+                            let icon_px = Px(16.0);
 
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: if fill_content_width {
-                                        Length::Fill
-                                    } else {
-                                        Length::Auto
+                            let mut row = Vec::new();
+                            if let Some(icon) = icon {
+                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            } else {
+                                if let Some(icon) = leading_icon {
+                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                                }
+
+                                if !label.is_empty() {
+                                    let mut style = typography::fixed_line_box_style(
+                                        FontId::ui(),
+                                        text_px,
+                                        line_height,
+                                    );
+                                    style.weight = FontWeight::MEDIUM;
+                                    row.push(cx.text_props(TextProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Auto,
+                                                height: Length::Px(line_height),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        text: label,
+                                        style: Some(style),
+                                        color: Some(fg),
+                                        wrap: TextWrap::None,
+                                        overflow: TextOverflow::Clip,
+                                        align: fret_core::TextAlign::Start,
+                                        ink_overflow: Default::default(),
+                                    }));
+                                }
+                                row.extend(children);
+
+                                if let Some(icon) = trailing_icon {
+                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                                }
+                            }
+
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: if fill_content_width {
+                                                Length::Fill
+                                            } else {
+                                                Length::Auto
+                                            },
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
                                     },
-                                    height: Length::Fill,
-                                    ..Default::default()
+                                    direction: Axis::Horizontal,
+                                    gap,
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: fret_ui::element::MainAlign::Center,
+                                    align: fret_ui::element::CrossAlign::Center,
+                                    wrap: false,
                                 },
-                                ..Default::default()
-                            },
-                            direction: Axis::Horizontal,
-                            gap,
-                            padding: Edges::all(Px(0.0)),
-                            justify: fret_ui::element::MainAlign::Center,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
+                                move |_cx| row,
+                            )]
                         },
-                        move |_cx| row,
-                    )]
+                    )
                 };
 
                 (pressable_props, chrome_props, content)
