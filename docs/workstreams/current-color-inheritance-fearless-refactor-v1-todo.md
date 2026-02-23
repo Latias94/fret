@@ -30,12 +30,12 @@ Last updated: 2026-02-23
 
 ## Text adoption (the big win after icons)
 
-- [ ] Decide the minimal text surface that should inherit `currentColor`:
-  - [ ] `fret-ui-kit::ui::text(...)` default color?
-  - [ ] `declarative::text` wrappers?
-  - [ ] a separate `currentTextStyle` provider (v2)?
-- [ ] Implement the chosen default (inherit-first, theme fallback second).
-- [ ] Add a focused unit test proving “button sets fg → text inherits fg”.
+- [x] Decide the minimal text surface that should inherit `currentColor`:
+  - [x] `fret-ui-kit::ui::text(...)` default color (via `ui::TextBox` + `ui::RawTextBox`).
+  - [ ] `declarative::text` wrappers? (defer)
+  - [ ] a separate `currentTextStyle` provider (v2)? (defer)
+- [x] Implement the chosen default (inherit-first, theme fallback second).
+- [x] Add a focused unit test proving text inherits `currentColor`.
 
 ## Gallery + docs cleanups
 

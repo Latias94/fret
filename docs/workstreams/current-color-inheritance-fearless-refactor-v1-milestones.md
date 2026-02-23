@@ -63,11 +63,15 @@ Evidence anchors:
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json`
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json`
 
-### M5 — Text adoption (planned; biggest ROI after icons)
+### M5 — Text adoption (landed; biggest ROI after icons)
 
 - Decide the minimal text surface that should inherit `currentColor` (v1 scope is “foreground only”).
-- Implement inherit-first, theme-fallback-second for the chosen surface.
-- Add a focused unit test proving “button sets fg → text inherits fg”.
+- Implement inherit-first, theme-fallback-second for `ui::TextBox` + `ui::RawTextBox`.
+- Add a focused unit test proving text inherits `currentColor` when available.
+
+Evidence anchor:
+
+- `ecosystem/fret-ui-kit/src/ui.rs`
 
 ### M6 — Close the loop (planned)
 
