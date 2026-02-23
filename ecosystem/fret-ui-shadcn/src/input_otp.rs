@@ -40,6 +40,45 @@ fn otp_active_ring_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("ring"))
 }
 
+fn otp_invalid_ring_color(theme: &Theme) -> Color {
+    let border_color = theme.color_token("destructive");
+    let ring_key = if theme.name.contains("/dark") {
+        "destructive/40"
+    } else {
+        "destructive/20"
+    };
+    theme
+        .color_by_key(ring_key)
+        .or_else(|| theme.color_by_key("destructive/20"))
+        .unwrap_or(border_color)
+}
+
+fn otp_slot_border_color(
+    theme: &Theme,
+    border_color: Color,
+    border_color_focused: Color,
+    is_active: bool,
+    aria_invalid: bool,
+) -> Color {
+    if aria_invalid {
+        return theme.color_token("destructive");
+    }
+
+    if is_active {
+        border_color_focused
+    } else {
+        border_color
+    }
+}
+
+fn otp_slot_ring_color(theme: &Theme, aria_invalid: bool) -> Color {
+    if aria_invalid {
+        otp_invalid_ring_color(theme)
+    } else {
+        otp_active_ring_color(theme)
+    }
+}
+
 fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
     let mut out = String::new();
     out.reserve(length.min(input.len()));
@@ -74,6 +113,8 @@ pub struct InputOtp {
     length: usize,
     numeric_only: bool,
     group_size: Option<usize>,
+    aria_invalid: bool,
+    disabled: bool,
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -93,6 +134,8 @@ impl std::fmt::Debug for InputOtp {
             .field("length", &self.length)
             .field("numeric_only", &self.numeric_only)
             .field("group_size", &self.group_size)
+            .field("aria_invalid", &self.aria_invalid)
+            .field("disabled", &self.disabled)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
@@ -120,6 +163,8 @@ impl InputOtp {
             length: 6,
             numeric_only: true,
             group_size: None,
+            aria_invalid: false,
+            disabled: false,
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -150,6 +195,18 @@ impl InputOtp {
 
     pub fn group_size(mut self, group_size: Option<usize>) -> Self {
         self.group_size = group_size.and_then(|v| if v >= 1 { Some(v) } else { None });
+        self
+    }
+
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
+    /// Apply the upstream `disabled` interaction + chrome outcome.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -278,6 +335,8 @@ impl InputOtp {
                 input.chrome = chrome;
                 input.text_style = slot_text_style.clone();
                 input.test_id = input_test_id.clone();
+                input.enabled = !self.disabled;
+                input.focusable = !self.disabled;
                 input.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
@@ -297,7 +356,7 @@ impl InputOtp {
                 let input_el = cx.text_input(input);
 
                 let input_id = input_el.id;
-                let focused = cx.is_focused_element(input_id);
+                let focused = cx.is_focused_element(input_id) && !self.disabled;
                 let active_slot_idx = focused.then(|| chars.len().min(length.saturating_sub(1)));
                 let fake_caret_idx = (focused && chars.len() < length).then_some(chars.len());
 
@@ -330,11 +389,13 @@ impl InputOtp {
 
                         let bg = resolved.background;
                         let border = resolved.border_width;
-                        let border_color = if is_active {
-                            resolved.border_color_focused
-                        } else {
-                            resolved.border_color
-                        };
+                        let border_color = otp_slot_border_color(
+                            &theme,
+                            resolved.border_color,
+                            resolved.border_color_focused,
+                            is_active,
+                            self.aria_invalid,
+                        );
                         let radius = resolved.radius;
                         let fg = resolved.text_color;
 
@@ -566,7 +627,7 @@ impl InputOtp {
                             .and_then(|id| cx.last_bounds_for_element(*id));
                         if let (Some(root_bounds), Some(slot_bounds)) = (root_bounds, slot_bounds) {
                             let ring_w = otp_active_ring_width(&theme);
-                            let ring_color = otp_active_ring_color(&theme);
+                            let ring_color = otp_slot_ring_color(&theme, self.aria_invalid);
                             let corners = slot_corners
                                 .get(active_idx)
                                 .copied()
@@ -724,5 +785,27 @@ mod tests {
         render(&mut ui, &mut app, &mut services, model.clone());
 
         assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
+    }
+
+    #[test]
+    fn input_otp_aria_invalid_uses_destructive_border_color() {
+        let app = App::new();
+        let theme = Theme::global(&app).clone();
+        let resolved = resolve_input_chrome(
+            &theme,
+            ComponentSize::default(),
+            &ChromeRefinement::default(),
+            InputTokenKeys::none(),
+        );
+
+        let invalid = otp_slot_border_color(
+            &theme,
+            resolved.border_color,
+            resolved.border_color_focused,
+            false,
+            true,
+        );
+
+        assert_eq!(invalid, theme.color_token("destructive"));
     }
 }
