@@ -178,6 +178,7 @@ scope: diagnostics, automation, tooling, refactor
   - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
   - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
   - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
+  - [x] Accept `bundle.schema2.json` as a primary bundle artifact (so `--fix-sidecars` works even when the directory only contains schema2).
 - [x] Add `--bundle-doctor` integration for `diag run` / `diag suite` / `diag perf` (per-bundle preflight).
   - Modes: `check` / `check-all` / `fix` / `fix-dry-run`.
   - Evidence anchors:
