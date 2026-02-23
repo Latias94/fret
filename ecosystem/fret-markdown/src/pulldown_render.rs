@@ -238,7 +238,7 @@ fn render_pulldown_table<H: UiHost>(
 
     cx.scroll(scroll_props, |cx| {
         let mut table_props = ContainerProps::default();
-        table_props.padding = Edges::all(Px(0.0));
+        table_props.padding = Edges::all(Px(0.0)).into();
         table_props.border = Edges::all(Px(1.0));
         table_props.border_color = Some(markdown_theme.table_border);
         table_props.background = None;
@@ -247,8 +247,8 @@ fn render_pulldown_table<H: UiHost>(
             let mut column_props = FlexProps::default();
             column_props.direction = Axis::Vertical;
             column_props.wrap = false;
-            column_props.gap = Px(0.0);
-            column_props.padding = Edges::all(Px(0.0));
+            column_props.gap = Px(0.0).into();
+            column_props.padding = Edges::all(Px(0.0)).into();
             column_props.justify = MainAlign::Start;
             column_props.align = CrossAlign::Start;
 
@@ -259,8 +259,8 @@ fn render_pulldown_table<H: UiHost>(
                         let mut row_props = FlexProps::default();
                         row_props.direction = Axis::Horizontal;
                         row_props.wrap = false;
-                        row_props.gap = Px(0.0);
-                        row_props.padding = Edges::all(Px(0.0));
+                        row_props.gap = Px(0.0).into();
+                        row_props.padding = Edges::all(Px(0.0)).into();
                         row_props.justify = MainAlign::Start;
                         row_props.align = CrossAlign::Stretch;
 
@@ -352,13 +352,14 @@ fn render_table_cell<H: UiHost>(
     let mut props = ContainerProps::default();
     props.layout.flex.grow = 1.0;
     props.layout.flex.basis = Length::Px(Px(0.0));
-    props.layout.size.min_width = Some(Px(0.0));
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
     props.padding = Edges {
         top: markdown_theme.table_cell_padding_y,
         right: markdown_theme.table_cell_padding_x,
         bottom: markdown_theme.table_cell_padding_y,
         left: markdown_theme.table_cell_padding_x,
-    };
+    }
+    .into();
     props.border = Edges {
         top: if row_index > 0 { Px(1.0) } else { Px(0.0) },
         right: Px(0.0),
@@ -539,7 +540,7 @@ fn render_blockquote_container<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
-    props.padding = Edges::all(markdown_theme.blockquote_padding);
+    props.padding = Edges::all(markdown_theme.blockquote_padding).into();
     props.border = Edges {
         top: Px(0.0),
         right: Px(0.0),
@@ -714,7 +715,8 @@ fn render_pulldown_list<H: UiHost + 'static>(
     props.padding = Edges {
         left: indent,
         ..Edges::all(Px(0.0))
-    };
+    }
+    .into();
     props.border = Edges::all(Px(0.0));
     cx.container(props, |_cx| vec![list_el])
 }

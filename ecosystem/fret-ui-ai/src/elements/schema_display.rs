@@ -530,7 +530,8 @@ impl SchemaDisplayMethod {
         props.padding = Edges::symmetric(
             MetricRef::space(Space::N2).resolve(&theme),
             MetricRef::space(Space::N0p5).resolve(&theme),
-        );
+        )
+        .into();
         props.background = Some(bg);
         props.border = Edges::all(Px(1.0));
         props.border_color = Some(border_color(&theme));
@@ -675,7 +676,8 @@ impl SchemaDisplayDescription {
         props.padding = Edges::symmetric(
             MetricRef::space(Space::N4).resolve(&theme),
             MetricRef::space(Space::N3).resolve(&theme),
-        );
+        )
+        .into();
         props.border = Edges {
             top: Px(0.0),
             right: Px(0.0),
@@ -1071,7 +1073,8 @@ impl SchemaDisplayParameter {
             right: pad_x,
             bottom: pad_y,
             left: Px(pad_x.0 + 24.0),
-        };
+        }
+        .into();
 
         cx.container(props, move |_cx| {
             let mut children = vec![line];
@@ -1371,7 +1374,8 @@ fn schema_inline_description<H: UiHost>(
         right: MetricRef::space(Space::N4).resolve(theme),
         bottom: pad_bottom,
         left: padding_left,
-    };
+    }
+    .into();
 
     cx.container(props, move |cx| {
         vec![
@@ -1466,7 +1470,8 @@ fn schema_section_trigger<H: UiHost + 'static>(
         props.padding = Edges::symmetric(
             MetricRef::space(Space::N4).resolve(&theme_for_row),
             MetricRef::space(Space::N3).resolve(&theme_for_row),
-        );
+        )
+        .into();
         props.background = Some(bg);
 
         vec![cx.container(props, move |_cx| vec![row])]
@@ -1579,7 +1584,8 @@ fn schema_property_trigger_row<H: UiHost + 'static>(
             right: MetricRef::space(Space::N4).resolve(&theme_for_row),
             bottom: MetricRef::space(Space::N3).resolve(&theme_for_row),
             left: padding_left,
-        };
+        }
+        .into();
         props.background = Some(bg);
 
         vec![cx.container(props, move |_cx| vec![row])]
@@ -1645,7 +1651,8 @@ fn schema_property_leaf<H: UiHost>(
         right: MetricRef::space(Space::N4).resolve(theme),
         bottom: MetricRef::space(Space::N3).resolve(theme),
         left: padding_left,
-    };
+    }
+    .into();
 
     let el = cx.container(props, move |_cx| inner);
     let Some(test_id) = test_id else {

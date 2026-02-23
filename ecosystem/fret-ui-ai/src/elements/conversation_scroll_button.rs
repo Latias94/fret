@@ -131,7 +131,7 @@ impl ConversationScrollButton {
         cx.container(
             ContainerProps {
                 layout: overlay_layout,
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: None,
                 corner_radii: Corners::all(Px(0.0)),
                 ..Default::default()

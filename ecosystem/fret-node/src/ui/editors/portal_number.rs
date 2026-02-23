@@ -217,7 +217,7 @@ impl PortalNumberEditor {
             layout.node_window.origin.y.0 + style.node_header_height + style.node_padding;
 
         let mut column = ColumnProps::default();
-        column.gap = Px(ui.gap);
+        column.gap = Px(ui.gap).into();
         column.layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
@@ -254,7 +254,7 @@ impl PortalNumberEditor {
         vec![ecx.column(column, |cx| {
             let input_row = if show_stepper || show_drag {
                 let mut row = RowProps::default();
-                row.gap = Px(ui.gap);
+                row.gap = Px(ui.gap).into();
                 row.layout.size.width = Length::Fill;
 
                 cx.row(row, |cx| {
@@ -265,8 +265,8 @@ impl PortalNumberEditor {
                     props.layout.size.width = Length::Fill;
 
                     let mut btn_col = ColumnProps::default();
-                    btn_col.gap = Px(2.0);
-                    btn_col.padding = Edges::all(Px(0.0));
+                    btn_col.gap = Px(2.0).into();
+                    btn_col.padding = Edges::all(Px(0.0)).into();
                     btn_col.layout.size.width = Length::Px(Px(ui.button.size));
 
                     let drag_button = if show_drag {

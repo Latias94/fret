@@ -378,7 +378,7 @@ impl InputOtp {
                                     },
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 background: Some(bg),
                                 shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                 border: slot_border,
@@ -400,8 +400,8 @@ impl InputOtp {
                                             ..Default::default()
                                         },
                                         direction: Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -456,8 +456,8 @@ impl InputOtp {
                                                         ..Default::default()
                                                     },
                                                     direction: Axis::Horizontal,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Center,
                                                     align: CrossAlign::Center,
                                                     wrap: false,
@@ -504,8 +504,8 @@ impl InputOtp {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: Axis::Horizontal,
-                            gap: slot_gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: slot_gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -525,8 +525,8 @@ impl InputOtp {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -547,8 +547,8 @@ impl InputOtp {
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: Axis::Horizontal,
-                        gap: container_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: container_gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,

@@ -582,23 +582,26 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap,
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
+                                vec![
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: Axis::Horizontal,
+                                            gap: gap.into(),
+                                            padding: Edges {
+                                                top: pt,
+                                                right: px_3,
+                                                bottom: pb,
+                                                left: px_3,
+                                            }
+                                            .into(),
+                                            justify: fret_ui::element::MainAlign::Start,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_start,
-                                )]
+                                        move |_cx| block_start,
+                                    ),
+                                ]
                             },
                         )
                     });
@@ -641,23 +644,26 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap,
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
+                                vec![
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: Axis::Horizontal,
+                                            gap: gap.into(),
+                                            padding: Edges {
+                                                top: pt,
+                                                right: px_3,
+                                                bottom: pb,
+                                                left: px_3,
+                                            }
+                                            .into(),
+                                            justify: fret_ui::element::MainAlign::Start,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_end,
-                                )]
+                                        move |_cx| block_end,
+                                    ),
+                                ]
                             },
                         )
                     });
@@ -672,8 +678,8 @@ impl InputGroup {
                                 )
                             },
                             direction: Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Stretch,
                             wrap: false,
@@ -764,13 +770,14 @@ impl InputGroup {
                             FlexProps {
                                 layout,
                                 direction: Axis::Horizontal,
-                                gap,
+                                gap: gap.into(),
                                 padding: Edges {
                                     top: addon_py,
                                     right: Px(0.0),
                                     bottom: addon_py,
                                     left: addon_pl,
-                                },
+                                }
+                                .into(),
                                 justify: fret_ui::element::MainAlign::Center,
                                 align: fret_ui::element::CrossAlign::Center,
                                 wrap: false,
@@ -798,13 +805,14 @@ impl InputGroup {
                             FlexProps {
                                 layout,
                                 direction: Axis::Horizontal,
-                                gap,
+                                gap: gap.into(),
                                 padding: Edges {
                                     top: addon_py,
                                     right: addon_pl,
                                     bottom: addon_py,
                                     left: Px(0.0),
-                                },
+                                }
+                                .into(),
                                 justify: fret_ui::element::MainAlign::Center,
                                 align: fret_ui::element::CrossAlign::Center,
                                 wrap: false,
@@ -819,8 +827,8 @@ impl InputGroup {
                         FlexProps {
                             layout: flex_layout,
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,
@@ -1133,7 +1141,8 @@ impl InputGroupButton {
                         right: padding_x,
                         bottom: Px(0.0),
                         left: padding_x,
-                    },
+                    }
+                    .into(),
                     ..Default::default()
                 };
 
@@ -1178,8 +1187,8 @@ impl InputGroupButton {
                                 ..Default::default()
                             },
                             direction: Axis::Horizontal,
-                            gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Center,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,

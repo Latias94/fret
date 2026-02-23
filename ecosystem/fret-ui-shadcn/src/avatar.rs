@@ -196,8 +196,8 @@ impl AvatarBadge {
                 FlexProps {
                     layout: LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -295,8 +295,8 @@ impl AvatarGroup {
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -384,8 +384,8 @@ impl AvatarGroupCount {
                 FlexProps {
                     layout: LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -671,8 +671,8 @@ impl AvatarFallback {
                 FlexProps {
                     layout: flex_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,

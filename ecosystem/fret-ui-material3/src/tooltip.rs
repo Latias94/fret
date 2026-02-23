@@ -12,7 +12,7 @@ use fret_core::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, Elements, FlexProps, HoverRegionProps, LayoutStyle,
-    PointerRegionProps, SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
+    Length, PointerRegionProps, SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -731,12 +731,12 @@ impl PlainTooltip {
             };
 
             let mut layout = LayoutStyle::default();
-            layout.size.max_width = Some(content_max_width);
+            layout.size.max_width = Some(Length::Px(content_max_width));
 
             let container = cx.container(
                 ContainerProps {
                     layout,
-                    padding: container_padding,
+                    padding: container_padding.into(),
                     background: Some(container_bg),
                     shadow,
                     corner_radii,
@@ -1327,7 +1327,7 @@ impl RichTooltip {
                 } => {
                     let mut props = FlexProps::default();
                     props.direction = Axis::Vertical;
-                    props.gap = text_gap;
+                    props.gap = text_gap.into();
 
                     cx.flex(props, move |cx| {
                         let mut children = Vec::new();
@@ -1360,12 +1360,12 @@ impl RichTooltip {
             };
 
             let mut layout = LayoutStyle::default();
-            layout.size.max_width = Some(content_max_width);
+            layout.size.max_width = Some(Length::Px(content_max_width));
 
             let container = cx.container(
                 ContainerProps {
                     layout,
-                    padding: container_padding,
+                    padding: container_padding.into(),
                     background: Some(container_bg),
                     shadow,
                     corner_radii,

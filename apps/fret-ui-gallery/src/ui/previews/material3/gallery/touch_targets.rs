@@ -181,7 +181,7 @@ pub(in crate::ui) fn preview_material3_touch_targets(
         props.layout.size.width = fret_ui::element::Length::Fill;
         props.direction = fret_core::Axis::Horizontal;
         props.wrap = true;
-        props.gap = Px(16.0);
+        props.gap = Px(16.0).into();
         props.align = fret_ui::element::CrossAlign::Start;
         props.justify = fret_ui::element::MainAlign::Start;
 

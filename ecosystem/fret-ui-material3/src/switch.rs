@@ -695,7 +695,8 @@ impl Switch {
                             right: Px(0.0),
                             bottom: size.track_y_offset,
                             left: Px(0.0),
-                        };
+                        }
+                        .into();
                         outer.corner_radii = Corners::all(Px(0.0));
 
                         let chrome = cx.container(outer, move |_cx| vec![overlay, track]);
@@ -909,8 +910,8 @@ fn switch_track<H: UiHost>(
                 FlexProps {
                     layout,
                     direction: Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -1093,8 +1094,8 @@ fn material_switch_icon_layer<H: UiHost>(
             FlexProps {
                 layout,
                 direction: Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
                 wrap: false,

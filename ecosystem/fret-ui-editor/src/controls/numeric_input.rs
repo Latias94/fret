@@ -256,7 +256,7 @@ where
                     size: SizeStyle {
                         width: Length::Fill,
                         height: Length::Fill,
-                        min_height: Some(density.row_height),
+                        min_height: Some(Length::Px(density.row_height)),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -451,7 +451,7 @@ where
 
         let mut layout = options.layout;
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.row_height);
+            layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         cx.flex(

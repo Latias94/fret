@@ -140,7 +140,8 @@ pub(crate) fn render_copy_button<H: UiHost>(
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_x,
-            },
+            }
+            .into(),
             corner_radii: fret_core::Corners::all(radius_sm),
             background: Some(bg),
             border: Edges::all(Px(0.0)),

@@ -281,7 +281,7 @@ impl Menu {
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
-            roving.flex.gap = Px(0.0);
+            roving.flex.gap = Px(0.0).into();
             roving.flex.align = CrossAlign::Stretch;
             roving.flex.justify = MainAlign::Start;
             roving.roving = fret_ui::element::RovingFocusProps {
@@ -577,7 +577,8 @@ fn material_menu_item<H: UiHost>(
                     right: Px(12.0),
                     top: Px(0.0),
                     bottom: Px(0.0),
-                };
+                }
+                .into();
 
                 let mut chrome = cx.flex(row, move |_cx| vec![overlay, label_el]);
                 if let Some(test_id) = chrome_test_id.clone() {

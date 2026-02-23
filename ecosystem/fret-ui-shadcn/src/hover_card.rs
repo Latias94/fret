@@ -122,12 +122,18 @@ fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
         if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
             let width_hint = match layout.size.width {
                 Length::Px(w) => Some(w),
-                _ => layout.size.max_width,
+                _ => layout.size.max_width.and_then(|l| match l {
+                    Length::Px(w) => Some(w),
+                    _ => None,
+                }),
             };
             if let Some(w) = width_hint {
                 let height_hint = match layout.size.height {
                     Length::Px(h) => Some(h),
-                    _ => layout.size.max_height,
+                    _ => layout.size.max_height.and_then(|l| match l {
+                        Length::Px(h) => Some(h),
+                        _ => None,
+                    }),
                 };
                 let h = height_hint.unwrap_or(Px(120.0));
                 let candidate = Size::new(w, h);
@@ -1257,8 +1263,8 @@ mod tests {
                             layout
                         },
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Start,
                         wrap: false,
@@ -1315,8 +1321,8 @@ mod tests {
                             layout
                         },
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Start,
                         wrap: false,

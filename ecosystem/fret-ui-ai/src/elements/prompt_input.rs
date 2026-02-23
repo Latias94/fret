@@ -1377,8 +1377,8 @@ impl PromptInput {
             FlexProps {
                 layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
                 direction: Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::End,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -1672,8 +1672,8 @@ impl PromptInputHeader {
             FlexProps {
                 layout: decl_style::layout_style(&theme, self.layout),
                 direction: Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: true,
@@ -1719,8 +1719,8 @@ impl PromptInputFooter {
             FlexProps {
                 layout: decl_style::layout_style(&theme, self.layout),
                 direction: Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -1774,8 +1774,8 @@ impl PromptInputTools {
             FlexProps {
                 layout: decl_style::layout_style(&theme, self.layout),
                 direction: Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,

@@ -241,7 +241,7 @@ impl AlertDialog {
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             background: Some(overlay_color),
                             shadow: None,
                             border: Edges::all(Px(0.0)),
@@ -460,7 +460,10 @@ impl AlertDialogContent {
             .size
             .as_ref()
             .and_then(|s| s.max_width.as_ref())
-            .map(|m| m.resolve(&theme))
+            .and_then(|m| match m {
+                fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(&theme)),
+                _ => None,
+            })
         {
             crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
         }

@@ -565,7 +565,7 @@ impl CardFooter {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_top: false,
-            gap: Space::N0,
+            gap: Space::N0.into(),
             wrap: false,
         }
     }

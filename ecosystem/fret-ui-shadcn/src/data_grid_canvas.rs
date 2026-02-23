@@ -74,7 +74,7 @@ impl DataGridCanvasAxis {
             revision,
             mode: GridAxisMeasureMode::Measured,
             estimate,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding_start: Px(0.0),
             min: Px(0.0),
             max: None,

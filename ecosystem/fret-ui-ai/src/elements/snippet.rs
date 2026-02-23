@@ -140,7 +140,8 @@ impl SnippetText {
                     right: pad_x,
                     bottom: pad_y,
                     left: Px(pad_x.0.max(0.0) * 0.75),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -231,7 +232,7 @@ impl SnippetInput {
                     layout.size.height = Length::Auto;
                     layout
                 },
-                padding: Edges::symmetric(pad_x, pad_y),
+                padding: Edges::symmetric(pad_x, pad_y).into(),
                 ..Default::default()
             },
             move |cx| vec![cx.selectable_text_props(props)],
@@ -440,7 +441,7 @@ impl SnippetCopyButton {
             chrome_props.background = Some(bg);
             chrome_props.corner_radii = fret_core::Corners::all(radius);
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
                 let row = stack::hstack(

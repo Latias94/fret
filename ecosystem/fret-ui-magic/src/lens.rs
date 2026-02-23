@@ -177,7 +177,7 @@ where
 
                     let container_props = ContainerProps {
                         layout: container_layout,
-                        padding: props.padding,
+                        padding: props.padding.into(),
                         corner_radii: props.corner_radii,
                         ..Default::default()
                     };

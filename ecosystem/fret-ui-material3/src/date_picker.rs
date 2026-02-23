@@ -659,14 +659,14 @@ fn date_picker_modal_panel<H: UiHost>(
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(12.0),
+            gap: Px(12.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l.size.height = Length::Fill;
                 l
             },
-            padding: Edges::all(Px(16.0)),
+            padding: Edges::all(Px(16.0)).into(),
         },
         move |cx| {
             vec![
@@ -707,7 +707,7 @@ fn date_picker_actions<H: UiHost>(
     props.justify = MainAlign::End;
     props.align = CrossAlign::Center;
     props.wrap = false;
-    props.gap = Px(12.0);
+    props.gap = Px(12.0).into();
     props.layout.size.width = Length::Fill;
 
     cx.flex(props, move |cx| {
@@ -743,7 +743,7 @@ fn date_picker_body<H: UiHost>(
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
-            gap: Px(8.0),
+            gap: Px(8.0).into(),
             layout: {
                 let mut l = LayoutStyle::default();
                 l.size.width = Length::Fill;
@@ -810,7 +810,7 @@ fn month_nav_header<H: UiHost>(
     row.align = CrossAlign::Center;
     row.wrap = false;
     row.layout.size.width = Length::Fill;
-    row.gap = Px(12.0);
+    row.gap = Px(12.0).into();
 
     let title_el = {
         let (style, color) = {
@@ -904,7 +904,7 @@ fn weekdays_row<H: UiHost>(
     row.align = CrossAlign::Center;
     row.wrap = false;
     row.layout.size.width = Length::Fill;
-    row.gap = Px(0.0);
+    row.gap = Px(0.0).into();
 
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -996,7 +996,7 @@ fn dates_grid<H: UiHost>(
     grid.justify = MainAlign::Start;
     grid.align = CrossAlign::Stretch;
     grid.wrap = false;
-    grid.gap = Px(4.0);
+    grid.gap = Px(4.0).into();
     grid.layout.size.width = Length::Fill;
 
     cx.flex(grid, move |cx| {
@@ -1011,7 +1011,7 @@ fn dates_grid<H: UiHost>(
             row.justify = MainAlign::SpaceBetween;
             row.align = CrossAlign::Center;
             row.wrap = false;
-            row.gap = Px(0.0);
+            row.gap = Px(0.0).into();
             row.layout.size.width = Length::Fill;
 
             let row_days = &days[(row_idx * 7)..((row_idx + 1) * 7)];

@@ -213,7 +213,7 @@ pub mod composable {
                         vec![cx.container(
                             ContainerProps {
                                 layout: props.layout,
-                                padding: props.padding,
+                                padding: props.padding.into(),
                                 background: props.background,
                                 shadow: props.shadow,
                                 border: props.border,
@@ -271,8 +271,8 @@ pub mod composable {
                                 vec![cx.row(
                                     RowProps {
                                         layout: LayoutStyle::default(),
-                                        gap: trigger_gap(&theme),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: trigger_gap(&theme).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::SpaceBetween,
                                         align: CrossAlign::Start,
                                     },
@@ -391,12 +391,12 @@ pub mod composable {
             cx.container(props, move |cx| {
                 let mut column_layout = LayoutStyle::default();
                 column_layout.size.width = Length::Fill;
-                column_layout.size.min_width = Some(Px(0.0));
+                column_layout.size.min_width = Some(Length::Px(Px(0.0)));
                 vec![cx.column(
                     ColumnProps {
                         layout: column_layout,
-                        gap: MetricRef::space(Space::N4).resolve(&theme),
-                        padding: Edges::all(Px(0.0)),
+                        gap: MetricRef::space(Space::N4).resolve(&theme).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -730,8 +730,8 @@ pub mod composable {
                 cx.container(wrapper, move |cx| {
                     let mut flex = fret_ui::element::FlexProps {
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -1045,7 +1045,7 @@ impl AccordionTrigger {
                     vec![cx.container(
                         ContainerProps {
                             layout: props.layout,
-                            padding: props.padding,
+                            padding: props.padding.into(),
                             background: props.background,
                             shadow: props.shadow,
                             border: props.border,
@@ -1102,8 +1102,8 @@ impl AccordionTrigger {
                             vec![cx.row(
                                 RowProps {
                                     layout: LayoutStyle::default(),
-                                    gap: trigger_gap(&theme),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: trigger_gap(&theme).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::SpaceBetween,
                                     align: CrossAlign::Start,
                                 },
@@ -1222,12 +1222,12 @@ impl AccordionContent {
         cx.container(props, move |cx| {
             let mut column_layout = LayoutStyle::default();
             column_layout.size.width = Length::Fill;
-            column_layout.size.min_width = Some(Px(0.0));
+            column_layout.size.min_width = Some(Length::Px(Px(0.0)));
             vec![cx.column(
                 ColumnProps {
                     layout: column_layout,
-                    gap: MetricRef::space(Space::N4).resolve(&theme),
-                    padding: Edges::all(Px(0.0)),
+                    gap: MetricRef::space(Space::N4).resolve(&theme).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                 },
@@ -1550,8 +1550,8 @@ impl Accordion {
                     RovingFlexProps {
                         flex: fret_ui::element::FlexProps {
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -1711,8 +1711,8 @@ impl Accordion {
                                 vec![cx.column(
                                     ColumnProps {
                                         layout: LayoutStyle::default(),
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Stretch,
                                     },

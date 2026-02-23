@@ -775,8 +775,8 @@ where
                     layout
                 },
                 direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -888,7 +888,8 @@ impl ContextMenuRenderEnv {
                     right: pad_x,
                     bottom: pad_y,
                     left: pad_left,
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -921,7 +922,7 @@ impl ContextMenuRenderEnv {
                     layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
                     layout
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(border),
                 ..Default::default()
             },
@@ -1007,7 +1008,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1137,7 +1138,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1265,7 +1266,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1421,7 +1422,8 @@ impl ContextMenuContentRenderEnv {
                     right: pad_x,
                     bottom: pad_y,
                     left: pad_left,
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -1453,7 +1455,7 @@ impl ContextMenuContentRenderEnv {
                     layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
                     layout
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(border),
                 ..Default::default()
             },
@@ -1584,7 +1586,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1695,7 +1697,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1811,7 +1813,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1927,7 +1929,8 @@ fn menu_row_children<H: UiHost>(
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_left,
-            },
+            }
+            .into(),
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
             ..Default::default()
@@ -1957,8 +1960,8 @@ fn menu_row_children<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -2041,8 +2044,8 @@ fn menu_row_children<H: UiHost>(
                         layout
                     },
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(8.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -2079,8 +2082,8 @@ fn submenu_chevron_icon<H: UiHost>(
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2107,8 +2110,8 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2128,8 +2131,8 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2298,8 +2301,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                         flex: FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -3052,8 +3055,8 @@ impl ContextMenu {
                                                     flex: FlexProps {
                                                         layout: LayoutStyle::default(),
                                                         direction: fret_core::Axis::Vertical,
-                                                        gap: Px(0.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
@@ -3117,7 +3120,7 @@ impl ContextMenu {
                                                                     right: pad_x,
                                                                     bottom: pad_y,
                                                                     left: pad_left,
-                                                                },
+                                                                }.into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
@@ -3183,7 +3186,7 @@ impl ContextMenu {
                                                                         fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                     layout
                                                                 },
-                                                                padding: Edges::all(Px(0.0)),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 background: Some(border),
                                                                 ..Default::default()
                                                             },
@@ -3323,7 +3326,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -3494,7 +3497,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -3619,7 +3622,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -4382,7 +4385,7 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Fill;
-                                        layout.size.min_height = Some(Px(28.0));
+                                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                                         layout
                                     },
                                     enabled: true,

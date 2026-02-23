@@ -46,7 +46,7 @@ pub(in crate::ui) fn preview_material3_card(
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
-            container.padding = Edges::all(Px(12.0));
+            container.padding = Edges::all(Px(12.0)).into();
 
             let mut text = TextProps::new(Arc::<str>::from(label));
             text.style = Some(body_style.clone());
@@ -62,7 +62,7 @@ pub(in crate::ui) fn preview_material3_card(
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
-            container.padding = Edges::all(Px(12.0));
+            container.padding = Edges::all(Px(12.0)).into();
 
             let mut text = TextProps::new(Arc::<str>::from(label));
             text.style = Some(body_style.clone());

@@ -244,7 +244,7 @@ impl DrawerContent {
         let layout = base_layout.merge(self.layout);
 
         let mut props = decl_style::container_props(&theme, chrome, layout);
-        props.padding = Edges::all(Px(0.0));
+        props.padding = Edges::all(Px(0.0)).into();
         props.shadow = None;
         props.border = borders;
         props.corner_radii = corners;
@@ -268,7 +268,7 @@ impl DrawerContent {
                         },
                         ..Default::default()
                     },
-                    padding: Edges::all(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     background: Some(muted),
                     shadow: None,
                     border: Edges::all(Px(0.0)),

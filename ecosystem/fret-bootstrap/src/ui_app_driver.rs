@@ -658,7 +658,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
 
                 vec![cx.container(
                     fret_ui::element::ContainerProps {
-                        padding: Edges::all(pad_sm),
+                        padding: Edges::all(pad_sm).into(),
                         background: Some(muted),
                         border: Edges::all(Px(1.0)),
                         border_color: Some(border),
@@ -715,8 +715,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
         fret_ui::element::FlexProps {
             layout: dialog_prim::modal_barrier_layout(),
             direction: fret_core::Axis::Vertical,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::Center,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -730,7 +730,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                         layout.size.height = fret_ui::element::Length::Auto;
                         layout
                     },
-                    padding: Edges::all(pad),
+                    padding: Edges::all(pad).into(),
                     background: Some(card),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(border),
@@ -742,8 +742,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                         fret_ui::element::FlexProps {
                             layout: fret_ui::element::LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(12.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(12.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::SpaceBetween,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,
@@ -776,8 +776,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                         fret_ui::element::FlexProps {
                             layout: fret_ui::element::LayoutStyle::default(),
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(6.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(6.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Stretch,
                             wrap: false,
@@ -816,8 +816,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                         fret_ui::element::FlexProps {
                             layout: fret_ui::element::LayoutStyle::default(),
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(10.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(10.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Stretch,
                             wrap: false,
@@ -833,8 +833,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                     fret_ui::element::FlexProps {
                                         layout: fret_ui::element::LayoutStyle::default(),
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(12.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(12.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: fret_ui::element::MainAlign::SpaceBetween,
                                         align: fret_ui::element::CrossAlign::Center,
                                         wrap: false,
@@ -852,8 +852,8 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                                     layout
                                                 },
                                                 direction: fret_core::Axis::Vertical,
-                                                gap: Px(2.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: Px(2.0).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: fret_ui::element::MainAlign::Start,
                                                 align: fret_ui::element::CrossAlign::Stretch,
                                                 wrap: false,
@@ -908,7 +908,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
                                                 ));
                                                 vec![cx.container(
                                                     fret_ui::element::ContainerProps {
-                                                        padding: Edges::all(pad_sm),
+                                                        padding: Edges::all(pad_sm).into(),
                                                         background: Some(muted),
                                                         border: Edges::all(Px(1.0)),
                                                         border_color: Some(border),
@@ -945,7 +945,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
 
                     let watcher = cx.container(
                         fret_ui::element::ContainerProps {
-                            padding: Edges::all(pad_sm),
+                            padding: Edges::all(pad_sm).into(),
                             background: Some(muted),
                             border: Edges::all(Px(1.0)),
                             border_color: Some(border),
@@ -2393,7 +2393,7 @@ fn render_diag_inspect_overlay(
 
                 let mut props = ContainerProps::default();
                 props.layout = layout;
-                props.padding = Edges::all(Px(6.0));
+                props.padding = Edges::all(Px(6.0)).into();
                 props.background = Some(Color {
                     r: 0.0,
                     g: 0.0,
@@ -2516,7 +2516,7 @@ fn render_diag_inspect_overlay(
 
                 let mut label_props = ContainerProps::default();
                 label_props.layout = label_layout;
-                label_props.padding = Edges::all(Px(4.0));
+                label_props.padding = Edges::all(Px(4.0)).into();
                 label_props.background = Some(Color {
                     r: 0.0,
                     g: 0.0,

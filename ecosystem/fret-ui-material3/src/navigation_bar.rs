@@ -218,7 +218,7 @@ impl NavigationBar {
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
-            props.flex.gap = Px(0.0);
+            props.flex.gap = Px(0.0).into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = fret_ui::element::CrossAlign::Stretch;
             props.roving = fret_ui::element::RovingFocusProps {
@@ -586,8 +586,8 @@ fn navigation_bar_item<H: UiHost>(
                                 layout
                             },
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -613,8 +613,8 @@ fn navigation_bar_item<H: UiHost>(
                 col.direction = Axis::Vertical;
                 col.justify = MainAlign::Center;
                 col.align = CrossAlign::Center;
-                col.gap = Px(4.0);
-                col.padding = Edges::all(Px(0.0));
+                col.gap = Px(4.0).into();
+                col.padding = Edges::all(Px(0.0)).into();
 
                 let chrome_test_id = test_id
                     .as_ref()

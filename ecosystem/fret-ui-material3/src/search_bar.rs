@@ -284,7 +284,7 @@ impl SearchBar {
                         row.layout.size.height = Length::Fill;
                         row.justify = MainAlign::Start;
                         row.align = CrossAlign::Center;
-                        row.gap = Px(12.0);
+                        row.gap = Px(12.0).into();
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
@@ -320,7 +320,8 @@ impl SearchBar {
                             right: Px(16.0),
                             top: Px(0.0),
                             bottom: Px(0.0),
-                        };
+                        }
+                        .into();
                         container.background = Some(container_color);
                         container.shadow = shadow;
                         container.corner_radii = corner_radii;
@@ -368,7 +369,7 @@ fn search_bar_text_input_chrome(
     }
 
     let mut style = fret_ui::TextInputStyle::default();
-    style.padding = Edges::all(Px(0.0));
+    style.padding = Edges::all(Px(0.0)).into();
     style.border = Edges::all(Px(0.0));
     style.border_color = Color {
         r: 0.0,

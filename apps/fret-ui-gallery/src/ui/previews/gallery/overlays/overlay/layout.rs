@@ -10,8 +10,8 @@ fn row(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>) -> 
         fret_ui::element::FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::Start,
             align: fret_ui::element::CrossAlign::Center,
             wrap: true,
@@ -28,8 +28,8 @@ fn row_end(cx: &mut ElementContext<'_, App>, gap: Px, children: Vec<AnyElement>)
         fret_ui::element::FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::End,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,

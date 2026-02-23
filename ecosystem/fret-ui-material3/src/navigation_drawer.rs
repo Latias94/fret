@@ -201,7 +201,7 @@ impl NavigationDrawer {
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Vertical;
-            props.flex.gap = Px(0.0);
+            props.flex.gap = Px(0.0).into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = CrossAlign::Stretch;
             props.flex.padding = Edges {
@@ -209,7 +209,8 @@ impl NavigationDrawer {
                 right: item_h_pad,
                 top: Px(0.0),
                 bottom: Px(0.0),
-            };
+            }
+            .into();
             props.roving = fret_ui::element::RovingFocusProps {
                 enabled: !disabled,
                 wrap: loop_navigation,
@@ -553,13 +554,14 @@ fn navigation_drawer_item<H: UiHost>(
                             layout
                         },
                         direction: Axis::Horizontal,
-                        gap: Px(12.0),
+                        gap: Px(12.0).into(),
                         padding: Edges {
                             left: Px(16.0),
                             right: Px(24.0),
                             top: Px(0.0),
                             bottom: Px(0.0),
-                        },
+                        }
+                        .into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,

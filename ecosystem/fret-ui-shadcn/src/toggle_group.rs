@@ -519,8 +519,8 @@ impl ToggleGroup {
                     ToggleGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
                     ToggleGroupOrientation::Vertical => fret_core::Axis::Vertical,
                 },
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -582,7 +582,8 @@ impl ToggleGroup {
                         right: pad_x,
                         bottom: pad_y,
                         left: pad_x,
-                    };
+                    }
+                    .into();
                     base_props.corner_radii = corners;
 
                     if gap.0 <= 0.0
@@ -693,8 +694,8 @@ impl ToggleGroup {
                                             layout
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: inner_gap,
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: inner_gap.into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,

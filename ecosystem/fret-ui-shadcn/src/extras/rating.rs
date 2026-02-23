@@ -162,8 +162,8 @@ impl Rating {
                 let flex = FlexProps {
                     layout: root_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap,
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: gap.into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,

@@ -562,7 +562,8 @@ impl TopAppBar {
                 right: Px(4.0),
                 top: Px(0.0),
                 bottom: Px(0.0),
-            };
+            }
+            .into();
 
             let sem = SemanticsProps {
                 role: SemanticsRole::Toolbar,
@@ -899,8 +900,8 @@ fn slot_container<H: UiHost>(
     children: Vec<AnyElement>,
 ) -> AnyElement {
     let mut props = ContainerProps::default();
-    props.layout.size.min_width = Some(min_width);
-    props.layout.size.min_height = Some(Px(48.0));
+    props.layout.size.min_width = Some(Length::Px(min_width));
+    props.layout.size.min_height = Some(Length::Px(Px(48.0)));
     cx.container(props, move |_cx| children)
 }
 
@@ -1121,7 +1122,8 @@ fn top_app_bar_two_rows<H: UiHost>(
             right: Px(12.0),
             top: Px(0.0),
             bottom: bottom_padding,
-        };
+        }
+        .into();
 
         cx.container(wrapper, move |cx| {
             let mut row = FlexProps::default();

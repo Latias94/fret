@@ -248,7 +248,7 @@ pub fn textarea<H: UiHost>(
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Auto,
-        min_height: Some(min_height),
+        min_height: Some(Length::Px(min_height)),
         ..Default::default()
     };
 
@@ -269,7 +269,7 @@ pub fn textarea<H: UiHost>(
     cx.container(
         ContainerProps {
             layout: outer_layout,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: None,
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -383,7 +383,7 @@ pub fn textarea<H: UiHost>(
                 let grip = cx.container(
                     ContainerProps {
                         layout: grip_layout,
-                        padding: Edges::all(Px(0.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         background: None,
                         shadow: None,
                         border: Edges::all(Px(1.0)),

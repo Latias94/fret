@@ -674,7 +674,7 @@ impl Carousel {
                                 fret_core::Axis::Horizontal => {
                                     let inner = cx.container(
                                         fret_ui::element::ContainerProps {
-                                            padding,
+                                            padding: padding.into(),
                                             ..Default::default()
                                         },
                                         move |_cx| vec![content.clone()],
@@ -691,7 +691,7 @@ impl Carousel {
                                 fret_core::Axis::Vertical => cx.container(
                                     fret_ui::element::ContainerProps {
                                         layout: item_layout,
-                                        padding,
+                                        padding: padding.into(),
                                         ..Default::default()
                                     },
                                     move |_cx| vec![content.clone()],

@@ -591,7 +591,8 @@ fn menu_row_children<H: UiHost>(
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_left,
-            },
+            }
+            .into(),
             background: Some(bg),
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -621,8 +622,8 @@ fn menu_row_children<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -683,8 +684,8 @@ fn menu_row_children<H: UiHost>(
                         layout
                     },
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(8.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -713,8 +714,8 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -734,8 +735,8 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -763,8 +764,8 @@ fn submenu_chevron_right_text<H: UiHost>(
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -964,57 +965,60 @@ impl Menubar {
                         ..Default::default()
                     },
                     |cx| {
-                        vec![cx.container(
-                            ContainerProps {
-                                layout,
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout,
+                                    padding: Edges {
+                                        top: pad_top,
+                                        right: pad_right,
+                                        bottom: pad_bottom,
+                                        left: pad_left,
+                                    }
+                                    .into(),
+                                    background: Some(bg),
+                                    shadow: Some(shadow),
+                                    border: Edges::all(border_width),
+                                    border_color: Some(border),
+                                    corner_radii: Corners::all(radius),
+                                    ..Default::default()
                                 },
-                                background: Some(bg),
-                                shadow: Some(shadow),
-                                border: Edges::all(border_width),
-                                border_color: Some(border),
-                                corner_radii: Corners::all(radius),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                vec![roving_focus_group::roving_focus_group_apg(
-                                    cx,
-                                    RovingFlexProps {
-                                        flex: FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap,
-                                            padding: Edges::all(Px(0.0)),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            wrap: false,
+                                move |cx| {
+                                    vec![roving_focus_group::roving_focus_group_apg(
+                                        cx,
+                                        RovingFlexProps {
+                                            flex: FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: gap.into(),
+                                                padding: Edges::all(Px(0.0)).into(),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            roving: RovingFocusProps {
+                                                enabled: !disabled,
+                                                wrap: true,
+                                                disabled: trigger_disabled.clone(),
+                                            },
                                         },
-                                        roving: RovingFocusProps {
-                                            enabled: !disabled,
-                                            wrap: true,
-                                            disabled: trigger_disabled.clone(),
+                                        roving_focus_group::TypeaheadPolicy::Prefix {
+                                            labels: trigger_labels.clone(),
+                                            timeout_ticks: typeahead_timeout_ticks,
                                         },
-                                    },
-                                    roving_focus_group::TypeaheadPolicy::Prefix {
-                                        labels: trigger_labels.clone(),
-                                        timeout_ticks: typeahead_timeout_ticks,
-                                    },
-                                    move |cx| {
-                                        menus
-                                            .into_iter()
-                                            .map(|m| {
-                                                m.align_leading_icons(align_leading_icons)
-                                                    .into_element(cx)
-                                            })
-                                            .collect::<Vec<_>>()
-                                    },
-                                )]
-                            },
-                        )]
+                                        move |cx| {
+                                            menus
+                                                .into_iter()
+                                                .map(|m| {
+                                                    m.align_leading_icons(align_leading_icons)
+                                                        .into_element(cx)
+                                                })
+                                                .collect::<Vec<_>>()
+                                        },
+                                    )]
+                                },
+                            ),
+                        ]
                     },
                 )
             })
@@ -1651,8 +1655,8 @@ impl MenubarMenuEntries {
                                                      flex: FlexProps {
                                                          layout: LayoutStyle::default(),
                                                         direction: fret_core::Axis::Vertical,
-                                                        gap: Px(0.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
@@ -1712,7 +1716,7 @@ impl MenubarMenuEntries {
                                                                         right: pad_x,
                                                                         bottom: pad_y,
                                                                         left: pad_left,
-                                                                    },
+                                                                    }.into(),
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx| {
@@ -2438,7 +2442,7 @@ impl MenubarMenuEntries {
                                                                                 right: pad_x,
                                                                                 bottom: pad_y,
                                                                                 left: pad_x,
-                                                                            },
+                                                                            }.into(),
                                                                             background: Some(bg),
                                                                             shadow: None,
                                                                             border: Edges::all(
@@ -2767,8 +2771,8 @@ impl MenubarMenuEntries {
                                                             flex: FlexProps {
                                                                 layout: LayoutStyle::default(),
                                                                 direction: fret_core::Axis::Vertical,
-                                                                gap: Px(0.0),
-                                                                padding: Edges::all(Px(0.0)),
+                                                                gap: Px(0.0).into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Start,
                                                                 align: CrossAlign::Stretch,
                                                                 wrap: false,
@@ -2830,7 +2834,7 @@ impl MenubarMenuEntries {
                                                                                     right: pad_x,
                                                                                     bottom: pad_y,
                                                                                     left: pad_left,
-                                                                                },
+                                                                                }.into(),
                                                                                 ..Default::default()
                                                                             },
                                                                             move |cx| {
@@ -3413,7 +3417,7 @@ impl MenubarMenuEntries {
                         right: Px(8.0),
                         bottom: Px(4.0),
                         left: Px(8.0),
-                    },
+                    }.into(),
                     background: trigger_bg,
                     shadow: None,
                     border: Edges::all(Px(0.0)),

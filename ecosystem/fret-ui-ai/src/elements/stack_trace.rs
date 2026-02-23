@@ -392,7 +392,7 @@ impl StackTraceCopyButton {
             chrome_props.background = Some(bg);
             chrome_props.corner_radii = Corners::all(radius);
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
                 let row = stack::hstack(
@@ -991,7 +991,7 @@ impl StackTrace {
                             size: SizeStyle {
                                 width: Length::Fill,
                                 height: Length::Auto,
-                                min_width: Some(Px(0.0)),
+                                min_width: Some(Length::Px(Px(0.0))),
                                 ..Default::default()
                             },
                             ..Default::default()

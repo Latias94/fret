@@ -219,10 +219,10 @@ fn navigation_rail_impl<H: UiHost>(
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Vertical;
-        props.flex.gap = Px(4.0);
+        props.flex.gap = Px(4.0).into();
         props.flex.justify = MainAlign::Start;
         props.flex.align = CrossAlign::Stretch;
-        props.flex.padding = Edges::all(Px(4.0));
+        props.flex.padding = Edges::all(Px(4.0)).into();
         props.roving = fret_ui::element::RovingFocusProps {
             enabled: !disabled,
             wrap: loop_navigation,
@@ -595,8 +595,8 @@ fn navigation_rail_item<H: UiHost>(
                                 layout
                             },
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -622,8 +622,8 @@ fn navigation_rail_item<H: UiHost>(
                 col.direction = Axis::Vertical;
                 col.justify = MainAlign::Start;
                 col.align = CrossAlign::Center;
-                col.gap = Px(4.0);
-                col.padding = Edges::all(Px(0.0));
+                col.gap = Px(4.0).into();
+                col.padding = Edges::all(Px(0.0)).into();
 
                 let mut children: Vec<AnyElement> = vec![overlay, icon_slot];
                 if let Some(label_el) = label_el {

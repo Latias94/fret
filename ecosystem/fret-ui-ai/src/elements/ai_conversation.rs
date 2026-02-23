@@ -385,7 +385,7 @@ impl AiConversationTranscript {
         let list = cx.container(
             ContainerProps {
                 layout: decl_style::layout_style(&theme, layout),
-                padding: Edges::all(padding_px),
+                padding: Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |_cx| vec![list],

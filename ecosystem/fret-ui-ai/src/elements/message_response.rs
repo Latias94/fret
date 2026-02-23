@@ -291,7 +291,7 @@ impl MessageResponse {
         cx.container(
             ContainerProps {
                 layout: root_layout,
-                padding: fret_core::Edges::all(padding_px),
+                padding: fret_core::Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |_cx| vec![content],

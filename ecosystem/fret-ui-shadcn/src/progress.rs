@@ -178,7 +178,7 @@ impl Progress {
                         vec![cx.container(
                             fret_ui::element::ContainerProps {
                                 layout: fill_layout,
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 background: Some(fill),
                                 shadow: None,
                                 border: Edges::all(Px(0.0)),

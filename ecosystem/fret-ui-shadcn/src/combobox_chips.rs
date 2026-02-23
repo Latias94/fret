@@ -385,7 +385,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                         .merge(layout_patch),
                 );
                 trigger_layout.size.height = Length::Auto;
-                trigger_layout.size.min_height = Some(min_h);
+                trigger_layout.size.min_height = Some(Length::Px(min_h));
 
                 let bg_base = chrome_patch
                     .background
@@ -515,7 +515,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                 right: pad_right,
                                 bottom: pad_bottom,
                                 left: pad_left,
-                            },
+                            }
+                            .into(),
                             background: Some(bg),
                             shadow: None,
                             border: Edges::all(border_w),
@@ -538,8 +539,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                         layout
                                     },
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: chip_gap,
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: chip_gap.into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Center,
                                     wrap: true,
@@ -635,8 +636,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                                 layout: LayoutStyle::default(),
                                                                 direction:
                                                                     fret_core::Axis::Horizontal,
-                                                                gap: Px(0.0),
-                                                                padding: Edges::all(Px(0.0)),
+                                                                gap: Px(0.0).into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Center,
                                                                 align: CrossAlign::Center,
                                                                 wrap: false,
@@ -656,7 +657,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                 right: Px(4.0),
                                                 bottom: Px(2.0),
                                                 left: Px(6.0),
-                                            },
+                                            }
+                                            .into(),
                                             background: Some(chip_bg),
                                             corner_radii: Corners::all(Px(4.0)),
                                             ..Default::default()
@@ -667,8 +669,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                     FlexProps {
                                                         layout: LayoutStyle::default(),
                                                         direction: fret_core::Axis::Horizontal,
-                                                        gap: Px(4.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(4.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Center,
                                                         wrap: false,
@@ -707,8 +709,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                                 FlexProps {
                                     layout: LayoutStyle::default(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: trigger_gap,
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: trigger_gap.into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::SpaceBetween,
                                     align: CrossAlign::Center,
                                     wrap: false,

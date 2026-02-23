@@ -356,7 +356,7 @@ impl Sheet {
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             background: Some(overlay_color),
                             shadow: None,
                             border: Edges::all(Px(0.0)),
@@ -427,7 +427,7 @@ impl Sheet {
                                 } else {
                                     Length::Auto
                                 },
-                                max_height: vertical_auto_max_h,
+                                max_height: vertical_auto_max_h.map(Length::Px),
                                 ..Default::default()
                             },
                             sheet_h,
@@ -446,7 +446,7 @@ impl Sheet {
                                 } else {
                                     Length::Auto
                                 },
-                                max_height: vertical_auto_max_h,
+                                max_height: vertical_auto_max_h.map(Length::Px),
                                 ..Default::default()
                             },
                             sheet_h,
@@ -616,26 +616,31 @@ impl SheetContent {
                 left: max_px(safe.left, occlusion.left),
             };
 
+            let add_inset = |edge: &mut fret_ui::element::SpacingLength, delta: Px| {
+                if let fret_ui::element::SpacingLength::Px(px) = edge {
+                    px.0 = (px.0 + delta.0).max(0.0);
+                }
+            };
             match side {
                 SheetSide::Left => {
-                    props.padding.left.0 += insets.left.0;
-                    props.padding.top.0 += insets.top.0;
-                    props.padding.bottom.0 += insets.bottom.0;
+                    add_inset(&mut props.padding.left, insets.left);
+                    add_inset(&mut props.padding.top, insets.top);
+                    add_inset(&mut props.padding.bottom, insets.bottom);
                 }
                 SheetSide::Right => {
-                    props.padding.right.0 += insets.right.0;
-                    props.padding.top.0 += insets.top.0;
-                    props.padding.bottom.0 += insets.bottom.0;
+                    add_inset(&mut props.padding.right, insets.right);
+                    add_inset(&mut props.padding.top, insets.top);
+                    add_inset(&mut props.padding.bottom, insets.bottom);
                 }
                 SheetSide::Top => {
-                    props.padding.top.0 += insets.top.0;
-                    props.padding.left.0 += insets.left.0;
-                    props.padding.right.0 += insets.right.0;
+                    add_inset(&mut props.padding.top, insets.top);
+                    add_inset(&mut props.padding.left, insets.left);
+                    add_inset(&mut props.padding.right, insets.right);
                 }
                 SheetSide::Bottom => {
-                    props.padding.bottom.0 += insets.bottom.0;
-                    props.padding.left.0 += insets.left.0;
-                    props.padding.right.0 += insets.right.0;
+                    add_inset(&mut props.padding.bottom, insets.bottom);
+                    add_inset(&mut props.padding.left, insets.left);
+                    add_inset(&mut props.padding.right, insets.right);
                 }
             }
 

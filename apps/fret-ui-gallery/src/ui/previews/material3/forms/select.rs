@@ -313,7 +313,7 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) 
             border: fret_core::Edges::all(Px(1.0)),
             border_color: Some(probe_border),
             corner_radii: fret_core::Corners::all(Px(12.0)),
-            padding: fret_core::Edges::all(Px(12.0)),
+            padding: fret_core::Edges::all(Px(12.0)).into(),
             ..Default::default()
         },
         move |cx| {

@@ -153,7 +153,7 @@ impl Checkbox {
             layout.size.height = Length::Px(density.hit_thickness);
         }
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.hit_thickness);
+            layout.size.min_height = Some(Length::Px(density.hit_thickness));
         }
 
         let focus_ring_bounds = match (layout.size.width, layout.size.height) {

@@ -518,8 +518,8 @@ impl TextField {
                             layout
                         },
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(4.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Start,
                         wrap: false,
@@ -1282,7 +1282,7 @@ fn text_field_label<H: UiHost>(
     if variant == TextFieldVariant::Outlined {
         let patch_padding_x = Px(4.0);
         let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = if floated {
+        patch.padding = (if floated {
             Edges {
                 top: patch_padding_y,
                 right: patch_padding_x,
@@ -1291,7 +1291,8 @@ fn text_field_label<H: UiHost>(
             }
         } else {
             Edges::all(Px(0.0))
-        };
+        })
+        .into();
         patch.background = floated.then_some(input_bg);
     }
 

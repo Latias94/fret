@@ -63,8 +63,8 @@ fn shortcut_hint_with_patch<H: UiHost>(
         FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap: MetricRef::space(Space::N1).resolve(&theme),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: MetricRef::space(Space::N1).resolve(&theme).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
             wrap: false,

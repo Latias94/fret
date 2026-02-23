@@ -163,7 +163,8 @@ fn status_badge<H: UiHost>(
     props.padding = Edges::symmetric(
         MetricRef::space(Space::N2).resolve(theme),
         MetricRef::space(Space::N0p5).resolve(theme),
-    );
+    )
+    .into();
     props.background = Some(bg);
     props.corner_radii = Corners::all(MetricRef::radius(Radius::Full).resolve(theme));
 
@@ -1081,7 +1082,7 @@ impl Test {
                     size: SizeStyle {
                         width: Length::Fill,
                         height: Length::Auto,
-                        min_width: Some(Px(0.0)),
+                        min_width: Some(Length::Px(Px(0.0))),
                         ..Default::default()
                     },
                     ..Default::default()

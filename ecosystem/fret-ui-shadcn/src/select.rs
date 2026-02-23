@@ -345,7 +345,7 @@ where
                                     right: Px(0.0),
                                     bottom: Px(4.0),
                                     left: Px(0.0),
-                                },
+                                }.into(),
                                 background: Some(Color::TRANSPARENT),
                                 shadow: None,
                                 border: Edges::all(Px(0.0)),
@@ -363,8 +363,8 @@ where
                                             layout
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -442,7 +442,7 @@ where
                                 layout.size.width = Length::Fill;
                                 layout
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             ..Default::default()
                         },
                         move |cx| content(cx, active_element_ref).into_iter().collect::<Vec<_>>(),
@@ -1277,7 +1277,7 @@ fn select_impl<H: UiHost>(
         }
         // In narrow containers (e.g. dialog headers), allow the trigger to shrink so surrounding
         // text does not get forced into extreme wrapping.
-        trigger_layout.size.min_width = Some(Px(0.0));
+        trigger_layout.size.min_width = Some(Length::Px(Px(0.0)));
         trigger_layout.flex.shrink = 1.0;
 
         let mut border = resolved.border_color;
@@ -2419,7 +2419,7 @@ fn select_impl<H: UiHost>(
                                     layout
                                 },
                                 // new-york-v4: `SelectViewport` uses `p-1`.
-                                padding: Edges::all(Px(4.0)),
+                                padding: Edges::all(Px(4.0)).into(),
                                 ..Default::default()
                             },
                             |cx| {
@@ -2438,7 +2438,7 @@ fn select_impl<H: UiHost>(
                                                 right: Px(32.0),
                                                 bottom: Px(6.0),
                                                 left: Px(8.0),
-                                            },
+                                            }.into(),
                                             ..Default::default()
                                         },
                                         |cx| {
@@ -2686,7 +2686,7 @@ fn select_impl<H: UiHost>(
                                                                                         right: Px(8.0),
                                                                                         bottom: Px(6.0),
                                                                                         left: Px(8.0),
-                                                                                    },
+                                                                                    }.into(),
                                                                                     background: None,
                                                                                     shadow: None,
                                                                                     border: Edges::all(Px(0.0)),
@@ -3056,7 +3056,7 @@ fn select_impl<H: UiHost>(
                                                                                                         right: Px(0.0),
                                                                                                         bottom: Px(6.0),
                                                                                                         left: Px(8.0),
-                                                                                                    },
+                                                                                                    }.into(),
                                                                                                     background: Some(bg),
                                                                                                     shadow: None,
                                                                                                     border: Edges::all(Px(0.0)),
@@ -3120,7 +3120,7 @@ fn select_impl<H: UiHost>(
                                                                                                             Length::Fill;
                                                                                                         layout
                                                                                                     },
-                                                                                                    padding: Edges::all(Px(0.0)),
+                                                                                                    padding: Edges::all(Px(0.0)).into(),
                                                                                                     ..Default::default()
                                                                                                 },
                                                                                                 |cx| {
@@ -3137,8 +3137,8 @@ fn select_impl<H: UiHost>(
                                                                                                             },
                                                                                                             direction:
                                                                                                                 fret_core::Axis::Horizontal,
-                                                                                                            gap: Px(0.0),
-                                                                                                            padding: Edges::all(Px(0.0)),
+                                                                                                            gap: Px(0.0).into(),
+                                                                                                            padding: Edges::all(Px(0.0)).into(),
                                                                                                             justify: MainAlign::Center,
                                                                                                             align: CrossAlign::Center,
                                                                                                             wrap: false,
@@ -3160,8 +3160,8 @@ fn select_impl<H: UiHost>(
                                                                                                         layout
                                                                                                     },
                                                                                                     direction: fret_core::Axis::Horizontal,
-                                                                                                    gap: Px(0.0),
-                                                                                                    padding: Edges::all(Px(0.0)),
+                                                                                                    gap: Px(0.0).into(),
+                                                                                                    padding: Edges::all(Px(0.0)).into(),
                                                                                                     justify: MainAlign::Start,
                                                                                                     align: CrossAlign::Center,
                                                                                                     wrap: false,
@@ -3249,8 +3249,8 @@ fn select_impl<H: UiHost>(
                                                                                                 layout: LayoutStyle::default(),
                                                                                                 direction:
                                                                                                     fret_core::Axis::Vertical,
-                                                                                                gap: Px(0.0),
-                                                                                                padding: Edges::all(Px(0.0)),
+                                                                                                gap: Px(0.0).into(),
+                                                                                                padding: Edges::all(Px(0.0)).into(),
                                                                                                 justify: MainAlign::Start,
                                                                                                 align: CrossAlign::Stretch,
                                                                                                 wrap: false,
@@ -3288,8 +3288,8 @@ fn select_impl<H: UiHost>(
                                                                     FlexProps {
                                                                         layout: LayoutStyle::default(),
                                                                         direction: fret_core::Axis::Vertical,
-                                                                        gap: Px(0.0),
-                                                                        padding: Edges::all(Px(4.0)),
+                                                                        gap: Px(0.0).into(),
+                                                                        padding: Edges::all(Px(4.0)).into(),
                                                                         justify: MainAlign::Start,
                                                                         align: CrossAlign::Stretch,
                                                                         wrap: false,
@@ -3324,7 +3324,7 @@ fn select_impl<H: UiHost>(
                                                 layout.overflow = Overflow::Clip;
                                                 layout
                                             },
-                                            padding: Edges::all(Px(0.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             background: Some(
                                                 theme_for_overlay.colors.panel_background,
                                             ),
@@ -3494,8 +3494,8 @@ fn select_impl<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: MetricRef::space(Space::N1p5).resolve(&theme),
-                        padding: Edges::all(Px(0.0)),
+                        gap: MetricRef::space(Space::N1p5).resolve(&theme).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::SpaceBetween,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -3509,7 +3509,7 @@ fn select_impl<H: UiHost>(
                                     } else {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Auto;
-                                        layout.size.min_width = Some(Px(0.0));
+                                        layout.size.min_width = Some(Length::Px(Px(0.0)));
                                         layout.flex.grow = 1.0;
                                         layout.flex.shrink = 1.0;
                                         layout.flex.basis = Length::Px(Px(0.0));

@@ -399,7 +399,7 @@ fn input_with_style_and_submit<H: UiHost>(
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(resolved.min_height),
-        min_width: Some(fret_core::Px(0.0)),
+        min_width: Some(Length::Px(fret_core::Px(0.0))),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;

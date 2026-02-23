@@ -296,7 +296,7 @@ impl CommitContent {
 
         let mut wrapper = ContainerProps::default();
         wrapper.layout = decl_style::layout_style(&theme, self.layout);
-        wrapper.padding = Edges::all(MetricRef::space(Space::N3).resolve(&theme));
+        wrapper.padding = Edges::all(MetricRef::space(Space::N3).resolve(&theme)).into();
         wrapper.border = Edges {
             top: Px(1.0),
             right: Px(0.0),
@@ -805,7 +805,7 @@ impl CommitCopyButton {
             chrome_props.background = Some(bg);
             chrome_props.corner_radii = Corners::all(radius);
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
                 let row = stack::hstack(
@@ -935,7 +935,8 @@ impl CommitFile {
                 props.padding = Edges::symmetric(
                     MetricRef::space(Space::N2).resolve(&theme),
                     MetricRef::space(Space::N1).resolve(&theme),
-                );
+                )
+                .into();
                 props.background = bg;
                 props.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
@@ -1095,7 +1096,7 @@ impl CommitFilePath {
                 size: SizeStyle {
                     width: Length::Fill,
                     height: Length::Auto,
-                    min_width: Some(Px(0.0)),
+                    min_width: Some(Length::Px(Px(0.0))),
                     ..Default::default()
                 },
                 ..Default::default()

@@ -248,7 +248,7 @@ impl SearchView {
 
                         let body = cx.container(
                             ContainerProps {
-                                padding: Edges::all(Px(8.0)),
+                                padding: Edges::all(Px(8.0)).into(),
                                 ..Default::default()
                             },
                             content,

@@ -89,8 +89,8 @@ impl Pagination {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -121,8 +121,8 @@ impl PaginationContent {
             FlexProps {
                 layout: Default::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -287,8 +287,8 @@ impl PaginationLink {
                 FlexProps {
                     layout: inner_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: inner_gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: inner_gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: inner_wrap,
@@ -312,7 +312,7 @@ impl PaginationLink {
             vec![cx.container(
                 ContainerProps {
                     layout,
-                    padding,
+                    padding: padding.into(),
                     background: Some(bg),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(base_border),
@@ -490,7 +490,7 @@ impl PaginationEllipsis {
         cx.container(
             ContainerProps {
                 layout,
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: None,
                 border: Edges::all(Px(0.0)),
                 border_color: None,
@@ -502,8 +502,8 @@ impl PaginationEllipsis {
                     FlexProps {
                         layout: Default::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                         wrap: false,

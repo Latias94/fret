@@ -641,8 +641,8 @@ impl DataGrid {
 
             let col = ColumnProps {
                 layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 align: fret_ui::element::CrossAlign::Stretch,
                 justify: MainAlign::Start,
             };

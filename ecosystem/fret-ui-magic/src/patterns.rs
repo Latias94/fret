@@ -138,7 +138,7 @@ where
         return cx.container(
             ContainerProps {
                 layout: props.layout,
-                padding: props.padding,
+                padding: props.padding.into(),
                 background: Some(props.base),
                 corner_radii: props.corner_radii,
                 ..Default::default()
@@ -166,7 +166,7 @@ where
     cx.container(
         ContainerProps {
             layout: props.layout,
-            padding: props.padding,
+            padding: props.padding.into(),
             background: None,
             background_paint: Some(Paint::Material { id, params }),
             corner_radii: props.corner_radii,
@@ -228,7 +228,7 @@ where
         return cx.container(
             ContainerProps {
                 layout: props.layout,
-                padding: props.padding,
+                padding: props.padding.into(),
                 background: Some(props.base),
                 corner_radii: props.corner_radii,
                 ..Default::default()
@@ -256,7 +256,7 @@ where
     cx.container(
         ContainerProps {
             layout: props.layout,
-            padding: props.padding,
+            padding: props.padding.into(),
             background: None,
             background_paint: Some(Paint::Material { id, params }),
             corner_radii: props.corner_radii,
@@ -320,7 +320,7 @@ where
         return cx.container(
             ContainerProps {
                 layout: props.layout,
-                padding: props.padding,
+                padding: props.padding.into(),
                 background: Some(props.base),
                 corner_radii: props.corner_radii,
                 ..Default::default()
@@ -348,7 +348,7 @@ where
     cx.container(
         ContainerProps {
             layout: props.layout,
-            padding: props.padding,
+            padding: props.padding.into(),
             background: None,
             background_paint: Some(Paint::Material { id, params }),
             corner_radii: props.corner_radii,

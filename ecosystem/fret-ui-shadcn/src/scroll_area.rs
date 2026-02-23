@@ -299,8 +299,8 @@ impl ScrollAreaRoot {
             if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
                 layout.size.height = Length::Fill;
             }
-            layout.size.min_width.get_or_insert(Px(0.0));
-            layout.size.min_height.get_or_insert(Px(0.0));
+            layout.size.min_width.get_or_insert(Length::Px(Px(0.0)));
+            layout.size.min_height.get_or_insert(Length::Px(Px(0.0)));
             let shrinkwrap_height_via_max_h =
                 matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
             vec![cx.stack_props(StackProps { layout }, move |cx| {
@@ -315,8 +315,8 @@ impl ScrollAreaRoot {
                 } else {
                     Length::Fill
                 };
-                scroll_layout.size.min_width = Some(Px(0.0));
-                scroll_layout.size.min_height = Some(Px(0.0));
+                scroll_layout.size.min_width = Some(Length::Px(Px(0.0)));
+                scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
                 scroll_layout.overflow = Overflow::Clip;
 
                 let scroll = cx.scroll(

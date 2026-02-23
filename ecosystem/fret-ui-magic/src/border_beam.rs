@@ -125,7 +125,7 @@ where
             overflow: Overflow::Clip,
             ..props.layout
         },
-        padding: props.padding,
+        padding: props.padding.into(),
         corner_radii: props.corner_radii,
         background: Some(props.background),
         border: props.border,

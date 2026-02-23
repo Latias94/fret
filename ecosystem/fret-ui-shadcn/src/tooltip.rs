@@ -3623,7 +3623,7 @@ mod tests {
 
                                     vec![cx.column(
                                         fret_ui::element::ColumnProps {
-                                            gap: Px(0.0),
+                                            gap: Px(0.0).into(),
                                             ..Default::default()
                                         },
                                         |cx| {
@@ -3815,7 +3815,7 @@ mod tests {
                                 FlexProps {
                                     layout: flex_layout,
                                     direction: fret_core::Axis::Vertical,
-                                    gap: Px(24.0),
+                                    gap: Px(24.0).into(),
                                     ..Default::default()
                                 },
                                 |cx| {
@@ -3869,7 +3869,7 @@ mod tests {
 
                                             vec![cx.column(
                                                 fret_ui::element::ColumnProps {
-                                                    gap: Px(0.0),
+                                                    gap: Px(0.0).into(),
                                                     ..Default::default()
                                                 },
                                                 |cx| {
@@ -3908,7 +3908,7 @@ mod tests {
                                         |cx| {
                                             vec![cx.column(
                                                 fret_ui::element::ColumnProps {
-                                                    gap: Px(0.0),
+                                                    gap: Px(0.0).into(),
                                                     ..Default::default()
                                                 },
                                                 |cx| {
@@ -4264,7 +4264,7 @@ mod tests {
                         .with_elements(cx, |cx| {
                             vec![cx.row(
                                 fret_ui::element::RowProps {
-                                    gap: Px(20.0),
+                                    gap: Px(20.0).into(),
                                     ..Default::default()
                                 },
                                 |cx| {

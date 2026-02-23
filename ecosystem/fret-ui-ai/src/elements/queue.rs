@@ -342,7 +342,8 @@ impl QueueSectionTrigger {
             props.padding = Edges::symmetric(
                 MetricRef::space(Space::N3).resolve(&theme),
                 MetricRef::space(Space::N2).resolve(&theme),
-            );
+            )
+            .into();
             props.background = Some(if hovered { hover_bg } else { bg });
             props.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
@@ -622,7 +623,8 @@ impl QueueList {
             right: MetricRef::space(Space::N4).resolve(&theme),
             bottom: Px(0.0),
             left: Px(0.0),
-        };
+        }
+        .into();
 
         let viewport = cx.container(viewport, move |_cx| vec![list]);
 
@@ -706,7 +708,8 @@ impl QueueItem {
             chrome.padding = Edges::symmetric(
                 MetricRef::space(Space::N3).resolve(&theme),
                 MetricRef::space(Space::N1).resolve(&theme),
-            );
+            )
+            .into();
             chrome.background = hovered.then_some(muted);
             chrome.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
@@ -1380,7 +1383,8 @@ impl QueueItemFile {
         props.padding = Edges::symmetric(
             MetricRef::space(Space::N2).resolve(&theme),
             MetricRef::space(Space::N1).resolve(&theme),
-        );
+        )
+        .into();
         props.border = Edges::all(Px(1.0));
         props.border_color = Some(border);
         props.background = Some(muted);

@@ -58,7 +58,7 @@ fn size_hint_px(element: &AnyElement) -> SizeHintPx {
                         .unwrap_or(h),
                 );
             }
-            if let Some(max_h) = layout.size.max_height {
+            if let Some(Length::Px(max_h)) = layout.size.max_height {
                 hint.max_height = Some(
                     hint.max_height
                         .map(|cur| if max_h.0 > cur.0 { max_h } else { cur })

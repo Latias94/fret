@@ -1377,7 +1377,7 @@ impl Tabs {
                 .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
             LayoutRefinement::default().h_px(list_height),
         );
-        list_props.padding = Edges::all(list_padding);
+        list_props.padding = Edges::all(list_padding).into();
         if list_full_width {
             list_props.layout.size.width = Length::Fill;
             list_props.layout.flex.align_self = Some(CrossAlign::Stretch);
@@ -1469,8 +1469,8 @@ impl Tabs {
                                         TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
                                         TabsOrientation::Vertical => fret_core::Axis::Vertical,
                                     },
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     // NOTE: Taffy currently shrink-wraps auto-sized flex containers
                                     // around the sum of flex bases, not the min-content widths.
                                     // With Tailwind-like `flex-1` (`basis=0`), that yields a
@@ -1765,7 +1765,7 @@ impl Tabs {
                                                 right: pad_x,
                                                 bottom: pad_y,
                                                 left: pad_x,
-                                            },
+                                            }.into(),
                                             background: bg,
                                             shadow,
                                             border: Edges::all(border_w),
@@ -1821,8 +1821,8 @@ impl Tabs {
                                                      layout
                                                  },
                                                     direction: fret_core::Axis::Horizontal,
-                                                    gap: Px(6.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: Px(6.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Center,
                                                     align: CrossAlign::Center,
                                                     wrap: false,
@@ -2011,8 +2011,8 @@ impl Tabs {
                         TabsOrientation::Horizontal => fret_core::Axis::Vertical,
                         TabsOrientation::Vertical => fret_core::Axis::Horizontal,
                     },
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,

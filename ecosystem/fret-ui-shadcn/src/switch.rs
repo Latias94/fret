@@ -399,10 +399,15 @@ impl Switch {
                 // (Tailwind-like border-box behavior). Child positioning is relative to the inner
                 // content area, so we should not double-count border/padding when computing the
                 // thumb's absolute insets.
+                let pad_px = |v: fret_ui::element::SpacingLength| match v {
+                    fret_ui::element::SpacingLength::Px(px) => px.0.max(0.0),
+                    fret_ui::element::SpacingLength::Fill
+                    | fret_ui::element::SpacingLength::Fraction(_) => 0.0,
+                };
                 let chrome_inset_y = Px(chrome_props.border.top.0.max(0.0)
                     + chrome_props.border.bottom.0.max(0.0)
-                    + chrome_props.padding.top.0.max(0.0)
-                    + chrome_props.padding.bottom.0.max(0.0));
+                    + pad_px(chrome_props.padding.top)
+                    + pad_px(chrome_props.padding.bottom));
 
                 if let (Some(control_id), Some(control_registry)) =
                     (control_id.clone(), control_registry.clone())
@@ -465,8 +470,8 @@ impl Switch {
                     //   track border (1px) plus any explicit padding.
                     let chrome_inset_x = Px(chrome_props.border.left.0.max(0.0)
                         + chrome_props.border.right.0.max(0.0)
-                        + chrome_props.padding.left.0.max(0.0)
-                        + chrome_props.padding.right.0.max(0.0));
+                        + pad_px(chrome_props.padding.left)
+                        + pad_px(chrome_props.padding.right));
 
                     let inner_w = Px((w.0 - chrome_inset_x.0).max(0.0));
                     let inner_h = Px((h.0 - chrome_inset_y.0).max(0.0));
@@ -500,7 +505,7 @@ impl Switch {
 
                     let thumb_props = ContainerProps {
                         layout: thumb_layout,
-                        padding: Edges::all(Px(0.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         background: Some(thumb_color),
                         shadow: None,
                         border: Edges::all(Px(0.0)),

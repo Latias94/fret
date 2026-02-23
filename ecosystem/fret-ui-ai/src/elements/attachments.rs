@@ -274,7 +274,7 @@ impl Attachments {
 
         let mut props = fret_ui::element::FlexProps::default();
         props.layout = flex_layout;
-        props.gap = gap;
+        props.gap = gap.into();
         props.wrap = self.variant != AttachmentVariant::List;
         props.direction = match self.variant {
             AttachmentVariant::List => fret_core::Axis::Vertical,

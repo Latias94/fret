@@ -858,8 +858,8 @@ fn material_icon_button_chrome<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
-    props.layout.size.min_width = Some(size.container);
-    props.layout.size.min_height = Some(size.container);
+    props.layout.size.min_width = Some(Length::Px(size.container));
+    props.layout.size.min_height = Some(Length::Px(size.container));
     props.background = background;
     props.corner_radii = corner_radii;
     if let Some(outline) = outline {
@@ -881,13 +881,14 @@ fn material_icon_button_content<H: UiHost>(
         FlexProps {
             layout,
             direction: Axis::Horizontal,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding: Edges {
                 left: size.pad_left,
                 right: size.pad_right,
                 top: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,

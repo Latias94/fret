@@ -705,7 +705,7 @@ impl TerminalCopyButton {
             chrome_props.corner_radii =
                 fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
                 let row = stack::hstack(
@@ -828,7 +828,7 @@ impl TerminalClearButton {
             chrome_props.corner_radii =
                 fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
                 vec![stack::hstack(

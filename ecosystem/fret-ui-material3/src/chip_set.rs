@@ -94,7 +94,7 @@ impl Default for ChipSet {
         Self {
             items: Vec::new(),
             disabled: false,
-            gap: Px(8.0),
+            gap: Px(8.0).into(),
             wrap_layout: false,
             loop_navigation: true,
             a11y_label: None,
@@ -182,7 +182,7 @@ impl ChipSet {
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Horizontal;
-        props.flex.gap = gap;
+        props.flex.gap = gap.into();
         props.flex.wrap = wrap_layout;
         props.roving.enabled = !disabled;
         props.roving.wrap = loop_navigation;

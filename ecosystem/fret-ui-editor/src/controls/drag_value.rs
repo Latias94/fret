@@ -221,7 +221,7 @@ where
                             size: SizeStyle {
                                 width: Length::Fill,
                                 height: Length::Fill,
-                                min_height: Some(density.row_height),
+                                min_height: Some(Length::Px(density.row_height)),
                                 ..Default::default()
                             },
                             ..Default::default()
@@ -306,8 +306,8 @@ fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
     layout.size = SizeStyle {
         width: Length::Px(Px(0.0)),
         height: Length::Px(Px(0.0)),
-        min_width: Some(Px(0.0)),
-        min_height: Some(Px(0.0)),
+        min_width: Some(Length::Px(Px(0.0))),
+        min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
     };
     layout.position = PositionStyle::Absolute;

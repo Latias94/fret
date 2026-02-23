@@ -407,7 +407,7 @@ impl Checkbox {
                     LayoutRefinement::default(),
                 );
                 chrome_props.corner_radii = Corners::all(radius);
-                chrome_props.padding = Edges::all(Px(0.0));
+                chrome_props.padding = Edges::all(Px(0.0)).into();
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
@@ -500,8 +500,8 @@ impl Checkbox {
                         FlexProps {
                             layout: inner_layout,
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -979,8 +979,8 @@ mod tests {
                     FlexProps {
                         layout: row_layout,
                         direction: Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -1078,8 +1078,8 @@ mod tests {
                     FlexProps {
                         layout: row_layout,
                         direction: Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Start,
                         wrap: false,

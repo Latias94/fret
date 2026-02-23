@@ -273,7 +273,7 @@ impl ConversationTranscript {
                     overflow: fret_ui::element::Overflow::Clip,
                     ..Default::default()
                 },
-                padding: Edges::all(padding_px),
+                padding: Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |_cx| vec![list],
@@ -501,7 +501,7 @@ impl Conversation {
         let content = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(padding_px),
+                padding: Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |cx| {

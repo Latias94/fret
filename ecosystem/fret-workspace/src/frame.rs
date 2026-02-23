@@ -22,7 +22,7 @@ fn row_layout(height: Px) -> LayoutStyle {
 fn flex_grow_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
-    layout.size.min_width = Some(Px(0.0));
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.grow = 1.0;
     layout.flex.shrink = 1.0;
     layout
@@ -111,7 +111,7 @@ impl WorkspaceFrame {
                     FlexProps {
                         layout: {
                             let mut layout = flex_grow_layout();
-                            layout.size.min_height = Some(Px(0.0));
+                            layout.size.min_height = Some(Length::Px(Px(0.0)));
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
@@ -215,7 +215,7 @@ impl WorkspaceTopBar {
         cx.container(
             ContainerProps {
                 layout: row_layout(self.height),
-                padding: self.padding,
+                padding: self.padding.into(),
                 background: bg,
                 border: Edges {
                     bottom: Px(1.0),
@@ -229,7 +229,7 @@ impl WorkspaceTopBar {
                     FlexProps {
                         layout: fill_layout(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
+                        gap: Px(8.0).into(),
                         align: CrossAlign::Center,
                         ..Default::default()
                     },
@@ -252,7 +252,7 @@ impl WorkspaceTopBar {
                                 FlexProps {
                                     layout: center_layout,
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: Px(8.0),
+                                    gap: Px(8.0).into(),
                                     align: CrossAlign::Center,
                                     ..Default::default()
                                 },
@@ -328,7 +328,7 @@ impl WorkspaceStatusBar {
         cx.container(
             ContainerProps {
                 layout: row_layout(self.height),
-                padding: self.padding,
+                padding: self.padding.into(),
                 background: bg,
                 border: Edges {
                     top: Px(1.0),
@@ -342,7 +342,7 @@ impl WorkspaceStatusBar {
                     FlexProps {
                         layout: fill_layout(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
+                        gap: Px(8.0).into(),
                         align: CrossAlign::Center,
                         ..Default::default()
                     },
