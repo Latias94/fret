@@ -439,15 +439,15 @@ pub(in crate::ui) fn preview_data_table_legacy(
                             )])
                             .into_element(cx);
 
-                        shadcn::DropdownMenu::new(open)
-                            .align(shadcn::DropdownMenuAlign::End)
-                            .side(shadcn::DropdownMenuSide::Bottom)
-                            .into_element(
-                                cx,
-                                move |_cx| trigger.clone(),
-                                move |_cx| {
-                                    vec![
-                                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenu::new(open)
+                                .align(shadcn::DropdownMenuAlign::End)
+                                .side(shadcn::DropdownMenuSide::Bottom)
+                                .into_element(
+                                    cx,
+                                    move |_cx| trigger,
+                                    move |_cx| {
+                                        vec![
+                                            shadcn::DropdownMenuEntry::Item(
                                             shadcn::DropdownMenuItem::new("Edit")
                                                 .test_id(Arc::<str>::from(format!(
                                                     "ui-gallery-data-table-row-actions-item-edit-{}",

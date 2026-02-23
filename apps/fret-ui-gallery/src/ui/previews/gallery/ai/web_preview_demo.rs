@@ -199,7 +199,7 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
             let body = ui_ai::WebPreviewBody::new().into_element(cx);
 
             let mut out: Vec<AnyElement> = vec![nav, body, console];
-            out.extend(markers.clone());
+            out.extend(markers);
             out
         });
 

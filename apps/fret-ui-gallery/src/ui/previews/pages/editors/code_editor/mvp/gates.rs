@@ -180,7 +180,7 @@ pub(super) fn a11y_composition_gate(
     let controls = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject.clone(), clear.clone()],
+        move |_cx| vec![inject, clear],
     );
 
     let platform_controls = {
@@ -219,7 +219,7 @@ pub(super) fn a11y_composition_gate(
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |_cx| vec![start.clone(), cancel.clone()],
+            move |_cx| vec![start, cancel],
         )
     };
 
@@ -331,7 +331,7 @@ pub(super) fn a11y_composition_wrap_gate(
     let controls = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject.clone(), clear.clone()],
+        move |_cx| vec![inject, clear],
     );
 
     let panel = gate_panel(cx, theme, gate_editor);
@@ -427,7 +427,7 @@ pub(super) fn a11y_composition_drag_gate(
     let controls = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject.clone(), clear.clone()],
+        move |_cx| vec![inject, clear],
     );
 
     let panel = gate_panel(cx, theme, gate_editor);

@@ -197,20 +197,26 @@ pub(super) fn preview_command_palette(
         }
     };
 
-    let basic_items = vec![
-        shadcn::CommandItem::new("Calendar")
-            .shortcut("Cmd+C")
-            .keywords(["events", "schedule"])
-            .on_select_action(on_select(Arc::from("command.basic.calendar"))),
-        shadcn::CommandItem::new("Search Emoji")
-            .shortcut("Cmd+E")
-            .keywords(["emoji", "insert"])
-            .on_select_action(on_select(Arc::from("command.basic.search-emoji"))),
-        shadcn::CommandItem::new("Calculator")
-            .shortcut("Cmd+K")
-            .keywords(["math", "calc"])
-            .on_select_action(on_select(Arc::from("command.basic.calculator"))),
-    ];
+    fn build_basic_items(
+        on_select: &impl Fn(Arc<str>) -> fret_ui::action::OnActivate,
+    ) -> Vec<shadcn::CommandItem> {
+        vec![
+            shadcn::CommandItem::new("Calendar")
+                .shortcut("Cmd+C")
+                .keywords(["events", "schedule"])
+                .on_select_action(on_select(Arc::from("command.basic.calendar"))),
+            shadcn::CommandItem::new("Search Emoji")
+                .shortcut("Cmd+E")
+                .keywords(["emoji", "insert"])
+                .on_select_action(on_select(Arc::from("command.basic.search-emoji"))),
+            shadcn::CommandItem::new("Calculator")
+                .shortcut("Cmd+K")
+                .keywords(["math", "calc"])
+                .on_select_action(on_select(Arc::from("command.basic.calculator"))),
+        ]
+    }
+
+    let basic_items = build_basic_items(&on_select);
 
     let usage_entries: Vec<shadcn::CommandEntry> = vec![
         shadcn::CommandGroup::new([
@@ -245,8 +251,10 @@ pub(super) fn preview_command_palette(
         .test_id_item_prefix("ui-gallery-command-usage-item-")
         .into_element(cx)
         .test_id("ui-gallery-command-usage");
-    let mut demo_filter_entries: Vec<shadcn::CommandEntry> =
-        basic_items.clone().into_iter().map(Into::into).collect();
+    let mut demo_filter_entries: Vec<shadcn::CommandEntry> = build_basic_items(&on_select)
+        .into_iter()
+        .map(Into::into)
+        .collect();
     demo_filter_entries.push(
         shadcn::CommandSeparator::new()
             .always_render(true)
@@ -410,7 +418,7 @@ pub(super) fn preview_command_palette(
                 .placeholder("Type a command or search... (demo-only)")
                 .a11y_label("Command controlled value demo")
                 .value(Some(demo_filter_value.clone()))
-                .entries(demo_filter_entries.clone())
+                .entries(demo_filter_entries)
                 .should_filter(!demo_disable_filtering_value)
                 .test_id_input("ui-gallery-command-demo-filter-input")
                 .list_test_id("ui-gallery-command-demo-filter-listbox")
@@ -657,7 +665,7 @@ pub(super) fn preview_command_palette(
                 shadcn::CommandPalette::new(loading_query.clone(), Vec::new())
                     .placeholder("Type a command or search...")
                     .a11y_label("Command loading demo")
-                    .entries(loading_entries.clone())
+                    .entries(loading_entries)
                     .test_id_input("ui-gallery-command-loading-input")
                     .list_test_id("ui-gallery-command-loading-listbox")
                     .test_id_item_prefix("ui-gallery-command-loading-item-")
