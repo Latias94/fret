@@ -157,6 +157,7 @@ Statuses:
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/command.rs` | `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json` + `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json` |
 | Sidebar icon-only toggle uses deferred icon slot | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (manual) |
 | AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | (manual) |
+| Diag gate: primary button icon visibility (via ButtonGroup demo; zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |
 | Text defaults inherit `currentColor` | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui.rs` | unit test |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |

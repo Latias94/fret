@@ -48,8 +48,8 @@ Last updated: 2026-02-23
 - [x] Add a Button Group diag script capturing Demo preview + Code.
 - [x] Add a Dropdown Menu icons diag script (zinc/light + zinc/dark) to gate leading-icon foreground inheritance.
 - [x] Add Command docs demo icons screenshot scripts (zinc/light + zinc/dark) to gate `CommandItem::leading_icon` inheritance.
-- [ ] Add a “primary button + icon” diag script that asserts the icon is visible:
-  - [ ] capture screenshot in zinc/light and zinc/dark presets
+- [x] Add a “primary button + icon” diag script that asserts the icon is visible:
+  - [x] capture screenshot in zinc/light and zinc/dark presets (`tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json`)
   - [ ] (optional) pixel-change assertion for the icon bounds
 - [ ] Add a “menu item with leading icon + disabled/active” diag script.
 
