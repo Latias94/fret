@@ -52,6 +52,10 @@ Shadcn modal titles should publish heading semantics to improve navigation and c
 - `DialogTitle` → `role=Heading`, `level=2`
 - `AlertDialogTitle` → `role=Heading`, `level=2`
 
+Markdown renderers should publish heading semantics directly from the document structure:
+
+- `fret-markdown` pulldown headings → `role=Heading`, `level = h1..h6`
+
 ## Evidence (implementation)
 
 - Contract: `crates/fret-core/src/semantics.rs` (`SemanticsRole::Heading`)
@@ -59,7 +63,10 @@ Shadcn modal titles should publish heading semantics to improve navigation and c
 - Ecosystem adoption:
   - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`DialogTitle`)
   - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`AlertDialogTitle`)
-- Regression gate: `ecosystem/fret-ui-shadcn/tests/snapshots/heading_level_semantics.json`
+- Markdown adoption: `ecosystem/fret-markdown/src/pulldown_render.rs`
+- Regression gates:
+  - shadcn snapshot: `ecosystem/fret-ui-shadcn/tests/snapshots/heading_level_semantics.json`
+  - markdown unit tests: `ecosystem/fret-markdown/src/semantics_tests.rs`
 
 ## Alternatives considered
 
@@ -69,4 +76,3 @@ Shadcn modal titles should publish heading semantics to improve navigation and c
 2. **Keep headings as text-only conventions.**
    - Pros: avoids contract change.
    - Cons: platforms cannot provide heading navigation; diagnostics cannot assert structure.
-

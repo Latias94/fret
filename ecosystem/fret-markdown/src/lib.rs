@@ -38,6 +38,8 @@ mod open_url;
 mod parse;
 mod pulldown_render;
 #[cfg(test)]
+mod semantics_tests;
+#[cfg(test)]
 mod tests;
 mod theme;
 

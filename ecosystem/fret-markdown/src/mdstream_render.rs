@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -336,6 +337,7 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
                     (1, title, id)
                 });
             let info = HeadingInfo { level, text };
+            let semantics_label = info.text.clone();
             let test_id =
                 crate::anchors::heading_anchor_test_id_with_id(&info.text, explicit_id.as_deref());
 
@@ -344,7 +346,13 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             } else {
                 crate::render_heading_inline(cx, theme, markdown_theme, components, info, events)
             };
-            el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            el.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Heading)
+                    .label(semantics_label)
+                    .level(u32::from(level))
+                    .test_id(test_id),
+            )
         }
         mdstream::BlockKind::Paragraph => {
             if crate::is_display_math_block_text(block.display_or_raw()) {
