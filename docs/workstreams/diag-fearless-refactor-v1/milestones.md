@@ -25,6 +25,7 @@ Exit criteria:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
   - `crates/fret-diag/src/stats/debug_stats_gates.rs`
+  - `crates/fret-diag/src/stats/drag_cache_gates.rs`
   - `crates/fret-diag/src/stats/interaction_gates.rs`
   - `crates/fret-diag/src/stats/gc_gates.rs`
   - `crates/fret-diag/src/stats/notify_gates.rs`
