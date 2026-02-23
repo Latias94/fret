@@ -534,6 +534,84 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
     ]
 }
 
+pub(in crate::ui) fn preview_magic_patterns_torture(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
+
+    let stripes = {
+        let mut c = ring;
+        c.a = (c.a * 0.14).clamp(0.0, 1.0);
+        c
+    };
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Px(Px(840.0));
+
+    let surface = magic::stripe_pattern(
+        cx,
+        magic::StripePatternProps {
+            layout,
+            padding: Edges::all(Px(0.0)),
+            corner_radii: Corners::all(Px(16.0)),
+            base,
+            stripes,
+            motion: magic::PatternMotionProps {
+                enabled: true,
+                scroll_px_per_s: (140.0, 0.0),
+            },
+            seed: 1,
+            ..Default::default()
+        },
+        |cx| {
+            vec![
+                shadcn::typography::p(cx, "Stripe (fill-rate torture)")
+                    .test_id("ui-gallery-magic-patterns-torture-label"),
+            ]
+        },
+    )
+    .test_id("ui-gallery-magic-patterns-torture-surface");
+
+    vec![
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start(),
+            |cx| {
+                vec![
+                    shadcn::typography::h4(cx, "Patterns (fill-rate torture)"),
+                    shadcn::typography::p(
+                        cx,
+                        "A large animated Tier B material surface intended for WebGPU perf evidence collection.",
+                    ),
+                    cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(Px(840.0));
+                                layout
+                            },
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(border),
+                            corner_radii: Corners::all(Px(16.0)),
+                            ..Default::default()
+                        },
+                        |_cx| vec![surface],
+                    )
+                    .test_id("ui-gallery-magic-patterns-torture"),
+                ]
+            },
+        )
+        .test_id("ui-gallery-magic-patterns-torture-root"),
+    ]
+}
+
 pub(in crate::ui) fn preview_magic_sparkles_text(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {
