@@ -539,6 +539,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-230 Stage 23: speed up material distinct tracking during encode.
+  - Goal: avoid `Vec::contains` linear scans per `Paint::Material` encode and keep distinct-budget checks fast.
+  - Landed (step 1): replace the distinct-seen scratch with a reused `HashSet<MaterialId>` stored on `SceneEncoding`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding::encode_material_seen_scratch`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`Paint::Material` path)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

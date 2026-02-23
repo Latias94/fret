@@ -767,6 +767,18 @@ Progress record (EncodeState per-frame stack scratch reuse):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Material distinct encode tracking uses HashSet scratch):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 23 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding::encode_material_seen_scratch`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`Paint::Material` path)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
