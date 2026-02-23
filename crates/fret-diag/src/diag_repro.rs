@@ -77,6 +77,32 @@ fn resolve_repro_scripts(rest: &[String], workspace_root: &Path) -> (Vec<PathBuf
     }
 }
 
+fn compute_required_caps(scripts: &[PathBuf]) -> Vec<String> {
+    let mut required_caps: Vec<String> = Vec::new();
+    for src in scripts.iter() {
+        required_caps.extend(script_required_capabilities(src));
+    }
+    required_caps.sort();
+    required_caps.dedup();
+    required_caps
+}
+
+fn pack_defaults_with_fallback(
+    pack_include_root_artifacts: bool,
+    pack_include_triage: bool,
+    pack_include_screenshots: bool,
+) -> (bool, bool, bool) {
+    let mut pack_defaults = (
+        pack_include_root_artifacts,
+        pack_include_triage,
+        pack_include_screenshots,
+    );
+    if !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
+        pack_defaults = (true, true, true);
+    }
+    pack_defaults
+}
+
 struct PreparedReproLaunch {
     launch: Option<Vec<String>>,
     launch_env: Vec<(String, String)>,
@@ -454,25 +480,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         );
     }
 
-    let mut pack_defaults = (
+    let pack_defaults = pack_defaults_with_fallback(
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
     );
-    if !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
-        pack_defaults = (true, true, true);
-    }
 
     let (scripts, suite_name) = resolve_repro_scripts(&rest, &workspace_root);
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
-    let mut required_caps: Vec<String> = Vec::new();
-    for src in scripts.iter() {
-        required_caps.extend(script_required_capabilities(src));
-    }
-    required_caps.sort();
-    required_caps.dedup();
+    let required_caps = compute_required_caps(&scripts);
 
     let mut overall_reason_code: Option<String> = None;
 
