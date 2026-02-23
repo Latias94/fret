@@ -233,6 +233,7 @@ diagnostics stack stays easy to evolve.
     - `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
     - `crates/fret-diag/src/stats/bundle_stats_compute.inc.rs`
     - `crates/fret-diag/src/stats/bundle_stats_snapshot.rs`
+  - [x] Move retained vlist keep-alive gates into `crates/fret-diag/src/stats/retained_vlist_gates.rs`.
 - [ ] Audit and remove dead/legacy code paths once consumers have migrated:
   - legacy env knobs that are no longer used,
   - legacy schema compatibility layers that are no longer needed for in-tree workflows.
