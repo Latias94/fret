@@ -165,6 +165,13 @@ impl DevtoolsWsClient {
             let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) else {
                 return;
             };
+            if wasm_client_log_enabled() {
+                wasm_log(&format!(
+                    "fret-diag-ws: onmessage type={} session_id={}",
+                    msg.r#type,
+                    msg.session_id.as_deref().unwrap_or("<none>")
+                ));
+            }
             maybe_capture_session_id(&state_message, &msg);
             if let Ok(mut inbox) = state_message.inbox.lock() {
                 inbox.push_back(msg);
