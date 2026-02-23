@@ -218,6 +218,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - View-cache harness (on): `.fret/diag/exports/1771842156088-bundle` (`view_cache_active=true`, `view_cache_roots_total=2`, `view_cache_roots_reused=2` steady-state).
     - Recommended evidence URL flags for WebGPU perf bundles: enable `fret_ui_gallery_view_cache=1`, `fret_ui_gallery_view_cache_shell=1`,
       and `fret_ui_gallery_view_cache_continuous=1` so DevTools WS scripts can progress even when the page is otherwise idle.
+  - Status note (2026-02-23): re-exported `magic_patterns_torture` under web view-cache flags (shell-only caching, animation preserved):
+    - Bundle: `.fret/diag/exports/1771842539046-bundle`
+    - `fretboard diag stats`: avg total ≈ 4.9ms, p95 total ≈ 5.2ms; `paint` still dominates but shell reuse is active (`cache_roots=1`, `cache_roots_reused=1`).
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.

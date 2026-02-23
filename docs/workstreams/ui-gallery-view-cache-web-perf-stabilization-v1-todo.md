@@ -14,12 +14,13 @@
     - off: `view_cache_active=false`, `view_cache_roots_total>0` (has `cached_subtree`, but reuse should be gated off)
     - on: `view_cache_active=true`, `view_cache_roots_total>0`, `view_cache_roots_reused>0` after warm-up
   - Note: prefer `fret_ui_gallery_view_cache_continuous=1` on web so scripts can advance frames reliably.
-- [ ] Re-capture a view-cache bundle after:
+- [x] Re-capture a view-cache bundle after:
   - enabling shell view-cache by default on `wasm32` when view-cache is enabled
   - removing per-frame model churn for undo/redo availability
-- [ ] Confirm view-cache roots are actually mounted for the magic-patterns workload:
-  - Expect: `view_cache_roots_total > 0` (at least sidebar + content) and some reuse in steady-state.
-  - If still `0`, verify effective shell caching and/or force it for evidence runs.
+  - Evidence: `.fret/diag/exports/1771842539046-bundle`
+- [x] Confirm view-cache roots are actually mounted for the magic-patterns workload:
+  - Observed: `view_cache_active=true`, `cache_roots=1`, `cache_roots_reused=1` (shell).
+  - Note: the `magic_patterns_torture` content subtree intentionally remains uncached under view-cache to preserve animation.
 - [ ] Compare:
   - `paint_time_us` p95 and max
   - `paint_cache_misses`

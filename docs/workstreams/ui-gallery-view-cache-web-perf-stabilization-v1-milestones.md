@@ -24,7 +24,8 @@
     - off: `view_cache_active=false`, `view_cache_roots_total=1`
     - on: `view_cache_active=true`, `view_cache_roots_total=2`, `view_cache_roots_reused=2` (steady-state)
 - [ ] Post-fixes experimental bundle (web, view-cache enabled + shell default + churn fix):
-  - Evidence: `.fret/diag/exports/<ts>-bundle` (path only)
+  - Evidence: `.fret/diag/exports/1771842539046-bundle`
+  - Notes: `view_cache_active=true`, `cache_roots=1`, `cache_roots_reused=1` (shell only; magic patterns content remains uncached to preserve animation)
 - [x] Post-churn-fix experimental bundle (web, view-cache enabled):
   - Evidence: `.fret/diag/exports/1771835082078-bundle`
   - Notes: `model_changes=0`, `paint_cache_misses≈2`, but `view_cache_roots_total=0` still (shell roots not being mounted yet).
