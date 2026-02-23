@@ -19,6 +19,7 @@ scope: diagnostics, automation, tooling, refactor
   - script execution / state / step handlers,
   - bundle dumping + sidecar writers,
   - DevTools WS bridge wiring.
+- [x] Extract bundle dump policy helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump_policy.rs`.
 - [x] Keep a regression gate: `cargo check -p fret-ui-gallery` after each extraction step.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)

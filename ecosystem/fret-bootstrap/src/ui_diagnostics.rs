@@ -51,6 +51,7 @@ pub use bundle::{
 mod bundle_index;
 
 mod bundle_dump;
+mod bundle_dump_policy;
 mod fs_triggers;
 mod inspect;
 mod pick;
