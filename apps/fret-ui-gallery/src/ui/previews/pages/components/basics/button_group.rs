@@ -117,6 +117,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     let theme = Theme::global(&*cx.app).snapshot();
     let outline_fg = ColorRef::Color(theme.color_token("foreground"));
     let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
+    let primary_fg = ColorRef::Color(theme.color_token("primary-foreground"));
 
     let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
         shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
@@ -125,7 +126,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     let demo = shadcn::ButtonGroup::new([
         shadcn::Button::new("Button").into(),
         shadcn::Button::new("Get Started")
-            .children([icon(cx, "lucide.arrow-right", outline_fg.clone())])
+            .children([icon(cx, "lucide.arrow-right", primary_fg.clone())])
             .into(),
     ])
     .a11y_label("Button group")
@@ -496,36 +497,133 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 .test_id_prefix("ui-gallery-button-group-demo")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("primary-foreground"));
+
+let arrow = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.arrow-right"),
+    None,
+    Some(fg),
+);
+
+shadcn::ButtonGroup::new([
     shadcn::Button::new("Button").into(),
-    shadcn::Button::new("Get Started").into(),
-]).into_element(cx);"#,
+    shadcn::Button::new("Get Started").children([arrow]).into(),
+])
+.a11y_label("Button group")
+.into_element(cx);"#,
                 ),
             DocSection::new("Orientation", orientation)
                 .test_id_prefix("ui-gallery-button-group-orientation")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([...])
-    .orientation(shadcn::ButtonGroupOrientation::Vertical)
-    .into_element(cx);"#,
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
+
+let plus = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.plus"),
+    None,
+    Some(fg.clone()),
+);
+let minus = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.minus"),
+    None,
+    Some(fg),
+);
+
+shadcn::ButtonGroup::new([
+    shadcn::Button::new("Increase")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([plus])
+        .into(),
+    shadcn::Button::new("Decrease")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([minus])
+        .into(),
+])
+.orientation(shadcn::ButtonGroupOrientation::Vertical)
+.a11y_label("Media controls")
+.into_element(cx);"#,
                 ),
             DocSection::new("Size", size)
                 .no_shell()
                 .test_id_prefix("ui-gallery-button-group-size")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
+
+let icon = |cx, name: &'static str| {
+    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg.clone()))
+};
+
+let small = shadcn::ButtonGroup::new([
     shadcn::Button::new("Small")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .into(),
+    shadcn::Button::new("Button")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .into(),
+    shadcn::Button::new("Group")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
         .into(),
     shadcn::Button::new("Add")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::IconSm)
-        .children([icon(cx, "lucide.plus", fg)])
+        .children([icon(cx, "lucide.plus")])
         .into(),
 ])
-.into_element(cx);"#,
+.into_element(cx);
+
+let medium = shadcn::ButtonGroup::new([
+    shadcn::Button::new("Default").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("Button").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("Group").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("Add")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([icon(cx, "lucide.plus")])
+        .into(),
+])
+.into_element(cx);
+
+let large = shadcn::ButtonGroup::new([
+    shadcn::Button::new("Large")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Lg)
+        .into(),
+    shadcn::Button::new("Button")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Lg)
+        .into(),
+    shadcn::Button::new("Group")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Lg)
+        .into(),
+    shadcn::Button::new("Add")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::IconLg)
+        .children([icon(cx, "lucide.plus")])
+        .into(),
+])
+.into_element(cx);
+
+stack::vstack(
+    cx,
+    stack::VStackProps::default()
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0()),
+    |_cx| vec![small, medium, large],
+)"#,
                 ),
             DocSection::new("Nested", nested)
                 .test_id_prefix("ui-gallery-button-group-nested")
@@ -560,7 +658,17 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
                 .test_id_prefix("ui-gallery-button-group-split")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("secondary-foreground"));
+
+let plus = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.plus"),
+    None,
+    Some(fg),
+);
+
+shadcn::ButtonGroup::new([
     shadcn::Button::new("Button").variant(shadcn::ButtonVariant::Secondary).into(),
     shadcn::Separator::new()
         .orientation(shadcn::SeparatorOrientation::Vertical)
@@ -568,7 +676,7 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
     shadcn::Button::new("Add")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Icon)
-        .children([icon(cx, "lucide.plus", fg)])
+        .children([plus])
         .into(),
 ])
 .into_element(cx);"#,
@@ -596,22 +704,59 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
                 .test_id_prefix("ui-gallery-button-group-input")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
-    shadcn::Input::new(model).placeholder("Search...").into_element(cx).into(),
-    shadcn::Button::new("Search").into(),
-]).into_element(cx);"#,
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
+let model = cx.app.models_mut().insert(String::new());
+
+let search = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.search"),
+    None,
+    Some(fg),
+);
+
+shadcn::ButtonGroup::new([
+    shadcn::Input::new(model)
+        .a11y_label("Search")
+        .placeholder("Search...")
+        .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+        .into_element(cx)
+        .into(),
+    shadcn::Button::new("Search")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([search])
+        .into(),
+])
+.into_element(cx);"#,
                 ),
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
                 .code(
                     "rust",
-                    r#"let group = shadcn::InputGroup::new(model)
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
+let model = cx.app.models_mut().insert(String::new());
+
+let plus = shadcn::icon::icon_with(
+    cx,
+    fret_icons::IconId::new_static("lucide.plus"),
+    None,
+    Some(fg),
+);
+
+let group = shadcn::InputGroup::new(model)
+    .a11y_label("Message")
     .leading([shadcn::InputGroupText::new("To").into_element(cx)])
     .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
 
 shadcn::ButtonGroup::new([
-    shadcn::Button::new("Add").variant(shadcn::ButtonVariant::Outline).into(),
+    shadcn::Button::new("Add")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([plus])
+        .into(),
     group.into(),
 ])
 .into_element(cx);"#,
@@ -621,40 +766,144 @@ shadcn::ButtonGroup::new([
                 .test_id_prefix("ui-gallery-button-group-dropdown")
                 .code(
                     "rust",
-                    r#"let menu = shadcn::DropdownMenu::new(open_model).into_element(
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
+let open_model = cx.app.models_mut().insert(false);
+
+let icon = |cx, name: &'static str| {
+    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg.clone()))
+};
+
+let menu = shadcn::DropdownMenu::new(open_model.clone()).into_element(
     cx,
-    |cx| shadcn::Button::new("More").toggle_model(open_model).into_element(cx),
-    |_cx| vec![shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile"))],
+    |cx| {
+        shadcn::Button::new("More")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .children([icon(cx, "lucide.chevron-down")])
+            .toggle_model(open_model.clone())
+            .into_element(cx)
+    },
+    |cx| {
+        vec![
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Mute Conversation")
+                    .leading(icon(cx, "lucide.volume-x")),
+            ),
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Mark as Read").leading(icon(cx, "lucide.check")),
+            ),
+            shadcn::DropdownMenuEntry::Separator,
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Delete Conversation")
+                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .leading(icon(cx, "lucide.trash")),
+            ),
+        ]
+    },
 );
 
-shadcn::ButtonGroup::new([shadcn::Button::new("Edit").into(), menu.into()])
-    .into_element(cx);"#,
+shadcn::ButtonGroup::new([
+    shadcn::Button::new("Follow")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into(),
+    menu.into(),
+])
+.into_element(cx);"#,
                 ),
             DocSection::new("Select", select)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-select")
                 .code(
                     "rust",
-                    r#"let select = shadcn::Select::new(value_model, open_model)
-    .into_element(
-        cx,
-        |cx, trigger| trigger.into_element(cx),
-        |_cx| vec![shadcn::SelectEntry::Item(shadcn::SelectItem::new("Apple"))],
-    );
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
 
-shadcn::ButtonGroup::new([select.into(), shadcn::Button::new("Apply").into()])
-    .into_element(cx);"#,
+let select_open = cx.app.models_mut().insert(false);
+let select_value = cx.app.models_mut().insert(Some("$".into()));
+let amount_value = cx.app.models_mut().insert(String::new());
+
+let icon = |cx, name: &'static str| {
+    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg.clone()))
+};
+
+let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
+    .placeholder("$")
+    .refine_layout(LayoutRefinement::default().w_px(Px(96.0)))
+    .items([
+        shadcn::SelectItem::new("$", "US Dollar"),
+        shadcn::SelectItem::new("€", "Euro"),
+        shadcn::SelectItem::new("£", "British Pound"),
+    ])
+    .into_element(cx);
+
+let amount = shadcn::Input::new(amount_value)
+    .a11y_label("Amount")
+    .placeholder("10.00")
+    .refine_layout(LayoutRefinement::default().w_px(Px(140.0)))
+    .into_element(cx);
+
+let send = shadcn::Button::new("Send")
+    .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Icon)
+    .children([icon(cx, "lucide.arrow-right")]);
+
+shadcn::ButtonGroup::new([
+    shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
+    shadcn::ButtonGroup::new([send.into()]).into(),
+])
+.into_element(cx);"#,
                 ),
             DocSection::new("Popover", popover)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-popover")
                 .code(
                     "rust",
-                    r#"let popover = shadcn::Popover::new(open_model)
-    .into_element(cx, |cx| trigger_button, |cx| popover_content);
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let fg = ColorRef::Color(theme.color_token("foreground"));
 
-shadcn::ButtonGroup::new([shadcn::Button::new("Filter").into(), popover.into()])
-    .into_element(cx);"#,
+let open_model = cx.app.models_mut().insert(false);
+let text_model =
+    cx.app.models_mut().insert(String::from("Describe your task in natural language."));
+
+let icon = |cx, name: &'static str| {
+    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg.clone()))
+};
+
+let popover = shadcn::Popover::new(open_model.clone())
+    .side(shadcn::PopoverSide::Bottom)
+    .align(shadcn::PopoverAlign::End)
+    .into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("Open Popover")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.chevron-down")])
+                .toggle_model(open_model.clone())
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::PopoverContent::new(vec![
+                shadcn::PopoverTitle::new("Agent Tasks").into_element(cx),
+                shadcn::Separator::new().into_element(cx),
+                shadcn::Textarea::new(text_model.clone())
+                    .a11y_label("Task")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+                    .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );
+
+shadcn::ButtonGroup::new([
+    shadcn::Button::new("Copilot")
+        .variant(shadcn::ButtonVariant::Outline)
+        .children([icon(cx, "lucide.bot")])
+        .into(),
+    popover.into(),
+])
+.into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-button-group-rtl")
