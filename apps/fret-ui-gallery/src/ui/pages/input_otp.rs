@@ -9,26 +9,29 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         digits_only_value: Option<Model<String>>,
         separator_value: Option<Model<String>>,
         spacing_value: Option<Model<String>>,
+        invalid_value: Option<Model<String>>,
     }
 
-    let (simple_value, digits_only_value, separator_value, spacing_value) =
-        cx.with_state(InputOtpPageModels::default, |st| {
+    let (simple_value, digits_only_value, separator_value, spacing_value, invalid_value) = cx
+        .with_state(InputOtpPageModels::default, |st| {
             (
                 st.simple_value.clone(),
                 st.digits_only_value.clone(),
                 st.separator_value.clone(),
                 st.spacing_value.clone(),
+                st.invalid_value.clone(),
             )
         });
 
-    let (simple_value, digits_only_value, separator_value, spacing_value) = match (
+    let (simple_value, digits_only_value, separator_value, spacing_value, invalid_value) = match (
         simple_value,
         digits_only_value,
         separator_value,
         spacing_value,
+        invalid_value,
     ) {
-        (Some(simple), Some(digits), Some(separator), Some(spacing)) => {
-            (simple, digits, separator, spacing)
+        (Some(simple), Some(digits), Some(separator), Some(spacing), Some(invalid)) => {
+            (simple, digits, separator, spacing, invalid)
         }
         _ => {
             let models = cx.app.models_mut();
@@ -36,20 +39,21 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             let digits = models.insert(String::new());
             let separator = models.insert(String::from("123456"));
             let spacing = models.insert(String::new());
+            let invalid = models.insert(String::new());
 
             cx.with_state(InputOtpPageModels::default, |st| {
                 st.simple_value = Some(simple.clone());
                 st.digits_only_value = Some(digits.clone());
                 st.separator_value = Some(separator.clone());
                 st.spacing_value = Some(spacing.clone());
+                st.invalid_value = Some(invalid.clone());
             });
 
-            (simple, digits, separator, spacing)
+            (simple, digits, separator, spacing, invalid)
         }
     };
 
     let theme = Theme::global(&*cx.app).snapshot();
-    let destructive = theme.color_token("destructive");
     let otp_width = LayoutRefinement::default()
         .w_full()
         .min_w_0()
@@ -119,9 +123,20 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .group_size(Some(6))
             .slot_gap_px(slot_gap)
             .slot_corner_mode(shadcn::input_otp::InputOtpSlotCornerMode::All)
-            .test_id_prefix("ui-gallery-input-otp-with-spacing")
-            .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(destructive))),
+            .test_id_prefix("ui-gallery-input-otp-with-spacing"),
         "ui-gallery-input-otp-with-spacing",
+    );
+
+    let invalid = field(
+        cx,
+        "Invalid",
+        shadcn::InputOtp::new(invalid_value)
+            .length(6)
+            .numeric_only(true)
+            .group_size(Some(3))
+            .aria_invalid(true)
+            .test_id_prefix("ui-gallery-input-otp-invalid"),
+        "ui-gallery-input-otp-invalid",
     );
 
     let demo = doc_layout::wrap_row_snapshot(
@@ -129,15 +144,15 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         &theme,
         Space::N6,
         fret_ui::element::CrossAlign::Start,
-        |_cx| vec![simple, digits_only, with_separator, with_spacing],
+        |_cx| vec![simple, digits_only, with_separator, with_spacing, invalid],
     )
     .test_id("ui-gallery-input-otp-demo");
 
     let notes = doc_layout::notes(
         cx,
         [
-            "This page aligns with shadcn Input OTP demo: Simple, Digits Only, With Separator, With Spacing.",
-            "Fret's `InputOtp` is a higher-level recipe; the spacing demo approximates `aria-invalid` by applying a destructive border to all slots.",
+            "This page follows shadcn Input OTP patterns (grouping, separators, and active slot behavior).",
+            "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
             "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
         ],
     );
@@ -163,15 +178,20 @@ shadcn::InputOtp::new(model).length(6).numeric_only(true).group_size(Some(6));
 // With Separator
 shadcn::InputOtp::new(model).length(6).group_size(Some(2));
 
-// With Spacing (approx invalid style)
+// With Spacing
 shadcn::InputOtp::new(model)
     .length(6)
     .group_size(Some(6))
     .slot_gap_px(MetricRef::space(Space::N2).resolve(theme.snapshot()))
     .slot_corner_mode(shadcn::input_otp::InputOtpSlotCornerMode::All)
-    .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(
-        theme.color_token("destructive"),
-    )));"#,
+    .into_element(cx);
+
+// Invalid (shadcn: aria-invalid)
+shadcn::InputOtp::new(model)
+    .length(6)
+    .group_size(Some(3))
+    .aria_invalid(true)
+    .into_element(cx);"#,
                 ),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
