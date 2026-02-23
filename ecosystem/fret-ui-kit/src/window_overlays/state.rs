@@ -6,6 +6,9 @@ use fret_ui::action::OnDismissiblePointerMove;
 use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
+use super::requests::{
+    CachedDismissiblePopoverDecl, CachedHoverOverlayDecl, CachedModalDecl, CachedTooltipDecl,
+};
 use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
@@ -85,20 +88,20 @@ pub(super) struct WindowOverlays {
     /// optimization rather than a hard requirement. This is critical when view caching skips
     /// rerendering the subtree that normally emits overlay requests.
     pub(super) cached_popover_requests:
-        HashMap<(AppWindowId, GlobalElementId), DismissiblePopoverRequest>,
+        HashMap<(AppWindowId, GlobalElementId), CachedDismissiblePopoverDecl>,
     /// See `cached_popover_requests`.
-    pub(super) cached_modal_requests: HashMap<(AppWindowId, GlobalElementId), ModalRequest>,
+    pub(super) cached_modal_requests: HashMap<(AppWindowId, GlobalElementId), CachedModalDecl>,
     /// See `cached_popover_requests`.
     pub(super) cached_toast_layer_requests:
         HashMap<(AppWindowId, GlobalElementId), ToastLayerRequest>,
     /// See `cached_popover_requests`.
     pub(super) cached_hover_overlay_requests:
-        HashMap<(AppWindowId, GlobalElementId), HoverOverlayRequest>,
+        HashMap<(AppWindowId, GlobalElementId), CachedHoverOverlayDecl>,
     /// See `cached_popover_requests`.
     pub(super) cached_hover_overlay_pointer_move_handlers:
         HashMap<(AppWindowId, GlobalElementId), Option<OnDismissiblePointerMove>>,
     /// See `cached_popover_requests`.
-    pub(super) cached_tooltip_requests: HashMap<(AppWindowId, GlobalElementId), TooltipRequest>,
+    pub(super) cached_tooltip_requests: HashMap<(AppWindowId, GlobalElementId), CachedTooltipDecl>,
     pub(super) popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,
     pub(super) modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
     pub(super) hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,

@@ -15,7 +15,7 @@ use crate::{ChromeRefinement, LayoutRefinement};
 /// Radix-style `AspectRatio` wrapper.
 ///
 /// This applies `layout.aspect_ratio = Some(ratio)` and defaults to `Overflow::Clip`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AspectRatio {
     ratio: f32,
     child: AnyElement,

@@ -650,30 +650,6 @@ mod tests {
                       services: &mut FakeServices|
          -> fret_core::NodeId {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
-                let header = cx.semantics(
-                    SemanticsProps {
-                        test_id: Some(Arc::<str>::from("table-test-header")),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    overflow: Overflow::Clip,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            |cx| vec![crate::ui::text(cx, "Header").into_element(cx)],
-                        )]
-                    },
-                );
-
                 vec![table_virtualized(
                     cx,
                     &data,
@@ -685,7 +661,32 @@ mod tests {
                     None,
                     TableViewProps::default(),
                     |_row| None,
-                    move |_cx, _col, _sort| [header.clone()],
+                    move |cx, _col, _sort| {
+                        let header = cx.semantics(
+                            SemanticsProps {
+                                test_id: Some(Arc::<str>::from("table-test-header")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![crate::ui::text(cx, "Header").into_element(cx)],
+                                )]
+                            },
+                        );
+                        [header]
+                    },
                     |cx, row, _col| {
                         let long = format!("Row{}-{}", row.index, "x".repeat(4096));
                         let cell = crate::ui::text(cx, long).wrap(TextWrap::Grapheme);
