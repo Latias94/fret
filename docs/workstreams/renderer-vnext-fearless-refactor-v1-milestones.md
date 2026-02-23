@@ -710,6 +710,17 @@ Progress record (Plan quad vertices/bases scratch reuse):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Render plan segment report scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 18 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{render_plan_scene_draw_range_passes_scratch,render_plan_path_msaa_batch_passes_scratch,render_plan_segment_report_scratch}`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

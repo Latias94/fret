@@ -486,6 +486,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-180 Stage 18: reuse renderer-owned scratch for per-frame segment pass counts + segment report.
+  - Goal: avoid per-frame heap allocations in perf-only render-plan diagnostics while keeping segment-drift metrics stable.
+  - Landed (step 1): store scratch vectors on `Renderer` and swap the segment report with the last-frame report for reuse.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{render_plan_*_scratch}`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
