@@ -538,6 +538,17 @@ Progress record (Render space upload helper):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Frame geometry uploads helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 7 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/uploads.rs` (`upload_frame_geometry`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
