@@ -1,4 +1,4 @@
-use super::super::frame_targets::{FrameTargets, downsampled_size};
+use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use super::executor::{RecordPassCtx, RecordPassResources, RenderSceneExecutor};
 use super::helpers::{
@@ -242,52 +242,7 @@ impl Renderer {
                 .saturating_add(encoding.material_degraded_due_to_budget);
         }
 
-        let postprocess = if self.debug_pixelate_scale > 0 {
-            DebugPostprocess::Pixelate {
-                scale: self.debug_pixelate_scale,
-            }
-        } else if self.debug_blur_radius > 0 {
-            let radius = self.debug_blur_radius.max(1);
-            let budget = self.intermediate_budget_bytes;
-            let full = estimate_texture_bytes(viewport_size, format, 1);
-            let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
-            let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
-
-            let required_half = full.saturating_add(half.saturating_mul(2));
-            let required_quarter = full.saturating_add(quarter.saturating_mul(2));
-
-            let default_downsample_scale = if radius > 4 { 4 } else { 2 };
-            let mut downsample_scale = default_downsample_scale;
-            if downsample_scale == 2 && required_half > budget {
-                downsample_scale = 4;
-                if self.intermediate_perf_enabled {
-                    self.intermediate_perf.blur_degraded_to_quarter = self
-                        .intermediate_perf
-                        .blur_degraded_to_quarter
-                        .saturating_add(1);
-                }
-            }
-
-            if downsample_scale == 4 && required_quarter > budget {
-                if self.intermediate_perf_enabled {
-                    self.intermediate_perf.blur_disabled_due_to_budget = self
-                        .intermediate_perf
-                        .blur_disabled_due_to_budget
-                        .saturating_add(1);
-                }
-                DebugPostprocess::None
-            } else {
-                DebugPostprocess::Blur {
-                    radius,
-                    downsample_scale,
-                    scissor: self.debug_blur_scissor,
-                }
-            }
-        } else if self.debug_offscreen_blit_enabled {
-            DebugPostprocess::OffscreenBlit
-        } else {
-            DebugPostprocess::None
-        };
+        let postprocess = self.pick_debug_postprocess(viewport_size, format);
         let (plan, plan_elapsed) = fret_perf::measure_span(
             perf_enabled,
             trace_enabled,

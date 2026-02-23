@@ -494,6 +494,17 @@ Progress record (Scene encoding cache module split):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Debug postprocess selection helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 6 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/debug_postprocess.rs` (`pick_debug_postprocess`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

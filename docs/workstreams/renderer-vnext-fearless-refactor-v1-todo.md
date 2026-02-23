@@ -356,6 +356,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [~] REN-VNEXT-refactor-060 Stage 6: extract debug postprocess selection into a dedicated helper.
+  - Goal: keep debug-only plan mutations localized while preserving existing degrade/budget semantics and perf counters.
+  - Landed (step 1): move debug postprocess selection to `Renderer::pick_debug_postprocess`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/debug_postprocess.rs` (`pick_debug_postprocess`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
