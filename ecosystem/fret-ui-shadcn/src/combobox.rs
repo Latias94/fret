@@ -88,7 +88,16 @@ impl ComboboxStyle {
 pub struct ComboboxItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    /// Optional structured detail for display, typically rendered as a suffix (e.g. `(React)`).
+    ///
+    /// This is primarily meant to support "object item" adapters without forcing callers to
+    /// pre-format richer labels into a single string.
+    pub detail: Option<Arc<str>>,
     pub disabled: bool,
+    /// Additional strings that participate in cmdk-style filtering/ranking.
+    ///
+    /// This aligns with `CommandItem::keywords(...)` and cmdk's `keywords` prop.
+    pub keywords: Vec<Arc<str>>,
 }
 
 impl ComboboxItem {
@@ -96,8 +105,32 @@ impl ComboboxItem {
         Self {
             value: value.into(),
             label: label.into(),
+            detail: None,
             disabled: false,
+            keywords: Vec::new(),
         }
+    }
+
+    /// Sets a structured detail suffix and appends it to the visible label as `(<detail>)`.
+    ///
+    /// This preserves the existing string-based label contract while letting callers keep the
+    /// underlying data model structured.
+    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
+        let detail = detail.into();
+        self.detail = Some(detail.clone());
+        self.keywords.push(detail.clone());
+        self.label = Arc::<str>::from(format!("{} ({})", self.label, detail));
+        self
+    }
+
+    /// Additional strings used for cmdk-style filtering/ranking.
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1152,6 +1185,7 @@ fn combobox_with_patch<H: UiHost>(
 
                                 let mut cmd_item = CommandItem::new(item.label.clone())
                                     .value(item.value.clone())
+                                    .keywords(item.keywords.clone())
                                     .disabled(item_disabled)
                                     .checkmark(is_selected)
                                     .on_select_value_action(move |host, action_cx, reason, value| {
@@ -1302,6 +1336,7 @@ fn combobox_with_patch<H: UiHost>(
 
                                 let mut cmd_item = CommandItem::new(label_text)
                                     .value(item.value.clone())
+                                    .keywords(item.keywords.clone())
                                     .disabled(item_disabled)
                                     .on_select_value_action(move |host, action_cx, reason, value| {
                                         let on_select = kit_combobox::commit_selection_on_activate(
@@ -1731,6 +1766,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let mut cmd_item = CommandItem::new(item.label.clone())
                             .value(item.value.clone())
+                            .keywords(item.keywords.clone())
                             .disabled(item_disabled)
                             .checkmark(is_selected)
                             .on_select_value_action(move |host, action_cx, reason, value| {
@@ -1877,6 +1913,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let mut cmd_item = CommandItem::new(label_text)
                             .value(item.value.clone())
+                            .keywords(item.keywords.clone())
                             .disabled(item_disabled)
                             .on_select_value_action(move |host, action_cx, reason, value| {
                                 let on_select = kit_combobox::commit_selection_on_activate(
@@ -2037,6 +2074,17 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn combobox_item_detail_appends_label_and_keywords() {
+        let item = ComboboxItem::new("next", "Next.js").detail("React");
+        assert_eq!(item.detail.as_deref(), Some("React"));
+        assert_eq!(item.label.as_ref(), "Next.js (React)");
+        assert!(
+            item.keywords.iter().any(|kw| kw.as_ref() == "React"),
+            "expected detail to be included in keywords"
+        );
     }
 
     fn render_frame(

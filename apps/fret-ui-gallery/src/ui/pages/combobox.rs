@@ -167,17 +167,15 @@ shadcn::ComboboxChips::new(values, open)
     .into_element(cx);"#,
                 ),
             DocSection::new("Extras: Custom Items", custom_items_top)
-                .description(
-                    "Fret currently uses string value/label pairs; object-item mapping is approximated by richer labels.",
-                )
+                .description("Structured item details (e.g. suffix metadata) without pre-formatting richer labels.")
                 .code(
                     "rust",
                     r#"let combo = shadcn::Combobox::new(value, open)
     .placeholder("Select framework")
     .query_model(query)
     .items([
-        shadcn::ComboboxItem::new("next", "Next.js (React)"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
+        shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
     ])
     .into_element(cx);"#,
                 ),

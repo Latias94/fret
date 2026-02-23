@@ -118,10 +118,10 @@ pub(super) fn custom_items_top(
             .test_id_prefix("ui-gallery-combobox-custom-items")
             .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
             .items([
-                shadcn::ComboboxItem::new("next", "Next.js (React)"),
-                shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
-                shadcn::ComboboxItem::new("svelte", "SvelteKit (Svelte)"),
-                shadcn::ComboboxItem::new("astro", "Astro (Hybrid)"),
+                shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
+                shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
+                shadcn::ComboboxItem::new("svelte", "SvelteKit").detail("Svelte"),
+                shadcn::ComboboxItem::new("astro", "Astro").detail("Hybrid"),
             ])
             .into_element(cx);
     let content = stack::vstack(
