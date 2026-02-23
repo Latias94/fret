@@ -489,6 +489,7 @@ impl Renderer {
             adapter: adapter.clone(),
             uniform_bind_group,
             uniforms,
+            render_space_bytes_scratch: Vec::new(),
             globals,
             textures,
             effect_params,
