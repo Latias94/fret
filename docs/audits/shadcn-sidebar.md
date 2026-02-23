@@ -147,6 +147,9 @@ coverage for `sidebar-*` pages.
 - Added a scripted conformance gate that exercises the mobile/offcanvas sheet path (`open_mobile`): Escape dismisses the sheet and focus restores to `SidebarTrigger`.
   - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json`
   - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises mobile `open_mobile` controlled sync: external open-model toggles and `SidebarTrigger`/Escape dismissal stay in sync.
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
 
 ## Component-by-component audit (24/24)
 

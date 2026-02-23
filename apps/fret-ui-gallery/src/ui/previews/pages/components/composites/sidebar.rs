@@ -474,6 +474,13 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                     .unwrap_or(false);
                 let selected_value = resolve_selected(cx, &mobile_selected, "playground");
 
+                let open_mobile_for_toggle = mobile_open.clone();
+                let on_toggle_open_mobile: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&open_mobile_for_toggle, |v| *v = !*v);
+                        host.request_redraw(action_cx.window);
+                    });
+
                 let header = stack::hstack(
                     cx,
                     stack::HStackProps::default()
@@ -484,6 +491,12 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                         vec![
                             shadcn::SidebarTrigger::new()
                                 .test_id("ui-gallery-sidebar-mobile-trigger")
+                                .into_element(cx),
+                            shadcn::Button::new("Toggle open_mobile")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(on_toggle_open_mobile)
+                                .test_id("ui-gallery-sidebar-mobile-external-toggle")
                                 .into_element(cx),
                             shadcn::typography::muted(
                                 cx,

@@ -174,7 +174,7 @@ pub(crate) fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 27] {
+pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 28] {
     [
         "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
         "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
@@ -203,6 +203,7 @@ pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 27
         "tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
         "tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json",
         "tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json",
     ]
 }
 
