@@ -80,6 +80,8 @@ pub struct Renderer {
     uniforms: UniformResources,
     viewport_uniform_bytes_scratch: Vec<u8>,
     render_space_bytes_scratch: Vec<u8>,
+    plan_quad_vertices_scratch: Vec<ViewportVertex>,
+    plan_quad_vertex_bases_scratch: Vec<Option<u32>>,
     globals: GpuGlobals,
     textures: GpuTextures,
     effect_params: GpuEffectParams,

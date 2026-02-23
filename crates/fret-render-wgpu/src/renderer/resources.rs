@@ -491,6 +491,8 @@ impl Renderer {
             uniforms,
             viewport_uniform_bytes_scratch: Vec::new(),
             render_space_bytes_scratch: Vec::new(),
+            plan_quad_vertices_scratch: Vec::new(),
+            plan_quad_vertex_bases_scratch: Vec::new(),
             globals,
             textures,
             effect_params,

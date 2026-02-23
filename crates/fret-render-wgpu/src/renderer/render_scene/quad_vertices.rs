@@ -1,16 +1,14 @@
 use super::super::*;
 
-pub(super) struct PlanQuadVertices {
-    pub(super) vertices: Vec<ViewportVertex>,
-    pub(super) bases: Vec<Option<u32>>,
-}
-
-pub(super) fn build_plan_quad_vertices(
+pub(super) fn build_plan_quad_vertices_into(
     plan: &RenderPlan,
     viewport_size: (u32, u32),
-) -> PlanQuadVertices {
-    let mut vertices: Vec<ViewportVertex> = Vec::new();
-    let mut bases: Vec<Option<u32>> = vec![None; plan.passes.len()];
+    vertices: &mut Vec<ViewportVertex>,
+    bases: &mut Vec<Option<u32>>,
+) {
+    vertices.clear();
+    bases.clear();
+    bases.resize(plan.passes.len(), None);
 
     for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
         match planned_pass {
@@ -146,8 +144,6 @@ pub(super) fn build_plan_quad_vertices(
             _ => {}
         }
     }
-
-    PlanQuadVertices { vertices, bases }
 }
 
 pub(super) fn upload_plan_quad_vertices(
@@ -157,7 +153,9 @@ pub(super) fn upload_plan_quad_vertices(
     plan: &RenderPlan,
     viewport_size: (u32, u32),
 ) -> Vec<Option<u32>> {
-    let PlanQuadVertices { vertices, bases } = build_plan_quad_vertices(plan, viewport_size);
+    let mut vertices = std::mem::take(&mut renderer.plan_quad_vertices_scratch);
+    let mut bases = std::mem::take(&mut renderer.plan_quad_vertex_bases_scratch);
+    build_plan_quad_vertices_into(plan, viewport_size, &mut vertices, &mut bases);
 
     if !vertices.is_empty() {
         renderer.ensure_path_composite_vertex_buffer(device, vertices.len());
@@ -168,5 +166,7 @@ pub(super) fn upload_plan_quad_vertices(
         );
     }
 
+    vertices.clear();
+    renderer.plan_quad_vertices_scratch = vertices;
     bases
 }
