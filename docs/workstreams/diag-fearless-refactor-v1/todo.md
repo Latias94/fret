@@ -87,6 +87,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/json_utils.rs` (via `include!`) to reduce churn.
 - [x] Extract filesystem/path helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/path_utils.rs` (via `include!`) to reduce churn.
+- [x] Extract touch + pointer helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/touch_stamp.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
