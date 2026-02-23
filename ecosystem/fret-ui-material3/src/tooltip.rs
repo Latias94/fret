@@ -65,6 +65,42 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement 
     element
 }
 
+fn stabilize_popper_desired_size<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    desired: Size,
+    scale_factor: f32,
+) -> Size {
+    #[derive(Default)]
+    struct State {
+        last: Option<Size>,
+    }
+
+    let eps = if scale_factor.is_finite() && scale_factor > 0.0 {
+        // One physical pixel in logical px.
+        Px(1.0 / scale_factor)
+    } else {
+        // Default to half a logical px if scale factor is unavailable.
+        Px(0.5)
+    };
+
+    cx.with_state(State::default, |st| {
+        let next = match st.last {
+            None => desired,
+            Some(prev) => {
+                let dw = (prev.width.0 - desired.width.0).abs();
+                let dh = (prev.height.0 - desired.height.0).abs();
+                if dw <= eps.0 && dh <= eps.0 {
+                    prev
+                } else {
+                    desired
+                }
+            }
+        };
+        st.last = Some(next);
+        next
+    })
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TooltipAlign {
     Start,
@@ -143,7 +179,6 @@ impl TooltipProvider {
     }
 }
 
-#[derive(Clone)]
 enum PlainTooltipContent {
     Text(Arc<str>),
     Element(AnyElement),
@@ -350,7 +385,7 @@ fn tooltip_policy_root<H: UiHost>(
         }
 
         let trigger =
-            tooltip_prim::apply_tooltip_trigger_a11y(base_trigger.clone(), update.open, content_id);
+            tooltip_prim::apply_tooltip_trigger_a11y(base_trigger, update.open, content_id);
 
         cx.pressable_add_on_activate_for(
             trigger_id,
@@ -461,9 +496,14 @@ fn tooltip_policy_root<H: UiHost>(
                 return Vec::new();
             };
 
+            let scale_factor = cx.environment_scale_factor(fret_ui::Invalidation::Layout);
             let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
             let estimated_size = Size::new(Px(240.0), Px(32.0));
-            let content_size = last_content_size.unwrap_or(estimated_size);
+            let content_size = stabilize_popper_desired_size(
+                cx,
+                last_content_size.unwrap_or(estimated_size),
+                scale_factor,
+            );
 
             let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
                 cx,
@@ -498,7 +538,7 @@ fn tooltip_policy_root<H: UiHost>(
                 placed,
                 Edges::all(Px(0.0)),
                 fret_ui::element::Overflow::Visible,
-                move |_cx| vec![content.clone()],
+                move |_cx| vec![content],
             );
 
             let origin = popper::popper_content_transform_origin(&layout, anchor, None);
@@ -541,7 +581,6 @@ fn tooltip_policy_root<H: UiHost>(
 /// Material 3 Plain Tooltip (MVP).
 ///
 /// This is a policy wrapper built on `fret-ui-kit` tooltip primitives.
-#[derive(Clone)]
 pub struct PlainTooltip {
     trigger: AnyElement,
     content: PlainTooltipContent,
@@ -897,11 +936,8 @@ impl PlainTooltip {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
             }
 
-            let trigger = tooltip_prim::apply_tooltip_trigger_a11y(
-                base_trigger.clone(),
-                update.open,
-                content_id,
-            );
+            let trigger =
+                tooltip_prim::apply_tooltip_trigger_a11y(base_trigger, update.open, content_id);
 
             cx.pressable_add_on_pointer_down_for(
                 trigger_id,
@@ -1031,14 +1067,19 @@ impl PlainTooltip {
             let direction = direction_prim::use_direction_in_scope(cx, None);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-                let Some(anchor) = anchor else {
-                    return Vec::new();
-                };
+            let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
+            let Some(anchor) = anchor else {
+                return Vec::new();
+            };
 
-                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-                let estimated_size = Size::new(Px(240.0), Px(32.0));
-                let content_size = last_content_size.unwrap_or(estimated_size);
+            let scale_factor = cx.environment_scale_factor(fret_ui::Invalidation::Layout);
+            let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+            let estimated_size = Size::new(Px(240.0), Px(32.0));
+            let content_size = stabilize_popper_desired_size(
+                cx,
+                last_content_size.unwrap_or(estimated_size),
+                scale_factor,
+            );
 
                 let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
                     cx,
@@ -1072,7 +1113,7 @@ impl PlainTooltip {
                     placed,
                     Edges::all(Px(0.0)),
                     fret_ui::element::Overflow::Visible,
-                    move |_cx| vec![content.clone()],
+                    move |_cx| vec![content],
                 );
 
                 let origin = popper::popper_content_transform_origin(&layout, anchor, None);
@@ -1111,7 +1152,6 @@ impl PlainTooltip {
     }
 }
 
-#[derive(Clone)]
 enum RichTooltipContent {
     Text {
         title: Option<Arc<str>>,
@@ -1126,7 +1166,6 @@ enum RichTooltipContent {
 /// - Rich tooltips remain click-through because `OverlayKind::Tooltip` is not hit-testable in Fret.
 /// - Action rows are therefore out-of-scope until we have a concrete consumer that requires an
 ///   interactive outcome (mechanism follow-up candidate).
-#[derive(Clone)]
 pub struct RichTooltip {
     trigger: AnyElement,
     content: RichTooltipContent,
