@@ -165,3 +165,40 @@ pub(super) fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCan
         })
         .collect()
 }
+
+pub(super) fn resource_caches_for_window(
+    app: &App,
+    window: u64,
+    redact_text: bool,
+    max_debug_string_bytes: usize,
+) -> Option<UiResourceCachesV1> {
+    let icon_svg_cache = icon_svg_cache_stats(app);
+    let canvas = canvas_cache_stats_for_window(app, window);
+    let render_text = app
+        .global::<fret_core::RendererTextPerfSnapshot>()
+        .copied()
+        .map(UiRendererTextPerfSnapshotV1::from_core);
+    let render_text_font_trace = app
+        .global::<fret_core::RendererTextFontTraceSnapshot>()
+        .cloned()
+        .map(|s| {
+            UiRendererTextFontTraceSnapshotV1::from_core(s, redact_text, max_debug_string_bytes)
+        });
+    let render_text_fallback_policy = app
+        .global::<fret_core::RendererTextFallbackPolicySnapshot>()
+        .cloned()
+        .map(|s| UiRendererTextFallbackPolicySnapshotV1::from_core(s, max_debug_string_bytes));
+
+    (icon_svg_cache.is_some()
+        || !canvas.is_empty()
+        || render_text.is_some()
+        || render_text_font_trace.is_some()
+        || render_text_fallback_policy.is_some())
+    .then_some(UiResourceCachesV1 {
+        icon_svg_cache,
+        canvas,
+        render_text,
+        render_text_font_trace,
+        render_text_fallback_policy,
+    })
+}

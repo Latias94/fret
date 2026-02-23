@@ -706,46 +706,12 @@ impl UiDiagnosticsService {
         let changed_model_sources_top =
             snapshot_recording::changed_model_sources_top(app, &changed_models);
 
-        let resource_caches = {
-            let icon_svg_cache = snapshot_recording::icon_svg_cache_stats(app);
-            let canvas =
-                snapshot_recording::canvas_cache_stats_for_window(app, window.data().as_ffi());
-            let render_text = app
-                .global::<fret_core::RendererTextPerfSnapshot>()
-                .copied()
-                .map(UiRendererTextPerfSnapshotV1::from_core);
-            let render_text_font_trace = app
-                .global::<fret_core::RendererTextFontTraceSnapshot>()
-                .cloned()
-                .map(|s| {
-                    UiRendererTextFontTraceSnapshotV1::from_core(
-                        s,
-                        self.cfg.redact_text,
-                        self.cfg.max_debug_string_bytes,
-                    )
-                });
-            let render_text_fallback_policy = app
-                .global::<fret_core::RendererTextFallbackPolicySnapshot>()
-                .cloned()
-                .map(|s| {
-                    UiRendererTextFallbackPolicySnapshotV1::from_core(
-                        s,
-                        self.cfg.max_debug_string_bytes,
-                    )
-                });
-            (icon_svg_cache.is_some()
-                || !canvas.is_empty()
-                || render_text.is_some()
-                || render_text_font_trace.is_some()
-                || render_text_fallback_policy.is_some())
-            .then_some(UiResourceCachesV1 {
-                icon_svg_cache,
-                canvas,
-                render_text,
-                render_text_font_trace,
-                render_text_fallback_policy,
-            })
-        };
+        let resource_caches = snapshot_recording::resource_caches_for_window(
+            app,
+            window.data().as_ffi(),
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
 
         let renderer_perf = app
             .global::<fret_render::RendererPerfFrameStore>()
