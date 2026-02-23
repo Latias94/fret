@@ -381,7 +381,13 @@ impl DevtoolsWsClient {
                         Err(err) => {
                             let is_timeout = matches!(
                                 err,
-                                tungstenite::Error::Io(ref io) if io.kind() == std::io::ErrorKind::TimedOut
+                                tungstenite::Error::Io(ref io)
+                                    if matches!(
+                                        io.kind(),
+                                        std::io::ErrorKind::TimedOut
+                                            | std::io::ErrorKind::WouldBlock
+                                            | std::io::ErrorKind::Interrupted
+                                    )
                             );
                             if is_timeout {
                                 continue;
