@@ -99,6 +99,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/focus_and_ime_trace_recording.rs` (via `include!`) to reduce churn.
 - [x] Extract hit-test trace recording helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/hit_test_trace_recording.rs` (via `include!`) to reduce churn.
+- [x] Extract selector resolution trace helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
@@ -233,6 +235,7 @@ diagnostics stack stays easy to evolve.
 - [x] Extract overlay placement trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/overlay_placement_trace_recording.rs`.
 - [x] Extract focus + IME trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/focus_and_ime_trace_recording.rs`.
 - [x] Extract hit-test trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/hit_test_trace_recording.rs`.
+- [x] Extract selector resolution trace helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs`.
 - [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
 - [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
