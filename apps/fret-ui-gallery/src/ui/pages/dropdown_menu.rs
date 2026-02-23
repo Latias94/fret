@@ -193,8 +193,6 @@ pub(super) fn preview_dropdown_menu(
             .into_element(cx)
     };
 
-    let icon = doc_layout::icon;
-
     let action_text = cx
         .app
         .models()
@@ -401,14 +399,17 @@ pub(super) fn preview_dropdown_menu(
             vec![
                 shadcn::DropdownMenuEntry::CheckboxItem(
                     shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
-                        .leading(icon(cx, "lucide.panel-bottom")),
+                        .leading_icon(fret_icons::IconId::new_static("lucide.panel-bottom"))
+                        .test_id("ui-gallery-dropdown-menu-checkboxes-icons-status-bar"),
                 ),
                 shadcn::DropdownMenuEntry::CheckboxItem(
                     shadcn::DropdownMenuCheckboxItem::new(
                         show_activity_bar.clone(),
                         "Activity Bar",
                     )
-                    .leading(icon(cx, "lucide.panel-left")),
+                    .leading_icon(fret_icons::IconId::new_static("lucide.panel-left"))
+                    .disabled(true)
+                    .test_id("ui-gallery-dropdown-menu-checkboxes-icons-activity-bar"),
                 ),
             ]
         },
@@ -449,15 +450,19 @@ pub(super) fn preview_dropdown_menu(
                 shadcn::DropdownMenuRadioGroup::new(theme_mode.clone())
                     .item(
                         shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
-                            .leading(icon(cx, "lucide.sun")),
+                            .leading_icon(fret_icons::IconId::new_static("lucide.sun"))
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-light"),
                     )
                     .item(
                         shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
-                            .leading(icon(cx, "lucide.moon")),
+                            .leading_icon(fret_icons::IconId::new_static("lucide.moon"))
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-dark"),
                     )
                     .item(
                         shadcn::DropdownMenuRadioItemSpec::new("system", "System")
-                            .leading(icon(cx, "lucide.monitor")),
+                            .leading_icon(fret_icons::IconId::new_static("lucide.monitor"))
+                            .disabled(true)
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-system"),
                     ),
             )]
         },
@@ -668,9 +673,8 @@ shadcn::DropdownMenuEntry::CheckboxItem(shadcn::DropdownMenuCheckboxItem::new(
                     r#"let show_activity_bar = cx.app.models_mut().insert(false);
 
 shadcn::DropdownMenuEntry::CheckboxItem(
-    shadcn::DropdownMenuCheckboxItem::new(show_activity_bar, "Activity Bar").leading(
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.panel-left")),
-    ),
+    shadcn::DropdownMenuCheckboxItem::new(show_activity_bar, "Activity Bar")
+        .leading_icon(fret_icons::IconId::new_static("lucide.panel-left")),
 );"#,
                 ),
             DocSection::new("Radio Group", radio_group)
@@ -690,16 +694,12 @@ shadcn::DropdownMenuEntry::CheckboxItem(
                     r#"shadcn::DropdownMenuEntry::RadioGroup(
     shadcn::DropdownMenuRadioGroup::new(theme_mode)
         .item(
-            shadcn::DropdownMenuRadioItemSpec::new("light", "Light").leading(shadcn::icon::icon(
-                cx,
-                fret_icons::IconId::new_static("lucide.sun"),
-            )),
+            shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
+                .leading_icon(fret_icons::IconId::new_static("lucide.sun")),
         )
         .item(
-            shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark").leading(shadcn::icon::icon(
-                cx,
-                fret_icons::IconId::new_static("lucide.moon"),
-            )),
+            shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
+                .leading_icon(fret_icons::IconId::new_static("lucide.moon")),
         ),
 );"#,
                 ),

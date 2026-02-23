@@ -269,10 +269,12 @@ pub struct DropdownMenuCheckboxItem {
     pub value: Arc<str>,
     pub checked: Model<bool>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -284,10 +286,12 @@ impl DropdownMenuCheckboxItem {
             value: label,
             checked,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -298,7 +302,15 @@ impl DropdownMenuCheckboxItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -319,6 +331,11 @@ impl DropdownMenuCheckboxItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -354,10 +371,12 @@ pub struct DropdownMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -369,16 +388,26 @@ impl DropdownMenuRadioItemSpec {
             label,
             value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -402,6 +431,11 @@ impl DropdownMenuRadioItemSpec {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -413,10 +447,12 @@ impl DropdownMenuRadioItemSpec {
             value: self.value,
             group_value,
             leading: self.leading,
+            leading_icon: self.leading_icon,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
             a11y_label: self.a11y_label,
+            test_id: self.test_id,
             trailing: self.trailing,
         }
     }
@@ -429,10 +465,12 @@ pub struct DropdownMenuRadioItem {
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -449,10 +487,12 @@ impl DropdownMenuRadioItem {
             value,
             group_value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -478,7 +518,20 @@ impl DropdownMenuRadioItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -593,22 +646,26 @@ fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
     for entry in entries {
         match entry {
             DropdownMenuEntry::Item(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::CheckboxItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioGroup(group) => {
-                if group.items.iter().any(|i| i.leading.is_some()) {
+                if group
+                    .items
+                    .iter()
+                    .any(|i| i.leading.is_some() || i.leading_icon.is_some())
+                {
                     return true;
                 }
             }
@@ -869,6 +926,7 @@ fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_kind: CheckableIndicatorKind,
@@ -976,12 +1034,16 @@ fn checkable_menu_row_children<H: UiHost>(
                 );
 
                 let mut row: Vec<AnyElement> = Vec::with_capacity(
-                    2 + usize::from(leading.is_some() || reserve_leading_slot)
-                        + usize::from(trailing.is_some()),
+                    2 + usize::from(
+                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                    ) + usize::from(trailing.is_some()),
                 );
 
                 if let Some(l) = leading.clone() {
                     row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon.clone() {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
                 } else if reserve_leading_slot {
                     row.push(menu_icon_slot_empty(cx));
                 }
@@ -1960,7 +2022,9 @@ impl DropdownMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let leading = item.leading.clone();
+                                                        let leading_icon = item.leading_icon.clone();
                                                         let trailing = item.trailing.clone();
+                                                        let test_id = item.test_id.clone();
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2017,14 +2081,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_checkbox_a11y(
-                                                                            a11y_label,
-                                                                            checked_now,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                a11y_label,
+                                                                                checked_now,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2050,6 +2117,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        leading_icon.clone(),
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::Check,
@@ -2087,7 +2155,9 @@ impl DropdownMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let leading = item.leading.clone();
+                                                        let leading_icon = item.leading_icon.clone();
                                                         let trailing = item.trailing.clone();
+                                                        let test_id = item.test_id.clone();
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2150,14 +2220,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_radio_a11y(
-                                                                            a11y_label,
-                                                                            is_selected,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                a11y_label,
+                                                                                is_selected,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2183,6 +2256,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        leading_icon.clone(),
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::RadioDot,
@@ -2955,7 +3029,9 @@ impl DropdownMenu {
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
                                                                 let leading = item.leading.clone();
+                                                                let leading_icon = item.leading_icon.clone();
                                                                 let trailing = item.trailing.clone();
+                                                                let test_id = item.test_id.clone();
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -2996,14 +3072,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_checkbox_a11y(
-                                                                                    a11y_label,
-                                                                                    checked_now,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                        a11y_label,
+                                                                                        checked_now,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3026,6 +3105,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
+                                                                                leading_icon.clone(),
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::Check,
@@ -3063,7 +3143,9 @@ impl DropdownMenu {
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
                                                                 let leading = item.leading.clone();
+                                                                let leading_icon = item.leading_icon.clone();
                                                                 let trailing = item.trailing.clone();
+                                                                let test_id = item.test_id.clone();
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -3109,14 +3191,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_radio_a11y(
-                                                                                    a11y_label,
-                                                                                    is_selected,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                        a11y_label,
+                                                                                        is_selected,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3139,6 +3224,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
+                                                                                leading_icon.clone(),
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::RadioDot,
