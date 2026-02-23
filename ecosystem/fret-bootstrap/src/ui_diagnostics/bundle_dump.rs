@@ -11,12 +11,24 @@ use super::{
     write_json_compact, write_latest_pointer,
 };
 
+struct DumpArtifactCounts {
+    bundle_json_bytes: Option<u64>,
+    window_count: u64,
+    event_count: u64,
+    snapshot_count: u64,
+    max_snapshots: u64,
+    dump_max_snapshots: Option<u64>,
+}
+
 pub(super) fn dump_bundle_with_options(
     service: &mut UiDiagnosticsService,
     label: Option<&str>,
     dump_max_snapshots_override: Option<usize>,
     request_id: Option<u64>,
 ) -> Option<PathBuf> {
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = request_id;
+
     let ts = unix_ms_now();
     let mut dir_name = ts.to_string();
     if let Some(label) = label {
@@ -79,7 +91,7 @@ pub(super) fn dump_bundle_with_options(
         .map(|v| v.trim().to_ascii_lowercase());
     let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
 
-    let stats = match schema_version {
+    let counts = match schema_version {
         bundle::BundleSchemaVersionV1::V1 => dump_schema_v1(
             service,
             ts,
@@ -114,7 +126,15 @@ pub(super) fn dump_bundle_with_options(
     }
 
     service.last_dump_dir = Some(dir.clone());
-    service.last_dump_artifact_stats = Some(stats);
+    service.last_dump_artifact_stats = Some(UiArtifactStatsV1 {
+        schema_version: 1,
+        bundle_json_bytes: counts.bundle_json_bytes,
+        window_count: counts.window_count,
+        event_count: counts.event_count,
+        snapshot_count: counts.snapshot_count,
+        max_snapshots: counts.max_snapshots,
+        dump_max_snapshots: counts.dump_max_snapshots,
+    });
 
     Some(dir)
 }
@@ -156,7 +176,7 @@ fn finalize_dump(
     config: &UiDiagnosticsBundleConfigV1,
     is_script_dump: bool,
     request_id: Option<u64>,
-) -> Option<UiArtifactStatsV1> {
+) -> Option<DumpArtifactCounts> {
     #[cfg(not(feature = "diagnostics-ws"))]
     let _ = exported_unix_ms;
     #[cfg(not(feature = "diagnostics-ws"))]
@@ -187,8 +207,7 @@ fn finalize_dump(
         );
     }
 
-    Some(UiArtifactStatsV1 {
-        schema_version: 1,
+    Some(DumpArtifactCounts {
         bundle_json_bytes,
         window_count,
         event_count,
@@ -209,7 +228,7 @@ fn dump_schema_v1(
     dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
     is_script_dump: bool,
     request_id: Option<u64>,
-) -> Option<UiArtifactStatsV1> {
+) -> Option<DumpArtifactCounts> {
     bundle.apply_semantics_mode_v1(semantics_mode);
     bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
     apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
@@ -240,7 +259,7 @@ fn dump_schema_v2(
     dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
     is_script_dump: bool,
     request_id: Option<u64>,
-) -> Option<UiArtifactStatsV1> {
+) -> Option<DumpArtifactCounts> {
     let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
     bundle.apply_semantics_mode_v1(semantics_mode);
     bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
