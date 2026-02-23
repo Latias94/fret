@@ -25,6 +25,8 @@ Run doctor first. It is safe to run repeatedly.
 - `fretboard diag doctor --check <bundle_dir> --warmup-frames <n>`
 - If missing/invalid artifacts are reported:
   - `fretboard diag doctor --fix <bundle_dir> --warmup-frames <n>`
+  - If `bundle.json` is large and you want a compact view for tooling/agents:
+    - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 
 ## Step 1: First-pass perf triage (no bundle.json materialization)
 

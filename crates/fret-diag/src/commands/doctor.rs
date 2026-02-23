@@ -8,6 +8,7 @@ use super::sidecars;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct DoctorRunOptions {
     pub(crate) fix_bundle_json: bool,
+    pub(crate) fix_schema2: bool,
     pub(crate) fix_sidecars: bool,
     pub(crate) fix_dry_run: bool,
     pub(crate) check_required: bool,
@@ -144,6 +145,20 @@ pub(crate) fn run_doctor_for_bundle_dir(
             }
         }
     }
+    if opts.fix_schema2 {
+        let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
+        if !schema2_exists {
+            if resolve_raw_bundle_json_path_no_materialize(&bundle_dir).is_some() {
+                fixes_planned
+                    .push("write bundle.schema2.json from bundle.json (--mode last)".to_string());
+            } else {
+                fixes_planned.push(
+                    "write bundle.schema2.json from bundle.json (blocked: missing bundle.json)"
+                        .to_string(),
+                );
+            }
+        }
+    }
 
     if opts.fix_dry_run {
         return Ok(DoctorRunResult {
@@ -175,6 +190,46 @@ pub(crate) fn run_doctor_for_bundle_dir(
                             err
                         ));
                     }
+                }
+            }
+        }
+    }
+
+    if opts.fix_schema2 {
+        let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
+        if !schema2_exists {
+            let Some(bundle_json) = resolve_raw_bundle_json_path_no_materialize(&bundle_dir) else {
+                fixes_applied.push("skipped writing bundle.schema2.json (missing bundle.json)".to_string());
+                let report = doctor_report_json(&bundle_dir, warmup_frames);
+                return Ok(DoctorRunResult {
+                    bundle_dir,
+                    report,
+                    fixes_planned,
+                    fixes_applied,
+                });
+            };
+
+            let out_dir = bundle_json.parent().unwrap_or(&bundle_dir);
+            let out = out_dir.join("bundle.schema2.json");
+            match super::bundle_v2::write_bundle_schema2_json_from_path(
+                &bundle_json,
+                &out,
+                super::bundle_v2::WriteBundleSchema2Options {
+                    mode: "last",
+                    pretty: false,
+                    force: false,
+                },
+            ) {
+                Ok(res) => {
+                    fixes_applied.push(format!(
+                        "wrote bundle.schema2.json (input_schema_version={}, output_bytes={})",
+                        res.input_schema_version, res.output_bytes
+                    ));
+                }
+                Err(err) => {
+                    fixes_applied.push(format!(
+                        "attempted to write bundle.schema2.json, but failed ({err})"
+                    ));
                 }
             }
         }
@@ -301,6 +356,7 @@ pub(crate) fn cmd_doctor(
     }
 
     let mut fix_bundle_json: bool = false;
+    let mut fix_schema2: bool = false;
     let mut fix_sidecars: bool = false;
     let mut fix_dry_run: bool = false;
     let mut check_required: bool = false;
@@ -319,6 +375,10 @@ pub(crate) fn cmd_doctor(
                 fix_bundle_json = true;
                 fix_sidecars = true;
                 fix_dry_run = true;
+                i += 1;
+            }
+            "--fix-schema2" => {
+                fix_schema2 = true;
                 i += 1;
             }
             "--fix-bundle-json" => {
@@ -388,6 +448,7 @@ pub(crate) fn cmd_doctor(
 
     let opts = DoctorRunOptions {
         fix_bundle_json,
+        fix_schema2,
         fix_sidecars,
         fix_dry_run,
         check_required,
@@ -615,6 +676,30 @@ fn resolve_bundle_json_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf>
     None
 }
 
+fn resolve_raw_bundle_json_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
+    let direct = bundle_dir.join("bundle.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = bundle_dir.join("_root").join("bundle.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    None
+}
+
+fn resolve_bundle_schema2_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
+    let direct = bundle_dir.join("bundle.schema2.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = bundle_dir.join("_root").join("bundle.schema2.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    None
+}
+
 fn resolve_script_result_path(bundle_dir: &Path) -> Option<PathBuf> {
     let direct = bundle_dir.join("script.result.json");
     if direct.is_file() {
@@ -765,6 +850,12 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
     let bundle_json = resolve_bundle_json_path_no_materialize(bundle_dir);
     let bundle_json_bytes = bundle_json.as_deref().and_then(file_bytes);
+    let schema2_exists = resolve_bundle_schema2_path_no_materialize(bundle_dir).is_some();
+    let bundle_is_raw_bundle_json = bundle_json
+        .as_deref()
+        .and_then(|p| p.file_name())
+        .and_then(|s| s.to_str())
+        == Some("bundle.json");
     let (bundle_schema_version, bundle_schema_error) = if let Some(path) = bundle_json.as_deref() {
         match sniff_bundle_schema_version(path) {
             Ok(v) => (v, None),
@@ -873,6 +964,22 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                     repairs.push(json!({
                         "code": "suggest_bundle_v2",
                         "note": "convert to schema v2 (writes bundle.schema2.json)",
+                        "command": format!("fretboard diag bundle-v2 {}", bundle_dir.display()),
+                    }));
+                }
+            }
+        }
+        if schema_version == 2 && !schema2_exists && bundle_is_raw_bundle_json {
+            if let Some(bytes) = bundle_json_bytes {
+                const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
+                if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
+                    warnings.push(Value::String(
+                        "bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
+                            .to_string(),
+                    ));
+                    repairs.push(json!({
+                        "code": "suggest_bundle_schema2",
+                        "note": "write a compact schema2 bundle (writes bundle.schema2.json)",
                         "command": format!("fretboard diag bundle-v2 {}", bundle_dir.display()),
                     }));
                 }
