@@ -964,7 +964,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                     repairs.push(json!({
                         "code": "suggest_bundle_v2",
                         "note": "convert to schema v2 (writes bundle.schema2.json)",
-                        "command": format!("fretboard diag bundle-v2 {}", bundle_dir.display()),
+                        "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
                 }
             }
@@ -980,7 +980,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                     repairs.push(json!({
                         "code": "suggest_bundle_schema2",
                         "note": "write a compact schema2 bundle (writes bundle.schema2.json)",
-                        "command": format!("fretboard diag bundle-v2 {}", bundle_dir.display()),
+                        "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                     }));
                 }
             }
