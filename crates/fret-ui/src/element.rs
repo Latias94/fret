@@ -752,7 +752,8 @@ pub struct SemanticsProps {
     /// For `TextField` roles, this surfaces as the platform's "set value" action surface.
     ///
     /// For `Slider` roles, this is interpreted as stepper semantics and maps to
-    /// Increment/Decrement actions.
+    /// Increment/Decrement actions. `SetValue` for sliders is derived conservatively by the
+    /// runtime when sufficient numeric metadata is present.
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,

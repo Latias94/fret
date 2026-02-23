@@ -1288,8 +1288,7 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
                 self.actions.set_value = editable;
             }
             // Range controls generally surface as stepper semantics on platforms. Prefer
-            // Increment/Decrement for sliders rather than `SetValue`, since the latter is not
-            // universally implemented by assistive technologies.
+            // Increment/Decrement for sliders.
             SemanticsRole::Slider => {
                 self.actions.increment = editable;
                 self.actions.decrement = editable;

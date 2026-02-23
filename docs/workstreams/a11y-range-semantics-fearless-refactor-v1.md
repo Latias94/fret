@@ -77,6 +77,14 @@ Notes:
 - AccessKit mapping is best-effort: only emit numeric/scroll properties for finite values.
 - Validation: `SemanticsNode::validate()` rejects non-finite numeric/scroll values; requires `min <= max` when both are present; requires `value` within `[min,max]` when all are present; requires positive `step/jump`; requires scroll positions within `[min,max]` when all are present; and enforces `level` as 1-based.
 
+Action notes:
+
+- `SemanticsActions.scroll_by` is the portable “scroll by delta” action surface.
+- `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for sliders. In `fret-ui`,
+  `value_editable` on `SemanticsRole::Slider` maps to these actions (instead of `SetValue`).
+- Sliders also expose a direct `SetValue` surface when `value_editable` is enabled; the default `fret-ui-app` driver
+  implements it by translating target values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences.
+  This surface is gated by the runtime: it is only exposed when slider numeric metadata includes `value/min/max/step`.
 ## Additional “mechanismizable” semantics gaps (candidates)
 
 These are **not required** to ship the numeric/range backbone, but they are strong candidates to batch into the same

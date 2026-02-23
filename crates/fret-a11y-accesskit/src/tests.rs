@@ -8,8 +8,9 @@ use slotmap::KeyData;
 use crate::ids::{text_run_id_for, to_accesskit_id};
 use crate::roles::map_role;
 use crate::{
-    StepperAction, replace_selected_text_from_action, scroll_by_from_action,
-    set_text_selection_from_action, stepper_target_from_action, tree_update_from_snapshot,
+    SetValueData, StepperAction, replace_selected_text_from_action, scroll_by_from_action,
+    set_text_selection_from_action, set_value_from_action, stepper_target_from_action,
+    tree_update_from_snapshot,
 };
 
 fn node(id: u64) -> fret_core::NodeId {
@@ -317,6 +318,7 @@ fn increment_and_decrement_actions_are_exposed_and_decoded() {
                 text_selection: None,
                 text_composition: None,
                 actions: SemanticsActions {
+                    set_value: true,
                     increment: true,
                     decrement: true,
                     ..SemanticsActions::default()
@@ -338,6 +340,7 @@ fn increment_and_decrement_actions_are_exposed_and_decoded() {
         .expect("slider node present");
     assert!(slider_node.supports_action(accesskit::Action::Increment));
     assert!(slider_node.supports_action(accesskit::Action::Decrement));
+    assert!(slider_node.supports_action(accesskit::Action::SetValue));
 
     let increment_req = accesskit::ActionRequest {
         action: accesskit::Action::Increment,
@@ -360,6 +363,16 @@ fn increment_and_decrement_actions_are_exposed_and_decoded() {
         stepper_target_from_action(&decrement_req).expect("decoded decrement target");
     assert_eq!(target, slider);
     assert_eq!(action, StepperAction::Decrement);
+
+    let req = accesskit::ActionRequest {
+        action: accesskit::Action::SetValue,
+        target_tree: accesskit::TreeId::ROOT,
+        target_node: slider_id,
+        data: Some(accesskit::ActionData::NumericValue(42.0)),
+    };
+    let (target, data) = set_value_from_action(&req).expect("decoded set value");
+    assert_eq!(target, slider);
+    assert_eq!(data, SetValueData::Numeric(42.0));
 }
 
 #[test]
