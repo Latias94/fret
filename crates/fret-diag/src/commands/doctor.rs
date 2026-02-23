@@ -182,7 +182,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
 
     if opts.fix_sidecars {
         let bundle_json = resolve_bundle_json_path_no_materialize(&bundle_dir).ok_or_else(|| {
-            "unable to regenerate sidecars: missing bundle.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains bundle.json)".to_string()
+            "unable to regenerate sidecars: missing bundle.json or bundle.schema2.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
         })?;
         let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
             .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));
@@ -363,7 +363,9 @@ pub(crate) fn cmd_doctor(
 
     // If the user points at an out-dir root (no bundle artifacts directly), prefer the latest
     // bundle directory so `doctor` produces a useful report without requiring another argument.
-    let has_bundleish_artifact = bundle_dir.join("bundle.json").is_file()
+    let has_bundleish_artifact = bundle_dir.join("bundle.schema2.json").is_file()
+        || bundle_dir.join("_root").join("bundle.schema2.json").is_file()
+        || bundle_dir.join("bundle.json").is_file()
         || bundle_dir.join("_root").join("bundle.json").is_file()
         || bundle_dir.join("bundle.index.json").is_file()
         || bundle_dir.join("_root").join("bundle.index.json").is_file()
@@ -594,9 +596,17 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
 }
 
 fn resolve_bundle_json_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
+    let direct_v2 = bundle_dir.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return Some(direct_v2);
+    }
     let direct = bundle_dir.join("bundle.json");
     if direct.is_file() {
         return Some(direct);
+    }
+    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return Some(root_v2);
     }
     let root = bundle_dir.join("_root").join("bundle.json");
     if root.is_file() {
@@ -843,13 +853,13 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     if let Some(schema_version) = bundle_schema_version {
         if schema_version != 1 && schema_version != 2 {
             warnings.push(Value::String(format!(
-                "unsupported bundle.json schema_version={schema_version} (expected 1 or 2)"
+                "unsupported bundle schema_version={schema_version} (expected 1 or 2)"
             )));
             repairs.push(json!({
                 "code": "unsupported_bundle_schema_version",
-                "note": "bundle.json schema_version is not supported by in-tree tooling",
+                "note": "bundle schema_version is not supported by in-tree tooling",
                 "schema_version": schema_version,
-                "repair_hint": "re-capture the bundle or regenerate bundle.json from a known-good source",
+                "repair_hint": "re-capture the bundle or regenerate it from a known-good source",
             }));
         }
         if schema_version == 1 {
@@ -857,7 +867,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_V2_MIN_BYTES {
                     warnings.push(Value::String(
-                        "bundle.json uses schema v1; consider converting to schema v2 to reduce bundle size and enable semantics tables"
+                        "bundle uses schema v1; consider converting to schema v2 to reduce bundle size and enable semantics tables"
                             .to_string(),
                     ));
                     repairs.push(json!({
@@ -870,13 +880,13 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         }
     } else if bundle_json.is_some() {
         warnings.push(Value::String(
-            "bundle.json is present but schema_version could not be detected from the file prefix"
+            "bundle is present but schema_version could not be detected from the file prefix"
                 .to_string(),
         ));
         repairs.push(json!({
             "code": "missing_bundle_schema_version",
-            "note": "bundle.json is present but schema_version could not be detected",
-            "repair_hint": "re-capture the bundle or regenerate bundle.json; ensure schema_version is at the top-level object",
+            "note": "bundle is present but schema_version could not be detected",
+            "repair_hint": "re-capture the bundle or regenerate it; ensure schema_version is at the top-level object",
         }));
     }
     if let Some(err) = &bundle_schema_error {
@@ -924,7 +934,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         if bundle_json_bytes > DEFAULT_MAX_FILE_BYTES {
             repairs.push(json!({
                 "code": "bundle_json_too_large",
-                "note": "bundle.json is very large; prefer generating a small ai-packet for agentic triage",
+                "note": "bundle is very large; prefer generating a small ai-packet for agentic triage",
                 "bundle_json_bytes": bundle_json_bytes,
                 "command": format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
             }));
