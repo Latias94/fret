@@ -35,6 +35,9 @@
   - Notes: `fretboard diag perf-baseline-from-bundles` baselines:
     - `.fret/perf.web.magic_patterns_no_view_cache.v1.json` (worst bundle: `.fret/diag/exports/1771845229222-bundle/bundle.json`, `top_total_time_us=7200`)
     - `.fret/perf.web.magic_patterns_view_cache.v1.json` (worst bundle: `.fret/diag/exports/1771842539046-bundle/bundle.json`, `top_total_time_us=5800`)
+  - Notes (from per-snapshot debug stats):
+    - off: `ui_total_us(pre+layout+paint)` median ≈ 4600us, max ≈ 7200us; `paint_cache_misses≈1150` (per snapshot)
+    - on: `ui_total_us(pre+layout+paint)` median ≈ 4900us, max ≈ 5800us; `paint_cache_misses=1`; `cache_roots_reused=1`
 
 ## M3 — Decision (pending)
 
