@@ -1,6 +1,6 @@
 use super::super::*;
 use super::helpers::render_plan_trace_fingerprint;
-use super::quad_vertices::upload_plan_quad_vertices;
+use super::uploads::FrameUploadResources;
 use fret_core::time::Instant;
 
 impl Renderer {
@@ -526,93 +526,28 @@ impl Renderer {
         self.prepare_image_bind_groups(device, &encoding.ordered_draws);
         self.prepare_uniform_mask_image_bind_groups(device, &encoding.uniform_mask_images);
 
-        let instances = &encoding.instances;
-        let path_paints = &encoding.path_paints;
-        let text_paints = &encoding.text_paints;
-        let viewport_vertices = &encoding.viewport_vertices;
-        let text_vertices = &encoding.text_vertices;
-        let path_vertices = &encoding.path_vertices;
-
-        self.quad_instances.ensure_capacity(device, instances.len());
-        self.path_paints.ensure_capacity(device, path_paints.len());
-        self.text_paints.ensure_capacity(device, text_paints.len());
-        self.viewport_vertices
-            .ensure_capacity(device, viewport_vertices.len());
-        self.text_vertices
-            .ensure_capacity(device, text_vertices.len());
-        self.path_vertices
-            .ensure_capacity(device, path_vertices.len());
-
-        let (instance_buffer, quad_instance_bind_group) = self.quad_instances.next_pair();
-        if !instances.is_empty() {
-            queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
-            if perf_enabled {
-                frame_perf.instance_bytes = frame_perf
-                    .instance_bytes
-                    .saturating_add((std::mem::size_of::<QuadInstance>() * instances.len()) as u64);
-            }
-        }
-
-        let (path_paint_buffer, path_paint_bind_group) = self.path_paints.next_pair();
-        if !path_paints.is_empty() {
-            queue.write_buffer(&path_paint_buffer, 0, bytemuck::cast_slice(path_paints));
-            if perf_enabled {
-                frame_perf.instance_bytes = frame_perf
-                    .instance_bytes
-                    .saturating_add((std::mem::size_of::<PaintGpu>() * path_paints.len()) as u64);
-            }
-        }
-
-        let (text_paint_buffer, text_paint_bind_group) = self.text_paints.next_pair();
-        if !text_paints.is_empty() {
-            queue.write_buffer(&text_paint_buffer, 0, bytemuck::cast_slice(text_paints));
-            if perf_enabled {
-                frame_perf.instance_bytes = frame_perf
-                    .instance_bytes
-                    .saturating_add((std::mem::size_of::<PaintGpu>() * text_paints.len()) as u64);
-            }
-        }
-
-        let viewport_vertex_buffer = self.viewport_vertices.next_buffer();
-        if !viewport_vertices.is_empty() {
-            queue.write_buffer(
-                &viewport_vertex_buffer,
-                0,
-                bytemuck::cast_slice(viewport_vertices),
-            );
-            if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<ViewportVertex>() * viewport_vertices.len()) as u64,
-                );
-            }
-        }
-
-        let text_vertex_buffer = self.text_vertices.next_buffer();
-        if !text_vertices.is_empty() {
-            queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
-            if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<TextVertex>() * text_vertices.len()) as u64,
-                );
-            }
-        }
-
-        let path_vertex_buffer = self.path_vertices.next_buffer();
-        if !path_vertices.is_empty() {
-            queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
-            if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<PathVertex>() * path_vertices.len()) as u64,
-                );
-            }
-        }
-
-        // Some passes draw textured quads (not fullscreen triangles). Upload the vertex payload
-        // once per frame and reference it via slices, since multiple `queue.write_buffer()` calls
-        // against the same buffer region in a single submission would make all passes observe the
-        // final write.
-        let quad_vertex_bases =
-            upload_plan_quad_vertices(self, device, queue, &plan, viewport_size);
+        let FrameUploadResources {
+            quad_instance_bind_group,
+            text_paint_bind_group,
+            path_paint_bind_group,
+            viewport_vertex_buffer,
+            text_vertex_buffer,
+            path_vertex_buffer,
+            quad_vertex_bases,
+        } = self.upload_frame_geometry(
+            device,
+            queue,
+            &plan,
+            viewport_size,
+            &encoding.instances,
+            &encoding.path_paints,
+            &encoding.text_paints,
+            &encoding.viewport_vertices,
+            &encoding.text_vertices,
+            &encoding.path_vertices,
+            perf_enabled,
+            &mut frame_perf,
+        );
 
         drop(uploads_guard);
         if let Some(upload_started) = upload_started {
