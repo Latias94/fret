@@ -1235,98 +1235,27 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     min_keep_alive_reuse_frames: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
-        &bundle,
+    retained_vlist_gates::check_bundle_for_retained_vlist_keep_alive_reuse_min(
         bundle_path,
         min_keep_alive_reuse_frames,
         warmup_frames,
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let mut examined_snapshots: u64 = 0;
-    let mut keep_alive_reuse_frames: u64 = 0;
-    let mut offenders: Vec<String> = Vec::new();
-
-    for w in windows {
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            examined_snapshots = examined_snapshots.saturating_add(1);
-
-            let reconciles = s
-                .get("debug")
-                .and_then(|v| v.get("retained_virtual_list_reconciles"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if reconciles.is_empty() {
-                continue;
-            }
-
-            let any_keep_alive_reuse = reconciles.iter().any(|r| {
-                r.get("reused_from_keep_alive_items")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-                    > 0
-            });
-
-            if any_keep_alive_reuse {
-                keep_alive_reuse_frames = keep_alive_reuse_frames.saturating_add(1);
-            } else {
-                let kept_alive_sum = reconciles
-                    .iter()
-                    .map(|r| {
-                        r.get("kept_alive_items")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0)
-                    })
-                    .sum::<u64>();
-                offenders.push(format!(
-                    "frame_id={frame_id} reconciles={count} kept_alive_sum={kept_alive_sum}",
-                    count = reconciles.len()
-                ));
-            }
-        }
-    }
-
-    if keep_alive_reuse_frames < min_keep_alive_reuse_frames {
-        let mut msg = String::new();
-        msg.push_str("expected retained virtual-list to reuse keep-alive items\n");
-        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-        msg.push_str(&format!(
-            "min_keep_alive_reuse_frames={min_keep_alive_reuse_frames} keep_alive_reuse_frames={keep_alive_reuse_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
-        ));
-        for line in offenders.into_iter().take(10) {
-            msg.push_str("  ");
-            msg.push_str(&line);
-            msg.push('\n');
-        }
-        return Err(msg);
-    }
-
-    Ok(())
+    retained_vlist_gates::check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+        bundle,
+        bundle_path,
+        min_keep_alive_reuse_frames,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
@@ -1335,10 +1264,7 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
     max_total_evicted_items: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_keep_alive_budget_json(
-        &bundle,
+    retained_vlist_gates::check_bundle_for_retained_vlist_keep_alive_budget(
         bundle_path,
         min_max_pool_len_after,
         max_total_evicted_items,
@@ -1346,6 +1272,8 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
     )
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -1353,110 +1281,13 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     max_total_evicted_items: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
-        return Ok(());
-    }
-
-    let evidence_dir = bundle_path
-        .parent()
-        .ok_or_else(|| "invalid bundle path: missing parent directory".to_string())?;
-    let evidence_path = evidence_dir.join("check.retained_vlist_keep_alive_budget.json");
-
-    let mut examined_snapshots: u64 = 0;
-    let mut reconcile_frames: u64 = 0;
-    let mut max_pool_len_after: u64 = 0;
-    let mut total_evicted_items: u64 = 0;
-    let mut samples: Vec<serde_json::Value> = Vec::new();
-
-    for w in windows {
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < warmup_frames {
-                continue;
-            }
-            examined_snapshots = examined_snapshots.saturating_add(1);
-
-            let reconciles = s
-                .get("debug")
-                .and_then(|v| v.get("retained_virtual_list_reconciles"))
-                .and_then(|v| v.as_array())
-                .map_or(&[][..], |v| v);
-            if reconciles.is_empty() {
-                continue;
-            }
-            reconcile_frames = reconcile_frames.saturating_add(1);
-
-            let mut frame_pool_after_max: u64 = 0;
-            let mut frame_evicted_sum: u64 = 0;
-            for r in reconciles {
-                let pool_after = r
-                    .get("keep_alive_pool_len_after")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
-                frame_pool_after_max = frame_pool_after_max.max(pool_after);
-
-                let evicted = r
-                    .get("evicted_keep_alive_items")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
-                frame_evicted_sum = frame_evicted_sum.saturating_add(evicted);
-            }
-
-            max_pool_len_after = max_pool_len_after.max(frame_pool_after_max);
-            total_evicted_items = total_evicted_items.saturating_add(frame_evicted_sum);
-
-            if samples.len() < 16 && (frame_pool_after_max > 0 || frame_evicted_sum > 0) {
-                samples.push(serde_json::json!({
-                    "frame_id": frame_id,
-                    "pool_len_after_max": frame_pool_after_max,
-                    "evicted_items": frame_evicted_sum,
-                }));
-            }
-        }
-    }
-
-    let evidence = serde_json::json!({
-        "schema_version": 1,
-        "kind": "retained_vlist_keep_alive_budget",
-        "bundle_json": bundle_path.display().to_string(),
-        "evidence_dir": evidence_dir.display().to_string(),
-        "evidence_path": evidence_path.display().to_string(),
-        "generated_unix_ms": super::util::now_unix_ms(),
-        "warmup_frames": warmup_frames,
-        "examined_snapshots": examined_snapshots,
-        "reconcile_frames": reconcile_frames,
-        "min_max_pool_len_after": min_max_pool_len_after,
-        "max_pool_len_after": max_pool_len_after,
-        "max_total_evicted_items": max_total_evicted_items,
-        "total_evicted_items": total_evicted_items,
-        "samples": samples,
-    });
-    let bytes = serde_json::to_vec_pretty(&evidence).map_err(|e| e.to_string())?;
-    std::fs::write(&evidence_path, bytes).map_err(|e| e.to_string())?;
-
-    if max_pool_len_after < min_max_pool_len_after || total_evicted_items > max_total_evicted_items
-    {
-        return Err(format!(
-            "retained virtual-list keep-alive budget violated\n  bundle: {}\n  evidence: {}\n  min_max_pool_len_after={} max_pool_len_after={}\n  max_total_evicted_items={} total_evicted_items={}",
-            bundle_path.display(),
-            evidence_path.display(),
-            min_max_pool_len_after,
-            max_pool_len_after,
-            max_total_evicted_items,
-            total_evicted_items,
-        ));
-    }
-
-    Ok(())
+    retained_vlist_gates::check_bundle_for_retained_vlist_keep_alive_budget_json(
+        bundle,
+        bundle_path,
+        min_max_pool_len_after,
+        max_total_evicted_items,
+        warmup_frames,
+    )
 }
 
 pub(super) fn check_bundle_for_notify_hotspot_file_max(
