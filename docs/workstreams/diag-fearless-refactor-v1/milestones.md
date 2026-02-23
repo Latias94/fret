@@ -25,6 +25,7 @@ Exit criteria:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
   - `crates/fret-diag/src/stats/debug_stats_gates.rs`
+  - `crates/fret-diag/src/stats/overlay_gates.rs`
   - `crates/fret-diag/src/stats/view_cache_gates.rs`
 - The `diag perf` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_perf.rs`
