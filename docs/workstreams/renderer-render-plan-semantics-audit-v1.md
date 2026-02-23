@@ -36,7 +36,8 @@ Definition: “initialized in the current frame” (v1)
 - `PlanTarget::Output` is intentionally treated as “externally initialized” by the runtime:
   - debug validation does not track `Output` initialization/liveness,
   - and `LoadOp::Load` into `Output` is therefore permitted by the validator.
-  - For deterministic output (tests, diagnostics, refactors), prefer ensuring the first write to `Output` uses `LoadOp::Clear`.
+  - For deterministic output (tests, diagnostics, refactors), ensure the first write to `Output` uses `LoadOp::Clear`.
+    - Guardrail: unit tests assert the plan’s first `Output` write is `Clear` for the common plan shapes.
 
 Guardrail:
 - `RenderPlan::debug_validate()` (debug-only) must remain enabled at `render_scene_execute` call sites.
