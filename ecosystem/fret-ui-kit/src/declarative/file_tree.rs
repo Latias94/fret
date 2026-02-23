@@ -204,6 +204,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 
         let is_selected = selected_for_row == Some(entry.id);
         let is_expanded = entry.has_children && expanded_for_row.contains(&entry.id);
+        let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
 
         let debug_test_id: Option<Arc<str>> = row_test_id_prefix
             .as_ref()
@@ -219,6 +220,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::TreeItem),
                     label: Some(entry.label.clone()),
+                    level: a11y_level,
                     selected: is_selected,
                     test_id: debug_test_id,
                     ..Default::default()

@@ -223,6 +223,7 @@ impl ElementHostWidget {
                     cx.set_invokable(false);
                 } else {
                     cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                    cx.set_level(props.a11y.level);
                     if let Some(label) = props.a11y.label.as_ref() {
                         cx.set_label(label.as_ref().to_string());
                     }

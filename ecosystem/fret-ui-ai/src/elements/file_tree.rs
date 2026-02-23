@@ -886,6 +886,7 @@ fn render_folder_row<H: UiHost + 'static>(
         pressable.a11y = PressableA11y {
             role: Some(SemanticsRole::TreeItem),
             label: Some(folder.name.clone()),
+            level: u32::try_from(depth.saturating_add(1)).ok(),
             selected: is_selected,
             test_id: row_test_id.clone(),
             expanded: Some(is_expanded),
@@ -1011,6 +1012,7 @@ fn render_file_row<H: UiHost + 'static>(
         pressable.a11y = PressableA11y {
             role: Some(SemanticsRole::TreeItem),
             label: Some(file.name.clone()),
+            level: u32::try_from(depth.saturating_add(1)).ok(),
             selected: is_selected,
             test_id: row_test_id.clone(),
             ..Default::default()
