@@ -170,12 +170,13 @@ pub(crate) fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 20] {
+pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 21] {
     [
         "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
         "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
         "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
+        "tools/diag-scripts/ui-gallery-breadcrumb-links-semantic-link.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
         "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",

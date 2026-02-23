@@ -71,7 +71,10 @@ pub(super) fn preview_breadcrumb(
                         |cx| {
                             vec![
                                 shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
-                                    .into_element(cx),
+                                    .href("/home")
+                                    .on_click(CMD_APP_OPEN)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
                             ]
                         },
                     );
@@ -185,6 +188,7 @@ pub(super) fn preview_breadcrumb(
     let link_component = shadcn::Breadcrumb::new()
         .items([
             shadcn::BreadcrumbItem::new("Home (router link)")
+                .on_click(CMD_APP_OPEN)
                 .truncate(true)
                 .refine_layout(trunc_layout.clone()),
             shadcn::BreadcrumbItem::new("Components"),
@@ -306,7 +310,7 @@ pub(super) fn preview_breadcrumb(
         [
             "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
             "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
-            "Current dropdown and router-link samples are visual approximations; full `asChild` composition can be added in a follow-up primitive demo.",
+            "Dropdown and router-link samples use typed pressables/links (ADR 0115 avoids general Slot/`asChild` prop merging).",
             "Validate RTL with long labels to ensure truncation and separator spacing remain stable.",
         ],
     );

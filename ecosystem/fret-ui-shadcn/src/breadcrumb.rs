@@ -1,15 +1,33 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
-use fret_runtime::{CommandId, WindowCommandGatingSnapshot};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
+use fret_runtime::{CommandId, Effect, WindowCommandGatingSnapshot};
+use fret_ui::action::OnActivate;
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableKeyActivation, PressableProps,
+    SemanticsDecoration,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+
+fn open_url_on_activate(
+    url: Arc<str>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
+) -> OnActivate {
+    Arc::new(move |host, _acx, _reason| {
+        host.push_effect(Effect::OpenUrl {
+            url: url.to_string(),
+            target: target.as_ref().map(|v| v.to_string()),
+            rel: rel.as_ref().map(|v| v.to_string()),
+        });
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BreadcrumbItemKind {
@@ -247,7 +265,11 @@ impl BreadcrumbItem {
                 };
 
                 let label = self.label.clone();
-                cx.pressable(PressableProps::default(), move |cx, st| {
+                let mut props = PressableProps::default();
+                props.key_activation = PressableKeyActivation::EnterOnly;
+                props.a11y.role = Some(SemanticsRole::Link);
+                props.a11y.label = Some(label.clone());
+                cx.pressable(props, move |cx, st| {
                     cx.pressable_dispatch_command_if_enabled(command.clone());
                     vec![breadcrumb_link_text(
                         cx,
@@ -573,13 +595,33 @@ pub mod primitives {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     pub struct BreadcrumbLink {
         label: Arc<str>,
         command: Option<CommandId>,
+        on_activate: Option<OnActivate>,
+        href: Option<Arc<str>>,
+        target: Option<Arc<str>>,
+        rel: Option<Arc<str>>,
         truncate: bool,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
+    }
+
+    impl std::fmt::Debug for BreadcrumbLink {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("BreadcrumbLink")
+                .field("label", &self.label)
+                .field("command", &self.command)
+                .field("on_activate", &self.on_activate.is_some())
+                .field("href", &self.href)
+                .field("target", &self.target)
+                .field("rel", &self.rel)
+                .field("truncate", &self.truncate)
+                .field("chrome", &self.chrome)
+                .field("layout", &self.layout)
+                .finish()
+        }
     }
 
     impl BreadcrumbLink {
@@ -587,6 +629,10 @@ pub mod primitives {
             Self {
                 label: label.into(),
                 command: None,
+                on_activate: None,
+                href: None,
+                target: None,
+                rel: None,
                 truncate: false,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
@@ -595,6 +641,26 @@ pub mod primitives {
 
         pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
             self.command = Some(command.into());
+            self
+        }
+
+        pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+            self.on_activate = Some(on_activate);
+            self
+        }
+
+        pub fn href(mut self, href: impl Into<Arc<str>>) -> Self {
+            self.href = Some(href.into());
+            self
+        }
+
+        pub fn target(mut self, target: impl Into<Arc<str>>) -> Self {
+            self.target = Some(target.into());
+            self
+        }
+
+        pub fn rel(mut self, rel: impl Into<Arc<str>>) -> Self {
+            self.rel = Some(rel.into());
             self
         }
 
@@ -642,11 +708,35 @@ pub mod primitives {
 
             let chrome = self.chrome;
             let layout = self.layout;
-            if let Some(command) = self.command
-                && !disabled_by_gating
+            let command = self.command.clone();
+            let href_for_action = self.href.clone();
+            let href_for_semantics = self.href.clone();
+            let target = self.target.clone();
+            let rel = self.rel.clone();
+            let on_activate = self.on_activate.clone();
+            let should_fallback_open_url = command.is_none() && on_activate.is_none();
+
+            if (command.is_some() && !disabled_by_gating)
+                || href_for_action.is_some()
+                || on_activate.is_some()
             {
-                cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command_if_enabled(command.clone());
+                let mut props = PressableProps::default();
+                props.key_activation = PressableKeyActivation::EnterOnly;
+                props.a11y.role = Some(SemanticsRole::Link);
+                props.a11y.label = Some(label.clone());
+
+                let mut element = cx.pressable(props, move |cx, st| {
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                    if let Some(on_activate) = on_activate.clone() {
+                        cx.pressable_on_activate(on_activate);
+                    } else if should_fallback_open_url && let Some(href) = href_for_action.clone() {
+                        cx.pressable_on_activate(open_url_on_activate(
+                            href,
+                            target.clone(),
+                            rel.clone(),
+                        ));
+                    }
+
                     let color = if st.hovered { fg } else { muted };
                     vec![cx.container(
                         {
@@ -672,7 +762,13 @@ pub mod primitives {
                             vec![text.into_element(cx)]
                         },
                     )]
-                })
+                });
+
+                if let Some(href) = href_for_semantics {
+                    element = element.attach_semantics(SemanticsDecoration::default().value(href));
+                }
+
+                element
             } else {
                 let props = {
                     let theme = Theme::global(&*cx.app);
