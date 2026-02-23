@@ -7,6 +7,7 @@ Last updated: 2026-02-23
 - M1: Complete (core contract + AccessKit mapping + unit tests).
 - M1.5: Complete (scroll semantics + `scroll_by`, level, read-only, placeholder, url).
 - M2: Complete (shadcn slider + progress populate numeric semantics; snapshots gated).
+- M2.25: Complete (slider Increment/Decrement stepper actions exposed; runner + default UI driver hooks wired).
 - M3: Complete (SetSliderValue prefers structured numeric semantics; string parsing as fallback).
 
 ## M0 — Agreement on contract (design)

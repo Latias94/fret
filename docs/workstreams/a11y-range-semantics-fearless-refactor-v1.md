@@ -1,6 +1,6 @@
 # A11y range/numeric semantics (fearless refactor v1)
 
-Status: In progress (core + AccessKit mapping landed; diagnostics hardening pending)
+Status: In progress (core + AccessKit mapping landed; slider stepper actions wired; ADR/docs alignment pending)
 
 Last updated: 2026-02-23
 
@@ -15,7 +15,8 @@ and a **string** `label`/`value`. This is a solid skeleton, but it is insufficie
 Symptoms before this workstream:
 
 Update (2026-02-23): The core contract now includes structured numeric + scroll fields, the AccessKit adapter emits them
-best-effort for finite values, and `scroll_by` is wired end-to-end for scrollable host widgets.
+best-effort for finite values, `scroll_by` is wired end-to-end for scrollable host widgets, and sliders expose
+Increment/Decrement stepper actions end-to-end (runner + default UI driver hooks).
 
 - A slider/progress often becomes “just text” (e.g. `"50%"`) rather than a role with `aria-valuenow/min/max`-like data.
 - The diagnostics harness’s `set_slider_value` step must parse floats out of `SemanticsNode::value` strings
@@ -82,9 +83,9 @@ Action notes:
 - `SemanticsActions.scroll_by` is the portable “scroll by delta” action surface.
 - `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for sliders. In `fret-ui`,
   `value_editable` on `SemanticsRole::Slider` maps to these actions (instead of `SetValue`).
-- Sliders also expose a direct `SetValue` surface when `value_editable` is enabled; the default `fret-ui-app` driver
-  implements it by translating target values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences.
-  This surface is gated by the runtime: it is only exposed when slider numeric metadata includes `value/min/max/step`.
+- Sliders may also expose a `SetValue` surface; the default `fret-ui-app` driver implements it by translating target
+  values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences. This surface is gated by the runtime: it is
+  only exposed when slider numeric metadata includes `value/min/max/step`.
 ## Additional “mechanismizable” semantics gaps (candidates)
 
 These are **not required** to ship the numeric/range backbone, but they are strong candidates to batch into the same
@@ -193,6 +194,7 @@ Regression protection:
 - Ecosystem adoption:
   - `ecosystem/fret-ui-shadcn/src/slider.rs` emits numeric range/value.
   - `ecosystem/fret-ui-shadcn/src/progress.rs` emits determinate progress numeric semantics.
+  - `ecosystem/fret-ui-material3/src/slider.rs` emits numeric range/value for Material 3 sliders.
 - Diagnostics: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_slider.rs` prefers structured numeric semantics.
 
 ## Risks / mitigations

@@ -27,11 +27,14 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Extend `fret-ui` `SemanticsProps` and `SemanticsDecoration` to carry extras + read-only.
 - [x] Forward extras into the snapshot in `crates/fret-ui/src/tree/ui_tree_semantics.rs`.
 - [x] Add snapshot validation for numeric/scroll invariants via `SemanticsNode::validate()` (finite values, bounds order, out-of-bounds values, positive step/jump, `level` is 1-based).
+- [x] Wire default `fret-bootstrap` UI driver hooks for common a11y actions (text selection, replace selected text, numeric set value, slider stepping).
+- [x] Implement best-effort slider `SetValue` numeric handling via key sequences (Home/End/PageUp/PageDown/ArrowUp/ArrowDown).
 
 ## AccessKit adapter
 
 - [x] Emit AccessKit numeric properties when fields are present.
 - [x] Add adapter unit tests covering numeric + extra properties.
+- [x] Expose portable slider stepper actions (`increment`/`decrement`) and map to AccessKit `Increment`/`Decrement`.
 
 ## Ecosystem adoption (shadcn/Radix alignment)
 
