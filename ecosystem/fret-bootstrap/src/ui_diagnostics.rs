@@ -2311,6 +2311,23 @@ mod legacy_forked_script_protocol {
             #[serde(default)]
             eps_px: f32,
         },
+        SemanticsNumericApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsNumericFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiSemanticsNumericFieldV1 {
+        Value,
+        Min,
+        Max,
+        Step,
+        Jump,
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -9283,6 +9300,35 @@ fn eval_predicate(
 
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
+        }
+        UiPredicateV1::SemanticsNumericApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                ui_action_script_types::UiSemanticsNumericFieldV1::Value => {
+                    node.extra.numeric.value
+                }
+                ui_action_script_types::UiSemanticsNumericFieldV1::Min => node.extra.numeric.min,
+                ui_action_script_types::UiSemanticsNumericFieldV1::Max => node.extra.numeric.max,
+                ui_action_script_types::UiSemanticsNumericFieldV1::Step => node.extra.numeric.step,
+                ui_action_script_types::UiSemanticsNumericFieldV1::Jump => node.extra.numeric.jump,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() <= eps
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
