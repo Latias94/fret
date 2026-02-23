@@ -44,6 +44,7 @@ Related living docs:
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_text_gates.rs`
 - `fret-diag` CLI commands treat sidecars as optional accelerators:
   - validate `kind` / `schema_version` / `warmup_frames`,
   - accept `_root/` bundle layouts,
