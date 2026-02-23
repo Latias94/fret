@@ -160,6 +160,8 @@ Statuses:
 | Diag gate: primary button icon visibility (via ButtonGroup demo; zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/badge.rs` | unit test |
 | Text defaults inherit `currentColor` | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui.rs` | unit test |
+| Tabs triggers provide `currentColor` (and prefer deferred icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/tabs.rs` | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` |
+| Diag gate: tabs trigger icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |
 
 ## Migration plan

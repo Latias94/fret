@@ -26,7 +26,7 @@ Last updated: 2026-02-23
   - [ ] `SelectItem` (if/when it grows icon slots)
   - [x] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
 - [x] Badge provides resolved `fg`.
-- [ ] Tabs triggers / pill-like controls provide resolved `fg`.
+- [x] Tabs triggers / pill-like controls provide resolved `fg` (prefer deferred icon slots for trigger icons).
 
 ## Text adoption (the big win after icons)
 
@@ -51,6 +51,7 @@ Last updated: 2026-02-23
 - [x] Add a “primary button + icon” diag script that asserts the icon is visible:
   - [x] capture screenshot in zinc/light and zinc/dark presets (`tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json`)
   - [ ] (optional) pixel-change assertion for the icon bounds
+- [x] Add a Tabs icons screenshot script (zinc/light + zinc/dark) to gate trigger icon visibility (`tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`).
 - [ ] Add a “menu item with leading icon + disabled/active” diag script.
 
 ## Cross-cutting checks

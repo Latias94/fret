@@ -63,6 +63,19 @@ Evidence anchors:
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json`
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json`
 
+### M4b — Host adoption: Tabs triggers (landed)
+
+- `TabsTrigger` foreground is treated as a host-provided `currentColor` so icons/text follow selected/disabled state.
+- Prefer deferred icon slots for trigger icons (`TabsItem::trigger_leading_icon` / `trigger_trailing_icon`) so icons are
+  built under the provider (no manual fg token threading).
+- Gate with a light/dark screenshot script for icon visibility.
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-shadcn/src/tabs.rs`
+- `apps/fret-ui-gallery/src/ui/previews/gallery/nav/tabs.rs`
+- `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`
+
 ### M5 — Text adoption (landed; biggest ROI after icons)
 
 - Decide the minimal text surface that should inherit `currentColor` (v1 scope is “foreground only”).
