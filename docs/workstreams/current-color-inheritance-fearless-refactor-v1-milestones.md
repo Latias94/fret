@@ -76,6 +76,19 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/ui/previews/gallery/nav/tabs.rs`
 - `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`
 
+### M4c — Host adoption: Toggle Group items (landed)
+
+- `ToggleGroupItem` foreground is treated as a host-provided `currentColor` so icons/text follow selected/disabled state.
+- Prefer deferred icon slots for icon-only items (`ToggleGroupItem::icon` / `leading_icon` / `trailing_icon`) so icons are
+  built under the provider (no manual fg token threading).
+- Gate with a light/dark screenshot script for demo icon visibility.
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
+- `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`
+- `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json`
+
 ### M5 — Text adoption (landed; biggest ROI after icons)
 
 - Decide the minimal text surface that should inherit `currentColor` (v1 scope is “foreground only”).
