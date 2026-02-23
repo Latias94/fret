@@ -128,6 +128,8 @@ pub struct UiSemanticsFlagsV1 {
     #[serde(default, skip_serializing_if = "is_false")]
     pub disabled: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    pub hidden: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub busy: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub selected: bool,
@@ -150,6 +152,7 @@ impl UiSemanticsFlagsV1 {
         !v.focused
             && !v.captured
             && !v.disabled
+            && !v.hidden
             && !v.busy
             && !v.selected
             && !v.expanded
@@ -252,6 +255,7 @@ impl UiSemanticsNodeV1 {
                 focused: node.flags.focused,
                 captured: node.flags.captured,
                 disabled: node.flags.disabled,
+                hidden: node.flags.hidden,
                 busy: node.flags.busy,
                 selected: node.flags.selected,
                 expanded: node.flags.expanded,

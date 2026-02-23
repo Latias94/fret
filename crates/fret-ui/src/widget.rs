@@ -1332,6 +1332,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.flags.read_only = read_only;
     }
 
+    pub fn set_hidden(&mut self, hidden: bool) {
+        self.flags.hidden = hidden;
+    }
+
     pub fn set_selected(&mut self, selected: bool) {
         self.flags.selected = selected;
     }

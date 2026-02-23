@@ -537,6 +537,7 @@ pub struct SemanticsDecoration {
     pub value: Option<Arc<str>>,
     pub disabled: Option<bool>,
     pub read_only: Option<bool>,
+    pub hidden: Option<bool>,
     pub busy: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
@@ -578,6 +579,7 @@ impl SemanticsDecoration {
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
             read_only: other.read_only.or(self.read_only),
+            hidden: other.hidden.or(self.hidden),
             busy: other.busy.or(self.busy),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
@@ -633,6 +635,11 @@ impl SemanticsDecoration {
 
     pub fn read_only(mut self, read_only: bool) -> Self {
         self.read_only = Some(read_only);
+        self
+    }
+
+    pub fn hidden(mut self, hidden: bool) -> Self {
+        self.hidden = Some(hidden);
         self
     }
 
@@ -781,6 +788,7 @@ pub struct SemanticsProps {
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,
+    pub hidden: bool,
     pub busy: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
@@ -833,6 +841,7 @@ impl Default for SemanticsProps {
             value_editable: None,
             disabled: false,
             read_only: false,
+            hidden: false,
             busy: false,
             selected: false,
             expanded: None,

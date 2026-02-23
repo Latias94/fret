@@ -4,10 +4,11 @@ use fret_core::{
     PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService,
     TextBlobId, TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
 };
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::tree::UiTree;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 fn is_false(v: &bool) -> bool {
     !*v
@@ -148,6 +149,8 @@ struct SnapSemanticsFlags {
     focused: bool,
     captured: bool,
     disabled: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    hidden: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     busy: bool,
     #[serde(default, skip_serializing_if = "is_false")]
@@ -622,6 +625,7 @@ where
                 focused: n.flags.focused,
                 captured: n.flags.captured,
                 disabled: n.flags.disabled,
+                hidden: n.flags.hidden,
                 busy: n.flags.busy,
                 read_only: n.flags.read_only,
                 selected: n.flags.selected,
@@ -745,6 +749,29 @@ fn snapshot_command_list_busy_semantics() {
                 .into(),
         ];
         vec![fret_ui_shadcn::command::CommandList::new_entries(entries).into_element(cx)]
+    });
+}
+
+#[test]
+fn snapshot_pressable_hidden_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(220.0), Px(120.0)),
+    );
+    snapshot_for_root("pressable_hidden_semantics", bounds, |cx| {
+        vec![cx.pressable(
+            PressableProps {
+                enabled: true,
+                focusable: false,
+                a11y: PressableA11y {
+                    hidden: true,
+                    test_id: Some(Arc::from("decorative-hidden")),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx, _st| Vec::new(),
+        )]
     });
 }
 

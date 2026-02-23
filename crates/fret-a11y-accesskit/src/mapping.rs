@@ -172,6 +172,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.read_only {
             out.set_read_only();
         }
+        if node.flags.hidden {
+            out.set_hidden();
+        }
         if node.flags.required {
             out.set_required();
         }

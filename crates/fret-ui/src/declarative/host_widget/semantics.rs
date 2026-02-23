@@ -95,6 +95,9 @@ impl ElementHostWidget {
                 if props.read_only {
                     cx.set_read_only(true);
                 }
+                if props.hidden {
+                    cx.set_hidden(true);
+                }
                 if props.busy {
                     cx.set_busy(true);
                 }
@@ -223,10 +226,10 @@ impl ElementHostWidget {
             ElementInstance::Pressable(props) => {
                 if props.a11y.hidden {
                     cx.set_role(SemanticsRole::Generic);
+                    cx.set_hidden(true);
                     if let Some(test_id) = props.a11y.test_id.as_ref() {
                         cx.set_test_id(test_id.as_ref().to_string());
                     }
-                    cx.set_disabled(true);
                     cx.set_focusable(false);
                     cx.set_invokable(false);
                 } else {
@@ -401,6 +404,9 @@ impl ElementHostWidget {
             }
             if let Some(read_only) = decoration.read_only {
                 cx.set_read_only(read_only);
+            }
+            if let Some(hidden) = decoration.hidden {
+                cx.set_hidden(hidden);
             }
             if let Some(busy) = decoration.busy {
                 cx.set_busy(busy);

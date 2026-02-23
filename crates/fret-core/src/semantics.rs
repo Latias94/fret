@@ -94,6 +94,11 @@ pub struct SemanticsFlags {
     pub captured: bool,
     pub disabled: bool,
     pub read_only: bool,
+    /// Exclude this node (and its subtree) from the accessibility tree presented to assistive
+    /// technologies.
+    ///
+    /// This is a portable approximation of ARIA `aria-hidden`.
+    pub hidden: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Legacy binary checked state.

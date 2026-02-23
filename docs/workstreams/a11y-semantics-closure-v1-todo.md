@@ -33,6 +33,13 @@ Last updated: 2026-02-23
 - [x] Adopt in at least one shadcn component (command list/palette loading state).
 - [x] Gate via snapshot/diag script.
 
+## P0: Hidden semantics (exclude from accessibility tree)
+
+- [x] Decide contract shape (node flag) and how it composes with existing role/flag surfaces.
+- [x] Map into AccessKit (`hidden`).
+- [x] Wire declarative `PressableA11y.hidden` without relying on role/action coercion.
+- [x] Gate via snapshot and unit test.
+
 ## Hygiene
 
 - [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).
