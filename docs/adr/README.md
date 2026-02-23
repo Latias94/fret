@@ -314,6 +314,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0293-a11y-hidden-semantics-v1.md`
 - `docs/adr/0294-a11y-visited-semantics-v1.md`
 - `docs/adr/0295-a11y-multiselectable-semantics-v1.md`
+- `docs/adr/0296-a11y-live-region-semantics-v1.md`
 - `docs/adr/0084-virtualized-accessibility-and-collection-semantics.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`

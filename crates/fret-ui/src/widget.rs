@@ -1,8 +1,8 @@
 use crate::{Theme, UiHost};
 use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsCheckedState, SemanticsFlags,
-    SemanticsInvalid, SemanticsOrientation, SemanticsPressedState, SemanticsRole, Size,
-    Transform2D, UiServices,
+    SemanticsInvalid, SemanticsLive, SemanticsOrientation, SemanticsPressedState, SemanticsRole,
+    Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1393,6 +1393,18 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_busy(&mut self, busy: bool) {
         self.flags.busy = busy;
+    }
+
+    pub fn set_live(&mut self, live: Option<SemanticsLive>) {
+        self.flags.live = live;
+    }
+
+    pub fn clear_live(&mut self) {
+        self.flags.live = None;
+    }
+
+    pub fn set_live_atomic(&mut self, live_atomic: bool) {
+        self.flags.live_atomic = live_atomic;
     }
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {

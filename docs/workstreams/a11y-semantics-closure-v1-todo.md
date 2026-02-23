@@ -54,6 +54,16 @@ Last updated: 2026-02-23
 - [x] Adopt in at least one shadcn component (combobox chips listbox).
 - [x] Gate via snapshot and unit test.
 
+## P0: Live region semantics (announcements)
+
+- [x] Confirm AccessKit surface (`live` + `live_atomic`).
+- [x] Add portable contract in `crates/fret-core` (`SemanticsFlags.live/live_atomic`).
+- [x] Add `fret-ui` writers (declarative semantics + decoration support).
+- [x] Add `fret-a11y-accesskit` mapping + unit tests.
+- [x] Adopt in the toast viewport overlay root (notification announcements).
+- [x] Gate via a shadcn semantics snapshot.
+- [x] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
+
 ## Hygiene
 
 - [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).

@@ -2964,13 +2964,13 @@ pub fn render<H: UiHost + 'static>(
                 );
 
                 let label = custom_aria_label.clone().or(container_aria_label.clone());
+                let mut decoration = fret_ui::element::SemanticsDecoration::default()
+                    .role(SemanticsRole::Viewport)
+                    .live(Some(fret_core::SemanticsLive::Polite));
                 if let Some(label) = label {
-                    root = root.attach_semantics(
-                        fret_ui::element::SemanticsDecoration::default()
-                            .role(SemanticsRole::Viewport)
-                            .label(label),
-                    );
+                    decoration = decoration.label(label);
                 }
+                root = root.attach_semantics(decoration);
 
                 vec![root]
             },

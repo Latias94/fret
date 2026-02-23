@@ -88,6 +88,14 @@ pub enum SemanticsInvalid {
     Spelling,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsLive {
+    Off,
+    Polite,
+    Assertive,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
@@ -107,6 +115,13 @@ pub struct SemanticsFlags {
     ///
     /// This is a portable approximation of ARIA `aria-multiselectable`.
     pub multiselectable: bool,
+    /// When set, indicates that this node is a live region (ARIA `aria-live`).
+    ///
+    /// `None` means no live region semantics are requested.
+    pub live: Option<SemanticsLive>,
+    /// When true, indicates that updates to this live region should be presented atomically
+    /// (ARIA `aria-atomic`).
+    pub live_atomic: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Legacy binary checked state.

@@ -60,6 +60,25 @@ impl UiInvalidV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiLiveV1 {
+    Off,
+    Polite,
+    Assertive,
+}
+
+impl UiLiveV1 {
+    fn from_semantics_live(v: fret_core::SemanticsLive) -> Option<Self> {
+        match v {
+            fret_core::SemanticsLive::Off => Some(Self::Off),
+            fret_core::SemanticsLive::Polite => Some(Self::Polite),
+            fret_core::SemanticsLive::Assertive => Some(Self::Assertive),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
@@ -149,6 +168,10 @@ pub struct UiSemanticsFlagsV1 {
     pub required: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub invalid: Option<UiInvalidV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live: Option<UiLiveV1>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub live_atomic: bool,
 }
 
 impl UiSemanticsFlagsV1 {
@@ -167,6 +190,8 @@ impl UiSemanticsFlagsV1 {
             && v.pressed_state.is_none()
             && !v.required
             && v.invalid.is_none()
+            && v.live.is_none()
+            && !v.live_atomic
     }
 }
 
@@ -278,6 +303,8 @@ impl UiSemanticsNodeV1 {
                     .map(UiPressedStateV1::from_semantics_pressed_state),
                 required: node.flags.required,
                 invalid: node.flags.invalid.map(UiInvalidV1::from_semantics_invalid),
+                live: node.flags.live.and_then(UiLiveV1::from_semantics_live),
+                live_atomic: node.flags.live_atomic,
             },
             test_id,
             active_descendant: node.active_descendant.map(key_to_u64),

@@ -1,10 +1,11 @@
 use fret_app::App;
 use fret_core::{
     AppWindowId, Color, Corners, Edges, Paint, PathCommand, PathConstraints, PathId, PathMetrics,
-    PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService,
-    TextBlobId, TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
+    PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, SemanticsLive, SemanticsRole,
+    Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    Transform2D, UvRect,
 };
-use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps};
 use fret_ui::tree::UiTree;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -170,6 +171,10 @@ struct SnapSemanticsFlags {
     required: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     invalid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    live: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    live_atomic: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -641,6 +646,8 @@ where
                 pressed_state: n.flags.pressed_state.map(|v| format!("{v:?}")),
                 required: n.flags.required,
                 invalid: n.flags.invalid.map(|v| format!("{v:?}")),
+                live: n.flags.live.map(|v| format!("{v:?}")),
+                live_atomic: n.flags.live_atomic,
             },
             extra: snap_semantics_extra(&n.extra),
         })
@@ -824,6 +831,26 @@ fn snapshot_command_palette_multiselectable_semantics() {
                 .list_multiselectable(true)
                 .into_element(cx),
         ]
+    });
+}
+
+#[test]
+fn snapshot_live_region_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("live_region_semantics", bounds, |cx| {
+        vec![cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Notifications")),
+                live: Some(SemanticsLive::Polite),
+                live_atomic: true,
+                ..Default::default()
+            },
+            |cx| vec![cx.text("Hello")],
+        )]
     });
 }
 

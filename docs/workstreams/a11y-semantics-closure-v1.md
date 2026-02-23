@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable closed)
+Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable + live region closed)
 
 Last updated: 2026-02-23
 
@@ -54,22 +54,22 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0294).
 - Multiselectable semantics: `SemanticsFlags.multiselectable` + AccessKit mapping + shadcn combobox chips adoption
   (ADR 0295).
+- Live region semantics: `SemanticsFlags.live/live_atomic` + AccessKit mapping + toast viewport adoption
+  (ADR 0296).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)
 
 These are common across apps/editors and map directly into platform APIs:
 
-1. **Live region announcements**
-   - Goal: enable structured announcements (polite/assertive/atomic) without encoding "status text" into random labels.
-2. **Heading semantics adoption**
+1. **Heading semantics adoption**
    - Goal: consistently publish `role=Heading` (or equivalent) + `level` for document/editor-like UIs.
 
 ### P1 candidates (valuable, but may require more policy decisions)
 
 - Heading semantics (role + `level` adoption policy).
 - More complete text field semantics (autofill hints, input purpose, spellcheck, etc.) depending on adapter support.
-- Live region announcements beyond the current extras (needs explicit contract boundaries).
+- Live region policy surfaces beyond the mechanism contract (e.g. `announce()` APIs, queueing, relevance semantics).
 
 ## Work plan (suggested sequence)
 

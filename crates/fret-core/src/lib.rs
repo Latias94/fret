@@ -90,7 +90,7 @@ pub use scene::{
 };
 pub use semantics::{
     SemanticsActions, SemanticsCheckedState, SemanticsFlags, SemanticsInlineSpan, SemanticsInvalid,
-    SemanticsNode, SemanticsNodeExtra, SemanticsNumeric, SemanticsOrientation,
+    SemanticsLive, SemanticsNode, SemanticsNodeExtra, SemanticsNumeric, SemanticsOrientation,
     SemanticsPressedState, SemanticsRole, SemanticsRoot, SemanticsScroll, SemanticsSnapshot,
 };
 pub use services::UiServices;

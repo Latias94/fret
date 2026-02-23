@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use accesskit::{
-    Action, Invalid, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree, TreeId,
-    TreeUpdate,
+    Action, Invalid, Live, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree,
+    TreeId, TreeUpdate,
 };
 use fret_core::{SemanticsNode, SemanticsOrientation, SemanticsRole, SemanticsSnapshot};
 
@@ -186,6 +186,20 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         }
         if node.flags.busy {
             out.set_busy();
+        }
+        if let Some(live) = node.flags.live {
+            let live = match live {
+                fret_core::SemanticsLive::Off => Some(Live::Off),
+                fret_core::SemanticsLive::Polite => Some(Live::Polite),
+                fret_core::SemanticsLive::Assertive => Some(Live::Assertive),
+                _ => None,
+            };
+            if let Some(live) = live {
+                out.set_live(live);
+                if node.flags.live_atomic {
+                    out.set_live_atomic();
+                }
+            }
         }
         if let Some(invalid) = node.flags.invalid {
             let invalid = match invalid {

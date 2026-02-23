@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsOrientation, SemanticsRole, Size,
-    SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
+    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -541,6 +541,11 @@ pub struct SemanticsDecoration {
     pub visited: Option<bool>,
     pub multiselectable: Option<bool>,
     pub busy: Option<bool>,
+    /// Live region setting (ARIA `aria-live`), applied as a semantics flags override.
+    ///
+    /// `Some(None)` clears any live region semantics from the underlying element.
+    pub live: Option<Option<SemanticsLive>>,
+    pub live_atomic: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
     /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
@@ -585,6 +590,8 @@ impl SemanticsDecoration {
             visited: other.visited.or(self.visited),
             multiselectable: other.multiselectable.or(self.multiselectable),
             busy: other.busy.or(self.busy),
+            live: other.live.or(self.live),
+            live_atomic: other.live_atomic.or(self.live_atomic),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
             checked: other.checked.or(self.checked),
@@ -659,6 +666,16 @@ impl SemanticsDecoration {
 
     pub fn busy(mut self, busy: bool) -> Self {
         self.busy = Some(busy);
+        self
+    }
+
+    pub fn live(mut self, live: Option<SemanticsLive>) -> Self {
+        self.live = Some(live);
+        self
+    }
+
+    pub fn live_atomic(mut self, live_atomic: bool) -> Self {
+        self.live_atomic = Some(live_atomic);
         self
     }
 
@@ -806,6 +823,8 @@ pub struct SemanticsProps {
     pub visited: bool,
     pub multiselectable: bool,
     pub busy: bool,
+    pub live: Option<SemanticsLive>,
+    pub live_atomic: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
@@ -861,6 +880,8 @@ impl Default for SemanticsProps {
             visited: false,
             multiselectable: false,
             busy: false,
+            live: None,
+            live_atomic: false,
             selected: false,
             expanded: None,
             checked: None,

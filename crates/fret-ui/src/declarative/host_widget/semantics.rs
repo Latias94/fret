@@ -107,6 +107,12 @@ impl ElementHostWidget {
                 if props.busy {
                     cx.set_busy(true);
                 }
+                if let Some(live) = props.live {
+                    cx.set_live(Some(live));
+                    if props.live_atomic {
+                        cx.set_live_atomic(true);
+                    }
+                }
                 if props.selected {
                     cx.set_selected(true);
                 }
@@ -428,6 +434,12 @@ impl ElementHostWidget {
             }
             if let Some(busy) = decoration.busy {
                 cx.set_busy(busy);
+            }
+            if let Some(live) = decoration.live {
+                cx.set_live(live);
+            }
+            if let Some(live_atomic) = decoration.live_atomic {
+                cx.set_live_atomic(live_atomic);
             }
             if let Some(selected) = decoration.selected {
                 cx.set_selected(selected);

@@ -7368,6 +7368,19 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.flags.visited);
         hasher.write_bool(node.flags.multiselectable);
         hasher.write_bool(node.flags.busy);
+        match node.flags.live {
+            None => hasher.write_u8(0),
+            Some(live) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match live {
+                    fret_core::SemanticsLive::Off => 0,
+                    fret_core::SemanticsLive::Polite => 1,
+                    fret_core::SemanticsLive::Assertive => 2,
+                    _ => 255,
+                });
+            }
+        }
+        hasher.write_bool(node.flags.live_atomic);
         hasher.write_bool(node.flags.selected);
         hasher.write_bool(node.flags.expanded);
         hasher.write_opt_bool(node.flags.checked);
