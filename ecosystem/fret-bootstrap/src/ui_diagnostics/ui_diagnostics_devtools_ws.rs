@@ -1,5 +1,27 @@
 use super::*;
 
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+pub(super) struct PendingDevtoolsScreenshotRequest {
+    pub(super) request_id: Option<u64>,
+    pub(super) request_id_str: String,
+    pub(super) label: Option<String>,
+    pub(super) timeout_frames: u32,
+    pub(super) window_ffi: u64,
+    pub(super) bundle_dir_name: Option<String>,
+    pub(super) remaining_frames: u32,
+    pub(super) last_result_trigger_stamp: Option<u64>,
+    pub(super) started: bool,
+}
+
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+pub(super) struct PendingDevtoolsSemanticsNodeGetRequest {
+    pub(super) request_id: Option<u64>,
+    pub(super) window_ffi: u64,
+    pub(super) node_id: u64,
+}
+
 impl UiDiagnosticsService {
     #[cfg(feature = "diagnostics-ws")]
     pub(super) fn ws_is_configured(&self) -> bool {

@@ -146,33 +146,13 @@ pub struct UiDiagnosticsService {
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
-    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    pending_devtools_screenshot:
+        Option<ui_diagnostics_devtools_ws::PendingDevtoolsScreenshotRequest>,
     #[cfg(feature = "diagnostics-ws")]
-    pending_devtools_semantics_node_get: Option<PendingDevtoolsSemanticsNodeGetRequest>,
+    pending_devtools_semantics_node_get:
+        Option<ui_diagnostics_devtools_ws::PendingDevtoolsSemanticsNodeGetRequest>,
     #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
-}
-
-#[cfg(feature = "diagnostics-ws")]
-#[derive(Debug, Clone)]
-struct PendingDevtoolsScreenshotRequest {
-    request_id: Option<u64>,
-    request_id_str: String,
-    label: Option<String>,
-    timeout_frames: u32,
-    window_ffi: u64,
-    bundle_dir_name: Option<String>,
-    remaining_frames: u32,
-    last_result_trigger_stamp: Option<u64>,
-    started: bool,
-}
-
-#[cfg(feature = "diagnostics-ws")]
-#[derive(Debug, Clone)]
-struct PendingDevtoolsSemanticsNodeGetRequest {
-    request_id: Option<u64>,
-    window_ffi: u64,
-    node_id: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
