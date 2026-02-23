@@ -1,6 +1,6 @@
 # UI Gallery view-cache web perf stabilization (v1)
 
-Status: Draft
+Status: In progress
 
 ## Context
 
@@ -23,7 +23,8 @@ This workstream focuses on making web perf captures *stable and interpretable* b
 ## Evidence inputs (baseline)
 
 - Web script: `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json`
-- Exported bundle example: `.fret/diag/exports/<ts>-bundle` (re-capture for each iteration)
+- Exported bundle (baseline, view-cache disabled): `.fret/diag/exports/1771829809968-bundle`
+- Exported bundle (early attempt, view-cache enabled but no roots): `.fret/diag/exports/1771832191642-bundle`
 - Metrics: `fretboard diag stats` + `fretboard diag triage --json`
 
 ## Configuration surface (web)
@@ -51,6 +52,11 @@ Implementation note: on web targets, UI Gallery routing may rewrite/canonicalize
    - total/layout/paint p50/p95
    - `paint_cache_misses`
    - view-cache counters (`cache_roots`, `cache_roots_reused`, `view_cache_active`)
+
+## Known pitfalls (from early evidence)
+
+- `view_cache_active=true` does not guarantee `view_cache_roots_total>0`: shell caching must actually wrap stable roots.
+- Avoid per-frame model writes that trigger `Invalidation::Layout` churn (e.g. settings/command availability flags) or view-cache reuse will be suppressed.
 
 ## Next steps
 

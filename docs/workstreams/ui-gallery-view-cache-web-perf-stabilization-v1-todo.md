@@ -2,9 +2,13 @@
 
 ## Capture + compare loop
 
-- [ ] Capture a baseline bundle with view-cache disabled (web).
-- [ ] Capture an experimental bundle with `fret_ui_gallery_view_cache=1`.
-- [ ] Capture a second experimental bundle with `fret_ui_gallery_view_cache_shell=1`.
+- [x] Capture a baseline bundle with view-cache disabled (web).
+  - Evidence: `.fret/diag/exports/1771829809968-bundle`
+- [x] Capture an experimental bundle with `fret_ui_gallery_view_cache=1`.
+  - Evidence: `.fret/diag/exports/1771832191642-bundle` (view-cache active, but `view_cache_roots_total=0`)
+- [ ] Re-capture a view-cache bundle after:
+  - enabling shell view-cache by default on `wasm32` when view-cache is enabled
+  - removing per-frame model churn for undo/redo availability
 - [ ] Compare:
   - `paint_time_us` p95 and max
   - `paint_cache_misses`
@@ -22,4 +26,3 @@
 
 - [ ] Record at least one “before vs after” bundle pair (paths only, no embedded tokens) in the milestones file.
 - [ ] If a decision impacts `REN-VNEXT-webgpu-004`, add a short status note to `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`.
-
