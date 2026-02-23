@@ -109,6 +109,7 @@ diagnostics stack stays easy to evolve.
   - Bundle dumping + sidecar writers live under `bundle_dump.rs` / `bundle_index.rs`.
   - DevTools WS wiring lives under `ui_diagnostics_devtools_ws.rs`.
 - [ ] Delete transitional glue after migration:
+  - [x] Remove the old inline `diag repro` implementation from `crates/fret-diag/src/lib.rs` after extraction (no redundant copies).
   - remove duplicated per-step dispatch code from the old location(s),
   - avoid “forwarder wrappers” that exist only because of historical file layout.
 - [ ] Remove redundant semantics traversal helpers in gates:
